@@ -35,7 +35,7 @@ FEATURE_JS = CARD_JS.parent / "flare-kelvin-feature.js"
 
 
 DRIVER = CARD_SHIMS + f"""
-const {{ supportsKelvinFeature, kelvinGradient, labelIsDark }} =
+const {{ supportsKelvinFeature, kelvinGradient, labelIsDark, labelKelvin }} =
   await import({json.dumps(FEATURE_JS.as_posix())});
 const {{ kelvinToRgb, rgbToHex }} = await import({json.dumps(CARD_JS.as_posix())});
 
@@ -68,6 +68,7 @@ process.stdout.write(JSON.stringify({{
     return rgbToHex(a.map((v, i) => Math.round(v + (b[i] - v) * t)));
   }})(),
   dark: input.labelKelvins.map(labelIsDark),
+  labelPositions: [labelKelvin(1000, 10000), labelKelvin(10000, 1000), labelKelvin(2000, 3000)],
   feature: (() => {{
     const entry = globalThis.window.customCardFeatures.find(
       (f) => f.type === 'flare-kelvin-feature'
@@ -221,6 +222,20 @@ def test_the_value_label_flips_with_the_track_behind_it(result):
 
     assert by_kelvin[1000] is False, "deep amber needs a light label"
     assert by_kelvin[10000] is True, "pale blue needs a dark label"
+
+
+def test_the_label_is_coloured_for_where_it_sits_not_for_the_value(result):
+    """The label is pinned to the left of the track and does not ride the
+    thumb, so the colour under it is the range's low end whatever the
+    value is. Colouring it by the current value instead reads correctly
+    only at the bottom of the range and puts dark text on deep amber
+    everywhere else - the first version did exactly that, and it was
+    caught by eye rather than here, which is why this test exists."""
+    full, reversed_, narrow = result["labelPositions"]
+
+    assert full == 1000
+    assert reversed_ == 1000, "min/max the wrong way round must not flip the label"
+    assert narrow == 2000, "a narrow range's label sits over its own low end"
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

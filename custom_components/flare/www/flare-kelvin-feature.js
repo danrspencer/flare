@@ -81,15 +81,27 @@ export function kelvinGradient(min, max, stops = 16) {
  * colour is unreadable at one end whichever end you pick. Rec. 601 luma
  * of the colour actually under the label, thresholded at mid-grey.
  *
- * Called with the colour temperature AT THE LABEL'S POSITION, which is
- * the low end of the range - the label is pinned to the left of the
- * track, it does not ride the thumb. Passing the current value instead
- * looks right in a screenshot at the bottom of the range and picks dark
- * text on deep amber everywhere else, which was the first version.
+ * Call it with labelKelvin() below, never with the current value.
  */
 export function labelIsDark(kelvin) {
   const [r, g, b] = kelvinToRgb(kelvin);
   return 0.299 * r + 0.587 * g + 0.114 * b > 140;
+}
+
+/**
+ * The colour temperature sitting UNDER the value label.
+ *
+ * The label is pinned to the left of the track and does not ride the
+ * thumb, so that is the low end of the range - not the current value.
+ * A one-line function purely so the distinction is testable: the first
+ * version of this passed the current value, which looks right in a
+ * screenshot taken at the bottom of the range and picks dark text on
+ * deep amber everywhere else. Caught by eye, not by a test, which is
+ * the reason it is a named function now rather than an expression
+ * buried in the render path.
+ */
+export function labelKelvin(min, max) {
+  return Math.min(min, max);
 }
 
 class FlareKelvinFeature extends HTMLElement {
@@ -233,7 +245,7 @@ class FlareKelvinFeature extends HTMLElement {
     this._input.disabled = false;
     this._input.value = value;
     this._input.style.background = kelvinGradient(min, max);
-    this._labelKelvin = Math.min(min, max);
+    this._labelKelvin = labelKelvin(min, max);
     this._paint(value);
   }
 }
