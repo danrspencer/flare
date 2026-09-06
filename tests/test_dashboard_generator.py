@@ -164,8 +164,32 @@ def test_every_curve_value_is_draggable(parsed):
 
     assert len(curve_tiles) == 8
     for t in curve_tiles:
-        assert t["features"] == [{"type": "numeric-input", "style": "slider"}], t["entity"]
         assert t["features_position"] == "inline", t["entity"]
+
+    brightness = [t for t in curve_tiles if t["entity"].endswith("_brightness")]
+    kelvin = [t for t in curve_tiles if t["entity"].endswith("_kelvin")]
+    assert len(brightness) == 4 and len(kelvin) == 4
+
+    for t in brightness:
+        assert t["features"] == [{"type": "numeric-input", "style": "slider"}], t["entity"]
+
+
+def test_colour_temperature_uses_flares_own_slider(parsed):
+    """The built-in slider paints itself from --feature-color, which
+    hui-tile-card sets to the tile's own colour - and this section spends
+    that on encoding the phase. FLARE's feature paints its own track in
+    the temperature it sets, so the tile colour goes back to meaning just
+    the icon. It ships inside the integration, so the section still needs
+    nothing extra installed."""
+    kelvin = [
+        t
+        for t in _tiles(parsed)
+        if t["entity"].startswith("number.") and t["entity"].endswith("_kelvin")
+    ]
+
+    assert len(kelvin) == 4
+    for t in kelvin:
+        assert t["features"] == [{"type": "custom:flare-kelvin-feature"}], t["entity"]
 
 
 def test_no_transition_gets_a_slider(parsed):

@@ -345,6 +345,12 @@ async def _two_step_turn_on(
 
 CARD_URL_BASE = "/flare_static"
 CARD_JS_PATH = "flare-curve-card.js"
+# A custom card feature, not a card - it renders a Kelvin-valued `number`
+# as a slider whose track is the colour temperature it sets. Separate
+# file because it is separately useful (a tile anywhere can use it), and
+# it imports kelvinToRgb from the card above, so the two agree on colour
+# by construction rather than by a second copy of the conversion.
+FEATURE_JS_PATH = "flare-kelvin-feature.js"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -364,6 +370,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         [StaticPathConfig(CARD_URL_BASE, str(Path(__file__).parent / "www"), cache_headers=False)]
     )
     add_extra_js_url(hass, f"{CARD_URL_BASE}/{CARD_JS_PATH}")
+    add_extra_js_url(hass, f"{CARD_URL_BASE}/{FEATURE_JS_PATH}")
     return True
 
 
