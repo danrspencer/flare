@@ -84,7 +84,11 @@ they don't all issue commands in the same instant.
 
 ## Step 4 — add the card (optional)
 
-Add a **Manual** card to any dashboard:
+On Home Assistant 2026.6 or newer, add a card, open the **By entity** tab, and pick your
+schedule sensor — **FLARE Curve** appears under *Community* with a live preview, and lands
+full-width with no YAML at all.
+
+Otherwise, add a **Manual** card to any dashboard:
 
 ```yaml
 type: custom:flare-curve-card

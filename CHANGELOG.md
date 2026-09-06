@@ -7,6 +7,26 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.1] - 2026-09-02
+
+### Added
+
+- **The curve card is now suggested when you pick a schedule sensor.**
+  Home Assistant 2026.6 rebuilt the card picker around entities — pick a
+  thing in your home and it offers the cards that fit it. On the **By
+  entity** tab, selecting a FLARE schedule sensor now offers **FLARE
+  Curve** under *Community*, with a live preview and already sized to
+  fill its section, so the card no longer has to be added by hand. Older
+  Home Assistant versions ignore this and are unaffected.
+
+### Fixed
+
+- **A card added from the picker's "By card" tab pointed at a sensor
+  that no longer exists.** With no configuration the card fell back to
+  `sensor.default_flare` — the auto-seeded "Default" sensor the config
+  flow deliberately stopped creating — and rendered an error instead of a
+  chart. It now picks the first real schedule sensor it can find.
+
 ## [0.10.0] - 2026-08-28
 
 ### Breaking
