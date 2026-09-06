@@ -260,20 +260,24 @@ const SCHEDULE_SUFFIX = '_flare';
 /**
  * The slug of a FLARE *schedule* sensor, or null for anything else.
  *
- * Two tests, and both are load-bearing:
+ * Two tests, doing two different jobs - worth being precise about which,
+ * because it is easy to assume the name check is what excludes things:
  *
- * 1. The `_flare` SUFFIX, not a substring search. Every entity this
- *    integration creates carries "flare" somewhere, including the
- *    tracking scope's own sensors - sensor.<slug>_flare_tracking,
- *    _flare_controlled, _flare_overridden. Those end in something else,
- *    so anchoring on the suffix drops them for free, with no exclusion
- *    list to go stale as entities are added. A plain includes('_flare')
- *    would suggest a curve card for all three.
- * 2. The `points` attribute, which only the schedule sensor publishes
- *    (sensor.py's _AdaptiveLightingSensor - it is the 289-sample day
- *    curve the chart actually draws). Shape alone would also match some
- *    unrelated integration's sensor.foo_flare; this is what makes the
- *    match about *this* sensor rather than about its name.
+ * 1. The `points` attribute is the actual discriminator. Only the
+ *    schedule sensor publishes it (sensor.py's _AdaptiveLightingSensor -
+ *    it is the 289-sample day curve the chart draws). This is what
+ *    rejects the tracking scope's own sensor.<slug>_flare_tracking /
+ *    _controlled / _overridden, and equally some unrelated
+ *    integration's sensor.solar_flare. It rejects on what the entity
+ *    *is*, not what it is called, so it needs no exclusion list to go
+ *    stale as this integration grows entities.
+ * 2. The `_flare` SUFFIX (not a substring) is a shape gate, and it is
+ *    what makes the slug slice below correct: the slug is the entity_id
+ *    with a fixed prefix and suffix removed, which is only meaningful if
+ *    the id genuinely ends there. Relaxing it to includes('_flare')
+ *    would slice `sensor.x_flare_tracking` to the slug `x_flare_tracking`.
+ *    Kept as a second line of defence too - matching on an attribute
+ *    name alone is thin, so both must hold.
  */
 export function scheduleSensorSlug(hass, entityId) {
   if (typeof entityId !== 'string') return null;

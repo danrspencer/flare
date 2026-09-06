@@ -63,8 +63,7 @@ process.stdout.write(JSON.stringify({{
 # A schedule sensor is identified by the `points` attribute, so the
 # stand-in states below carry one (its contents are irrelevant here -
 # only its presence is checked). The tracking siblings deliberately do
-# not: they are real entities on this same integration whose names all
-# contain "_flare", which is the trap being guarded against.
+# not, matching the real entities.
 SCHEDULE_STATE = {"attributes": {"points": [], "phase": "Evening"}}
 PLAIN_STATE = {"attributes": {}}
 
@@ -84,6 +83,14 @@ STATES = {
     # Someone else's entity that happens to end the same way.
     "sensor.solar_flare": PLAIN_STATE,
     "light.kitchen": PLAIN_STATE,
+    # Contrived on purpose, and the only case that isolates the *shape*
+    # test from the attribute test: a tracking-shaped id that does carry
+    # `points`. No real entity looks like this, which is exactly why it
+    # is needed - every realistic non-schedule entity is already rejected
+    # on the missing attribute, so without this the suffix check could be
+    # relaxed to a substring match and nothing would notice. See
+    # test_the_name_shape_is_required_even_when_the_attribute_matches.
+    "sensor.upstairs_flare_tracking": SCHEDULE_STATE,
 }
 
 ENTITY_IDS = list(STATES)
@@ -134,11 +141,28 @@ def test_a_multi_word_slug_survives_the_round_trip(result):
     ],
 )
 def test_the_tracking_scope_sensors_are_not_suggested(result, entity_id):
-    """The case a substring test gets wrong. These are real sensors on
-    this integration whose entity_ids all contain "_flare", and the curve
-    card cannot render any of them - it needs the day-curve `points`
-    attribute only the schedule sensor publishes."""
+    """Real sensors on this integration whose entity_ids all contain
+    "_flare". The curve card cannot render any of them - it needs the
+    day-curve `points` attribute only the schedule sensor publishes,
+    which is what rejects them here."""
     assert _by_entity(result, "suggestions")[entity_id] is None
+
+
+def test_the_name_shape_is_required_even_when_the_attribute_matches(result):
+    """Pins the `_flare` suffix independently of the attribute check.
+
+    Every realistic non-schedule entity is already rejected for lacking
+    `points`, so the two checks are indistinguishable on real data and
+    the suffix could be quietly relaxed to a substring match with no test
+    noticing - verified by mutation, which is why this case exists. It
+    matters because the slug is the entity_id minus a fixed prefix and
+    suffix: under includes('_flare') this id would slice to the nonsense
+    slug "upstairs_flare_tracking" and point the card at a sensor that
+    does not exist."""
+    by_entity = _by_entity(result, "suggestions")
+
+    assert by_entity["sensor.upstairs_flare_tracking"] is None
+    assert _by_entity(result, "slugs")["sensor.upstairs_flare_tracking"] is None
 
 
 @pytest.mark.parametrize(
