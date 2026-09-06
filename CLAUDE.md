@@ -882,10 +882,25 @@ HA derives the id from the name at creation.
 - The two halves deploy separately, so a brief window where a restarted
   integration meets a not-yet-reimported blueprint is expected and
   self-resolves.
-- **The dashboard cards ship inside the integration**
+- **The dashboard front-end files ship inside the integration**
   (`custom_components/flare/www/`) and self-register
   via `async_setup` → `async_register_static_paths` +
-  `add_extra_js_url`. `cache_headers=False` is deliberate: neither file
+  `add_extra_js_url`. Two of them now: `flare-curve-card.js` (a card)
+  and `flare-kelvin-feature.js` (a *card feature* - registered on
+  `window.customCardFeatures`, not `customCards`; the older
+  `customTileFeatures` name is not used). One StaticPathConfig serves
+  the directory, so each new file needs only its own
+  `add_extra_js_url`. The feature imports `kelvinToRgb`/`rgbToHex` from
+  the card rather than copying them, so its gradient and the chart
+  agree by construction - ES modules are per-URL singletons, so the
+  shared import costs nothing. It exists because a tile's slider takes
+  its colour from `--feature-color`, which `hui-tile-card` sets to
+  `var(--tile-color)`, and a tile `color` accepts no template - so the
+  built-in `numeric-input` cannot show a value as a colour while the
+  tile colour means something else. card-mod can, and was rejected: the
+  generator's promise is paste-and-go with no third-party dependency.
+  Built on `<input type="range">` rather than `ha-control-slider` for
+  the same reason - no dependency on frontend internals. `cache_headers=False` is deliberate: neither file
   has a versioned URL, so caching would trade a stale-deployed-file bug
   for a stale-browser-cache one. This replaced a separate symlink path
   that silently went stale for over a week.
