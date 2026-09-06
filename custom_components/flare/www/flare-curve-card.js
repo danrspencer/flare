@@ -254,11 +254,76 @@ function sunTimeInWindow(isoString, dayStart, dayEnd) {
   return t;
 }
 
+const SENSOR_PREFIX = 'sensor.';
+const SCHEDULE_SUFFIX = '_flare';
+
+/**
+ * The slug of a FLARE *schedule* sensor, or null for anything else.
+ *
+ * Two tests, and both are load-bearing:
+ *
+ * 1. The `_flare` SUFFIX, not a substring search. Every entity this
+ *    integration creates carries "flare" somewhere, including the
+ *    tracking scope's own sensors - sensor.<slug>_flare_tracking,
+ *    _flare_controlled, _flare_overridden. Those end in something else,
+ *    so anchoring on the suffix drops them for free, with no exclusion
+ *    list to go stale as entities are added. A plain includes('_flare')
+ *    would suggest a curve card for all three.
+ * 2. The `points` attribute, which only the schedule sensor publishes
+ *    (sensor.py's _AdaptiveLightingSensor - it is the 289-sample day
+ *    curve the chart actually draws). Shape alone would also match some
+ *    unrelated integration's sensor.foo_flare; this is what makes the
+ *    match about *this* sensor rather than about its name.
+ */
+export function scheduleSensorSlug(hass, entityId) {
+  if (typeof entityId !== 'string') return null;
+  if (!entityId.startsWith(SENSOR_PREFIX) || !entityId.endsWith(SCHEDULE_SUFFIX)) return null;
+  const state = hass && hass.states && hass.states[entityId];
+  if (!state || !state.attributes || !('points' in state.attributes)) return null;
+  return entityId.slice(SENSOR_PREFIX.length, -SCHEDULE_SUFFIX.length) || null;
+}
+
+/**
+ * Home Assistant's card picker (2026.6+) asks every custom card whether
+ * it makes sense for the entity the user just picked; a suggestion shows
+ * up under "Community" with a live preview. Returning null means "not
+ * mine", which is the answer for everything except a schedule sensor.
+ *
+ * The suggested config uses the `sensor:` shorthand setConfig already
+ * documents rather than a raw `entities` map, and carries
+ * grid_options.columns: 'full' deliberately - a card in a sections view
+ * does not inherit its section's width, so without it the chart lands at
+ * roughly a third of the section and looks broken on arrival (see
+ * CLAUDE.md lesson 15). A suggestion is exactly the right place to carry
+ * that knowledge, since the user never sees the config to fix it.
+ */
+export function entitySuggestion(hass, entityId) {
+  const slug = scheduleSensorSlug(hass, entityId);
+  if (!slug) return null;
+  return {
+    config: {
+      type: 'custom:flare-curve-card',
+      sensor: slug,
+      grid_options: { columns: 'full' },
+    },
+  };
+}
+
 class FlareCurveCard extends HTMLElement {
-  static getStubConfig() {
+  // Given hass, point a brand-new card at a schedule sensor that
+  // actually exists. Without this the card fell back to
+  // DEFAULT_ENTITIES' sensor.default_flare - the auto-seeded "Default"
+  // sensor that config_flow.py deliberately stopped creating - so a card
+  // added from the picker's "By card" tab rendered the error card
+  // instead of a chart. That is also what makes `preview: true` on the
+  // customCards entry show the real thing rather than that error.
+  static getStubConfig(hass) {
+    const entityId = Object.keys((hass && hass.states) || {}).find((id) =>
+      scheduleSensorSlug(hass, id)
+    );
     // No title: a fresh card names itself after the sensor it is pointed
     // at (see cardHeader).
-    return {};
+    return entityId ? { sensor: scheduleSensorSlug(hass, entityId) } : {};
   }
 
   setConfig(config) {
@@ -805,4 +870,13 @@ window.customCards.push({
   type: 'flare-curve-card',
   name: 'FLARE Curve',
   description: 'Live brightness and rendered-colour curve for a FLARE schedule.',
+  // Renders a real preview in the picker rather than a placeholder -
+  // only safe because getStubConfig now finds a schedule sensor that
+  // exists; previously this would have previewed the error card.
+  preview: true,
+  documentationURL: 'https://danrspencer.github.io/flare/',
+  // Suggest this card when someone picks a schedule sensor in HA's
+  // entity-first card picker (2026.6+). Ignored by older frontends, so
+  // no min_version bump - the card just isn't suggested there.
+  getEntitySuggestion: entitySuggestion,
 });
