@@ -189,6 +189,20 @@ const heading = (text, style, extra = '') =>
 // a duration is the right one. It also halves the group's height.
 const SLIDER = [{ type: 'numeric-input', style: 'slider' }];
 
+// The colour-temperature values get FLARE's own feature instead of the
+// built-in slider, so the track is painted in the temperature it sets.
+// The built-in one cannot do that: a tile's slider takes its colour from
+// --feature-color, which hui-tile-card sets to the tile's own --tile-color
+// - one knob for two jobs, and this section already spends the tile's
+// `color` on encoding the phase. A tile `color` takes no template either,
+// so "tint it by the current value" is not expressible there at all.
+//
+// It ships and self-registers inside the integration exactly as the curve
+// card does, so pasting this section still requires nothing extra to be
+// installed - and the tile's own `color` goes back to meaning only the
+// icon, which is what keeps the phase colour readable alongside it.
+const KELVIN_SLIDER = [{ type: 'custom:flare-kelvin-feature' }];
+
 export function buildYaml(slug, title) {
   const NESTED = '      ';
 
@@ -207,7 +221,7 @@ export function buildYaml(slug, title) {
         name: `${p.label} colour temp`,
         icon: KELVIN_ICON,
         color: p.color,
-        features: SLIDER,
+        features: KELVIN_SLIDER,
         indent: NESTED,
       }),
     ])

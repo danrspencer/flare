@@ -7,6 +7,38 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.2] - 2026-09-06
+
+### Added
+
+- **Colour-temperature sliders are now painted in the colour they set.**
+  A new card feature, **FLARE Colour temperature**, renders any
+  Kelvin-valued `number` entity as a slider whose track runs through the
+  actual colour temperature across the entity's own range, with the
+  value shown on it. It ships and self-registers inside the integration,
+  so there is nothing extra to install, and it is offered in the tile
+  card editor for any `number` entity measured in `K` — FLARE's or
+  anyone else's.
+
+  The built-in `numeric-input` slider cannot do this: it paints itself
+  from `--feature-color`, which the tile card sets to the tile's own
+  colour, and a tile's `color` accepts no template. So on the generated
+  dashboard section, where a tile's colour encodes which *phase* a
+  control belongs to, the slider had no way to also carry the value.
+  Now the icon keeps the phase colour and the track carries the
+  temperature.
+
+  The gradient uses the same Kelvin-to-RGB conversion the curve card
+  draws with, so a slider and the curve above it in the same section
+  always agree.
+
+### Changed
+
+- The generated dashboard section uses the new feature for its four
+  colour-temperature controls. Re-generate from the
+  [Dashboard Generator](https://danrspencer.github.io/flare/dashboard/)
+  to pick it up; existing sections keep working unchanged.
+
 ## [0.10.1] - 2026-09-02
 
 ### Added

@@ -83,7 +83,7 @@ export function kelvinToRgb(kelvin) {
   return [Math.round(r), Math.round(g), Math.round(b)];
 }
 
-function rgbToHex([r, g, b]) {
+export function rgbToHex([r, g, b]) {
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 

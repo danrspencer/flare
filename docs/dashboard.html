@@ -72,12 +72,12 @@ permalink: /dashboard/
 </p>
 
 <p>
-  The eight curve values are tiles carrying the <code>numeric-input</code> feature
+  The four brightness values are tiles carrying the <code>numeric-input</code> feature
   (<code>style: slider</code>) — drag to set the value directly from the dashboard, no
-  need to open anything. The slider's own range comes from the entity itself
-  (brightness 0–255, colour temperature 1000–10000 Kelvin), not from anything typed
-  into this generator, so it can never drift out of sync with what the entity actually
-  accepts. Every feature sits
+  need to open anything. The slider's own range comes from the entity itself (0–255),
+  not from anything typed into this generator, so it can never drift out of sync with
+  what the entity actually accepts. The four colour-temperature values get FLARE's own
+  slider instead — see below. Every feature sits
   <code>inline</code> — on the same row as the tile's name rather than stacked under it —
   so a slider is half the height it would otherwise be.
 </p>
@@ -127,13 +127,46 @@ permalink: /dashboard/
 
 <p>
   A tile's <code>color</code> reaches its slider, not just its icon: the tile card
-  publishes <code>--feature-color</code> from its own colour, so the fill you drag in the
-  Curve group is the phase colour too. That only applies while the entity counts as
+  publishes <code>--feature-color</code> from its own colour, so the brightness fill you
+  drag is the phase colour too. That only applies while the entity counts as
   "active", which for a <code>number</code> is always — so a transition left at
   <code>0</code> still shows its phase colour rather than greying out. Sticky is the
   deliberate exception: it's a
   <code>switch</code>, so it greys itself out when off, which is exactly the right signal
   for an override that isn't engaged.
+</p>
+
+<h2 id="colour-temperature-slider">The colour-temperature slider</h2>
+
+<p>
+  The four colour-temperature controls use <strong>FLARE Colour temperature</strong>
+  (<code>type: custom:flare-kelvin-feature</code>) rather than the built-in slider: its
+  track is painted with the actual colour temperature it sets, running across the
+  entity's own range, with the value written on it.
+</p>
+
+<p>
+  It exists because <code>--feature-color</code> is one knob doing two jobs. The
+  built-in slider takes its fill from the tile's colour — which this section has already
+  spent on encoding the phase — and a tile's <code>color</code> accepts no template, so
+  "tint it by the current value" isn't expressible there at all. FLARE's feature paints
+  its own track and never reads <code>--feature-color</code>, so both things can be true
+  at once: the icon keeps the phase colour, the track carries the temperature.
+</p>
+
+<p>
+  The gradient is sampled from the same Kelvin-to-RGB conversion the curve card draws
+  with, so the slider and the curve directly above it in the same section agree by
+  construction. It's sampled rather than blended between the two ends because that curve
+  isn't linear in RGB — a straight blend from the warm end to the cool one passes
+  through purple, which is not a colour any temperature on the scale actually is.
+</p>
+
+<p>
+  It ships inside the integration and registers itself exactly as the curve card does,
+  so there's still nothing extra to install. It's also not FLARE-specific: it's offered
+  in the tile card editor for any <code>number</code> entity measured in
+  <code>K</code>.
 </p>
 
 <p>
