@@ -54,20 +54,97 @@ permalink: /dashboard/
   on the curve card aren't decorative — a card inside a <code>sections</code> view doesn't
   inherit its section's full width just because the section itself is full-width,
   so both are needed for the curve to actually span the section instead of rendering
-  at roughly a third of it. The same setting is what packs several cards onto one
-  row elsewhere in the section — <code>columns</code> is out of the section's own
-  12-column grid, so e.g. <code>3</code> fits four sliders per row instead of one.
+  at roughly a third of it.
+</p>
+
+<p class="dgen-note">
+  The Curve and Transitions groups are each a nested <code>grid</code> card at
+  <code>columns: 2</code>, so a row is always exactly one phase — brightness beside
+  colour, Morning down to Night — and reading down a column gives you one channel
+  across the whole day. That has to be the grid card's own <code>columns</code>, not
+  per-tile <code>grid_options</code>: the latter counts against the <em>section's</em>
+  grid, which is 12 columns times its <code>column_span</code>, so a fixed per-tile
+  value lands on a different number of tiles per row as the window changes width.
+  Fine where nothing depends on which cards are adjacent — the Override pair and the
+  five schedule times still use it — and not fine for a layout that is entirely about
+  which two tiles sit together. The nested grid needs its own
+  <code>grid_options: {columns: full}</code> for the same reason the curve card does.
 </p>
 
 <p>
-  The eight curve values and eight transition minutes are tiles carrying the
-  <code>numeric-input</code> feature (<code>style: slider</code>) — drag to set the value
-  directly from the dashboard, no need to open anything. The slider's own range comes
-  from the entity itself (brightness 0–255, colour temperature 1000–10000 Kelvin,
-  transition 0–1440 minutes), not from anything typed into this generator, so it can
-  never drift out of sync with what the entity actually accepts. Phase gets the inline
-  <code>select-options</code> feature so it's a dropdown rather than tap-to-open; Sticky
-  and the five schedule times stay as plain tiles.
+  The eight curve values are tiles carrying the <code>numeric-input</code> feature
+  (<code>style: slider</code>) — drag to set the value directly from the dashboard, no
+  need to open anything. The slider's own range comes from the entity itself
+  (brightness 0–255, colour temperature 1000–10000 Kelvin), not from anything typed
+  into this generator, so it can never drift out of sync with what the entity actually
+  accepts. Every feature sits
+  <code>inline</code> — on the same row as the tile's name rather than stacked under it —
+  so a slider is half the height it would otherwise be.
+</p>
+
+<p>
+  Phase and Sticky are directly actionable the same way — a <code>select-options</code>
+  dropdown and a <code>toggle</code> respectively, both inline. The five schedule times
+  deliberately aren't: a <code>time</code> entity has no inline-editable feature, so
+  tapping the tile to open the time picker is the best available option.
+</p>
+
+<p>
+  <strong>The eight transition tiles carry no feature at all</strong>, which is also
+  deliberate. They run 0–1440 minutes — a whole day, so that "always be transitioning"
+  is expressible rather than an error — while any value you'd actually set is under an
+  hour. A slider would spend about 96% of its travel out of reach and a single pixel
+  would be worth several minutes. The <code>numeric-input</code> feature takes no
+  min/max of its own (its whole config is <code>{type, style}</code>), so there's
+  nothing to narrow, and <code>style: buttons</code> steps by the entity's step of 1,
+  i.e. 45 taps to reach 45 minutes. So a transition tile falls through to its more-info
+  dialog — which FLARE already sets to <code>mode: box</code>, a number you type rather
+  than a second slider. For a duration that's the right interaction anyway, and it
+  halves the group's height.
+</p>
+
+<h2 id="reading-the-section">Reading the section at a glance</h2>
+
+<p>
+  Twenty-five near-identical controls is a lot to scan, so the section is colour-coded
+  along one axis and icon-coded along the other:
+</p>
+
+<ul>
+  <li><strong>Colour is the phase.</strong> Morning is blue, Day yellow, Evening orange,
+    Night indigo — the same colour wherever that phase appears, in the Schedule group,
+    the Curve group and Transitions alike. The palette tracks the <em>colour temperature
+    the curve actually reaches</em> in each phase rather than the time of day: Morning
+    ramps to the coldest, bluest light of the day, and each phase after it is warmer
+    than the last. That reads backwards against a sunrise/sunset mental model, and
+    right against the curve drawn directly above it.</li>
+  <li><strong>Icon is the channel.</strong> Brightness controls carry
+    <code>mdi:brightness-6</code> and colour-temperature controls
+    <code>mdi:temperature-kelvin</code>, whichever phase they belong to. Transitions are
+    durations rather than levels, so they all take <code>mdi:timer-sand</code> instead —
+    the two groups otherwise use identical tile names.</li>
+</ul>
+
+<p>
+  A tile's <code>color</code> reaches its slider, not just its icon: the tile card
+  publishes <code>--feature-color</code> from its own colour, so the fill you drag in the
+  Curve group is the phase colour too. That only applies while the entity counts as
+  "active", which for a <code>number</code> is always — so a transition left at
+  <code>0</code> still shows its phase colour rather than greying out. Sticky is the
+  deliberate exception: it's a
+  <code>switch</code>, so it greys itself out when off, which is exactly the right signal
+  for an override that isn't engaged.
+</p>
+
+<p>
+  The section heading carries four badges reading straight off the schedule sensor:
+  the current <strong>phase</strong>, and the <strong>brightness</strong> and
+  <strong>colour temperature</strong> it's asking for right now (via
+  <code>state_content</code>, which takes an attribute name). The fourth is the manual
+  phase override, given a <code>visibility</code> condition of
+  <code>state_not: Auto</code> so it only appears while an override is actually
+  engaged — it reads "Auto" the vast majority of the time, which is noise on a header
+  whose job is to show what's happening.
 </p>
 
 <h2 id="repeat-per-schedule">Repeat per schedule</h2>

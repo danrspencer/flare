@@ -35,167 +35,266 @@ function titleCase(slug) {
     .join(' ');
 }
 
-// Phase/Sticky and the five schedule times stay plain tile cards - Phase
-// gets the select-options feature so it's an inline dropdown rather than
-// tap-to-open; a time entity has no stock inline-editable feature at
-// all, so tile (tap opens the time picker) is already the best available
-// option for it.
+// The section is built from data rather than 21 hand-written near-identical
+// tile blocks: every tile now carries a colour, an icon and a feature
+// position on top of its entity/name/width, and spelling that out per tile
+// would be ~350 lines of copy-paste for four phases x two channels x two
+// groups - precisely the shape that drifts when one of them is edited and
+// its seven siblings aren't.
 //
+// COLOUR encodes the PHASE and ICON encodes the CHANNEL, so the Curve and
+// Transitions groups can be scanned two ways at once: all of Morning is
+// one colour wherever it appears, and every colour-temperature control
+// carries the same icon whichever phase it belongs to.
+//
+// The palette tracks the COLOUR TEMPERATURE the curve actually reaches in
+// each phase, not the time of day: Morning ramps to the coldest, bluest
+// light of the day (10000K by default - the whole point of the phase, per
+// the Xiao et al. morning-light research in the README), Day sits warmer
+// and yellower, Evening warmer still, Night warmest. So Morning is blue
+// and Day is yellow, which reads backwards against a sunrise/sunset
+// mental model and is right against the curve sitting directly above it.
+//
+// A tile's `color` reaches its slider, not just its icon - hui-tile-card
+// sets `--feature-color: var(--tile-color)`. It only applies while
+// stateActive() is true, which for a `number` is always (the domain has no
+// special case and falls through to true, so even a transition set to 0
+// stays coloured). The one deliberate exception is Sticky: a `switch` that
+// is off counts as inactive, so it greys out on its own, which is the
+// right signal for an override that isn't engaged.
+const PHASES = [
+  { key: 'morning', label: 'Morning', color: 'blue', icon: 'mdi:weather-sunset-up' },
+  { key: 'day', label: 'Day', color: 'yellow', icon: 'mdi:weather-sunny' },
+  { key: 'evening', label: 'Evening', color: 'orange', icon: 'mdi:weather-sunset-down' },
+  { key: 'night', label: 'Night', color: 'indigo', icon: 'mdi:weather-night' },
+];
+
+const BRIGHTNESS_ICON = 'mdi:brightness-6';
+const KELVIN_ICON = 'mdi:temperature-kelvin';
+// Transitions are durations, not levels, so they take a timing icon rather
+// than repeating the channel icons from the Curve group above - the two
+// groups otherwise use identical tile names ("Morning brightness" appears
+// in both) and only the unit in the value distinguishes them.
+const TRANSITION_ICON = 'mdi:timer-sand';
+
+// The five schedule boundaries, in the order the day runs. Evening takes
+// both of its bounds, which is why the phase list above doesn't map 1:1.
+const SCHEDULE_TIMES = [
+  { entity: 'morning_time', name: 'Morning', phase: 'morning' },
+  { entity: 'day_time', name: 'Day', phase: 'day' },
+  { entity: 'evening_earliest_time', name: 'Evening (earliest)', phase: 'evening' },
+  { entity: 'evening_latest_time', name: 'Evening (latest)', phase: 'evening' },
+  { entity: 'night_time', name: 'Night', phase: 'night' },
+];
+
+const phase = (key) => PHASES.find((p) => p.key === key);
+
+// grid_options.columns is out of the SECTION's own grid (see CLAUDE.md
+// lesson 15), which is 12 wide times the section's column_span - so the
+// values here (6 for the Override pair, 4 for the five schedule times)
+// buy several cards sharing a row, but only approximately: the exact
+// number per row moves with the window. That is fine for those two
+// groups, where nothing depends on which cards are adjacent, and not
+// fine for Curve and Transitions - see pairGrid below.
+//
+// features_position: inline puts the control on the same row as the name
+// instead of below it, roughly halving each tile's height - which matters
+// on a section carrying 25 entities. Only the FIRST feature goes inline
+// (frontend's computeCardFeatureLayout slices at 1); every tile here has
+// exactly one, so all of them qualify.
+function tile({ entity, name, icon, color, columns, features, indent = '  ' }) {
+  const k = `${indent}  `;
+  const lines = [
+    `${indent}- type: tile`,
+    `${k}entity: ${entity}`,
+    `${k}name: ${name}`,
+  ];
+  if (icon) lines.push(`${k}icon: ${icon}`);
+  if (color) lines.push(`${k}color: ${color}`);
+  if (features) {
+    lines.push(`${k}features_position: inline`);
+    lines.push(`${k}features:`);
+    lines.push(
+      ...features.map((f) =>
+        `${k}  - type: ${f.type}`.concat(f.style ? `\n${k}    style: ${f.style}` : '')
+      )
+    );
+  }
+  // Omitted inside a nested grid card, which lays its own children out -
+  // a grid_options on a card the section's grid never sees does nothing.
+  if (columns) lines.push(`${k}grid_options:`, `${k}  columns: ${columns}`);
+  return lines.join('\n');
+}
+
+// Curve and Transitions are laid out as a nested grid card at two columns,
+// so a row is always exactly one phase: brightness beside colour, Morning
+// then Day then Evening then Night. Reading down a column then gives you
+// one channel across the whole day.
+//
+// This is the one place a nested grid earns its keep over per-tile
+// grid_options. `columns` there is out of the SECTION's own grid, and a
+// spanned section's grid widens with the span - this section is
+// column_span: 4, so on a wide screen its grid is 48 columns, not 12, and
+// any fixed per-tile value lands on a different number of tiles per row
+// at different window widths. A grid card's own `columns` is absolute, so
+// two-up holds everywhere, which is the entire point of the grouping.
+//
+// grid_options: {columns: full} on the grid card itself is still required:
+// a nested grid implements no getLayoutOptions(), so without it the whole
+// group renders at roughly a third of the section's width - CLAUDE.md
+// lesson 15, measured live.
+function pairGrid(tiles) {
+  return [
+    '  - type: grid',
+    '    columns: 2',
+    '    square: false',
+    '    grid_options:',
+    '      columns: full',
+    '    cards:',
+    ...tiles,
+  ].join('\n');
+}
+
+const heading = (text, style, extra = '') =>
+  `  - type: heading\n    heading: ${text}\n    heading_style: ${style}${extra}`;
+
 // The eight curve values and eight transition minutes are each a tile
-// carrying the numeric-input feature (style: slider) - a first attempt
-// used gauge cards instead, on the theory that seeing where today's
-// value sits in a fixed range (brightness 0-255, colour temperature
-// 1000-10000 Kelvin, transition 0-1440 minutes - see number.py's
-// _CurveNumber) was the point of glancing at this section. Wrong in
-// practice: a gauge is read-only in Home Assistant, tapping it only
-// opens the more-info dialog - and this section is a control panel, not
-// a readout, so losing the drag was a real regression. numeric-input
-// restores it, and reads the entity's own configured min/max/step
-// directly (confirmed against Home Assistant's own docs -
-// https://www.home-assistant.io/dashboards/features/), so unlike the
-// gauge version this generator carries no hardcoded ranges of its own to
-// drift from number.py's if they ever change. style: slider overrides
-// the entity's own mode: "box" more-info preference deliberately - fast
-// drag-to-set on the dashboard and precise typed entry (still mode: box,
-// via the entity's own more-info dialog opened another way) are two
-// different, both still available, ways to set the same value.
+// carrying the numeric-input feature (style: slider) - a first attempt used
+// gauge cards instead, on the theory that seeing where today's value sits
+// in a fixed range (brightness 0-255, colour temperature 1000-10000 Kelvin,
+// transition 0-1440 minutes - see number.py's _CurveNumber) was the point
+// of glancing at this section. Wrong in practice: a gauge is read-only in
+// Home Assistant, tapping it only opens the more-info dialog - and this
+// section is a control panel, not a readout, so losing the drag was a real
+// regression. numeric-input restores it, and reads the entity's own
+// configured min/max/step directly, so unlike the gauge version this
+// generator carries no hardcoded ranges of its own to drift from
+// number.py's if they ever change. style: slider overrides the entity's own
+// mode: "box" more-info preference deliberately - fast drag-to-set on the
+// dashboard and precise typed entry (still mode: box, via the entity's own
+// more-info dialog) are two different, both still available, ways to set
+// the same value.
 //
-// grid_options.columns is out of the SECTION's own 12-column grid (see
-// CLAUDE.md lesson 15) - 12 is one full-width row per card, which is what
-// the original tile-only layout used throughout and why it read as a
-// long single-column list despite the section itself being full-width.
-// Smaller values here (6/4/3) let several cards share a row instead.
-function buildYaml(slug, title) {
+// THE TRANSITIONS GROUP DELIBERATELY GETS NO FEATURE AT ALL. Its entities
+// run 0-1440 minutes (number.py again: a whole day, so that "always be
+// transitioning" is expressible rather than an error), while every value
+// anyone actually sets is under an hour - so a slider spends ~96% of its
+// travel on values nobody wants, and a single pixel is several minutes.
+// The feature takes no min/max or scaling of its own (its whole config is
+// {type, style}), so there is nothing to narrow, and style: buttons steps
+// by the entity's native_step of 1, i.e. 45 taps to reach 45 minutes.
+// A plain tile falls through to the more-info dialog, which these
+// entities already render as a TYPED BOX rather than another slider
+// (_attr_mode = "box"), so the precise path is the only path - which for
+// a duration is the right one. It also halves the group's height.
+const SLIDER = [{ type: 'numeric-input', style: 'slider' }];
+
+export function buildYaml(slug, title) {
+  const NESTED = '      ';
+
+  const curve = pairGrid(
+    PHASES.flatMap((p) => [
+      tile({
+        entity: `number.${slug}_${p.key}_brightness`,
+        name: `${p.label} brightness`,
+        icon: BRIGHTNESS_ICON,
+        color: p.color,
+        features: SLIDER,
+        indent: NESTED,
+      }),
+      tile({
+        entity: `number.${slug}_${p.key}_kelvin`,
+        name: `${p.label} colour temp`,
+        icon: KELVIN_ICON,
+        color: p.color,
+        features: SLIDER,
+        indent: NESTED,
+      }),
+    ])
+  );
+
+  const transitions = pairGrid(
+    PHASES.flatMap((p) => [
+      tile({
+        entity: `number.${slug}_${p.key}_brightness_transition`,
+        name: `${p.label} brightness`,
+        icon: TRANSITION_ICON,
+        color: p.color,
+        indent: NESTED,
+      }),
+      tile({
+        entity: `number.${slug}_${p.key}_kelvin_transition`,
+        name: `${p.label} colour`,
+        icon: TRANSITION_ICON,
+        color: p.color,
+        indent: NESTED,
+      }),
+    ])
+  );
+
+  const times = SCHEDULE_TIMES.map((t) =>
+    tile({
+      entity: `time.${slug}_${t.entity}`,
+      name: t.name,
+      icon: phase(t.phase).icon,
+      color: phase(t.phase).color,
+      columns: 4,
+    })
+  );
+
   return `type: grid
 column_span: 4
 cards:
-  - type: heading
-    heading: ${title}
-    heading_style: title
+${heading(title, 'title', `
     icon: mdi:chart-bell-curve
     badges:
       - type: entity
-        entity: select.${slug}_flare_phase
+        entity: sensor.${slug}_flare
         show_state: true
         show_icon: true
+        name: Phase
+      - type: entity
+        entity: sensor.${slug}_flare
+        state_content: brightness
+        icon: ${BRIGHTNESS_ICON}
+        name: Brightness
+      - type: entity
+        entity: sensor.${slug}_flare
+        state_content: color_temp
+        icon: ${KELVIN_ICON}
+        name: Colour
+      - type: entity
+        entity: select.${slug}_flare_phase
+        show_state: true
+        icon: mdi:hand-back-right
+        name: Override
+        visibility:
+          - condition: state
+            entity: select.${slug}_flare_phase
+            state_not: Auto`)}
   - type: custom:flare-curve-card
     sensor: ${slug}
     grid_options:
       columns: full
     title: ''
-  - type: heading
-    heading: Override
-    heading_style: subtitle
-  - type: tile
-    entity: select.${slug}_flare_phase
-    name: Phase
-    features:
-      - type: select-options
-    grid_options:
-      columns: 6
-  - type: tile
-    entity: switch.${slug}_sticky_phase_override
-    name: Sticky
-    grid_options:
-      columns: 6
-  - type: heading
-    heading: Schedule
-    heading_style: subtitle
-  - type: tile
-    entity: time.${slug}_morning_time
-    name: Morning
-    grid_options:
-      columns: 4
-  - type: tile
-    entity: time.${slug}_day_time
-    name: Day
-    grid_options:
-      columns: 4
-  - type: tile
-    entity: time.${slug}_evening_earliest_time
-    name: Evening (earliest)
-    grid_options:
-      columns: 4
-  - type: tile
-    entity: time.${slug}_evening_latest_time
-    name: Evening (latest)
-    grid_options:
-      columns: 4
-  - type: tile
-    entity: time.${slug}_night_time
-    name: Night
-    grid_options:
-      columns: 4
-  - type: heading
-    heading: Curve
-    heading_style: subtitle
-  - type: tile
-    entity: number.${slug}_morning_brightness
-    name: Morning brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_morning_kelvin
-    name: Morning colour temp
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_day_brightness
-    name: Day brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_day_kelvin
-    name: Day colour temp
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_evening_brightness
-    name: Evening brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_evening_kelvin
-    name: Evening colour temp
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_night_brightness
-    name: Night brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_night_kelvin
-    name: Night colour temp
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: heading
-    heading: Transitions
-    heading_style: subtitle
+${heading('Override', 'subtitle')}
+${tile({
+  entity: `select.${slug}_flare_phase`,
+  name: 'Phase',
+  columns: 6,
+  features: [{ type: 'select-options' }],
+})}
+${tile({
+  entity: `switch.${slug}_sticky_phase_override`,
+  name: 'Sticky',
+  columns: 6,
+  features: [{ type: 'toggle' }],
+})}
+${heading('Schedule', 'subtitle')}
+${times.join('\n')}
+${heading('Curve', 'subtitle')}
+${curve}
+${heading('Transitions', 'subtitle')}
   - type: markdown
     text_only: true
     grid_options:
@@ -204,70 +303,7 @@ cards:
       How long before each phase ends to start easing into the next one, in
       minutes. 0 is a hard cut. Values are clamped to the phase, so anything
       longer than the phase itself means "ease across the whole phase".
-  - type: tile
-    entity: number.${slug}_morning_brightness_transition
-    name: Morning brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_morning_kelvin_transition
-    name: Morning colour
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_day_brightness_transition
-    name: Day brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_day_kelvin_transition
-    name: Day colour
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_evening_brightness_transition
-    name: Evening brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_evening_kelvin_transition
-    name: Evening colour
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_night_brightness_transition
-    name: Night brightness
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
-  - type: tile
-    entity: number.${slug}_night_kelvin_transition
-    name: Night colour
-    features:
-      - type: numeric-input
-        style: slider
-    grid_options:
-      columns: 3
+${transitions}
 `;
 }
 
