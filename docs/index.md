@@ -7,7 +7,7 @@ nav_order: 1
 {: .no_toc }
 
 **F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — phase-based
-circadian lighting for Home Assistant, with scene reconciliation and override protection
+circadian lighting for Home Assistant, with scene handoff and override protection
 built in.
 {: .fs-6 .fw-300 }
 
@@ -72,8 +72,23 @@ override-protection machinery is available standalone, whether or not you use th
 
 ## What "reconciliation" means
 
-FLARE expects to share a room. A scene can take some lights, someone can grab a switch, and
-another automation can write the same bulb — none of that is treated as a fault:
+FLARE knows what every light it drives should be showing right now, and keeps working to
+get it there.
+
+That matters because lighting commands go missing. A Zigbee message drops, a bulb is
+busy, the mesh hiccups — and the light quietly stays where it was. FLARE doesn't assume a
+command landed just because it was sent:
+
+- It **re-checks on a timer** and re-sends anything that isn't where it should be, so a
+  command lost on first try is simply sent again.
+- A bulb that was unreachable is **caught up as soon as it comes back**, rather than
+  sitting wrong until the next phase.
+- A bulb already at the target, within tolerance, is **left alone** — so nothing gets
+  spammed, and bulbs that round values off aren't fought with.
+
+The other half is knowing when to stop. FLARE expects to share a room: a scene can take
+some lights, someone can grab a switch, another automation can write the same bulb. None
+of that is a fault, and none of it gets overwritten:
 
 - **Override protection** notices when a light no longer matches what FLARE last asked for —
   including being switched off — and stops driving it until the whole room goes dark.

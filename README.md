@@ -12,7 +12,7 @@ and anything a scene already has covered is left to the scene.
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
 
 The quickest way to see what this actually does is the
-**[interactive curve playground](https://danrspencer.github.io/flare/playground.html)** — it runs the
+**[interactive curve playground](https://danrspencer.github.io/flare/playground/)** — it runs the
 real dashboard card, and you can drag the schedule and curve settings around and watch it redraw.
 
 - **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
