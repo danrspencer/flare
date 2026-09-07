@@ -7,6 +7,31 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.14.2] - 2026-09-07
+
+### Changed
+
+- **The brightness sliders now show their value, not just their phase.**
+  They took their colour from the tile, so they showed which phase a
+  control belonged to and said nothing about the setting — while the
+  colour-temperature slider beside them was already painted in the value
+  it sets. The two disagreed about what colour meant.
+
+  Brightness has no colour of its own, so the value is carried by
+  intensity instead: the theme's accent colour, faded in proportion, so
+  it reads as a dimmer. The unfilled part of the track still carries the
+  phase colour, so a row is still identifiable at a glance.
+
+### Fixed
+
+- The **Curve playground** link on the documentation home page was dead —
+  the page had no permalink, so it only answered at `/playground.html`.
+- The home page's description of what "reconciliation" means described
+  sharing a room with other automations, which is only half of it. It now
+  leads with the part the name is actually about: FLARE knows what every
+  light it drives should be showing and keeps working to get it there, so
+  a command lost on first send is simply sent again.
+
 ## [0.14.1] - 2026-09-07
 
 ### Fixed

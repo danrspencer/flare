@@ -49,12 +49,17 @@ const SCHEDULE_TIMES = [
 
 const phase = (key) => PHASES.find((p) => p.key === key);
 
-const SLIDER = [{ type: 'numeric-input', style: 'slider' }];
-
-// Colour temperature gets FLARE's own feature rather than the built-in
-// slider: the built-in takes its colour from the tile's, which this
-// section spends on encoding the phase, and a tile `color` accepts no
-// template. See flare-kelvin-feature.js.
+// Both curve values get one of FLARE's own sliders rather than the
+// built-in one, for the same reason: the built-in takes its colour from
+// the tile's, which this section spends on encoding the phase, and a
+// tile `color` accepts no template - so it can only ever show which
+// phase a control belongs to, never what it is set to.
+//
+// Colour temperature is painted in the temperature itself; brightness
+// has no colour of its own, so it fades the theme's accent in
+// proportion to the value. See flare-kelvin-feature.js and
+// flare-brightness-feature.js.
+const BRIGHTNESS_SLIDER = [{ type: 'custom:flare-brightness-feature' }];
 const KELVIN_SLIDER = [{ type: 'custom:flare-kelvin-feature' }];
 
 const TRANSITIONS_NOTE =
@@ -127,7 +132,7 @@ export function sectionConfig(slug, title) {
         name: `${p.label} brightness`,
         icon: BRIGHTNESS_ICON,
         color: p.color,
-        features: SLIDER,
+        features: BRIGHTNESS_SLIDER,
       }),
       tile({
         entity: `number.${slug}_${p.key}_kelvin`,

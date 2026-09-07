@@ -302,12 +302,14 @@ def test_every_curve_value_is_draggable(result):
     brightness = [t for t in curve if t["entity"].endswith("_brightness")]
     assert len(brightness) == 4
     for t in brightness:
-        assert t["features"] == [{"type": "numeric-input", "style": "slider"}], t["entity"]
+        assert t["features"] == [{"type": "custom:flare-brightness-feature"}], t["entity"]
 
 
-def test_colour_temperature_uses_flares_own_slider(result):
+def test_both_curve_channels_use_flares_own_sliders(result):
     """The built-in slider paints itself from the tile's colour, which
-    this section spends on encoding the phase."""
+    this section spends on encoding the phase - so it can only show which
+    phase a control belongs to, never what it is set to. Both channels
+    therefore use a FLARE feature that colours by value."""
     kelvin = [
         t
         for t in _tiles(result["section"])
