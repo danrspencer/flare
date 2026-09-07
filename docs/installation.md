@@ -100,8 +100,9 @@ card draws the day's brightness and colour curve with a marker at the current ti
 
 {: .tip }
 > Want the curve alongside a phase override and every schedule/curve entity as tiles,
-> not just the chart? The [Dashboard Generator]({{ site.baseurl }}/dashboard/) builds
-> the whole section from the schedule sensor's slug.
+> not just the chart? Add FLARE's ready-made
+> [dashboard view]({{ site.baseurl }}/dashboard/) — one line of config, and it builds
+> a section per schedule sensor for you.
 
 ---
 

@@ -66,9 +66,8 @@ project exists, why the day is divided into four named phases
 sun-elevation curve the way most adaptive-lighting tools work - plus
 links onward. Everything else lives in `docs/` and is published to
 <https://danrspencer.github.io/flare/>: `installation.md` (quickstart),
-the `playground.html` interactive curve, `dashboard.html` (a Lovelace
-dashboard-section generator - draggable numeric-input sliders, not
-read-only gauges), `blueprint.md` (full per-feature/input breakdown),
+the `playground.html` interactive curve, `dashboard.md` (how to add the
+view strategy), `blueprint.md` (full per-feature/input breakdown),
 and a `docs/advanced/` "Power users" section (`has_children: true`):
 `reference.md` (the full service/entity reference - this is what
 `helpers.md` was renamed to when the docs site was restructured, see
@@ -980,6 +979,25 @@ HA derives the id from the name at creation.
   unaffected. The one HACS surface we *can* reach is the README, which
   it renders in the repository panel - hence the icon at the top of it.
 - pyscript is fully gone from both this repo and the live host.
+- **The dashboard ships as a Lovelace VIEW STRATEGY, not as pasted
+  YAML.** `views: - strategy: {type: custom:flare}` resolves to
+  `ll-strategy-view-flare` (`flare-view-strategy.js`), which builds one
+  section per schedule sensor from `flare-section.js`. That file is the
+  single definition of the layout and is a plain config OBJECT, not a
+  string, because a strategy hands HA objects. It registers nothing, so
+  it has no `add_extra_js_url` of its own - the strategy's import pulls
+  it in.
+  **This replaced a generator on the docs site** that emitted the same
+  section as YAML to copy-paste. The generator, its CSS and its tests
+  were deleted outright. Reason: the layout changed five times in a
+  single session, and each change meant every user re-generating and
+  re-pasting a section per schedule; a strategy is regenerated on every
+  dashboard load, so a HACS update is the whole migration, and a newly
+  added schedule sensor simply appears. The escape hatch for someone who
+  wants to own the YAML is HA's own "Take control", which is one-way.
+  When the port landed, `sectionConfig()`'s output was diffed against
+  the generator's last output and was byte-identical - worth repeating
+  if this is ever restructured again.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

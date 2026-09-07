@@ -7,6 +7,39 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.12.0] - 2026-09-07
+
+### Added
+
+- **FLARE now ships its dashboard.** Add one line to any dashboard and it
+  builds itself — a section per schedule sensor, with the curve, the
+  phase override, the schedule times, the curve values and the
+  transitions:
+
+  ```yaml
+  views:
+    - title: Lighting
+      strategy:
+        type: custom:flare
+  ```
+
+  There is nothing to fill in. It finds your schedule sensors itself, and
+  a schedule you add later appears without you touching the dashboard
+  again. Because the view is generated on each load, layout improvements
+  now arrive with an update instead of needing anything re-pasted.
+
+  If you'd rather own the layout, Home Assistant's **Take control** turns
+  the generated view into ordinary cards you can edit. That's one-way:
+  the view then stops tracking FLARE's layout and new schedules won't
+  appear on their own.
+
+### Removed
+
+- **The docs site's dashboard generator.** The view strategy above
+  replaces it and needs no slug, no copying and no re-pasting. Sections
+  you already pasted keep working exactly as they are — they're ordinary
+  cards, and nothing about them changed.
+
 ## [0.11.0] - 2026-09-07
 
 ### Changed

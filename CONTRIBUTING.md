@@ -68,11 +68,10 @@ blueprints/automation/danspencer/flare.yaml
 
 dashboard/
     house-settings-card.yaml   the curve card alone, to drop into a view.
-                               The fuller section (curve card, phase
-                               override, and every schedule/curve config
-                               entity as tiles) is generated on the docs
-                               site instead - see docs/dashboard.html
-                               below, not committed as a static file here.
+                               The fuller section is built at runtime by
+                               the view strategy in
+                               custom_components/flare/www/ - see
+                               flare-section.js, not committed as YAML.
 
 tests/
     pytest suite for curve.py, grouping.py, and scenes.py.
@@ -80,9 +79,7 @@ tests/
 docs/
     index.md          the pitch, and what the four phases are for
     installation.md   quickstart: HACS, blueprint, dashboard card
-    dashboard.html     "Dashboard Generator" - generates the fuller
-                       dashboard section (curve + phase override + every
-                       schedule/curve entity) from a schedule sensor's slug
+    dashboard.md      how to add the view strategy, and what it builds
     playground.html   the interactive curve, running the real card
     blueprint.md      full feature/input reference for the blueprint
     advanced/         power-user reference: services, scene handoff,
