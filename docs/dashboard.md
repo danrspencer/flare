@@ -10,6 +10,9 @@ FLARE ships a ready-made dashboard view. Add it once and it builds itself: one s
 per schedule sensor, with the curve, a phase override, the five schedule times, the
 eight curve values and the eight transition times.
 
+![The FLARE dashboard view: the day's curve, a phase override, the schedule times, and
+the curve and transition values for each phase]({{ '/assets/img/dashboard-section.png' | relative_url }})
+
 Open the dashboard you want it on, then **Edit dashboard** → the three-dot menu →
 **Raw configuration editor**, and add:
 
