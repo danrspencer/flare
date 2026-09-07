@@ -11,7 +11,10 @@
  * `cardFeatureStyles` rule for `ha-control-slider` - deliberately
  * identical, because the point is to look like its neighbour in the row,
  * not merely similar. Exactly ONE declaration differs:
- * `--control-slider-color`, the fill, which _render sets per value.
+ * the two colour properties, which _paint sets per value - the built-in
+ * points both at `--feature-color`, this points both at the colour of
+ * the value, so the fill is solid and the remainder is the same colour
+ * at the same native 0.2 opacity.
  *
  * Two earlier versions got this wrong and are worth recording so they
  * are not re-attempted. The first painted the whole track as a
@@ -31,9 +34,9 @@
  * belongs to, so the slider cannot also carry the value. A tile card's
  * `color` takes no template either (no Lovelace core card renders
  * Jinja), so "tint it by the current Kelvin" is not expressible in the
- * built-in feature at all. Here the tile's colour still drives the icon
- * and the slider's unfilled TRACK - so the row still reads as its phase
- * - while the fill carries the temperature.
+ * built-in feature at all. Here the tile's colour still drives the icon,
+ * so the row still reads as its phase, while the whole slider carries
+ * the temperature.
  *
  * `ha-control-slider` is a frontend internal with no compatibility
  * promise, and that is a real cost: a breaking change upstream lands
@@ -142,14 +145,13 @@ class FlareKelvinFeature extends HTMLElement {
     await ensureSlider();
 
     const style = document.createElement('style');
-    // Copied from the frontend's cardFeatureStyles, minus
-    // --control-slider-color which _render sets per value. Keep it that
-    // way: any divergence here is a divergence from the slider sitting
-    // next to this one in the same row.
+    // Copied from the frontend's cardFeatureStyles, minus the two
+    // colour properties, which _paint sets per value. Keep the rest
+    // identical: any divergence here is a divergence from the slider
+    // sitting next to this one in the same row.
     style.textContent = `
       :host { display: block; }
       ${SLIDER_TAG} {
-        --control-slider-background: var(--feature-color);
         --control-slider-background-opacity: 0.2;
         --control-slider-thickness: var(--feature-height);
         --control-slider-border-radius: var(--feature-border-radius);
@@ -179,7 +181,14 @@ class FlareKelvinFeature extends HTMLElement {
 
   _paint(kelvin) {
     if (kelvin == null || Number.isNaN(Number(kelvin))) return;
-    this._slider.style.setProperty('--control-slider-color', sliderColor(Number(kelvin)));
+    const color = sliderColor(Number(kelvin));
+    // Both halves of the bar take the value's colour: the fill solid,
+    // the unfilled remainder the same colour at the native 0.2 opacity.
+    // The built-in feature points BOTH of these at --feature-color, so
+    // this is still one substitution rather than a restyle - the whole
+    // control tracks the temperature instead of the tile's phase.
+    this._slider.style.setProperty('--control-slider-color', color);
+    this._slider.style.setProperty('--control-slider-background', color);
   }
 
   _render() {
