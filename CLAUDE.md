@@ -967,6 +967,18 @@ HA derives the id from the name at creation.
   unaffected. The one HACS surface we *can* reach is the README, which
   it renders in the repository panel - hence the icon at the top of it.
 - pyscript is fully gone from both this repo and the live host.
+- **The chart is one filled path, not a bar per sample.** It used to
+  draw a `<rect>` per five-minute sample, which made every ramp a
+  staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the
+  card are exported and covered by `tests/test_curve_chart.py`. Only
+  the GEOMETRY is simplified (the curve is piecewise linear, so most
+  sample points are redundant as shape) - the gradient still carries a
+  stop per sample, because colour moves continuously where brightness
+  does not. Corner easing uses a quadratic whose **control point is the
+  corner itself**, which is contained within the corner and so can only
+  cut inward; do not replace it with an interpolating spline
+  (Catmull-Rom and friends), which would overshoot the flat tops and
+  draw brightness the schedule never asks for.
 - **The docs site is how the card gets previewed without HA.**
   `docs/playground.html` loads the real
   `flare-curve-card.js` and feeds it the state shape a live

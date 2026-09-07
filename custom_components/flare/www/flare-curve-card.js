@@ -36,6 +36,9 @@ const DEFAULT_ENTITIES = {
 // One constant for both so they can't drift apart.
 const RENDER_INTERVAL_MS = 30000;
 
+// Bumped per card instance so each one's SVG gradient gets its own id.
+let _instanceCount = 0;
+
 const VB_W = 960;
 const VB_H = 220;
 const PAD_L = 34;
@@ -313,6 +316,138 @@ export function entitySuggestion(hass, entityId) {
   };
 }
 
+// How far back from a corner the fillet starts, in viewBox units.
+//
+// Chosen by eye, and worth being honest about: lights take 15-30s to
+// transition, but 30s of a 24h chart is about 0.3 units - invisible. So
+// this is cosmetic, not a physical model. It is safe to do anyway
+// because of how the corner is cut (see roundedTopEdge).
+const CORNER_RADIUS = 4;
+
+// Below this, a vertex is treated as lying on the line between its
+// neighbours and dropped. In viewBox units, so well under one brightness
+// step (CHART_H / 255, about 0.67) - it removes only genuinely collinear
+// points, of which there are many: a flat phase contributes a vertex
+// every five minutes that says nothing.
+const COLLINEAR_EPSILON = 0.3;
+
+/**
+ * Drop points that lie on the straight line between their neighbours.
+ *
+ * The samples are evenly spaced in time, but the curve is piecewise
+ * LINEAR (curve.py interpolates between boundaries), so nearly all of
+ * them are redundant as geometry - a flat Day phase is one straight line
+ * described by a hundred points. Dropping them leaves a handful of real
+ * vertices, which is what makes the corner rounding below controllable:
+ * the fillet is capped at half the shorter adjacent segment, and with
+ * every sample kept, every segment is one sample wide.
+ *
+ * Only the SHAPE is simplified. The gradient still gets a stop per
+ * sample, because colour varies continuously where brightness does not.
+ */
+export function simplifyPolyline(points, epsilon = COLLINEAR_EPSILON) {
+  if (points.length < 3) return points.slice();
+  const out = [points[0]];
+  for (let i = 1; i < points.length - 1; i++) {
+    const a = out[out.length - 1];
+    const b = points[i];
+    const c = points[i + 1];
+    const dx = c.x - a.x;
+    const dy = c.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    // Perpendicular distance of b from the line a->c.
+    const dist = Math.abs((b.x - a.x) * dy - (b.y - a.y) * dx) / len;
+    if (dist > epsilon) out.push(b);
+  }
+  out.push(points[points.length - 1]);
+  return out;
+}
+
+/**
+ * The top edge as an SVG path, with its corners eased off.
+ *
+ * Each interior vertex is replaced by a quadratic Bezier that leaves the
+ * incoming segment `r` before the corner and rejoins the outgoing one
+ * `r` after it, with the CONTROL POINT ON THE CORNER ITSELF.
+ *
+ * That last detail is what makes this safe. A quadratic is contained
+ * within the triangle of its three control points, so this curve can
+ * only ever cut inside the corner - it cannot overshoot. A smoothing
+ * spline through the sample points (Catmull-Rom, cardinal, anything
+ * interpolating) would overshoot around the flat tops and draw
+ * brightness the schedule never asks for, which is why the previous
+ * version refused to smooth at all. Cutting corners is a different
+ * operation and does not have that failure mode.
+ *
+ * r is capped at half of each adjacent segment so neighbouring fillets
+ * can never overlap or reverse, which is what would happen on a short
+ * segment between two close corners.
+ */
+export function roundedTopEdge(points, radius = CORNER_RADIUS) {
+  if (points.length < 2) return '';
+  const xy = (p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+  if (points.length === 2) return `M${xy(points[0])}L${xy(points[1])}`;
+
+  let d = `M${xy(points[0])}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = points[i - 1];
+    const v = points[i];
+    const next = points[i + 1];
+    const inLen = Math.hypot(v.x - prev.x, v.y - prev.y);
+    const outLen = Math.hypot(next.x - v.x, next.y - v.y);
+    const r = Math.min(radius, inLen / 2, outLen / 2);
+    if (!(r > 0.05)) {
+      d += `L${xy(v)}`;
+      continue;
+    }
+    const from = { x: v.x + ((prev.x - v.x) * r) / inLen, y: v.y + ((prev.y - v.y) * r) / inLen };
+    const to = { x: v.x + ((next.x - v.x) * r) / outLen, y: v.y + ((next.y - v.y) * r) / outLen };
+    d += `L${xy(from)}Q${xy(v)} ${xy(to)}`;
+  }
+  return `${d}L${xy(points[points.length - 1])}`;
+}
+
+/**
+ * The curve itself: ONE filled path whose top edge runs through the
+ * samples, filled with a single left-to-right gradient carrying a stop
+ * per sample.
+ *
+ * It used to be one <rect> per sample - a flat-topped column at that
+ * sample's brightness, in that sample's colour. That made every ramp a
+ * visible staircase: samples are five minutes apart, so an hour-long
+ * brightness fade rendered as a dozen steps, and the colour changed in
+ * hard vertical bands rather than blending.
+ *
+ * Straight lines between samples are EXACT: curve.py interpolates
+ * brightness and Kelvin linearly between boundaries, so the real curve
+ * is piecewise linear in time. The only deliberate inaccuracy is the
+ * corner rounding above, which is cosmetic and only ever cuts inward.
+ *
+ * Exported, like phaseAt/phaseMarks/layoutBoundaryLabels above, purely
+ * so tests can exercise it under node without a DOM.
+ */
+export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
+  if (!samples || samples.length < 2) return '';
+  const points = samples.map((s) => ({ x: xOf(s.t), y: BASELINE_Y - hOf(s.brightness) }));
+  const top = roundedTopEdge(simplifyPolyline(points));
+  const area =
+    `${top}L${xOf(samples[samples.length - 1].t).toFixed(2)},${BASELINE_Y}` +
+    `L${xOf(samples[0].t).toFixed(2)},${BASELINE_Y}Z`;
+  // Default gradientUnits (objectBoundingBox) maps 0-1 across the path's
+  // own bounding box, and the path spans exactly dayStart to dayEnd, so
+  // a stop's offset is just its position through the day.
+  const stops = samples
+    .map((s) => {
+      const offset = (((s.t - dayStart) / span) * 100).toFixed(3);
+      return `<stop offset="${offset}%" stop-color="${rgbToHex(kelvinToRgb(s.kelvin))}"/>`;
+    })
+    .join('');
+  return (
+    `<defs><linearGradient id="${gradientId}" x1="0" y1="0" x2="1" y2="0">${stops}</linearGradient></defs>` +
+    `<path d="${area}" fill="url(#${gradientId})" />`
+  );
+}
+
 class FlareCurveCard extends HTMLElement {
   // Given hass, point a brand-new card at a schedule sensor that
   // actually exists. Without this the card fell back to
@@ -332,6 +467,12 @@ class FlareCurveCard extends HTMLElement {
 
   setConfig(config) {
     this._config = config || {};
+    // Only used to make this card's SVG gradient id unique on the page -
+    // see the gradientId comment in the render below.
+    if (this._instanceId === undefined) {
+      _instanceCount += 1;
+      this._instanceId = _instanceCount;
+    }
     // `sensor: living_room` is shorthand for pointing every entity at
     // that named sensor's entities (the value is the sensor's slugified
     // name, i.e. its entity_id prefix - see coordinator.py's
@@ -579,18 +720,9 @@ class FlareCurveCard extends HTMLElement {
     const xOf = (t) => PAD_L + ((t - dayStart) / span) * CHART_W;
     const hOf = (brightness) => (brightness / 255) * CHART_H;
 
-    let bars = '';
-    if (haveSamples) {
-      const barW = CHART_W / (samples.length - 1) + 0.6;
-      bars = samples
-        .map((s) => {
-          const x = xOf(s.t);
-          const h = hOf(s.brightness);
-          const color = rgbToHex(kelvinToRgb(s.kelvin));
-          return `<rect x="${(x - barW / 2).toFixed(2)}" y="${(BASELINE_Y - h).toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" fill="${color}" />`;
-        })
-        .join('');
-    }
+    const curveFill = haveSamples
+      ? curveFillSvg(samples, xOf, hOf, dayStart, span, `flare-curve-fill-${this._instanceId}`)
+      : '';
 
     // Rendered as real HTML text, not SVG <text>, deliberately - the
     // chart's viewBox is stretched to the card's actual width via
@@ -705,7 +837,7 @@ class FlareCurveCard extends HTMLElement {
     const svg = `
       <div class="chart-wrap">
         <svg viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none" class="chart">
-          ${bars}
+          ${curveFill}
           ${sunMarkers}
           ${boundaryLines}
           ${nowMarker}
