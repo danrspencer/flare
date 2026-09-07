@@ -63,8 +63,8 @@ Twenty-five near-identical controls is a lot to scan, so two things are colour-c
 - **Icon is the channel** — brightness, colour temperature, or an hourglass for
   transitions.
 
-The colour-temperature sliders are painted in the colour they set, and change colour as
-you drag them.
+Both curve sliders show their value rather than just their phase: colour temperature is
+painted in the colour it sets, and brightness fades in and out with how bright it is.
 
 ## Changing it
 

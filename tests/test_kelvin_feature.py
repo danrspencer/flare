@@ -39,6 +39,9 @@ from test_curve_js_parity import CARD_JS, CARD_SHIMS, _node_eval
 pytestmark = pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
 
 FEATURE_JS = CARD_JS.parent / "flare-kelvin-feature.js"
+# The slider machinery both features share. The CSS and the per-value
+# setProperty calls live here now, not in the feature.
+SLIDER_JS = CARD_JS.parent / "flare-value-slider.js"
 
 
 DRIVER = CARD_SHIMS + f"""
@@ -207,29 +210,44 @@ def test_it_styles_the_native_slider_exactly_as_the_built_in_feature_does():
     Asserted against the source text rather than a rendered tile: these
     are one-line declarations whose only failure mode is drifting from
     upstream, and there is no DOM in this test layer to render into."""
-    source = FEATURE_JS.read_text()
+    source = SLIDER_JS.read_text()
 
     for prop, value in NATIVE_SLIDER_PROPERTIES.items():
         assert f"{prop}: {value};" in source, f"{prop} does not match cardFeatureStyles"
 
 
 @pytest.mark.parametrize("prop", PER_VALUE_PROPERTIES)
-def test_both_halves_of_the_bar_take_the_values_colour(prop):
-    """The fill and the unfilled remainder are both the colour of the
-    current value - the remainder simply faded by the native opacity
-    above. The built-in points both at --feature-color, the tile's phase
-    colour; pointing both at the value instead is the whole substitution.
+def test_both_halves_of_the_bar_are_set_per_value(prop):
+    """The fill and the unfilled remainder are both set from script, so
+    both can take the colour of the current value - the remainder simply
+    faded by the native opacity. The built-in points both at
+    --feature-color, the tile's phase colour; pointing both at the value
+    instead is the whole substitution."""
+    assert f"setProperty('{prop}'" in SLIDER_JS.read_text(), f"{prop} is never set per value"
 
-    Each must be set from script and NOT also appear in the static CSS:
-    with both, whichever wins would depend silently on specificity."""
+
+def test_colour_temperature_paints_both_halves_from_one_conversion():
+    """Not two colour functions that could disagree - the same one, so
+    the fill and the faded remainder can never be different hues."""
     source = FEATURE_JS.read_text()
+
+    assert "fillFor: sliderColor," in source
+    assert "trackFor: sliderColor," in source
+
+
+def test_the_background_is_never_declared_both_ways_at_once():
+    """A feature that sets the track per value must NOT also pin it in
+    the static CSS: with both, whichever wins would depend silently on
+    specificity. The shared CSS therefore emits that declaration only
+    when the feature has no trackFor."""
+    source = SLIDER_JS.read_text()
     style_block = source[source.index("style.textContent = `") : source.index("this._slider = document")]
 
     # Match on the colon: a bare `--control-slider-background` is also a
     # prefix of `--control-slider-background-opacity`, which legitimately
-    # IS in the static block.
-    assert f"{prop}:" not in style_block, f"{prop} is pinned statically as well as per value"
-    assert f"setProperty('{prop}'" in source, f"{prop} is never set per value"
+    # IS in the static block unconditionally.
+    assert "--control-slider-background:" in style_block, "no static fallback for the track"
+    assert "trackFor ?" in style_block, "the static track colour is not conditional"
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

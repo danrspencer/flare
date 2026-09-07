@@ -94,7 +94,7 @@ at all.
 
 ## Previewing the dashboard card
 
-The [curve playground](https://danrspencer.github.io/flare/playground.html) on this site renders the real card against synthetic data, with no
+The [curve playground](https://danrspencer.github.io/flare/playground/) on this site renders the real card against synthetic data, with no
 Home Assistant instance involved — the page loads
 `custom_components/flare/www/flare-curve-card.js` itself and feeds it the state
 shape a live Home Assistant would. Build the site locally (below) to exercise a change to the card.

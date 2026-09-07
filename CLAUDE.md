@@ -932,7 +932,15 @@ HA derives the id from the name at creation.
   didn't match). Depending on `ha-control-slider` is an accepted risk,
   taken at the user's direction - it is a frontend internal with no
   compatibility promise, so if it breaks, follow whatever
-  `hui-numeric-input-card-feature.ts` does next. It exists because a tile's slider takes
+  `hui-numeric-input-card-feature.ts` does next. **`flare-value-slider.js`
+  holds everything the two features share** (waiting for
+  `ha-control-slider`, the `cardFeatureStyles` copy, commit-on-changed /
+  repaint-on-moved); kelvin and brightness differ only in which entities
+  they accept and what colour a value maps to. Brightness has no colour
+  of its own, so it fades `--primary-color` by value instead - **not**
+  white-to-transparent, which looked best on a dark card and is
+  invisible at full brightness on a light one, the same trap the Kelvin
+  slider hits unavoidably near 6667K. It exists because a tile's slider takes
   its colour from `--feature-color`, which `hui-tile-card` sets to
   `var(--tile-color)`, and a tile `color` accepts no template - so the
   built-in `numeric-input` cannot show a value as a colour while the
