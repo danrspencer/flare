@@ -351,7 +351,7 @@ CARD_JS_PATH = "flare-curve-card.js"
 # it imports kelvinToRgb from the card above, so the two agree on colour
 # by construction rather than by a second copy of the conversion.
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
-# A Lovelace view strategy: `views: - strategy: {type: custom:flare}`
+# A Lovelace view strategy: `views: - strategy: {type: custom:flare-schedule}`
 # builds a settings view, one section per schedule sensor. Shipping it
 # here rather than having people paste generated YAML is what lets a
 # layout change reach existing installs through a HACS update.

@@ -7,6 +7,28 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.14.0] - 2026-09-07
+
+### Changed — breaking
+
+- **The schedule dashboard view is now `custom:flare-schedule`**, not
+  `custom:flare`. It was named while it was the only strategy; with a
+  tracking view alongside it, the bare name gives no hint which of the
+  two you get, and the pair now reads as a set.
+
+  **If you added the view, update its type:**
+
+  ```yaml
+  views:
+    - title: Lighting
+      strategy:
+        type: custom:flare-schedule   # was: custom:flare
+  ```
+
+  A view still using the old name shows "Custom element doesn't exist"
+  until it's updated. Nothing else changes — the `sensor:` option and
+  everything the view builds are unaffected.
+
 ## [0.13.0] - 2026-09-07
 
 ### Added
