@@ -42,7 +42,13 @@
  * Assistant resolves `custom:flare` to for a view strategy.
  */
 
-import { sectionConfig, scheduleSensors, normaliseSlug } from './flare-section.js';
+import {
+  sectionConfig,
+  scheduleSensors,
+  normaliseSlug,
+  trackingSectionConfig,
+  trackingScopes,
+} from './flare-section.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
 
@@ -91,3 +97,40 @@ class FlareViewStrategy extends HTMLElement {
 }
 
 customElements.define('ll-strategy-view-flare', FlareViewStrategy);
+
+/**
+ * A second view strategy, for what FLARE is currently DRIVING rather
+ * than what it is scheduled to do:
+ *
+ *   views:
+ *     - title: Tracking
+ *       strategy:
+ *         type: custom:flare-tracking
+ *
+ * One section per tracking scope - how many lights it is controlling,
+ * how many something else has taken, which ones those are, and the Clear
+ * button that hands them back.
+ *
+ * Separate from the schedule view rather than a section appended to it:
+ * a house has one scope per room (sixteen here) against a handful of
+ * schedules, so merging them would bury the schedules, and the two
+ * answer different questions - "what should the light be doing" versus
+ * "who currently owns it".
+ */
+class FlareTrackingViewStrategy extends HTMLElement {
+  static async generate(config, hass) {
+    const scopes = trackingScopes(hass);
+
+    if (!scopes.length) {
+      return notice(
+        'No FLARE tracking scopes found yet.\n\nAdd one under **Settings → Devices ' +
+          '& Services → FLARE Tracking → Add state device**, and it will appear here ' +
+          'automatically.'
+      );
+    }
+
+    return view(scopes.map(({ slug, title }) => trackingSectionConfig(slug, title)));
+  }
+}
+
+customElements.define('ll-strategy-view-flare-tracking', FlareTrackingViewStrategy);
