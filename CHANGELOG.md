@@ -7,6 +7,21 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.6] - 2026-09-07
+
+### Fixed
+
+- **The colour-temperature slider's drag handle is no longer invisible at
+  pale settings.** Home Assistant's slider draws its handle in white,
+  which works against a warm fill but disappears once the colour
+  temperature approaches white — around 6667 K, the Day default, white
+  contrasts with the fill at 1.03:1, i.e. not at all.
+
+  The handle now flips to near-black at the point where white stops
+  being visible (a 1.6:1 contrast floor, which lands near 3500 K). It
+  stays white everywhere white still works, so a warm slider is
+  unchanged and still matches the brightness slider beside it.
+
 ## [0.10.5] - 2026-09-07
 
 ### Changed
