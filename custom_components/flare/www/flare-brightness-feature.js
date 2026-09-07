@@ -9,8 +9,32 @@
  * two sliders sitting side by side disagreed about what colour meant.
  *
  * Brightness has no colour of its own, so the value is carried by
- * INTENSITY instead: the theme's own accent colour, faded in proportion
- * to the value. It reads as a dimmer, which is what it is.
+ * INTENSITY: the fill fades in proportion to it. It reads as a dimmer,
+ * which is what it is.
+ *
+ * The HUE comes from somewhere else. Point `tint_from` at a
+ * colour-temperature entity and the fill takes that colour, so the two
+ * sliders in a row together preview what the light will actually look
+ * like - hue from the temperature, intensity from the brightness:
+ *
+ *   features:
+ *     - type: custom:flare-brightness-feature
+ *       tint_from: number.downstairs_morning_kelvin
+ *
+ * Named `tint_from` rather than color_from/colour_from because this repo
+ * writes "colour" and Home Assistant's own config keys write "color",
+ * and a key someone has to type is a bad place to make them guess which.
+ * It also says what it does.
+ *
+ * The entity is NAMED rather than derived from the brightness entity's
+ * own id. The two are a fixed rename apart in FLARE's own naming
+ * (`..._brightness` / `..._kelvin`), so deriving it would work here -
+ * and would silently do nothing for anyone pointing this at their own
+ * entities, which the unit-free check below deliberately allows.
+ *
+ * With no `tint_from`, or one pointing at something unreadable, the fill
+ * falls back to the theme's accent at the same fading, so the feature
+ * still works standalone.
  *
  * Deliberately not white-fading-to-transparent, which is the most
  * literal reading of "brightness" and looked best on a dark card: at
@@ -20,10 +44,13 @@
  * unavoidable, so there is no reason to introduce it a second time
  * somewhere it is a free choice.
  *
- * The colour comes from `--primary-color` via color-mix rather than a
- * hardcoded value, so it follows the user's theme.
+ * The fallback colour comes from `--primary-color` via color-mix rather
+ * than a hardcoded value, so it follows the user's theme - and that is
+ * also ha-control-slider's own default fill, so an untinted one looks
+ * like the stock slider, only fading.
  */
 
+import { kelvinToRgb } from './flare-curve-card.js';
 import { defineValueSlider } from './flare-value-slider.js';
 
 // Below this the fill would be indistinguishable from the unfilled
@@ -47,9 +74,31 @@ export function fillStrength(value, { min = 0, max = 255 } = {}) {
   return MIN_STRENGTH + (1 - MIN_STRENGTH) * clamped;
 }
 
-export function brightnessColor(value, attrs) {
-  const percent = (fillStrength(value, attrs) * 100).toFixed(1);
-  return `color-mix(in srgb, var(--primary-color) ${percent}%, transparent)`;
+/**
+ * The colour temperature this slider should borrow its hue from, or null
+ * if there is none to borrow.
+ *
+ * Null covers every way that can go wrong - no `tint_from`, an entity
+ * that does not exist, one that is unavailable - because they all want
+ * the same answer: fall back to the theme colour rather than render
+ * something arbitrary.
+ */
+export function tintKelvin(config, hass) {
+  const entityId = config && config.tint_from;
+  const stateObj = entityId && hass && hass.states ? hass.states[entityId] : undefined;
+  if (!stateObj) return null;
+  const kelvin = Number(stateObj.state);
+  return Number.isNaN(kelvin) ? null : kelvin;
+}
+
+export function brightnessColor(value, attrs, config, hass) {
+  const strength = fillStrength(value, attrs);
+  const kelvin = tintKelvin(config, hass);
+  if (kelvin === null) {
+    return `color-mix(in srgb, var(--primary-color) ${(strength * 100).toFixed(1)}%, transparent)`;
+  }
+  const [r, g, b] = kelvinToRgb(kelvin);
+  return `rgba(${r}, ${g}, ${b}, ${strength.toFixed(3)})`;
 }
 
 /**

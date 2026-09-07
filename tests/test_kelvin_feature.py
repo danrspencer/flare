@@ -269,3 +269,21 @@ def test_the_feature_is_registered_for_the_card_editor(result):
     assert feature is not None, "not pushed to window.customCardFeatures"
     assert feature["name"] == "FLARE Colour temperature"
     assert feature["hasIsSupported"]
+
+
+def test_the_colour_functions_are_given_the_config_and_hass():
+    """A feature can colour itself from something other than its own
+    value - brightness borrows its hue from a colour-temperature entity
+    named in its config - and that only works if the factory hands both
+    the config and hass through to the colour function.
+
+    Dropping either FAILS SILENTLY: every colour function still returns
+    a perfectly good colour, just always the fallback one. The features'
+    own tests call those functions directly with all four arguments, so
+    they cannot see it either - which is how mutation testing found this
+    was unguarded."""
+    source = SLIDER_JS.read_text()
+    args = source[source.index("const args = [") : source.index("\n", source.index("const args = ["))]
+
+    assert "this._config" in args, "the colour function cannot see its own config"
+    assert "this._hass" in args, "the colour function cannot see hass"

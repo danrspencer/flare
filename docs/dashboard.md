@@ -63,8 +63,10 @@ Twenty-five near-identical controls is a lot to scan, so two things are colour-c
 - **Icon is the channel** — brightness, colour temperature, or an hourglass for
   transitions.
 
-Both curve sliders show their value rather than just their phase: colour temperature is
-painted in the colour it sets, and brightness fades in and out with how bright it is.
+Each Curve row is a colour temperature and a brightness, in that order, and together they
+preview what the light will look like: the colour temperature slider is painted in the
+colour it sets, and the brightness slider beside it takes that same colour and fades it by
+how bright it is.
 
 ## Changing it
 

@@ -302,7 +302,26 @@ def test_every_curve_value_is_draggable(result):
     brightness = [t for t in curve if t["entity"].endswith("_brightness")]
     assert len(brightness) == 4
     for t in brightness:
-        assert t["features"] == [{"type": "custom:flare-brightness-feature"}], t["entity"]
+        assert t["features"][0]["type"] == "custom:flare-brightness-feature", t["entity"]
+
+
+def test_each_brightness_slider_is_tinted_by_its_own_phases_colour(result):
+    """The two sliders in a row together preview what the light will look
+    like: hue from the colour temperature, intensity from the brightness.
+
+    That needs the brightness feature to be told which entity to take its
+    hue from, and it must be the one from the SAME phase - pointing at
+    another phase's would be invisible in review and quietly wrong on
+    screen."""
+    brightness = [
+        t
+        for t in _tiles(result["section"])
+        if t["entity"].startswith("number.") and t["entity"].endswith("_brightness")
+    ]
+
+    assert len(brightness) == 4
+    for t in brightness:
+        assert t["features"][0]["tint_from"] == t["entity"].replace("_brightness", "_kelvin")
 
 
 def test_both_curve_channels_use_flares_own_sliders(result):
@@ -353,8 +372,11 @@ def test_a_row_is_exactly_one_phase(result, group):
     pairs = [grid["cards"][i : i + 2] for i in range(0, len(grid["cards"]), 2)]
     assert [p[0]["name"].split()[0] for p in pairs] == ["Morning", "Day", "Evening", "Night"]
     for first, second in pairs:
-        assert "brightness" in first["entity"]
-        assert "kelvin" in second["entity"]
+        # Colour temperature leads, brightness follows: the colour is
+        # decided on the left and carried into the slider on the right,
+        # so left-to-right is the order the two are read in.
+        assert "kelvin" in first["entity"]
+        assert "brightness" in second["entity"]
         assert first["color"] == second["color"], "a row must be a single colour"
 
 

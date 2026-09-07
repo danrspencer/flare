@@ -65,7 +65,11 @@ function ensureSlider() {
  *   name      what the card editor calls it
  *   supported (hass, context) => boolean - which entities it is offered
  *             for, and which it refuses to render
- *   fillFor   (value, attributes) => CSS colour for the filled part
+ *   fillFor   (value, attributes, config, hass) => CSS colour for the
+ *             filled part. config and hass are passed so a feature can
+ *             colour itself from something OTHER than its own value -
+ *             brightness takes its hue from a colour-temperature entity
+ *             named in its config.
  *   trackFor  optional; the same for the unfilled remainder. Omit it and
  *             the remainder falls through to ha-control-slider's own
  *             default, a neutral grey - which is what you want when the
@@ -153,9 +157,10 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
     _paint(value) {
       if (value == null || Number.isNaN(Number(value))) return;
       const attrs = (this._stateObj || {}).attributes || {};
-      this._slider.style.setProperty('--control-slider-color', fillFor(Number(value), attrs));
+      const args = [Number(value), attrs, this._config, this._hass];
+      this._slider.style.setProperty('--control-slider-color', fillFor(...args));
       if (trackFor) {
-        this._slider.style.setProperty('--control-slider-background', trackFor(Number(value), attrs));
+        this._slider.style.setProperty('--control-slider-background', trackFor(...args));
       }
     }
 

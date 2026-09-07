@@ -7,6 +7,27 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.0] - 2026-09-07
+
+### Changed
+
+- **A Curve row now previews the light.** The brightness slider takes its
+  colour from that phase's colour temperature and fades it by how bright
+  the setting is — so hue comes from the temperature, intensity from the
+  brightness, and the two sliders read as one thing rather than two.
+
+- **Colour temperature now sits to the left of brightness**, in both the
+  Curve and Transitions groups. The colour is decided on the left and
+  carried into the slider on the right, so left-to-right is the order
+  they're read in.
+
+  The dashboard view regenerates itself, so there's nothing to do — but
+  the two columns have swapped round from what you're used to.
+
+- The brightness feature takes an optional `tint_from` pointing at a
+  colour-temperature entity. Without one it falls back to the theme's
+  accent colour, so it still works on its own.
+
 ## [0.14.3] - 2026-09-07
 
 ### Changed
