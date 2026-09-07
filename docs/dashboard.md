@@ -64,9 +64,9 @@ Twenty-five near-identical controls is a lot to scan, so two things are colour-c
   transitions.
 
 Each Curve row is a colour temperature and a brightness, in that order, and together they
-preview what the light will look like: the colour temperature slider is painted in the
-colour it sets, and the brightness slider beside it takes that same colour and fades it by
-how bright it is.
+preview what the light will look like: both sliders are painted in the colour that phase
+sets, and how far the brightness one fills is how bright it will be. It's the same idea as
+Home Assistant's own brightness slider for a light.
 
 ## Changing it
 
