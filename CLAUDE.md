@@ -937,10 +937,20 @@ HA derives the id from the name at creation.
   `ha-control-slider`, the `cardFeatureStyles` copy, commit-on-changed /
   repaint-on-moved); kelvin and brightness differ only in which entities
   they accept and what colour a value maps to. Brightness has no colour
-  of its own, so it fades `--primary-color` by value instead - **not**
-  white-to-transparent, which looked best on a dark card and is
-  invisible at full brightness on a light one, the same trap the Kelvin
-  slider hits unavoidably near 6667K. It exists because a tile's slider takes
+  of its own, so it BORROWS one: `tint_from` names a colour-temperature
+  entity (the section passes the same phase's Kelvin entity) and the
+  fill is that colour faded by value, so a row previews the light - hue
+  from the temperature, intensity from the brightness. Hence colour
+  temperature sits LEFT of brightness in both pair grids: the colour is
+  decided there and carried across. With no readable `tint_from` it
+  falls back to `--primary-color`, which is also `ha-control-slider`'s
+  own default fill. **Not** white-to-transparent, which looked best on
+  a dark card and is invisible at full brightness on a light one - the
+  same trap the Kelvin slider hits unavoidably near 6667K, and which
+  the tint now inherits for that one phase. The unfilled track is left
+  to the element's own `--disabled-color`, NOT the tile colour that
+  `cardFeatureStyles` uses: a phase-tinted track under a value-tinted
+  fill reads as two things fighting. It exists because a tile's slider takes
   its colour from `--feature-color`, which `hui-tile-card` sets to
   `var(--tile-color)`, and a tile `color` accepts no template - so the
   built-in `numeric-input` cannot show a value as a colour while the
