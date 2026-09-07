@@ -7,20 +7,16 @@ permalink: /dashboard/
 <h1>Dashboard Generator</h1>
 
 <p>
-  Every schedule sensor (Settings &rarr; Devices &amp; Services &rarr; <strong>FLARE
-  Schedules</strong> &rarr; Add schedule sensor) gets the same shape of dashboard
-  section: the curve, a phase override, the five schedule times, the eight curve
-  values, and the eight transition minutes. Typing the slug once below builds the
-  whole thing instead of hand-editing 25 entity IDs.
+  Every schedule sensor gets the same dashboard section: the curve, a phase override,
+  the five schedule times, the eight curve values and the eight transition times.
+  Type your sensor's slug below and paste the result into a dashboard.
 </p>
 
 <p class="dgen-note">
-  <strong>Just want the chart?</strong> On Home Assistant 2026.6 and newer you don't
-  need this page for that — add a card, switch to the <strong>By entity</strong> tab,
-  pick your schedule sensor, and <strong>FLARE Curve</strong> is offered under
-  <em>Community</em> with a live preview, already sized to fill its section. The
-  generator below is for the rest: the picker only ever suggests the one card, not the
-  24 controls that go around it.
+  <strong>Just want the chart?</strong> On Home Assistant 2026.6 and newer, add a card,
+  open the <strong>By entity</strong> tab and pick your schedule sensor —
+  <strong>FLARE Curve</strong> is offered under <em>Community</em>, with a live preview.
+  The generator below is for the 24 controls that go around it.
 </p>
 
 <div class="dgen-panel">
@@ -49,169 +45,46 @@ permalink: /dashboard/
 <pre class="dgen-output"><code id="dgen-yaml"></code></pre>
 <p class="dgen-status" id="dgen-status"></p>
 
-<p class="dgen-note">
-  <code>column_span: 4</code> on the outer grid and <code>grid_options: {columns: full}</code>
-  on the curve card aren't decorative — a card inside a <code>sections</code> view doesn't
-  inherit its section's full width just because the section itself is full-width,
-  so both are needed for the curve to actually span the section instead of rendering
-  at roughly a third of it.
-</p>
-
-<p class="dgen-note">
-  The Curve and Transitions groups are each a nested <code>grid</code> card at
-  <code>columns: 2</code>, so a row is always exactly one phase — brightness beside
-  colour, Morning down to Night — and reading down a column gives you one channel
-  across the whole day. That has to be the grid card's own <code>columns</code>, not
-  per-tile <code>grid_options</code>: the latter counts against the <em>section's</em>
-  grid, which is 12 columns times its <code>column_span</code>, so a fixed per-tile
-  value lands on a different number of tiles per row as the window changes width.
-  Fine where nothing depends on which cards are adjacent — the Override pair and the
-  five schedule times still use it — and not fine for a layout that is entirely about
-  which two tiles sit together. The nested grid needs its own
-  <code>grid_options: {columns: full}</code> for the same reason the curve card does.
-</p>
-
-<p>
-  The four brightness values are tiles carrying the <code>numeric-input</code> feature
-  (<code>style: slider</code>) — drag to set the value directly from the dashboard, no
-  need to open anything. The slider's own range comes from the entity itself (0–255),
-  not from anything typed into this generator, so it can never drift out of sync with
-  what the entity actually accepts. The four colour-temperature values get FLARE's own
-  slider instead — see below. Every feature sits
-  <code>inline</code> — on the same row as the tile's name rather than stacked under it —
-  so a slider is half the height it would otherwise be.
-</p>
-
-<p>
-  Phase and Sticky are directly actionable the same way — a <code>select-options</code>
-  dropdown and a <code>toggle</code> respectively, both inline. The five schedule times
-  deliberately aren't: a <code>time</code> entity has no inline-editable feature, so
-  tapping the tile to open the time picker is the best available option.
-</p>
-
-<p>
-  <strong>The eight transition tiles carry no feature at all</strong>, which is also
-  deliberate. They run 0–1440 minutes — a whole day, so that "always be transitioning"
-  is expressible rather than an error — while any value you'd actually set is under an
-  hour. A slider would spend about 96% of its travel out of reach and a single pixel
-  would be worth several minutes. The <code>numeric-input</code> feature takes no
-  min/max of its own (its whole config is <code>{type, style}</code>), so there's
-  nothing to narrow, and <code>style: buttons</code> steps by the entity's step of 1,
-  i.e. 45 taps to reach 45 minutes. So a transition tile falls through to its more-info
-  dialog — which FLARE already sets to <code>mode: box</code>, a number you type rather
-  than a second slider. For a duration that's the right interaction anyway, and it
-  halves the group's height.
-</p>
-
-<h2 id="reading-the-section">Reading the section at a glance</h2>
-
-<p>
-  Twenty-five near-identical controls is a lot to scan, so the section is colour-coded
-  along one axis and icon-coded along the other:
-</p>
+<h2 id="what-you-get">What you get</h2>
 
 <ul>
-  <li><strong>Colour is the phase.</strong> Morning is blue, Day yellow, Evening orange,
-    Night indigo — the same colour wherever that phase appears, in the Schedule group,
-    the Curve group and Transitions alike. The palette tracks the <em>colour temperature
-    the curve actually reaches</em> in each phase rather than the time of day: Morning
-    ramps to the coldest, bluest light of the day, and each phase after it is warmer
-    than the last. That reads backwards against a sunrise/sunset mental model, and
-    right against the curve drawn directly above it.</li>
-  <li><strong>Icon is the channel.</strong> Brightness controls carry
-    <code>mdi:brightness-6</code> and colour-temperature controls
-    <code>mdi:temperature-kelvin</code>, whichever phase they belong to. Transitions are
-    durations rather than levels, so they all take <code>mdi:timer-sand</code> instead —
-    the two groups otherwise use identical tile names.</li>
+  <li><strong>The curve</strong> — the day's brightness and colour, with a marker at the
+    current time.</li>
+  <li><strong>Override</strong> — force a phase, plus a Sticky switch to hold it until
+    you change it back.</li>
+  <li><strong>Schedule</strong> — the five times that bound the phases. Tap one to set it.</li>
+  <li><strong>Curve</strong> — brightness and colour temperature for each phase, one
+    phase per row. Drag to set.</li>
+  <li><strong>Transitions</strong> — how long before each phase ends to start easing into
+    the next. Tap one to type a value.</li>
 </ul>
 
 <p>
-  A tile's <code>color</code> reaches its slider, not just its icon: the tile card
-  publishes <code>--feature-color</code> from its own colour, so the brightness fill you
-  drag is the phase colour too. That only applies while the entity counts as
-  "active", which for a <code>number</code> is always — so a transition left at
-  <code>0</code> still shows its phase colour rather than greying out. Sticky is the
-  deliberate exception: it's a
-  <code>switch</code>, so it greys itself out when off, which is exactly the right signal
-  for an override that isn't engaged.
+  The heading shows the current phase, brightness and colour temperature, and adds a chip
+  when a manual override is active.
 </p>
 
-<h2 id="colour-temperature-slider">The colour-temperature slider</h2>
+<h2 id="reading-the-section">Reading it at a glance</h2>
+
+<ul>
+  <li><strong>Colour is the phase</strong> — Morning blue, Day yellow, Evening orange,
+    Night indigo, wherever that phase appears. It follows the colour temperature each
+    phase reaches, so it lines up with the curve above.</li>
+  <li><strong>Icon is the channel</strong> — brightness, colour temperature, or an
+    hourglass for transitions.</li>
+</ul>
 
 <p>
-  The four colour-temperature controls use <strong>FLARE Colour temperature</strong>
-  (<code>type: custom:flare-kelvin-feature</code>) rather than the built-in slider. It
-  <em>is</em> the built-in slider — the same <code>ha-control-slider</code> element, given
-  the same settings, so the handle, the rounded fill, the tooltip and the keyboard
-  behaviour are all Home Assistant's own. The only difference is that its fill is painted
-  in the colour temperature it's set to, and changes colour as you drag it.
-</p>
-
-<p>
-  It exists because <code>--feature-color</code> is one knob doing two jobs. The
-  built-in slider takes its fill from the tile's colour — which this section has already
-  spent on encoding the phase — and a tile's <code>color</code> accepts no template, so
-  "tint it by the current value" isn't expressible there at all. FLARE's feature paints
-  its own track and never reads <code>--feature-color</code>, so both things can be true
-  at once: the icon keeps the phase colour, the track carries the temperature.
-</p>
-
-<p>
-  The colour comes from the same Kelvin-to-RGB conversion the curve card draws with, so
-  the bar and the curve directly above it in the same section agree by construction.
-</p>
-
-<p>
-  Both halves of the bar take the value's colour: the fill solid, the unfilled remainder
-  the same colour faded — at the same 0.2 opacity the built-in slider uses, so only the
-  hue is FLARE's. The built-in points both of those at the tile's colour; this points
-  both at the temperature, which is the entire substitution. The tile's phase colour
-  still shows on the icon, so a row is still identifiable at a glance.
-</p>
-
-<p>
-  Everything else about the control is Home Assistant's, which is deliberate: there's no
-  separate slider implementation here to drift out of step with the one sitting next to
-  it in the same row.
-</p>
-
-<p>
-  One consequence worth knowing: the native slider draws its drag handle in white, and
-  at the pale end of the scale — around 6667&nbsp;K the colour temperature <em>is</em>
-  very nearly white — the handle blends into the fill. There is no supported way to
-  recolour it: the colour is hardcoded, with no CSS custom property and no
-  <code>part</code> exposed. Reaching into the slider's internals to override it was
-  tried and deliberately reverted, because it depended on an internal class name and
-  failed silently when that assumption didn't hold. The fill edge itself stays readable
-  regardless, since the filled portion is solid and the remainder is the same colour at
-  20% opacity.
-</p>
-
-<p>
-  It ships inside the integration and registers itself exactly as the curve card does,
-  so there's still nothing extra to install. It's also not FLARE-specific: it's offered
-  in the tile card editor for any <code>number</code> entity measured in
-  <code>K</code>.
-</p>
-
-<p>
-  The section heading carries four badges reading straight off the schedule sensor:
-  the current <strong>phase</strong>, and the <strong>brightness</strong> and
-  <strong>colour temperature</strong> it's asking for right now (via
-  <code>state_content</code>, which takes an attribute name). The fourth is the manual
-  phase override, given a <code>visibility</code> condition of
-  <code>state_not: Auto</code> so it only appears while an override is actually
-  engaged — it reads "Auto" the vast majority of the time, which is noise on a header
-  whose job is to show what's happening.
+  The colour-temperature sliders are painted in the colour they set, and change colour as
+  you drag them.
 </p>
 
 <h2 id="repeat-per-schedule">Repeat per schedule</h2>
 
 <p>
-  One section per schedule sensor — drop each one into its own <code>sections</code>
-  view column, or stack several in the same column if you'd rather. Nothing here
-  reads a live sensor's actual values; it only builds entity IDs from the slug you
-  give it, so it works whether or not that schedule exists yet.
+  One section per schedule sensor — drop each into its own column, or stack several in the
+  same one. The generator only builds entity IDs from the slug you give it, so it works
+  whether or not that schedule exists yet.
 </p>
 
 <link rel="stylesheet" href="{{ '/assets/css/dashboard-generator.css' | relative_url }}" />
