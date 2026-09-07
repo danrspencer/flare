@@ -15,7 +15,8 @@ The quickest way to see what this actually does is the
 **[interactive curve playground](https://danrspencer.github.io/flare/playground.html)** — it runs the
 real dashboard card, and you can drag the schedule and curve settings around and watch it redraw.
 
-- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard card
+- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
+- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
 - **[Power users](https://danrspencer.github.io/flare/advanced/)** — every service and entity, scene handoff, and building without the blueprint
 - **[Blueprint reference](https://danrspencer.github.io/flare/blueprint/)** — every input, feature by feature
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite

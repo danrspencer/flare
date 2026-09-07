@@ -82,27 +82,32 @@ That's the minimum. Everything else has a working default.
 Repeat per room. Rooms can share a schedule sensor — the update jitter setting exists so
 they don't all issue commands in the same instant.
 
-## Step 4 — add the card (optional)
+## Step 4 — add the dashboard (optional)
 
-On Home Assistant 2026.6 or newer, add a card, open the **By entity** tab, and pick your
-schedule sensor — **FLARE Curve** appears under *Community* with a live preview, and lands
-full-width with no YAML at all.
-
-Otherwise, add a **Manual** card to any dashboard:
+FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
+configuration editor**, and add:
 
 ```yaml
-type: custom:flare-curve-card
-sensor: ground_floor
+views:
+  - title: Lighting
+    strategy:
+      type: custom:flare-schedule
+  - title: Tracking
+    strategy:
+      type: custom:flare-tracking
 ```
 
-`sensor` is the schedule sensor's slug — `ground_floor` for `sensor.ground_floor_flare`. The
-card draws the day's brightness and colour curve with a marker at the current time.
+**Lighting** gives you the day's curve and every schedule and curve setting, a section
+per schedule sensor. **Tracking** shows which lights FLARE is driving and which ones
+something else has taken over. Nothing to fill in — see the
+[Dashboard]({{ site.baseurl }}/dashboard/) page for the details.
 
 {: .tip }
-> Want the curve alongside a phase override and every schedule/curve entity as tiles,
-> not just the chart? Add FLARE's ready-made
-> [dashboard view]({{ site.baseurl }}/dashboard/) — one line of config, and it builds
-> a section per schedule sensor for you.
+> **Just want the chart?** On Home Assistant 2026.6 or newer, add a card, open the
+> **By entity** tab and pick your schedule sensor — **FLARE Curve** appears under
+> *Community* with a live preview. Or add a **Manual** card with
+> `type: custom:flare-curve-card` and `sensor: ground_floor`, the part before `_flare`
+> in the sensor's entity ID.
 
 ---
 
