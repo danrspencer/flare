@@ -7,6 +7,22 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.7] - 2026-09-07
+
+### Reverted
+
+- **The drag-handle recolour from 0.10.6 has been removed.** Home
+  Assistant's slider hardcodes its handle to white with no CSS custom
+  property and no `part` exposed, so the only way to change it was to
+  inject a rule into the slider's own shadow root. That coupled the
+  feature to an internal class name, and in practice it silently did
+  nothing at all — so it bought fragility and delivered no fix.
+
+  The slider is now exactly the native one again, with only its colour
+  substituted. At the pale end of the scale the handle blends into the
+  fill, but the fill edge stays readable: the filled portion is solid
+  and the remainder is the same colour at 20% opacity.
+
 ## [0.10.6] - 2026-09-07
 
 ### Fixed
