@@ -1,12 +1,18 @@
 /**
- * A Lovelace VIEW strategy that builds a FLARE settings view.
+ * Two Lovelace VIEW strategies: `custom:flare-schedule` for what the
+ * lights are scheduled to do, and `custom:flare-tracking` (further down)
+ * for what FLARE is currently driving.
+ *
+ * Neither is called plain `custom:flare`. It was, while there was only
+ * one, and the rename came with the second: "flare" gives no hint which
+ * of the two you get, and the pair reads as a set.
  *
  * Every schedule, one view:
  *
  *   views:
  *     - title: Lighting
  *       strategy:
- *         type: custom:flare
+ *         type: custom:flare-schedule
  *
  * Or one schedule per view, which is usually what you want once there is
  * more than one:
@@ -14,11 +20,11 @@
  *   views:
  *     - title: Downstairs
  *       strategy:
- *         type: custom:flare
+ *         type: custom:flare-schedule
  *         sensor: downstairs
  *     - title: Upstairs
  *       strategy:
- *         type: custom:flare
+ *         type: custom:flare-schedule
  *         sensor: upstairs
  *
  * `sensor` is the schedule sensor's slug - the same value the curve card
@@ -38,8 +44,8 @@
  * edited last. Home Assistant's own "Take control" is the route for
  * anyone who wants to own the YAML, and it is one-way.
  *
- * Registered as `ll-strategy-view-flare`, which is the name Home
- * Assistant resolves `custom:flare` to for a view strategy.
+ * Registered as `ll-strategy-view-flare-schedule`, which is the name Home
+ * Assistant resolves `custom:flare-schedule` to for a view strategy.
  */
 
 import {
@@ -66,7 +72,7 @@ const notice = (body) =>
     },
   ]);
 
-class FlareViewStrategy extends HTMLElement {
+class FlareScheduleViewStrategy extends HTMLElement {
   static async generate(config, hass) {
     const all = scheduleSensors(hass);
     const wanted = normaliseSlug(config && config.sensor);
@@ -96,7 +102,7 @@ class FlareViewStrategy extends HTMLElement {
   }
 }
 
-customElements.define('ll-strategy-view-flare', FlareViewStrategy);
+customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
  * A second view strategy, for what FLARE is currently DRIVING rather

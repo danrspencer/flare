@@ -1,7 +1,7 @@
 """
 The Lovelace view strategy, and the section layout it builds.
 
-`views: - strategy: {type: custom:flare}` replaces what used to be a
+`views: - strategy: {type: custom:flare-schedule}` replaces what used to be a
 generator on the docs site emitting YAML to paste. That matters for what
 these tests are for: the layout is no longer something a user pastes once
 and owns, it is regenerated on every dashboard load, so a mistake here
@@ -58,7 +58,7 @@ const input = JSON.parse(await new Promise((resolve) => {{
 // precisely the failure the registration test exists to catch, and
 // crashing here instead would turn a clean assertion into a collection
 // error that says nothing about what broke.
-const Strategy = globalThis.__definedElements['ll-strategy-view-flare'];
+const Strategy = globalThis.__definedElements['ll-strategy-view-flare-schedule'];
 const Tracking = globalThis.__definedElements['ll-strategy-view-flare-tracking'];
 const generate = async (states, config = {{}}) =>
   Strategy ? await Strategy.generate(config, {{ states }}) : null;
@@ -161,9 +161,9 @@ def _integration_keys(name):
 
 
 def test_the_strategy_is_registered_under_the_name_ha_resolves(result):
-    """`custom:flare` on a view resolves to `ll-strategy-view-flare`. Get
+    """`custom:flare-schedule` on a view resolves to `ll-strategy-view-flare-schedule`. Get
     this wrong and the view renders nothing, with no error anywhere."""
-    assert "ll-strategy-view-flare" in result["registeredAs"]
+    assert "ll-strategy-view-flare-schedule" in result["registeredAs"]
 
 
 def test_a_view_is_one_section_per_schedule_sensor(result):

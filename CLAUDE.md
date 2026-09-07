@@ -998,9 +998,12 @@ HA derives the id from the name at creation.
   When the port landed, `sectionConfig()`'s output was diffed against
   the generator's last output and was byte-identical - worth repeating
   if this is ever restructured again.
-- **Two view strategies, not one**: `custom:flare` (schedules) and
-  `custom:flare-tracking` (scopes), registered as
-  `ll-strategy-view-flare` and `ll-strategy-view-flare-tracking`. Kept
+- **Two view strategies, not one**: `custom:flare-schedule` and
+  `custom:flare-tracking`, registered as
+  `ll-strategy-view-flare-schedule` and
+  `ll-strategy-view-flare-tracking`. The schedule one was plain
+  `custom:flare` in 0.12.x, while it was the only one; renamed in 0.14.0
+  because the bare name gives no hint which of the two you get. Kept
   apart because a house has one scope per room against a handful of
   schedules, so merging would bury the schedules, and they answer
   different questions - what a light should be doing versus who

@@ -20,7 +20,7 @@ Open the dashboard you want it on, then **Edit dashboard** → the three-dot men
 views:
   - title: Lighting
     strategy:
-      type: custom:flare
+      type: custom:flare-schedule
 ```
 
 That's the whole configuration. There's nothing to fill in — it finds your schedule
@@ -36,11 +36,11 @@ stacked. Add `sensor:` to pick one:
 views:
   - title: Downstairs
     strategy:
-      type: custom:flare
+      type: custom:flare-schedule
       sensor: downstairs
   - title: Upstairs
     strategy:
-      type: custom:flare
+      type: custom:flare-schedule
       sensor: upstairs
 ```
 
@@ -79,6 +79,11 @@ when a manual override is active.
 
 The colour-temperature sliders are painted in the colour they set, and change colour as
 you drag them.
+
+{: .note }
+> Upgrading from 0.12 or 0.13? This view was `custom:flare` then. Change the type to
+> `custom:flare-schedule` — a view still using the old name shows "Custom element
+> doesn't exist".
 
 ## The tracking view
 
