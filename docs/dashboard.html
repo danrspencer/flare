@@ -172,12 +172,19 @@ permalink: /dashboard/
 <p>
   Everything else about the control is Home Assistant's, which is deliberate: there's no
   separate slider implementation here to drift out of step with the one sitting next to
-  it in the same row. The single exception is the <strong>drag handle</strong>, which the
-  native slider hardcodes to white — fine on a warm fill, invisible once the colour
-  temperature approaches white, which around 6667&nbsp;K it does. So the handle flips to
-  near-black at the point where white stops being visible against the fill (a contrast
-  ratio of 1.6:1, which lands at roughly 3500&nbsp;K). It stays white everywhere it
-  still works, so a warm slider looks exactly like its neighbour.
+  it in the same row.
+</p>
+
+<p>
+  One consequence worth knowing: the native slider draws its drag handle in white, and
+  at the pale end of the scale — around 6667&nbsp;K the colour temperature <em>is</em>
+  very nearly white — the handle blends into the fill. There is no supported way to
+  recolour it: the colour is hardcoded, with no CSS custom property and no
+  <code>part</code> exposed. Reaching into the slider's internals to override it was
+  tried and deliberately reverted, because it depended on an internal class name and
+  failed silently when that assumption didn't hold. The fill edge itself stays readable
+  regardless, since the filled portion is solid and the remainder is the same colour at
+  20% opacity.
 </p>
 
 <p>

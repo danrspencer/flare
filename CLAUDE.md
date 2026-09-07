@@ -902,20 +902,17 @@ HA derives the id from the name at creation.
   the fill is solid and the remainder is that same colour at the same
   native 0.2 opacity. So the handle, rounded fill cap, tooltip and
   keyboard behaviour are HA's, and only the hue is ours; the tile's
-  phase colour still shows on the icon. **The one place it reaches into
-  another component's shadow DOM is the drag handle**, which
-  `ha-control-slider` hardcodes to `background-color: white` on
-  `.slider .slider-track-bar::after` - no custom property, and the
-  element declares no `part=`, so there is no supported hook. A near-
-  white fill therefore leaves it invisible. `_adoptHandleRule` appends
-  one declaration to that instance's own shadow root pointing at a
-  variable set per value; it is scoped to elements we created (the
-  substantive difference from card-mod) and fails soft - if the class
-  name changes upstream the selector matches nothing and the handle
-  reverts to stock white. The flip is a minimum-visibility floor
-  (white below 1.6:1 contrast against the fill, crossover ~3500K), NOT
-  "whichever contrasts more" - near-black wins at every temperature on
-  this ramp, so maximising would flip every handle dark. **Two earlier versions are
+  phase colour still shows on the icon. **The drag handle cannot be recoloured**:
+  `ha-control-slider` hardcodes it to white on
+  `.slider .slider-track-bar::after`, with no custom property and no
+  `part=`, so at the pale end of the ramp (near 6667K the colour *is*
+  nearly white) it blends into the fill. Injecting a rule into the
+  slider's own shadow root was built, shipped in 0.10.6 and reverted in
+  0.10.7 at the user's direction: it coupled to an internal class name,
+  and it silently did nothing in practice because a Lit element only
+  has a `shadowRoot` once connected, which the test stub (attaching in
+  its constructor) was too forgiving to catch. **Don't re-attempt it
+  without a supported hook.** **Two earlier versions are
   recorded in the file's header so they aren't re-attempted:** a
   full warm-to-cool gradient track (reads as a colour picker, not as one
   of a column of sliders), then a hand-rolled `<input type="range">`
@@ -930,9 +927,20 @@ HA derives the id from the name at creation.
   tile colour means something else. card-mod can, and was rejected: the
   generator's promise is paste-and-go with no third-party dependency.
   Built on `<input type="range">` rather than `ha-control-slider` for
-  the same reason - no dependency on frontend internals. `cache_headers=False` is deliberate: neither file
-  has a versioned URL, so caching would trade a stale-deployed-file bug
-  for a stale-browser-cache one. This replaced a separate symlink path
+  the same reason - no dependency on frontend internals. `cache_headers=False` is deliberate but **does
+  not do what it sounds like**: it removes the `Cache-Control` header
+  rather than disabling caching, and the response still carries `ETag`
+  and `Last-Modified`, so browsers fall back to *heuristic* caching
+  (roughly 10% of the age since `Last-Modified`). Safari applies that
+  aggressively - confirmed live, where a just-deployed card and feature
+  both rendered as "Configuration error" until the cache expired. A
+  versioned URL is NOT the fix: the feature statically imports
+  `./flare-curve-card.js`, so a `?v=` on only the `add_extra_js_url`
+  copy would load the card module twice under two URLs and the second
+  `customElements.define` would throw. Fixing it properly means serving
+  these with `Cache-Control: no-cache` so the ETag is revalidated,
+  which `StaticPathConfig`'s boolean cannot express - it needs a custom
+  view. Not done yet. This replaced a separate symlink path
   that silently went stale for over a week.
 - `scripts/link_into_ha.sh` was **deleted**, not fixed - once the cards
   travel with the integration there was nothing left for it to do, and

@@ -10,10 +10,11 @@
  * than from here. The CSS block below is a copy of the frontend's own
  * `cardFeatureStyles` rule for `ha-control-slider` - deliberately
  * identical, because the point is to look like its neighbour in the row,
- * not merely similar. Only the two COLOUR properties differ, and _paint
- * sets them per value: the built-in points both at `--feature-color`,
- * this points both at the colour of the value, so the fill is solid and
- * the remainder is that same colour at the same native 0.2 opacity.
+ * not merely similar. Exactly ONE declaration differs:
+ * the two colour properties, which _paint sets per value - the built-in
+ * points both at `--feature-color`, this points both at the colour of
+ * the value, so the fill is solid and the remainder is the same colour
+ * at the same native 0.2 opacity.
  *
  * Two earlier versions got this wrong and are worth recording so they
  * are not re-attempted. The first painted the whole track as a
@@ -36,13 +37,6 @@
  * built-in feature at all. Here the tile's colour still drives the icon,
  * so the row still reads as its phase, while the whole slider carries
  * the temperature.
- *
- * The one exception to "everything else is HA's" is the drag handle,
- * which the slider hardcodes to white with no property and no `part=`
- * to override - so a near-white fill leaves it invisible. See
- * _adoptHandleRule: one declaration injected into that instance's own
- * shadow root, which fails soft back to stock white if upstream renames
- * the class.
  *
  * `ha-control-slider` is a frontend internal with no compatibility
  * promise, and that is a real cost: a breaking change upstream lands
@@ -84,49 +78,6 @@ export function supportsKelvinFeature(hass, context) {
 export function sliderColor(kelvin) {
   const [r, g, b] = kelvinToRgb(kelvin);
   return `rgb(${r}, ${g}, ${b})`;
-}
-
-// ha-control-slider hardcodes its handle to `background-color: white`
-// (`.slider .slider-track-bar::after`) - no custom property, and the
-// element exposes no `part=`, so there is nothing to override from
-// outside. Hence _adoptHandleRule below, which is the one place this
-// file reaches into someone else's shadow DOM.
-const HANDLE_LIGHT = '#ffffff';
-// Near-black rather than black: a pure #000 slab on a pale fill reads as
-// a hole punched in the bar. This is about the value of HA's own dark
-// surfaces.
-const HANDLE_DARK = '#1f1f1f';
-
-// Below this contrast ratio against the fill, the white handle stops
-// being findable - at 6667K (very nearly white) it is 1.03, i.e. gone.
-//
-// A minimum rather than "whichever contrasts more" on purpose: near-black
-// beats white at EVERY colour temperature on this ramp, even deep amber
-// (5.0 vs 3.5 at 1000K), so maximising would flip every handle dark and
-// diverge from the built-in slider everywhere. The white handle is the
-// native look and is kept wherever it still works; 1.6 puts the crossover
-// around 3500K, so a saturated warm fill keeps white (2700K sits at 1.92,
-// 3200K at 1.69) and only the pale end flips.
-const WHITE_MIN_CONTRAST = 1.6;
-
-const _channel = (c) => {
-  const v = c / 255;
-  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-};
-
-/** WCAG relative luminance, 0 (black) to 1 (white). */
-export function relativeLuminance([r, g, b]) {
-  return 0.2126 * _channel(r) + 0.7152 * _channel(g) + 0.0722 * _channel(b);
-}
-
-/**
- * The handle colour for a given colour temperature: white while that is
- * still visible against the fill, near-black once it isn't.
- */
-export function handleColor(kelvin) {
-  const luminance = relativeLuminance(kelvinToRgb(kelvin));
-  const whiteContrast = 1.05 / (luminance + 0.05);
-  return whiteContrast < WHITE_MIN_CONTRAST ? HANDLE_DARK : HANDLE_LIGHT;
 }
 
 /**
@@ -216,44 +167,7 @@ class FlareKelvinFeature extends HTMLElement {
     this._slider.addEventListener('slider-moved', (ev) => this._paint(ev.detail.value));
 
     this.shadowRoot.append(style, this._slider);
-    await this._adoptHandleRule();
     this._render();
-  }
-
-  /**
-   * Recolour the slider's drag handle from inside its own shadow root.
-   *
-   * This is the one place the file reaches into another component's
-   * internals, and it is not done lightly. The handle is
-   * `.slider .slider-track-bar::after` with `background-color: white`
-   * written in literally - there is no custom property for it, and
-   * ha-control-slider exposes no `part=`, so no supported hook exists.
-   * Without this, a fill anywhere near white leaves the handle invisible,
-   * which is the whole reason for the change.
-   *
-   * Deliberately the smallest possible reach: one declaration, on one
-   * instance we created ourselves, pointing at a variable we then set
-   * from _paint. It is scoped to this element - nothing global is
-   * patched, which is the substantive difference from card-mod.
-   *
-   * FAILS SOFT. If the internal class name changes upstream, the
-   * selector simply matches nothing and the handle goes back to the
-   * stock white - no error, no broken slider, just the old behaviour
-   * back. Appended as a <style> after Lit's own adopted stylesheets so
-   * it wins the cascade at equal specificity.
-   */
-  async _adoptHandleRule() {
-    // Lit builds the shadow root on first update, so wait for it.
-    if (this._slider.updateComplete) await this._slider.updateComplete;
-    const root = this._slider.shadowRoot;
-    if (!root) return;
-    const patch = document.createElement('style');
-    patch.textContent = `
-      .slider .slider-track-bar::after {
-        background-color: var(--flare-handle-color, #ffffff);
-      }
-    `;
-    root.appendChild(patch);
   }
 
   _setValue(value) {
@@ -268,7 +182,6 @@ class FlareKelvinFeature extends HTMLElement {
   _paint(kelvin) {
     if (kelvin == null || Number.isNaN(Number(kelvin))) return;
     const color = sliderColor(Number(kelvin));
-    this._slider.style.setProperty('--flare-handle-color', handleColor(Number(kelvin)));
     // Both halves of the bar take the value's colour: the fill solid,
     // the unfilled remainder the same colour at the native 0.2 opacity.
     // The built-in feature points BOTH of these at --feature-color, so
