@@ -184,17 +184,57 @@ checked twice: `tests/test_version.py` runs on every PR, and
 `.github/workflows/release.yml` re-checks at tag time and refuses to publish a
 mismatch.
 
+### Two channels
+
+The tag decides, and nothing else does:
+
+| Tag | Published as | Who sees it |
+|---|---|---|
+| `v0.16.0` | a normal release | everyone |
+| `v0.16.0-beta.1` | a GitHub **pre-release** | only people who opted in |
+
+HACS filters on GitHub's own pre-release flag rather than on the tag text — see
+`custom_components/hacs/repositories/base.py`, which skips a release when
+`release.prerelease and not prerelease` — and that filter is driven by the
+per-repository **Pre-release** switch HACS creates for each downloaded repository.
+So a beta is invisible by default and arrives as an ordinary update to anyone who
+turned that switch on. No second branch, no second repository.
+
+`hacs.json` sets `hide_default_branch: true` so nobody can sidestep the channels by
+downloading `main` directly.
+
+To follow the betas on your own instance, turn on the **Pre-release** switch for
+FLARE under the HACS integration's entities. It ships registry-disabled, so you'll
+need to enable the entity before you can turn it on.
+
+### Steps
+
 1. Bump `version` in `custom_components/flare/manifest.json`.
-   Breaking changes bump the **minor** while below 1.0.
+   Breaking changes bump the **minor** while below 1.0. A beta carries the version it
+   is working toward plus a suffix — `0.16.0-beta.1`.
 2. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`, calling out anything
    breaking explicitly — this integration ships in two halves (integration and
    blueprint) that deploy separately, so "you must deploy both" is a real
    instruction, not boilerplate.
+
+   Betas are matched on their **base** version, so `0.16.0-beta.3` is described by the
+   `## [0.16.0]` section. Write that section once, before the first beta, and keep
+   adding to it. A section per beta would make the changelog a build log.
 3. Merge, then tag the merge commit and push it:
 
    ```bash
-   git tag v0.2.0 && git push origin v0.2.0
+   git tag v0.16.0-beta.1 && git push origin v0.16.0-beta.1
    ```
 
-The workflow validates and creates the GitHub release. HACS picks it up from there,
-so installs can track releases rather than `main`.
+   Promote when it's had some use, by tagging the same content without the suffix:
+
+   ```bash
+   git tag v0.16.0 && git push origin v0.16.0
+   ```
+
+The workflow validates and creates the GitHub release, marking it a pre-release when
+the tag carries a suffix.
+
+**Merge, then verify, then tag — as three separate steps.** Chaining them means a
+failed merge still tags, which has happened: a `wip` commit went out as a release
+because the tag was chained onto a merge that hadn't landed.

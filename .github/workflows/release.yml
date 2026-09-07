@@ -4,6 +4,19 @@ name: release
 # the tag and the manifest can't disagree: HACS reads the version out of
 # manifest.json, not out of the tag, so a mismatch means the version
 # people see installed isn't the version they downloaded.
+#
+# TWO CHANNELS, decided by the tag alone:
+#
+#   v0.16.0          -> a normal release
+#   v0.16.0-beta.1   -> a GitHub PRE-release
+#
+# HACS filters on GitHub's own prerelease flag, not on the tag text
+# (custom_components/hacs/repositories/base.py: `if release.draft or
+# (release.prerelease and not prerelease): continue`), and that filter is
+# driven by the per-repository "Show beta versions" toggle. So a
+# pre-release is invisible to anyone who hasn't opted in, and is offered
+# as an ordinary update to anyone who has - which is the whole mechanism.
+# Nothing here needs a second branch or a second repository.
 on:
   push:
     tags: ["v*"]
@@ -26,11 +39,29 @@ jobs:
             exit 1
           fi
 
-      - name: The changelog must describe this version
+      # A hyphen is the whole rule, which is why it isn't shared with
+      # tests/test_version.py as code - that file asserts this workflow
+      # still wires the result up, which is the part that could silently
+      # break.
+      - name: Which channel is this
+        id: channel
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          if ! grep -q "^## \[$tag\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## [$tag]' section"
+          case "$tag" in
+            *-*) echo "prerelease=true"  >> "$GITHUB_OUTPUT"; echo "base=${tag%%-*}" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "prerelease=false" >> "$GITHUB_OUTPUT"; echo "base=$tag"       >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      # The BASE version, so a run of betas can share the one section
+      # that describes what they are building toward. Requiring a section
+      # per beta would make the changelog a build log, and would put a
+      # commit in the way of every throwaway test build.
+      - name: The changelog must describe this version
+        env:
+          BASE: ${{ steps.channel.outputs.base }}
+        run: |
+          if ! grep -q "^## \[$BASE\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$BASE]' section"
             exit 1
           fi
 
@@ -39,4 +70,14 @@ jobs:
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          PRERELEASE: ${{ steps.channel.outputs.prerelease }}
+        run: |
+          # Not `[ "$PRERELEASE" = true ] && flags=...` - that is the last
+          # command in the step when the test is false, so the step would
+          # exit non-zero under bash -e and fail every stable release.
+          if [ "$PRERELEASE" = "true" ]; then
+            flags="--prerelease"
+          else
+            flags=""
+          fi
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes $flags
