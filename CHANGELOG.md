@@ -7,6 +7,29 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.4] - 2026-09-07
+
+### Changed
+
+- **The colour-temperature slider is now literally the native slider.**
+  It renders `ha-control-slider` — the element Home Assistant's own
+  `numeric-input` feature uses — configured the same way, so the drag
+  handle, the rounded fill cap, the tooltip and the keyboard behaviour
+  all come from Home Assistant instead of being reimplemented here. The
+  only thing FLARE changes is the fill colour, which tracks the colour
+  temperature the slider is set to.
+
+  0.10.3 hand-rolled the bar from an `<input type="range">`. The colour
+  was right, but it had no handle and no rounded cap on the fill, so it
+  visibly didn't match the brightness slider beside it.
+
+  Because the unfilled track once again takes the tile's own colour, as
+  the built-in does, a Curve row reads as its phase at a glance with the
+  temperature in front of it.
+
+  No configuration change: the feature type is unchanged, so existing
+  dashboards pick this up as-is.
+
 ## [0.10.3] - 2026-09-06
 
 ### Changed

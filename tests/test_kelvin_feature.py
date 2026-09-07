@@ -8,11 +8,18 @@ editor for every entity unless this says otherwise, so an over-broad
 check turns up on every entity in the house, and an over-narrow one
 means the feature simply never appears - neither surfaces as an error.
 
-The second is that the bar is painted from the *card's* Kelvin
+The second is that the fill is painted from the *card's* Kelvin
 conversion, at the current value. That is the entire feature - it has to
 agree with the curve drawn above it in the same dashboard section, and a
 second, drifting copy of the conversion would look fine and be subtly
 wrong, which is exactly the failure a test is for.
+
+Everything else - the handle, the rounded fill cap, the tooltip, drag and
+keyboard behaviour - is ha-control-slider's, not ours, so there is
+nothing here worth pinning about it. The one thing that IS ours and does
+matter is that we set the same custom properties the frontend's own
+cardFeatureStyles sets, so the slider matches the built-in one beside it;
+that is asserted against the style text rather than a rendered tile.
 
 Driven through node against the real feature file, reusing
 test_curve_js_parity.py's shims and runner. The DOM is deliberately not
@@ -35,7 +42,7 @@ FEATURE_JS = CARD_JS.parent / "flare-kelvin-feature.js"
 
 
 DRIVER = CARD_SHIMS + f"""
-const {{ supportsKelvinFeature, sliderBackground, valueFraction }} =
+const {{ supportsKelvinFeature, sliderColor }} =
   await import({json.dumps(FEATURE_JS.as_posix())});
 const {{ kelvinToRgb }} = await import({json.dumps(CARD_JS.as_posix())});
 
@@ -52,12 +59,8 @@ process.stdout.write(JSON.stringify({{
   supported: input.entityIds.map((id) => supportsKelvinFeature(hass, {{ entity_id: id }})),
   noContext: supportsKelvinFeature(hass, undefined),
   emptyContext: supportsKelvinFeature(hass, {{}}),
-  // The same value painted at three points of the same range, plus the
-  // card's own conversion for each, so the test can assert the bar is
-  // that colour rather than merely "some colour".
-  backgrounds: input.paintCases.map((c) => sliderBackground(c.k, valueFraction(c.k, c.min, c.max))),
-  rgbs: input.paintCases.map((c) => kelvinToRgb(c.k)),
-  fractions: input.fractionCases.map((c) => valueFraction(c[0], c[1], c[2])),
+  colors: input.paintKelvins.map(sliderColor),
+  rgbs: input.paintKelvins.map(kelvinToRgb),
   feature: (() => {{
     const entry = globalThis.window.customCardFeatures.find(
       (f) => f.type === 'flare-kelvin-feature'
@@ -109,33 +112,15 @@ STATES = {s["entity_id"]: s for s in (
 )}
 ENTITY_IDS = list(STATES)
 
-# Bottom, middle and top of one range, so the colour and the fill point
-# can be checked as moving together.
-PAINT_CASES = [
-    {"k": 1000, "min": 1000, "max": 10000},
-    {"k": 5500, "min": 1000, "max": 10000},
-    {"k": 10000, "min": 1000, "max": 10000},
-]
-
-FRACTION_CASES = [
-    (5500, 1000, 10000),  # midpoint
-    (500, 1000, 10000),  # below the range
-    (99999, 1000, 10000),  # above it
-    (2500, 2000, 3000),  # a narrower range of its own
-    (4000, 4000, 4000),  # degenerate: min == max
-]
+# Bottom, middle and top of the usual range.
+PAINT_KELVINS = [1000, 5500, 10000]
 
 
 @pytest.fixture(scope="module")
 def result():
     return _node_eval(
         DRIVER,
-        {
-            "states": STATES,
-            "entityIds": ENTITY_IDS,
-            "paintCases": PAINT_CASES,
-            "fractionCases": [list(c) for c in FRACTION_CASES],
-        },
+        {"states": STATES, "entityIds": ENTITY_IDS, "paintKelvins": PAINT_KELVINS},
     )
 
 
@@ -182,64 +167,56 @@ def test_a_missing_or_empty_context_is_not_supported(result):
     assert result["emptyContext"] is False
 
 
-def test_the_bar_is_a_solid_fill_in_the_colour_of_the_current_value(result):
-    """The whole feature. The bar is one solid colour - the colour of the
-    value it is set to - not a gradient across the range: an earlier
-    version painted the full warm-to-cool sweep and read as a colour
-    picker rather than as one of a column of matching sliders."""
-    for background, rgb in zip(result["backgrounds"], result["rgbs"]):
-        fill = "rgb({}, {}, {})".format(*rgb)
-
-        assert background.count(fill) == 2, f"expected two hard stops of {fill}"
-        assert background.startswith(f"linear-gradient(to right, {fill} 0%"), background
-
-
-def test_the_two_stops_meet_at_the_fill_point_with_no_blend(result):
-    """A fill level, not a gradient: both stops sit at the same position,
-    so the edge is crisp. A single stop either side would fade the bar
-    across its whole width."""
-    low, mid, high = result["backgrounds"]
-
-    assert "0.00%, rgba(" in low, "at the bottom of the range the bar is empty"
-    assert "100.00%, rgba(" in high, "at the top it is full"
-    assert "50.00%, rgba(" in mid
-
-
-def test_the_unfilled_remainder_is_neutral_not_tinted(result):
-    """The one place this deliberately departs from the built-in slider,
-    which tints its remainder with its own colour.
-
-    An honest orange-to-blue colour-temperature ramp has to pass through
-    white in the middle - 6667K, FLARE's own Day default, is very nearly
-    white - so a white fill above a white-tinted remainder on a white
-    tile is an invisible control. A neutral remainder keeps the fill edge
-    legible at every temperature, including the pale ones."""
-    for background, rgb in zip(result["backgrounds"], result["rgbs"]):
-        assert "rgba(128, 128, 128, 0.18)" in background, background
-        assert "rgba({}, {}, {}".format(*rgb) not in background, background
+def test_the_fill_is_the_colour_of_the_current_value(result):
+    """The entire feature. The colour comes from the card's own
+    kelvinToRgb, already parity-tested against curve.py, so the bar and
+    the curve above it in the same section agree by construction - a
+    second, drifting copy of the conversion would fail here."""
+    for color, rgb in zip(result["colors"], result["rgbs"]):
+        assert color == "rgb({}, {}, {})".format(*rgb)
 
 
 def test_the_colour_actually_moves_with_the_value(result):
-    """Guards the case the tests above would all still pass on: a bar
-    painted from a fixed colour rather than the current value."""
-    low, mid, high = result["backgrounds"]
-
-    assert low != mid != high
-    assert len({tuple(rgb) for rgb in result["rgbs"]}) == 3
+    """Guards the case the test above would still pass on: a fill painted
+    from a fixed colour rather than the current value."""
+    assert len(set(result["colors"])) == len(result["colors"])
 
 
-def test_the_fill_point_is_clamped_to_the_entitys_own_range(result):
-    """A `number` can report outside its own min/max - a restored value
-    from before the range changed, say - and an unclamped fraction paints
-    a stop at -5% or 300%, which CSS renders as a bar that is simply
-    wrong rather than as an error."""
-    mid, below, above, narrow, degenerate = result["fractions"]
+# The frontend's own cardFeatureStyles rule for ha-control-slider
+# (src/panels/lovelace/card-features/common/card-feature-styles.ts).
+# --control-slider-color is deliberately absent: it is the one thing this
+# feature sets per value, and it is what the whole feature is for.
+NATIVE_SLIDER_PROPERTIES = {
+    "--control-slider-background": "var(--feature-color)",
+    "--control-slider-background-opacity": "0.2",
+    "--control-slider-thickness": "var(--feature-height)",
+    "--control-slider-border-radius": "var(--feature-border-radius)",
+}
 
-    assert mid == 0.5
-    assert below == 0
-    assert above == 1
-    assert narrow == 0.5
-    assert degenerate == 0, "min == max must not divide by zero"
+
+def test_it_styles_the_native_slider_exactly_as_the_built_in_feature_does():
+    """The point of using ha-control-slider is to look like the built-in
+    slider sitting next to it in the same row, not merely similar - so
+    every custom property the frontend sets on it, this sets identically.
+
+    Asserted against the source text rather than a rendered tile: these
+    are one-line declarations whose only failure mode is drifting from
+    upstream, and there is no DOM in this test layer to render into."""
+    source = FEATURE_JS.read_text()
+
+    for prop, value in NATIVE_SLIDER_PROPERTIES.items():
+        assert f"{prop}: {value};" in source, f"{prop} does not match cardFeatureStyles"
+
+
+def test_the_fill_colour_is_the_only_thing_set_per_value():
+    """--control-slider-color is set from script, not in the style block,
+    because it changes with the value. If it ever appears in the static
+    CSS too, one of the two wins silently depending on specificity."""
+    source = FEATURE_JS.read_text()
+    style_block = source[source.index("style.textContent = `") : source.index("this._slider = document")]
+
+    assert "--control-slider-color" not in style_block
+    assert "setProperty('--control-slider-color'" in source
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

@@ -141,9 +141,10 @@ permalink: /dashboard/
 <p>
   The four colour-temperature controls use <strong>FLARE Colour temperature</strong>
   (<code>type: custom:flare-kelvin-feature</code>) rather than the built-in slider. It
-  looks exactly like the built-in one — same height, same corner radius, a solid fill to
-  the current value — except the fill is painted in the colour temperature it's set to,
-  and the whole bar changes colour as you drag it.
+  <em>is</em> the built-in slider — the same <code>ha-control-slider</code> element, given
+  the same settings, so the handle, the rounded fill, the tooltip and the keyboard
+  behaviour are all Home Assistant's own. The only difference is that its fill is painted
+  in the colour temperature it's set to, and changes colour as you drag it.
 </p>
 
 <p>
@@ -161,14 +162,12 @@ permalink: /dashboard/
 </p>
 
 <p>
-  One deliberate departure from the built-in slider: the <em>unfilled</em> part of the
-  bar is neutral grey rather than a dimmed tint of the fill colour, and the bar carries
-  a hairline border. An honest orange-to-blue colour-temperature ramp has to pass
-  through white in the middle — 6667&nbsp;K, FLARE's own Day default, is very nearly
-  white — so a white fill above a white-tinted remainder on a white tile would be an
-  invisible control. Dimming the whole ramp to compensate was tried and looks worse: the
-  middle goes muddy grey-brown and stops reading as warm white at all. So the colour
-  stays physically true and the contrast is fixed instead.
+  The <em>unfilled</em> part of the track still takes the tile's own colour, exactly as
+  the built-in slider does — so a Curve row still reads as its phase at a glance, with
+  the phase colour behind and the temperature in front. Everything about the control
+  except that one fill colour is Home Assistant's, which is deliberate: it means there's
+  no separate slider implementation here to drift out of step with the one sitting next
+  to it in the same row.
 </p>
 
 <p>
