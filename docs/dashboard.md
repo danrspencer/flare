@@ -24,6 +24,30 @@ That's the whole configuration. There's nothing to fill in — it finds your sch
 sensors itself, and a schedule you add later appears without you touching the dashboard
 again.
 
+## One schedule per view
+
+Once you have more than one schedule, a view each usually reads better than all of them
+stacked. Add `sensor:` to pick one:
+
+```yaml
+views:
+  - title: Downstairs
+    strategy:
+      type: custom:flare
+      sensor: downstairs
+  - title: Upstairs
+    strategy:
+      type: custom:flare
+      sensor: upstairs
+```
+
+`sensor` is the part before `_flare` in the schedule sensor's entity ID —
+`downstairs` for `sensor.downstairs_flare`. The full entity ID works too, if that's
+easier to copy.
+
+{: .note }
+> Get the name wrong and the view tells you so, and lists the schedules you do have.
+
 {: .tip }
 > **Just want the chart?** On Home Assistant 2026.6 and newer, add a card, open the
 > **By entity** tab and pick your schedule sensor — **FLARE Curve** is offered under

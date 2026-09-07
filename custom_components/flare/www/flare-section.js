@@ -243,6 +243,23 @@ function titleCase(slug) {
 }
 
 /**
+ * The slug for whatever someone put in a `sensor:` option.
+ *
+ * Accepts the slug itself (`downstairs`, matching the curve card's own
+ * `sensor:` shorthand) or the full entity_id (`sensor.downstairs_flare`),
+ * because both are things people reasonably write and neither is wrong.
+ * Returns null for an empty value, which callers read as "no filter".
+ */
+export function normaliseSlug(value) {
+  if (typeof value !== 'string') return null;
+  let slug = value.trim();
+  if (!slug) return null;
+  if (slug.startsWith(SENSOR_PREFIX)) slug = slug.slice(SENSOR_PREFIX.length);
+  if (slug.endsWith(SCHEDULE_SUFFIX)) slug = slug.slice(0, -SCHEDULE_SUFFIX.length);
+  return slug || null;
+}
+
+/**
  * Every FLARE schedule sensor in `hass`, as {slug, title} pairs, in a
  * stable order.
  *

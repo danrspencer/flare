@@ -42,7 +42,8 @@ globalThis.customElements.define = (name, cls) => {{
   globalThis.__definedElements[name] = cls;
 }};
 
-const {{ sectionConfig, scheduleSensors }} = await import({json.dumps(SECTION_JS.as_posix())});
+const {{ sectionConfig, scheduleSensors, normaliseSlug }} =
+  await import({json.dumps(SECTION_JS.as_posix())});
 await import({json.dumps(STRATEGY_JS.as_posix())});
 
 const input = JSON.parse(await new Promise((resolve) => {{
@@ -58,8 +59,8 @@ const input = JSON.parse(await new Promise((resolve) => {{
 // crashing here instead would turn a clean assertion into a collection
 // error that says nothing about what broke.
 const Strategy = globalThis.__definedElements['ll-strategy-view-flare'];
-const generate = async (states) =>
-  Strategy ? await Strategy.generate({{}}, {{ states }}) : null;
+const generate = async (states, config = {{}}) =>
+  Strategy ? await Strategy.generate(config, {{ states }}) : null;
 
 process.stdout.write(JSON.stringify({{
   section: sectionConfig('ground_floor', 'Ground Floor'),
@@ -67,6 +68,11 @@ process.stdout.write(JSON.stringify({{
   registeredAs: Object.keys(globalThis.__definedElements),
   view: await generate(input.states),
   emptyView: await generate({{}}),
+  bySlug: await generate(input.states, {{ sensor: 'upstairs' }}),
+  byEntityId: await generate(input.states, {{ sensor: 'sensor.upstairs_flare' }}),
+  unknown: await generate(input.states, {{ sensor: 'nosuchroom' }}),
+  blankSensor: await generate(input.states, {{ sensor: '   ' }}),
+  slugs: input.slugCases.map(normaliseSlug),
 }}));
 """
 
@@ -86,9 +92,14 @@ STATES = {
 }
 
 
+# Everything someone might reasonably put in `sensor:`, plus the values
+# that must read as "no filter" rather than as a slug.
+SLUG_CASES = ["upstairs", "sensor.upstairs_flare", "  upstairs  ", "", "   ", None, 7]
+
+
 @pytest.fixture(scope="module")
 def result():
-    return _node_eval(DRIVER, {"states": STATES})
+    return _node_eval(DRIVER, {"states": STATES, "slugCases": SLUG_CASES})
 
 
 def _cards(section):
@@ -157,6 +168,49 @@ def test_a_sensor_with_no_friendly_name_falls_back_to_its_slug(result):
     loft = next(s for s in result["sensors"] if s["slug"] == "loft")
 
     assert loft["title"] == "Loft"
+
+
+def test_a_view_can_be_limited_to_one_schedule(result):
+    """One section per view is the shape you want once there is more than
+    one schedule - a view per room rather than everything stacked."""
+    view = result["bySlug"]
+
+    assert len(view["sections"]) == 1
+    assert view["sections"][0]["cards"][0]["heading"] == "Upstairs"
+
+
+def test_the_full_entity_id_works_as_well_as_the_slug(result):
+    """`sensor: downstairs` matches the curve card's shorthand, but
+    `sensor.downstairs_flare` is what someone copying from the entity
+    list will paste, and neither is wrong."""
+    assert result["byEntityId"] == result["bySlug"]
+
+
+@pytest.mark.parametrize(
+    ("index", "expected"),
+    [(0, "upstairs"), (1, "upstairs"), (2, "upstairs"), (3, None), (4, None), (5, None), (6, None)],
+)
+def test_a_sensor_value_is_reduced_to_its_slug(result, index, expected):
+    """Empty, whitespace and non-strings all have to read as "no filter"
+    rather than as a slug that matches nothing - otherwise a stray key
+    silently produces the not-found notice instead of every schedule."""
+    assert result["slugs"][index] == expected
+
+
+def test_a_blank_sensor_value_still_shows_every_schedule(result):
+    """The consequence of the above at the strategy level."""
+    assert len(result["blankSensor"]["sections"]) == 3
+
+
+def test_an_unknown_schedule_names_the_ones_that_exist(result):
+    """A typo would otherwise render an empty view, which looks identical
+    to having no schedules at all. The available slugs are the one thing
+    the user needs and cannot see from the dashboard."""
+    content = result["unknown"]["sections"][0]["cards"][1]["content"]
+
+    assert "nosuchroom" in content
+    for slug in ("downstairs", "loft", "upstairs"):
+        assert f"`{slug}`" in content
 
 
 def test_no_schedules_explains_itself_rather_than_rendering_blank(result):
