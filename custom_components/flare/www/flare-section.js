@@ -55,12 +55,19 @@ const phase = (key) => PHASES.find((p) => p.key === key);
 // tile `color` accepts no template - so it can only ever show which
 // phase a control belongs to, never what it is set to.
 //
-// Colour temperature is painted in the temperature itself; brightness
-// has no colour of its own, so it fades the theme's accent in
-// proportion to the value. See flare-kelvin-feature.js and
-// flare-brightness-feature.js.
-const BRIGHTNESS_SLIDER = [{ type: 'custom:flare-brightness-feature' }];
+// Colour temperature is painted in the temperature itself. Brightness
+// borrows that same colour via tint_from and fades it by the value, so
+// the two together preview what the light will actually look like - hue
+// from the temperature, intensity from the brightness. See
+// flare-kelvin-feature.js and flare-brightness-feature.js.
+//
+// Which is why COLOUR TEMPERATURE COMES FIRST in each row below: the
+// colour is decided there and then carried across into the brightness
+// slider beside it, so left-to-right is the order the two are read in.
 const KELVIN_SLIDER = [{ type: 'custom:flare-kelvin-feature' }];
+const brightnessSlider = (kelvinEntity) => [
+  { type: 'custom:flare-brightness-feature', tint_from: kelvinEntity },
+];
 
 const TRANSITIONS_NOTE =
   'How long before each phase ends to start easing into the next one, in ' +
@@ -128,18 +135,18 @@ export function sectionConfig(slug, title) {
   const curve = pairGrid(
     PHASES.flatMap((p) => [
       tile({
-        entity: `number.${slug}_${p.key}_brightness`,
-        name: `${p.label} brightness`,
-        icon: BRIGHTNESS_ICON,
-        color: p.color,
-        features: BRIGHTNESS_SLIDER,
-      }),
-      tile({
         entity: `number.${slug}_${p.key}_kelvin`,
         name: `${p.label} colour temp`,
         icon: KELVIN_ICON,
         color: p.color,
         features: KELVIN_SLIDER,
+      }),
+      tile({
+        entity: `number.${slug}_${p.key}_brightness`,
+        name: `${p.label} brightness`,
+        icon: BRIGHTNESS_ICON,
+        color: p.color,
+        features: brightnessSlider(`number.${slug}_${p.key}_kelvin`),
       }),
     ])
   );
@@ -151,14 +158,14 @@ export function sectionConfig(slug, title) {
   const transitions = pairGrid(
     PHASES.flatMap((p) => [
       tile({
-        entity: `number.${slug}_${p.key}_brightness_transition`,
-        name: `${p.label} brightness`,
+        entity: `number.${slug}_${p.key}_kelvin_transition`,
+        name: `${p.label} colour`,
         icon: TRANSITION_ICON,
         color: p.color,
       }),
       tile({
-        entity: `number.${slug}_${p.key}_kelvin_transition`,
-        name: `${p.label} colour`,
+        entity: `number.${slug}_${p.key}_brightness_transition`,
+        name: `${p.label} brightness`,
         icon: TRANSITION_ICON,
         color: p.color,
       }),

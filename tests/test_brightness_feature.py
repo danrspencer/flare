@@ -25,7 +25,7 @@ FEATURE_JS = CARD_JS.parent / "flare-brightness-feature.js"
 
 DRIVER = CARD_SHIMS + f"""
 globalThis.customElements.whenDefined = () => Promise.resolve();
-const {{ fillStrength, brightnessColor, supportsBrightnessFeature }} =
+const {{ fillStrength, brightnessColor, supportsBrightnessFeature, tintKelvin }} =
   await import({json.dumps(FEATURE_JS.as_posix())});
 
 const input = JSON.parse(await new Promise((resolve) => {{
@@ -40,7 +40,18 @@ const hass = {{ states: input.states }};
 process.stdout.write(JSON.stringify({{
   strengths: input.values.map((v) => fillStrength(v, {{ min: 0, max: 255 }})),
   percentStrengths: input.values.map((v) => fillStrength(v, {{ min: 0, max: 100 }})),
-  colors: input.values.map((v) => brightnessColor(v, {{ min: 0, max: 255 }})),
+  colors: input.values.map((v) => brightnessColor(v, {{ min: 0, max: 255 }}, {{}}, hass)),
+  tinted: input.values.map((v) =>
+    brightnessColor(v, {{ min: 0, max: 255 }}, {{ tint_from: 'number.warm_kelvin' }}, hass)),
+  tintCases: [
+    tintKelvin({{ tint_from: 'number.warm_kelvin' }}, hass),
+    tintKelvin({{ tint_from: 'number.unavailable_kelvin' }}, hass),
+    tintKelvin({{ tint_from: 'number.does_not_exist' }}, hass),
+    tintKelvin({{}}, hass),
+    tintKelvin(undefined, hass),
+  ],
+  unreadableTint: brightnessColor(180, {{ min: 0, max: 255 }},
+    {{ tint_from: 'number.unavailable_kelvin' }}, hass),
   supported: input.entityIds.map((id) => supportsBrightnessFeature(hass, {{ entity_id: id }})),
   registered: globalThis.window.customCardFeatures.map((f) => f.type),
 }}));
@@ -63,6 +74,17 @@ STATES = {
     # the check is not just "no unit".
     "number.some_other_thing": {"entity_id": "number.some_other_thing", "attributes": {"min": 0, "max": 10}},
     "light.kitchen": {"entity_id": "light.kitchen", "attributes": {}},
+    # What a brightness slider borrows its hue from.
+    "number.warm_kelvin": {
+        "entity_id": "number.warm_kelvin",
+        "state": "2700",
+        "attributes": {"unit_of_measurement": "K", "min": 1000, "max": 10000},
+    },
+    "number.unavailable_kelvin": {
+        "entity_id": "number.unavailable_kelvin",
+        "state": "unavailable",
+        "attributes": {"unit_of_measurement": "K", "min": 1000, "max": 10000},
+    },
 }
 ENTITY_IDS = list(STATES)
 
@@ -139,3 +161,41 @@ def test_a_unitless_number_of_the_wrong_range_is_not_supported(result):
 
 def test_the_feature_is_registered_for_the_card_editor(result):
     assert "flare-brightness-feature" in result["registered"]
+
+
+# --- Borrowing a hue from a colour-temperature entity ------------------
+
+
+def test_a_tinted_slider_takes_the_colour_temperatures_hue(result):
+    """The point of the pairing: the two sliders in a row together
+    preview the light - hue from the temperature, intensity from the
+    brightness. 2700K is FLARE's own warm end."""
+    for colour in result["tinted"]:
+        assert colour.startswith("rgba(255, 167, 87, "), colour
+
+
+def test_a_tinted_slider_still_fades_with_the_value(result):
+    """The hue is borrowed; the intensity is still this entity's own."""
+    alphas = [float(c.rsplit(", ", 1)[1].rstrip(")")) for c in result["tinted"]]
+
+    assert alphas == sorted(alphas)
+    assert alphas[0] == pytest.approx(0.1)
+    assert alphas[-1] == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize("index", [1, 2, 3, 4])
+def test_every_way_the_tint_can_be_missing_reads_the_same(result, index):
+    """Unavailable, non-existent, unset and no config at all: all of them
+    want the theme colour rather than something arbitrary, so they all
+    resolve to null rather than each needing their own handling."""
+    assert result["tintCases"][index] is None
+
+
+def test_a_readable_tint_resolves_to_its_kelvin(result):
+    assert result["tintCases"][0] == 2700
+
+
+def test_an_unreadable_tint_falls_back_to_the_theme_colour(result):
+    """So the feature still works pointed at nothing, and a colour-temp
+    entity that has gone unavailable does not blank the slider."""
+    assert "var(--primary-color)" in result["unreadableTint"]
