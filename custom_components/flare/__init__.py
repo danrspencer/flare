@@ -57,6 +57,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.loader import async_get_integration
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry, ConfigSubentry
 from homeassistant.const import Platform
 from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
@@ -372,15 +373,36 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     incident this replaced). One static path serves the whole www/
     directory, so a second card would need only a second
     add_extra_js_url call, not a second StaticPathConfig.
-    cache_headers=False deliberately - neither file has a versioned URL,
-    so aggressive caching here would just trade a stale-deployed-file
-    bug for a stale-browser-cache one."""
+
+    THE URL CARRIES THE VERSION, which is what makes the caching correct.
+    It was previously an unversioned path with cache_headers=False, on
+    the reasoning that not caching beat serving something stale. That
+    reasoning was wrong: cache_headers=False does not disable caching, it
+    only omits Cache-Control - the response still carries ETag and
+    Last-Modified, and a response with no explicit freshness may be
+    cached HEURISTICALLY, commonly a fraction of its own age. Safari does
+    so keenly, and a just-deployed card and feature both rendered as
+    "Configuration error" until that window lapsed.
+
+    With the version in the path, every release is a new URL, so a cached
+    copy can never be taken for the current one - and cache_headers goes
+    back to True, since immutable content at an immutable URL is better
+    than revalidating on every load.
+
+    It has to be a path segment rather than a `?v=` query: these modules
+    import each other relatively, and a relative import resolves against
+    the importing module's own URL. A path is inherited by those imports;
+    a query is not, so the card would load twice under two URLs and the
+    second customElements.define would throw."""
+    integration = await async_get_integration(hass, DOMAIN)
+    # Falls back only if the manifest has no version, which a HACS
+    # install always does - still better than failing setup outright.
+    base = f"{CARD_URL_BASE}/{integration.version or 'dev'}"
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(CARD_URL_BASE, str(Path(__file__).parent / "www"), cache_headers=False)]
+        [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
     )
-    add_extra_js_url(hass, f"{CARD_URL_BASE}/{CARD_JS_PATH}")
-    add_extra_js_url(hass, f"{CARD_URL_BASE}/{FEATURE_JS_PATH}")
-    add_extra_js_url(hass, f"{CARD_URL_BASE}/{STRATEGY_JS_PATH}")
+    for js in (CARD_JS_PATH, FEATURE_JS_PATH, STRATEGY_JS_PATH):
+        add_extra_js_url(hass, f"{base}/{js}")
     return True
 
 
