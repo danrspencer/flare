@@ -939,20 +939,23 @@ HA derives the id from the name at creation.
   tile colour means something else. card-mod can, and was rejected: the
   generator's promise is paste-and-go with no third-party dependency.
   Built on `<input type="range">` rather than `ha-control-slider` for
-  the same reason - no dependency on frontend internals. `cache_headers=False` is deliberate but **does
-  not do what it sounds like**: it removes the `Cache-Control` header
-  rather than disabling caching, and the response still carries `ETag`
-  and `Last-Modified`, so browsers fall back to *heuristic* caching
-  (roughly 10% of the age since `Last-Modified`). Safari applies that
-  aggressively - confirmed live, where a just-deployed card and feature
-  both rendered as "Configuration error" until the cache expired. A
-  versioned URL is NOT the fix: the feature statically imports
-  `./flare-curve-card.js`, so a `?v=` on only the `add_extra_js_url`
-  copy would load the card module twice under two URLs and the second
-  `customElements.define` would throw. Fixing it properly means serving
-  these with `Cache-Control: no-cache` so the ETag is revalidated,
-  which `StaticPathConfig`'s boolean cannot express - it needs a custom
-  view. Not done yet. This replaced a separate symlink path
+  the same reason - no dependency on frontend internals. **The URL carries the integration version**
+  (`/flare_static/<version>/...`) with `cache_headers=True`. It was an
+  unversioned path with `cache_headers=False`, which **does not do what
+  it sounds like**: that only omits `Cache-Control`, leaving `ETag` and
+  `Last-Modified`, so browsers fall back to *heuristic* caching (roughly
+  10% of the age since `Last-Modified`). Safari applies that keenly -
+  confirmed live, where a just-deployed card and feature both rendered
+  as "Configuration error" until the window lapsed, then "fixed
+  themselves". With a version per release a cached copy can never be
+  taken for the current one, so caching hard is correct rather than
+  merely tolerable. **It must be a path segment, not `?v=`**: these
+  modules import each other relatively, and a relative import resolves
+  against the importing module's own URL - a path is inherited by those
+  imports, a query is not, so `?v=` would load the card twice under two
+  URLs and the second `customElements.define` would throw. That
+  relative-import invariant is pinned by
+  `tests/test_static_imports.py`. This replaced a separate symlink path
   that silently went stale for over a week.
 - `scripts/link_into_ha.sh` was **deleted**, not fixed - once the cards
   travel with the integration there was nothing left for it to do, and

@@ -7,6 +7,20 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.14.1] - 2026-09-07
+
+### Fixed
+
+- **A stale browser cache could serve an old card or feature after an
+  update**, showing "Configuration error" where a FLARE card should be
+  until the cache expired on its own. The front-end files are now served
+  from a URL carrying the integration's version, so every release is a
+  new URL and a cached copy from an older one can't be mistaken for the
+  current file.
+
+  If you've been hard-refreshing after updates, you shouldn't need to
+  any more.
+
 ## [0.14.0] - 2026-09-07
 
 ### Changed — breaking
