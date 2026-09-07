@@ -7,6 +7,24 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.5] - 2026-09-07
+
+### Changed
+
+- **The whole colour-temperature slider now tracks the value, not just
+  the fill.** The unfilled remainder takes the same colour as the fill,
+  faded — at the same 0.2 opacity Home Assistant's own slider uses, so
+  only the hue comes from FLARE. Previously the remainder kept the
+  tile's phase colour, which meant the two halves of one control
+  disagreed about what they were showing.
+
+  The built-in slider points both `--control-slider-color` and
+  `--control-slider-background` at the tile's colour; FLARE now points
+  both at the colour temperature. The tile's phase colour still shows on
+  the icon, so a row stays identifiable at a glance.
+
+  No configuration change: the feature type is unchanged.
+
 ## [0.10.4] - 2026-09-07
 
 ### Changed

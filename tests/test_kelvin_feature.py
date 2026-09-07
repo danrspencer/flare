@@ -183,15 +183,20 @@ def test_the_colour_actually_moves_with_the_value(result):
 
 
 # The frontend's own cardFeatureStyles rule for ha-control-slider
-# (src/panels/lovelace/card-features/common/card-feature-styles.ts).
-# --control-slider-color is deliberately absent: it is the one thing this
-# feature sets per value, and it is what the whole feature is for.
+# (src/panels/lovelace/card-features/common/card-feature-styles.ts),
+# minus the two colour properties - see PER_VALUE_PROPERTIES below.
+# Note the OPACITY stays: the unfilled remainder is faded by the same
+# native 0.2 the built-in uses, so only the hue is ours.
 NATIVE_SLIDER_PROPERTIES = {
-    "--control-slider-background": "var(--feature-color)",
     "--control-slider-background-opacity": "0.2",
     "--control-slider-thickness": "var(--feature-height)",
     "--control-slider-border-radius": "var(--feature-border-radius)",
 }
+
+# The two the built-in points at --feature-color and this points at the
+# colour of the value - the whole substitution, and the only reason the
+# feature exists.
+PER_VALUE_PROPERTIES = ["--control-slider-color", "--control-slider-background"]
 
 
 def test_it_styles_the_native_slider_exactly_as_the_built_in_feature_does():
@@ -208,15 +213,23 @@ def test_it_styles_the_native_slider_exactly_as_the_built_in_feature_does():
         assert f"{prop}: {value};" in source, f"{prop} does not match cardFeatureStyles"
 
 
-def test_the_fill_colour_is_the_only_thing_set_per_value():
-    """--control-slider-color is set from script, not in the style block,
-    because it changes with the value. If it ever appears in the static
-    CSS too, one of the two wins silently depending on specificity."""
+@pytest.mark.parametrize("prop", PER_VALUE_PROPERTIES)
+def test_both_halves_of_the_bar_take_the_values_colour(prop):
+    """The fill and the unfilled remainder are both the colour of the
+    current value - the remainder simply faded by the native opacity
+    above. The built-in points both at --feature-color, the tile's phase
+    colour; pointing both at the value instead is the whole substitution.
+
+    Each must be set from script and NOT also appear in the static CSS:
+    with both, whichever wins would depend silently on specificity."""
     source = FEATURE_JS.read_text()
     style_block = source[source.index("style.textContent = `") : source.index("this._slider = document")]
 
-    assert "--control-slider-color" not in style_block
-    assert "setProperty('--control-slider-color'" in source
+    # Match on the colon: a bare `--control-slider-background` is also a
+    # prefix of `--control-slider-background-opacity`, which legitimately
+    # IS in the static block.
+    assert f"{prop}:" not in style_block, f"{prop} is pinned statically as well as per value"
+    assert f"setProperty('{prop}'" in source, f"{prop} is never set per value"
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

@@ -896,10 +896,13 @@ HA derives the id from the name at creation.
   import costs nothing. It renders `ha-control-slider` - the frontend's
   own element, the one the built-in `numeric-input` feature uses -
   styled with a copy of the frontend's `cardFeatureStyles` block for it,
-  differing in exactly one declaration: `--control-slider-color`, the
-  fill, set per value. So the handle, rounded fill cap, tooltip and
-  keyboard behaviour are HA's, and the unfilled track still takes the
-  tile's phase colour like its row-mate. **Two earlier versions are
+  differing only in the two colour properties: the built-in points both
+  `--control-slider-color` and `--control-slider-background` at
+  `--feature-color`, this points both at the colour of the value, so
+  the fill is solid and the remainder is that same colour at the same
+  native 0.2 opacity. So the handle, rounded fill cap, tooltip and
+  keyboard behaviour are HA's, and only the hue is ours; the tile's
+  phase colour still shows on the icon. **Two earlier versions are
   recorded in the file's header so they aren't re-attempted:** a
   full warm-to-cool gradient track (reads as a colour picker, not as one
   of a column of sliders), then a hand-rolled `<input type="range">`
