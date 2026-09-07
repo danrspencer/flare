@@ -45,7 +45,7 @@ its own targets:
 
 | Phase | What it's for |
 |---|---|
-| **Morning** | Bright and cold. [Research](https://pubmed.ncbi.nlm.nih.gov/36058557/) found 1.5h of bright morning light for a week improved office workers' sleep efficiency and reduced morning sleepiness. |
+| **Morning** | Bright and cold. A [small study](https://pubmed.ncbi.nlm.nih.gov/36058557/) found 1.5h of bright morning light (1000 lux at 6500 K) for a week improved twelve students' sleep efficiency over regular office lighting. |
 | **Day** | Bright, easing steadily from Morning's colour toward Evening's across the whole afternoon. |
 | **Evening** | Dimming and warming, anchored to your actual sunset. |
 | **Night** | Warm and low, flat until morning. |
