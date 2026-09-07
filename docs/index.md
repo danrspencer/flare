@@ -17,6 +17,23 @@ built in.
 
 ---
 
+## What it does
+
+FLARE runs your lighting through the day so you don't have to think about it, and stops
+the moment you want something else.
+
+- **It keeps every light where it should be** — not just at the moment a phase changes.
+  It re-checks as it goes, and fixes anything that has drifted or never arrived.
+- **It works with lights on a physical wall switch.** Cut the power to a room and
+  restore it, and FLARE catches each bulb as it reappears, putting it straight onto the
+  current phase instead of leaving it at whatever it powered up as.
+- **It bends to fit the room.** A brightness multiplier per light, a scene per phase,
+  and templates for either when a fixed value isn't enough.
+- **It gets out of your way.** Change a bulb yourself — app, wall switch, another
+  automation — and FLARE stops driving that one until the room next goes dark.
+
+---
+
 ## Four phases, not one curve
 
 Adaptive lighting usually maps brightness and colour onto the sun's position. That tracks
@@ -86,12 +103,6 @@ command landed just because it was sent:
 - A bulb already at the target, within tolerance, is **left alone** — so nothing gets
   spammed, and bulbs that round values off aren't fought with.
 
-The other half is knowing when to stop. FLARE expects to share a room: a scene can take
-some lights, someone can grab a switch, another automation can write the same bulb. None
-of that is a fault, and none of it gets overwritten:
-
-- **Override protection** notices when a light no longer matches what FLARE last asked for —
-  including being switched off — and stops driving it until the whole room goes dark.
-- **Scene handoff** lets a scene own part of a room while FLARE keeps the rest on the curve.
-- **Tracking scopes** are named, configurable devices — one per room, typically — so you can
-  see at a glance which lights FLARE is currently driving and which have been taken.
+It also expects to share a room. A **scene** can own part of one while FLARE keeps the
+rest on the curve, and **tracking scopes** — one named device per room — show you at a
+glance which lights FLARE is currently driving and which have been taken.
