@@ -7,6 +7,32 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.12.1] - 2026-09-07
+
+### Added
+
+- **The dashboard view can now show a single schedule**, which reads
+  better than all of them stacked once you have more than one:
+
+  ```yaml
+  views:
+    - title: Downstairs
+      strategy:
+        type: custom:flare
+        sensor: downstairs
+    - title: Upstairs
+      strategy:
+        type: custom:flare
+        sensor: upstairs
+  ```
+
+  `sensor` is the part before `_flare` in the schedule sensor's entity
+  ID, the same value the curve card takes. A full entity ID works too.
+  Leave it out and you get every schedule, as before.
+
+  Name a schedule that doesn't exist and the view says so and lists the
+  ones that do, rather than rendering blank.
+
 ## [0.12.0] - 2026-09-07
 
 ### Added
