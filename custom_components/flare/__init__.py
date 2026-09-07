@@ -351,6 +351,15 @@ CARD_JS_PATH = "flare-curve-card.js"
 # it imports kelvinToRgb from the card above, so the two agree on colour
 # by construction rather than by a second copy of the conversion.
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
+# A Lovelace view strategy: `views: - strategy: {type: custom:flare}`
+# builds a settings view, one section per schedule sensor. Shipping it
+# here rather than having people paste generated YAML is what lets a
+# layout change reach existing installs through a HACS update.
+# flare-section.js holds the layout both it and anything else would use,
+# and is pulled in by the strategy's own import rather than a third
+# add_extra_js_url - it registers nothing, so loading it on every page
+# would be pure cost.
+STRATEGY_JS_PATH = "flare-view-strategy.js"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -371,6 +380,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     )
     add_extra_js_url(hass, f"{CARD_URL_BASE}/{CARD_JS_PATH}")
     add_extra_js_url(hass, f"{CARD_URL_BASE}/{FEATURE_JS_PATH}")
+    add_extra_js_url(hass, f"{CARD_URL_BASE}/{STRATEGY_JS_PATH}")
     return True
 
 
