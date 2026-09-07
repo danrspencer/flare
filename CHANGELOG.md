@@ -7,6 +7,16 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.1] - 2026-09-07
+
+### Changed
+
+- **The brightness slider no longer fades with its value.** It's now a
+  solid fill in that phase's colour, with how far it fills carrying the
+  brightness — the same way Home Assistant's own brightness slider works
+  for a light. The fade said what the fill's width already said, and the
+  only thing it added was making a dim setting harder to see.
+
 ## [0.15.0] - 2026-09-07
 
 ### Changed
