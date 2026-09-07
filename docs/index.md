@@ -45,7 +45,7 @@ its own targets:
 
 | Phase | What it's for |
 |---|---|
-| **Morning** | Bright and cold — enough eyeball caffeine to get you as far as the coffee machine. [Some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) agrees: twelve students given 1.5h a day at 1000 lux and 6500 K slept better for it. |
+| **Morning** | Bright and cold — enough eyeball caffeine to get you as far as the coffee machine, with [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back it up. |
 | **Day** | Bright, easing steadily from Morning's colour toward Evening's across the whole afternoon. |
 | **Evening** | Dimming and warming, anchored to your actual sunset. |
 | **Night** | Warm and low, flat until morning. |

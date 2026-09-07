@@ -32,9 +32,9 @@ FLARE works from your schedule instead, using four named phases, each with a job
 
 - **Morning** is there to help you wake up, so it starts at a fixed time before you'd normally be up rather than
   moving with sunrise — the same wake-up light in December as in June. Bright, cool-white light in the morning
-  wakes you up better, and there is [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up —
-  twelve students, an hour and a half a day at 1000 lux and 6500 K, and they slept better for it. Mostly, though,
-  it's that very cool light is just enough eyeball caffeine to get me as far as the coffee machine.
+  wakes you up better, and there is [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up.
+  Mostly, though, it's that very cool light is just enough eyeball caffeine to get me as far as the coffee
+  machine.
 - **Day** is the long middle stretch, gradually warming as it runs toward evening so the eventual transition
   doesn't feel abrupt.
 - **Evening** is when relaxed, warm lighting takes over — the one phase that *does* track the sun (sunset), so
