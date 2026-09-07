@@ -296,11 +296,17 @@ def test_the_handle_rule_targets_the_sliders_own_handle_and_fails_soft():
     The rule must go through a variable rather than writing a colour
     literal, so _paint can change it per value, and it must carry a
     fallback so that if the injection lands but _paint has not run the
-    handle is stock white rather than transparent."""
-    source = FEATURE_JS.read_text()
+    handle is stock white rather than transparent.
 
-    assert ".slider .slider-track-bar::after" in source
-    assert "background-color: var(--flare-handle-color, #ffffff);" in source
+    Scoped to the injected rule itself, not the whole file: the selector
+    is also quoted in the comments explaining why this exists, so a
+    whole-file search passes even when the real rule points somewhere
+    else entirely - which is exactly what mutation testing caught."""
+    source = FEATURE_JS.read_text()
+    rule = source[source.index("patch.textContent = `") : source.index("root.appendChild(patch)")]
+
+    assert ".slider .slider-track-bar::after" in rule, "the rule targets the wrong element"
+    assert "background-color: var(--flare-handle-color, #ffffff);" in rule
     assert "setProperty('--flare-handle-color'" in source
 
 
