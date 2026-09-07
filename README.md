@@ -9,6 +9,8 @@ the afternoon, dimming to a relaxed glow as evening sets in, and low and warm on
 turn their lights on and off as people come and go, manual changes are left alone until you're done with them,
 and anything a scene already has covered is left to the scene.
 
+[![The FLARE Lighting dashboard view: the day's curve, a phase override, the schedule times, and the curve and transition values for each phase](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/dashboard-section.png)](https://danrspencer.github.io/flare/dashboard/)
+
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
 
 The quickest way to see what this actually does is the
@@ -30,9 +32,9 @@ FLARE works from your schedule instead, using four named phases, each with a job
 
 - **Morning** is there to help you wake up, so it starts at a fixed time before you'd normally be up rather than
   moving with sunrise — the same wake-up light in December as in June. Bright, cool-white light in the morning
-  has been linked to better alertness later in the day: [one study](https://pubmed.ncbi.nlm.nih.gov/36058557/)
-  found office workers given 1.5 hours of bright morning light for a week had higher sleep efficiency and less
-  morning sleepiness than under regular office lighting.
+  has been linked to better alertness later in the day: [one small study](https://pubmed.ncbi.nlm.nih.gov/36058557/)
+  found twelve students given 1.5 hours of bright morning light (1000 lux at 6500 K) for a working week had
+  higher sleep efficiency than under regular office lighting (300 lux at 4000 K).
 - **Day** is the long middle stretch, gradually warming as it runs toward evening so the eventual transition
   doesn't feel abrupt.
 - **Evening** is when relaxed, warm lighting takes over — the one phase that *does* track the sun (sunset), so
@@ -44,7 +46,7 @@ FLARE works from your schedule instead, using four named phases, each with a job
 
 ## The two pieces
 
-Installed separately, and useful separately.
+Installed separately. The integration stands alone; the blueprint does not.
 
 **FLARE** is a Home Assistant integration. It exposes the phase schedule above, plus
 per-light grouping (reachability, tolerance, override protection, two-step transitions, optional RGB colour) and

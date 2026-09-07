@@ -100,13 +100,21 @@ front matter went straight into the files and the whole generation step
 reintroduce it without reintroducing the reason.
 
 The Morning-phase research citation
-([Xiao et al., 2022](https://pubmed.ncbi.nlm.nih.gov/36058557/) - 1.5h
-of bright morning light for a week improved office workers' sleep
-efficiency and reduced morning sleepiness vs regular office lighting)
-was verified via a live web search before being added, not recalled
-from memory - worth re-verifying rather than trusting as-is if it's
-ever revised, same standard any factual claim in these docs should
-meet.
+([He et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36058557/), J Sleep
+Res - twelve college students, 1.5h of morning light at 1000 lux/6500 K
+vs regular office light at 300 lux/4000 K for one working week, sleep
+efficiency 83.8% vs 80.4%) was verified via a live web search before
+being added, not recalled from memory - worth re-verifying rather than
+trusting as-is if it's ever revised, same standard any factual claim in
+these docs should meet.
+
+**It has already been described wrongly once**, which is why the numbers
+are spelled out here: README.md and docs/index.md both called the
+participants "office workers" (they were students who worked in a
+university office) and omitted that n=12. Cite it as the small study it
+is. Note also that its bright condition is **6500 K** - so FLARE's
+DEFAULT_MORNING_KELVIN of 6667 already sits at the researched figure,
+and there is no evidence here for going cooler than that.
 
 ## The architectural split (deliberate, not arbitrary)
 
