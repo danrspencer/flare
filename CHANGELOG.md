@@ -7,6 +7,34 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.2] - 2026-09-07
+
+### Added
+
+- **Beta releases.** FLARE now publishes pre-release builds between stable
+  versions. You will not be offered them unless you ask: HACS adds a
+  **Pre-release** switch for each repository you have downloaded, and turning
+  FLARE's on starts offering betas as ordinary updates. It ships disabled, so
+  enable the entity first. Leave it alone to stay on stable releases only.
+
+### Changed
+
+- **The `main` branch is no longer offered as a downloadable version.** It was
+  never meant to be installed - it is whatever landed last, including work that
+  has not been released - and HACS was listing it alongside the real releases.
+
+### Docs
+
+- The homepage now opens with what FLARE actually does, including two things
+  that were not written down anywhere: that it works with lights cut at a
+  physical wall switch, and that brightness multipliers, per-phase scenes and
+  templates for both exist at all.
+- The README shows the dashboard, so what this looks like is visible without
+  leaving the repository.
+- The Morning research citation was wrong. It described the participants as
+  office workers; they were twelve college students, and the sample size was
+  never mentioned. Corrected, and no longer written as if it needs defending.
+
 ## [0.15.1] - 2026-09-07
 
 ### Changed
