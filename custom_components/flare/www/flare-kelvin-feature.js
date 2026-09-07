@@ -1,47 +1,48 @@
 /**
  * A custom card feature that renders a `number` entity measured in Kelvin
- * as an ordinary Home Assistant slider whose SOLID COLOUR is the colour
- * temperature it is currently set to. Slide it and the whole bar changes
- * colour with the value.
+ * as Home Assistant's own slider, filled with the colour temperature it
+ * is currently set to. Drag it and the fill changes colour with the value.
  *
- * Visually it is the built-in `numeric-input` slider and nothing more: a
- * solid fill from the left to the current value, same height, same
- * corner radius, no thumb, no text of its own (the tile already shows
- * the value). The only difference is where the colour comes from - and
- * the remainder, see TRACK below.
+ * It IS the native slider: `ha-control-slider`, the same element the
+ * built-in `numeric-input` feature uses, configured the same way, so the
+ * handle, the rounded fill cap, the tooltip, the pointer and keyboard
+ * behaviour and the a11y semantics all come from Home Assistant rather
+ * than from here. The CSS block below is a copy of the frontend's own
+ * `cardFeatureStyles` rule for `ha-control-slider` - deliberately
+ * identical, because the point is to look like its neighbour in the row,
+ * not merely similar. Exactly ONE declaration differs:
+ * `--control-slider-color`, the fill, which _render sets per value.
  *
- * Why it can't be the built-in one: that slider takes its colour from
- * `--feature-color`, which hui-tile-card sets to `var(--tile-color)`.
- * That is one knob for two jobs - the FLARE dashboard section spends a
- * tile's `color` on encoding which PHASE a control belongs to, so the
- * slider can't also carry the value. A tile card's `color` takes no
- * template either (no Lovelace core card renders Jinja), so "tint it by
- * the current Kelvin" is not expressible there at all. This feature
- * paints itself and never reads `--feature-color`, so both can be true
- * at once: the icon keeps the phase colour, the bar shows the value.
+ * Two earlier versions got this wrong and are worth recording so they
+ * are not re-attempted. The first painted the whole track as a
+ * warm-to-cool Kelvin GRADIENT with a thumb and a value label - a
+ * rainbow bar reads as a colour picker, not as one of a column of
+ * matching sliders. The second was a hand-rolled <input type="range">
+ * with a solid fill: it got the colour right, but had to reimplement the
+ * handle and the rounded fill cap and visibly did not match the slider
+ * beside it. Reusing the native element is what retires that whole class
+ * of problem.
  *
- * An earlier version painted the track as a full Kelvin GRADIENT, warm
- * to cool across the entity's range, with a thumb and a value label. It
- * worked and it looked wrong - a rainbow bar reads as a colour picker,
- * not as one of a column of matching sliders. Matching the built-in
- * exactly, and changing only the colour, is the whole point. Don't
- * reintroduce the gradient. See TRACK below for the one place this
- * deliberately does NOT match the built-in, and why.
+ * Why the feature has to exist at all: `ha-control-slider` takes its
+ * fill from `--control-slider-color`, which the built-in feature sets to
+ * `--feature-color`, which `hui-tile-card` sets to the tile's own
+ * `--tile-color`. That is one knob for two jobs - the FLARE dashboard
+ * section spends a tile's `color` on encoding which PHASE a control
+ * belongs to, so the slider cannot also carry the value. A tile card's
+ * `color` takes no template either (no Lovelace core card renders
+ * Jinja), so "tint it by the current Kelvin" is not expressible in the
+ * built-in feature at all. Here the tile's colour still drives the icon
+ * and the slider's unfilled TRACK - so the row still reads as its phase
+ * - while the fill carries the temperature.
  *
- * The alternative was card-mod, which can template `--feature-color`
- * independently - rejected because the docs generator's promise is
- * paste-and-go with no third-party dependencies, and card-mod works by
- * patching frontend shadow-DOM internals, a well-known source of
- * breakage across Home Assistant upgrades. This file ships inside the
- * integration and self-registers exactly like flare-curve-card.js, so it
- * costs the user nothing to have.
- *
- * Deliberately built on a plain <input type="range"> rather than Home
- * Assistant's own ha-control-slider, which is an internal frontend
- * element with no compatibility promise - avoiding exactly the class of
- * dependency card-mod was rejected for. The native input brings pointer
- * drag, keyboard stepping, focus and correct ARIA semantics with no
- * code, and is sized from the documented --feature-* variables.
+ * `ha-control-slider` is a frontend internal with no compatibility
+ * promise, and that is a real cost: a breaking change upstream lands
+ * here. Taken deliberately, at the user's direction, over reimplementing
+ * a slider - and note the rejected alternative, card-mod, is *also*
+ * coupled to frontend internals AND a third-party dependency the docs
+ * generator's paste-and-go promise cannot take. If it ever does break,
+ * the fix is to follow whatever `hui-numeric-input-card-feature.ts` does
+ * next, since this deliberately mirrors it.
  */
 
 import { kelvinToRgb } from './flare-curve-card.js';
@@ -53,23 +54,7 @@ import { kelvinToRgb } from './flare-curve-card.js';
 // integration's own naming changes.
 const KELVIN_UNIT = 'K';
 
-// The unfilled remainder, and the hairline around the whole bar.
-//
-// The built-in slider tints its remainder with its own colour, and that
-// is wrong here for a reason worth recording: an honest orange-to-blue
-// colour-temperature ramp HAS to pass through white in the middle -
-// 6667K, FLARE's own Day default, is very nearly white - and a white
-// fill on a white tile with a white-tinted remainder is an invisible
-// control. Dimming the whole ramp to compensate was tried and looks
-// worse still: the middle goes muddy grey-brown and stops reading as
-// warm white at all.
-//
-// So the colour stays physically true and the CONTRAST is fixed
-// instead. A neutral remainder plus a hairline means the fill edge is
-// legible at every temperature, including the pale ones. One fixed
-// grey works in both themes - it is barely-there over a light card and
-// a soft lift over a dark one. Verified in both.
-const TRACK = 'rgba(128, 128, 128, 0.18)';
+const SLIDER_TAG = 'ha-control-slider';
 
 export function supportsKelvinFeature(hass, context) {
   const entityId = context && context.entity_id;
@@ -79,31 +64,51 @@ export function supportsKelvinFeature(hass, context) {
   return (stateObj.attributes || {}).unit_of_measurement === KELVIN_UNIT;
 }
 
-/** How far along its own range the value sits, clamped to 0..1. */
-export function valueFraction(value, min, max) {
-  if (!(max > min)) return 0;
-  return Math.min(Math.max((value - min) / (max - min), 0), 1);
-}
-
 /**
- * The slider's background: solid colour to the fill point, neutral
- * beyond it.
- *
- * Two hard stops at the same position rather than a blend, so the edge
- * is crisp - this is a fill level, not a gradient. The colour is a
- * single sample at the CURRENT VALUE, which is what makes the whole bar
- * change colour as it moves.
+ * The slider's fill colour for a given colour temperature.
  *
  * Uses the card's own kelvinToRgb, already parity-tested against
  * curve.py, so the bar and the curve drawn above it in the same
  * dashboard section agree by construction rather than by a second copy
  * of the conversion.
  */
-export function sliderBackground(kelvin, fraction) {
+export function sliderColor(kelvin) {
   const [r, g, b] = kelvinToRgb(kelvin);
-  const fill = `rgb(${r}, ${g}, ${b})`;
-  const stop = `${(Math.min(Math.max(fraction, 0), 1) * 100).toFixed(2)}%`;
-  return `linear-gradient(to right, ${fill} 0%, ${fill} ${stop}, ${TRACK} ${stop}, ${TRACK} 100%)`;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Resolve `ha-control-slider` before first render.
+ *
+ * In practice it is already defined - any tile feature in the same view
+ * pulls it in, and the generated dashboard section always has built-in
+ * brightness sliders beside these. But relying on a sibling card to have
+ * loaded your dependency is not a guarantee, and an undefined custom
+ * element renders as an empty inline box with no error anywhere.
+ * `loadCardHelpers` is the standard way a custom card forces the
+ * Lovelace bundle in, which registers it along with everything else.
+ *
+ * Awaited once per page rather than per element: `whenDefined` never
+ * resolves if the element genuinely never arrives, so a per-instance
+ * promise would leave one pending promise per tile.
+ */
+let sliderReady;
+function ensureSlider() {
+  if (!sliderReady) {
+    sliderReady = (async () => {
+      if (customElements.get(SLIDER_TAG)) return;
+      if (typeof window.loadCardHelpers === 'function') {
+        try {
+          await window.loadCardHelpers();
+        } catch (err) {
+          // Nothing useful to do here - fall through to whenDefined,
+          // which still resolves if something else registers it later.
+        }
+      }
+      await customElements.whenDefined(SLIDER_TAG);
+    })();
+  }
+  return sliderReady;
 }
 
 class FlareKelvinFeature extends HTMLElement {
@@ -132,101 +137,76 @@ class FlareKelvinFeature extends HTMLElement {
     return this._hass.states[entityId];
   }
 
-  _build() {
+  async _build() {
     this.attachShadow({ mode: 'open' });
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host { display: block; }
-        input {
-          -webkit-appearance: none;
-          appearance: none;
-          display: block;
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          height: var(--feature-height, 42px);
-          border-radius: var(--feature-border-radius, 12px);
-          cursor: pointer;
-          /* See TRACK above: without this a near-white fill has no
-             visible edge against a light tile. */
-          box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.35);
-          /* Only ever seen for an unavailable entity - every other path
-             sets a real background before paint. */
-          background: var(--disabled-color, #bdbdbd);
-        }
-        input:focus-visible {
-          outline: 2px solid var(--primary-color, #03a9f4);
-          outline-offset: 2px;
-        }
-        /* No visible thumb: the built-in slider has none, and the fill
-           edge is the indicator. Kept 2px wide rather than 0 so the
-           browser still has something to grab for the drag. */
-        input::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 2px;
-          height: var(--feature-height, 42px);
-          background: transparent;
-        }
-        input::-moz-range-thumb {
-          width: 2px;
-          height: var(--feature-height, 42px);
-          border: none;
-          background: transparent;
-        }
-      </style>
-      <input type="range" />
+    await ensureSlider();
+
+    const style = document.createElement('style');
+    // Copied from the frontend's cardFeatureStyles, minus
+    // --control-slider-color which _render sets per value. Keep it that
+    // way: any divergence here is a divergence from the slider sitting
+    // next to this one in the same row.
+    style.textContent = `
+      :host { display: block; }
+      ${SLIDER_TAG} {
+        --control-slider-background: var(--feature-color);
+        --control-slider-background-opacity: 0.2;
+        --control-slider-thickness: var(--feature-height);
+        --control-slider-border-radius: var(--feature-border-radius);
+        width: 100%;
+      }
     `;
-    this._input = this.shadowRoot.querySelector('input');
-    // `change` rather than `input`: `input` fires continuously through a
-    // drag, which would be one service call per pixel.
-    this._input.addEventListener('change', (ev) => this._setValue(ev.target.value));
-    // `input` too, but only to repaint - so the colour follows the drag
-    // live instead of snapping when the state comes back.
-    this._input.addEventListener('input', (ev) => this._paint(Number(ev.target.value)));
+
+    this._slider = document.createElement(SLIDER_TAG);
+    // `value-changed` is the commit - once, on release.
+    this._slider.addEventListener('value-changed', (ev) => this._setValue(ev.detail.value));
+    // `slider-moved` fires continuously through a drag. Repaint only;
+    // committing here would be one service call per pixel.
+    this._slider.addEventListener('slider-moved', (ev) => this._paint(ev.detail.value));
+
+    this.shadowRoot.append(style, this._slider);
+    this._render();
   }
 
-  _setValue(raw) {
+  _setValue(value) {
     const stateObj = this._stateObj;
-    if (!stateObj) return;
+    if (!stateObj || value == null) return;
     this._hass.callService('number', 'set_value', {
       entity_id: stateObj.entity_id,
-      value: Number(raw),
+      value: Number(value),
     });
   }
 
   _paint(kelvin) {
-    this._input.style.background = sliderBackground(
-      kelvin,
-      valueFraction(kelvin, this._min, this._max)
-    );
+    if (kelvin == null || Number.isNaN(Number(kelvin))) return;
+    this._slider.style.setProperty('--control-slider-color', sliderColor(Number(kelvin)));
   }
 
   _render() {
     const stateObj = this._stateObj;
     if (!this._config || !this._hass || !stateObj) return;
-    if (!this.shadowRoot) this._build();
-
-    const attrs = stateObj.attributes || {};
-    this._min = Number(attrs.min ?? 1000);
-    this._max = Number(attrs.max ?? 10000);
-    const value = Number(stateObj.state);
-
-    this._input.min = this._min;
-    this._input.max = this._max;
-    this._input.step = Number(attrs.step ?? 1);
-    this._input.setAttribute('aria-label', attrs.friendly_name || stateObj.entity_id);
-    // An unavailable/unknown entity parses to NaN, which a range input
-    // silently snaps to its own minimum - painting a confident 1000 K
-    // bar for a value we do not have. Disable and go grey instead.
-    if (Number.isNaN(value)) {
-      this._input.disabled = true;
-      this._input.style.background = '';
+    if (!this._built) {
+      this._built = this._build();
       return;
     }
-    this._input.disabled = false;
-    this._input.value = value;
-    this._paint(value);
+    // Still resolving ha-control-slider; _build re-renders once it lands.
+    if (!this._slider) return;
+
+    const attrs = stateObj.attributes || {};
+    const parsed = Number(stateObj.state);
+    // Matches hui-numeric-input-card-feature: an unavailable/unknown
+    // entity passes `undefined` rather than NaN, which the slider
+    // renders as empty instead of snapping to its own minimum.
+    const value = Number.isNaN(parsed) ? undefined : parsed;
+
+    this._slider.value = value;
+    this._slider.min = attrs.min;
+    this._slider.max = attrs.max;
+    this._slider.step = attrs.step;
+    this._slider.unit = attrs.unit_of_measurement;
+    this._slider.locale = this._hass.locale;
+    this._slider.disabled = value === undefined;
+    if (value !== undefined) this._paint(value);
   }
 }
 
