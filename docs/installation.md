@@ -35,6 +35,13 @@ with type **Integration**. Then find **FLARE** in the HACS list and download it.
 > The dashboard card ships inside the integration and registers itself — no Lovelace
 > resource to add.
 
+{: .note }
+> **Want the beta builds?** FLARE publishes pre-releases between stable versions. You
+> won't be offered them unless you ask: HACS adds a **Pre-release** switch for each
+> repository you've downloaded, and turning FLARE's on starts offering betas as ordinary
+> updates. It ships disabled, so enable the entity first. Leave it alone to stay on
+> stable releases only.
+
 ## Step 2 — restart, then add FLARE
 
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
