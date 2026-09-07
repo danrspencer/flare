@@ -1,21 +1,20 @@
 /**
  * A card feature that renders a brightness `number` as Home Assistant's
- * own slider, whose fill gets stronger as the value does.
+ * own slider, in the colour the light will actually be.
+ *
+ * This is how HA's own `light-brightness` feature works: a solid slider
+ * in the bulb's current colour, with the fill's WIDTH carrying the
+ * value. Brightness has no colour of its own, so it borrows one.
  *
  * The dashboard section used to leave brightness on the built-in
- * slider, which takes its colour from the tile - so it showed which
- * PHASE the control belonged to and said nothing about the value.
- * Colour temperature already carried its value in its colour, and the
- * two sliders sitting side by side disagreed about what colour meant.
+ * `numeric-input` slider, which takes its colour from the tile - so it
+ * showed which PHASE the control belonged to and said nothing about the
+ * setting, while the colour-temperature slider beside it was already
+ * painted in the value it sets.
  *
- * Brightness has no colour of its own, so the value is carried by
- * INTENSITY: the fill fades in proportion to it. It reads as a dimmer,
- * which is what it is.
- *
- * The HUE comes from somewhere else. Point `tint_from` at a
- * colour-temperature entity and the fill takes that colour, so the two
- * sliders in a row together preview what the light will actually look
- * like - hue from the temperature, intensity from the brightness:
+ * Point `tint_from` at a colour-temperature entity and the fill takes
+ * that colour, so the two sliders in a row together preview the light -
+ * the colour from the temperature, how far it fills from the brightness:
  *
  *   features:
  *     - type: custom:flare-brightness-feature
@@ -33,50 +32,23 @@
  * entities, which the unit-free check below deliberately allows.
  *
  * With no `tint_from`, or one pointing at something unreadable, the fill
- * falls back to the theme's accent at the same fading, so the feature
- * still works standalone.
+ * falls back to `--primary-color`, which is also ha-control-slider's own
+ * default - so an untinted one is exactly the stock slider rather than
+ * something odd.
  *
- * Deliberately not white-fading-to-transparent, which is the most
- * literal reading of "brightness" and looked best on a dark card: at
- * full brightness on a LIGHT theme a white fill is invisible against the
- * card. That is the same trap the colour-temperature slider hits at
- * 6667K, where the temperature genuinely is near-white - and there it is
- * unavoidable, so there is no reason to introduce it a second time
- * somewhere it is a free choice.
- *
- * The fallback colour comes from `--primary-color` via color-mix rather
- * than a hardcoded value, so it follows the user's theme - and that is
- * also ha-control-slider's own default fill, so an untinted one looks
- * like the stock slider, only fading.
+ * AN EARLIER VERSION ALSO FADED THE FILL by the value, floored at 0.1
+ * opacity. It is recorded here because it looked reasonable and was
+ * still wrong: the fill's width already says how bright, so the fade
+ * said it a second time, and the only thing it added was making a dim
+ * setting harder to see.
  */
 
 import { kelvinToRgb } from './flare-curve-card.js';
 import { defineValueSlider } from './flare-value-slider.js';
 
-// Below this the fill would be indistinguishable from the unfilled
-// track, and a slider that vanishes at its low end looks broken rather
-// than dim. The value is also carried by the fill's WIDTH, so this only
-// has to stay visible, not encode the number on its own.
-const MIN_STRENGTH = 0.1;
-
 /**
- * How strongly to paint the fill, 0.1 to 1, across the entity's own
- * range.
- *
- * Scaled from min/max rather than assuming 0-255, so it is still right
- * for a light's brightness (0-255), a percentage (0-100), or anything
- * else someone points it at.
- */
-export function fillStrength(value, { min = 0, max = 255 } = {}) {
-  const span = max - min;
-  const fraction = span > 0 ? (value - min) / span : 1;
-  const clamped = Math.min(Math.max(fraction, 0), 1);
-  return MIN_STRENGTH + (1 - MIN_STRENGTH) * clamped;
-}
-
-/**
- * The colour temperature this slider should borrow its hue from, or null
- * if there is none to borrow.
+ * The colour temperature this slider should borrow its colour from, or
+ * null if there is none to borrow.
  *
  * Null covers every way that can go wrong - no `tint_from`, an entity
  * that does not exist, one that is unavailable - because they all want
@@ -91,14 +63,20 @@ export function tintKelvin(config, hass) {
   return Number.isNaN(kelvin) ? null : kelvin;
 }
 
-export function brightnessColor(value, attrs, config, hass) {
-  const strength = fillStrength(value, attrs);
+/**
+ * The fill colour: solid, and the same colour the tinting entity's own
+ * slider shows.
+ *
+ * Deliberately takes no value: the factory's colour functions are called
+ * with (value, attributes, config, hass) and this needs only the last
+ * two, because how bright it is is already carried by how far the fill
+ * reaches.
+ */
+export function brightnessColor(config, hass) {
   const kelvin = tintKelvin(config, hass);
-  if (kelvin === null) {
-    return `color-mix(in srgb, var(--primary-color) ${(strength * 100).toFixed(1)}%, transparent)`;
-  }
+  if (kelvin === null) return 'var(--primary-color)';
   const [r, g, b] = kelvinToRgb(kelvin);
-  return `rgba(${r}, ${g}, ${b}, ${strength.toFixed(3)})`;
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /**
@@ -125,10 +103,10 @@ defineValueSlider({
   tag: 'flare-brightness-feature',
   name: 'FLARE Brightness',
   supported: supportsBrightnessFeature,
-  fillFor: brightnessColor,
+  fillFor: (value, attrs, config, hass) => brightnessColor(config, hass),
   // No trackFor: the unfilled remainder falls back to
   // ha-control-slider's own default, a neutral grey. Not the tile's
   // colour, which is what the built-in feature uses - a phase-tinted
-  // track under a value-tinted fill reads as two different things
+  // track under a value-coloured fill reads as two different things
   // fighting, and the phase is still carried by the tile's icon.
 });
