@@ -998,6 +998,18 @@ HA derives the id from the name at creation.
   When the port landed, `sectionConfig()`'s output was diffed against
   the generator's last output and was byte-identical - worth repeating
   if this is ever restructured again.
+- **Two view strategies, not one**: `custom:flare` (schedules) and
+  `custom:flare-tracking` (scopes), registered as
+  `ll-strategy-view-flare` and `ll-strategy-view-flare-tracking`. Kept
+  apart because a house has one scope per room against a handful of
+  schedules, so merging would bury the schedules, and they answer
+  different questions - what a light should be doing versus who
+  currently owns it. **The suffix test matters**: a scope's sensor is
+  `sensor.<slug>_flare_tracking`, which ends with `_flare` *plus more*,
+  so `endsWith('_flare')` is load-bearing - `includes('_flare')` would
+  put every scope in the schedule view. Both enumerators also require a
+  distinguishing attribute (`points` / `claims`) so a name alone is
+  never enough.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

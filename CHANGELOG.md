@@ -7,6 +7,29 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.13.0] - 2026-09-07
+
+### Added
+
+- **A tracking dashboard view**, showing what FLARE is currently driving
+  rather than what it's scheduled to do:
+
+  ```yaml
+  views:
+    - title: Tracking
+      strategy:
+        type: custom:flare-tracking
+  ```
+
+  One section per tracking scope: how many lights FLARE is controlling,
+  how many something else has taken over, and a **Clear tracking** button
+  that hands them back. When a light has been taken over the section
+  names it, so the "which light stopped following, and what took it"
+  question is answerable from the dashboard instead of the device page.
+
+  The overridden list stays hidden while the count is zero, so a healthy
+  house shows three tidy lines per room.
+
 ## [0.12.1] - 2026-09-07
 
 ### Added

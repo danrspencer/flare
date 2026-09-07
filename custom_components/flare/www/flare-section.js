@@ -229,6 +229,10 @@ export function sectionConfig(slug, title) {
 
 const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
+// A tracking scope's own sensor. Note it also ends in SCHEDULE_SUFFIX
+// followed by more, which is why scheduleSensors below tests the suffix
+// exactly rather than with includes().
+const TRACKING_SUFFIX = '_flare_tracking';
 
 // Only reached when a schedule sensor has no friendly_name, which is
 // rare - the device name normally supplies one. Worth doing anyway: a
@@ -278,6 +282,86 @@ export function scheduleSensors(hass) {
       const slug = id.slice(SENSOR_PREFIX.length, -SCHEDULE_SUFFIX.length);
       const friendly = states[id].attributes.friendly_name;
       return { slug, title: friendly || titleCase(slug) };
+    })
+    .filter((s) => s.slug)
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+
+/**
+ * The tracking section for one scope.
+ *
+ * Deliberately small - a scope is three numbers and a button, and a
+ * house has one per room (sixteen here), so these are sized to flow
+ * several to a row rather than to span the view like a schedule does.
+ *
+ * `controlled` and `overridden` do NOT sum to the total tracked: a light
+ * that is off or unavailable is in neither, because override protection
+ * does not apply to it at all. See sensor.py.
+ */
+export function trackingSectionConfig(slug, title) {
+  const controlled = `sensor.${slug}_flare_controlled`;
+  const overridden = `sensor.${slug}_flare_overridden`;
+  const clear = `button.${slug}_flare_clear`;
+
+  return {
+    type: 'grid',
+    cards: [
+      heading(title, 'title', { icon: 'mdi:eye-outline' }),
+      tile({ entity: controlled, name: 'Controlled', columns: 6 }),
+      tile({ entity: overridden, name: 'Overridden', columns: 6 }),
+      // Naming the lights is the whole reason someone opens this view -
+      // "which light stopped following, and what took it". Hidden while
+      // the count is zero, which is almost always, so the section stays
+      // three lines until something is actually overridden.
+      {
+        type: 'markdown',
+        text_only: true,
+        grid_options: { columns: 'full' },
+        content:
+          `{% set lights = expand(state_attr('${overridden}', 'lights') or []) %}` +
+          `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
+        visibility: [{ condition: 'numeric_state', entity: overridden, above: 0 }],
+      },
+      // An explicit tap_action rather than relying on the tile card's
+      // per-domain default: pressing is the only thing anyone wants from
+      // this tile, and a default that changes upstream would silently
+      // turn it into a more-info dialog.
+      {
+        type: 'tile',
+        entity: clear,
+        name: 'Clear tracking',
+        icon: 'mdi:backup-restore',
+        grid_options: { columns: 'full' },
+        tap_action: {
+          action: 'perform-action',
+          perform_action: 'button.press',
+          target: { entity_id: clear },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Every FLARE tracking scope in `hass`, as {slug, title} pairs.
+ *
+ * Identified by the `claims` attribute, the same way schedule sensors
+ * are identified by `points` - a name test alone would also match
+ * anything else ending that way. The friendly name is "Bedroom
+ * Tracking", so the trailing word is dropped to leave the scope's own
+ * name.
+ */
+export function trackingScopes(hass) {
+  const states = (hass && hass.states) || {};
+  return Object.keys(states)
+    .filter((id) => id.startsWith(SENSOR_PREFIX) && id.endsWith(TRACKING_SUFFIX))
+    .filter((id) => states[id] && states[id].attributes && 'claims' in states[id].attributes)
+    .map((id) => {
+      const slug = id.slice(SENSOR_PREFIX.length, -TRACKING_SUFFIX.length);
+      const friendly = states[id].attributes.friendly_name || '';
+      const title = friendly.replace(/\s*Tracking$/, '') || titleCase(slug);
+      return { slug, title };
     })
     .filter((s) => s.slug)
     .sort((a, b) => a.title.localeCompare(b.title));

@@ -80,6 +80,28 @@ when a manual override is active.
 The colour-temperature sliders are painted in the colour they set, and change colour as
 you drag them.
 
+## The tracking view
+
+FLARE also ships a second view, showing what it's currently *driving* rather than what
+it's scheduled to do — one section per tracking scope:
+
+```yaml
+views:
+  - title: Tracking
+    strategy:
+      type: custom:flare-tracking
+```
+
+Each scope shows how many lights FLARE is controlling, how many something else has taken
+over, and a **Clear tracking** button that hands them back. When a light has been taken
+over, the section names it, so you can see at a glance which one stopped following.
+
+{: .note }
+> **Controlled** and **Overridden** don't add up to the total tracked, and that's
+> deliberate: a light that's off or unavailable is in neither, because override
+> protection doesn't apply to it at all. An overridden light isn't a fault — it means
+> something else deliberately took it and FLARE correctly stepped back.
+
 ## Changing it
 
 The view is generated fresh each time it loads, which is what keeps it up to date when

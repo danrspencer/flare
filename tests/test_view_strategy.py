@@ -42,7 +42,7 @@ globalThis.customElements.define = (name, cls) => {{
   globalThis.__definedElements[name] = cls;
 }};
 
-const {{ sectionConfig, scheduleSensors, normaliseSlug }} =
+const {{ sectionConfig, scheduleSensors, normaliseSlug, trackingScopes }} =
   await import({json.dumps(SECTION_JS.as_posix())});
 await import({json.dumps(STRATEGY_JS.as_posix())});
 
@@ -59,6 +59,7 @@ const input = JSON.parse(await new Promise((resolve) => {{
 // crashing here instead would turn a clean assertion into a collection
 // error that says nothing about what broke.
 const Strategy = globalThis.__definedElements['ll-strategy-view-flare'];
+const Tracking = globalThis.__definedElements['ll-strategy-view-flare-tracking'];
 const generate = async (states, config = {{}}) =>
   Strategy ? await Strategy.generate(config, {{ states }}) : null;
 
@@ -73,6 +74,9 @@ process.stdout.write(JSON.stringify({{
   unknown: await generate(input.states, {{ sensor: 'nosuchroom' }}),
   blankSensor: await generate(input.states, {{ sensor: '   ' }}),
   slugs: input.slugCases.map(normaliseSlug),
+  scopes: trackingScopes({{ states: input.states }}),
+  tracking: Tracking ? await Tracking.generate({{}}, {{ states: input.states }}) : null,
+  emptyTracking: Tracking ? await Tracking.generate({{}}, {{ states: {{}} }}) : null,
 }}));
 """
 
@@ -89,6 +93,30 @@ STATES = {
     # Someone else's sensor that happens to end the same way.
     "sensor.solar_flare": {"attributes": {}},
     "light.kitchen": {"attributes": {}},
+    # Tracking scopes. Identified by `claims`, and named "<Scope>
+    # Tracking" - the trailing word is the entity's own name, not part
+    # of the scope's.
+    "sensor.bedroom_flare_tracking": {
+        "attributes": {"claims": {}, "friendly_name": "Bedroom Tracking"}
+    },
+    "sensor.dining_room_flare_tracking": {
+        "attributes": {"claims": {}, "friendly_name": "Dining Room Tracking"}
+    },
+    # No friendly name - falls back to the title-cased slug.
+    "sensor.utility_flare_tracking": {"attributes": {"claims": {}}},
+    # The count sensors a scope also creates: they must not each become
+    # a scope of their own.
+    "sensor.bedroom_flare_controlled": {"attributes": {"lights": []}},
+    "sensor.bedroom_flare_overridden": {"attributes": {"lights": []}},
+    # Contrived on purpose, and the only case that isolates the suffix
+    # test from the attribute test: a tracking-shaped id carrying
+    # `points`. No real entity looks like this - a tracking sensor has
+    # `claims` - which is exactly why it is needed. Without it, relaxing
+    # endsWith('_flare') to includes('_flare') passes everything,
+    # because every real tracking sensor is already rejected on the
+    # missing attribute. Verified by mutation. Same reasoning, and the
+    # same shape of fixture, as tests/test_card_suggestion.py.
+    "sensor.hallway_flare_tracking": {"attributes": {"points": []}},
 }
 
 
@@ -363,3 +391,105 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
     assert badge["visibility"] == [
         {"condition": "state", "entity": "select.ground_floor_flare_phase", "state_not": "Auto"}
     ]
+
+
+# --- The tracking view -------------------------------------------------
+
+
+def _tracking_section(result, index=0):
+    return result["tracking"]["sections"][index]
+
+
+def test_the_tracking_strategy_is_registered_separately(result):
+    """`custom:flare-tracking` resolves to its own element. Registering
+    only one of the two renders an empty view with no error."""
+    assert "ll-strategy-view-flare-tracking" in result["registeredAs"]
+
+
+def test_a_tracking_view_is_one_section_per_scope(result):
+    headings = [s["cards"][0]["heading"] for s in result["tracking"]["sections"]]
+
+    assert headings == ["Bedroom", "Dining Room", "Utility"]
+
+
+def test_the_scope_name_drops_the_entitys_own_trailing_word(result):
+    """The sensor is called "Bedroom Tracking"; the scope is "Bedroom".
+    Leaving it on gives a section headed "Bedroom Tracking" above a tile
+    already labelled Controlled, which reads as a stutter."""
+    titles = [s["title"] for s in result["scopes"]]
+
+    assert "Bedroom" in titles
+    assert "Bedroom Tracking" not in titles
+
+
+def test_the_count_sensors_do_not_become_scopes_of_their_own(result):
+    """Every scope creates `_flare_controlled` and `_flare_overridden`
+    alongside `_flare_tracking`. Matching loosely would turn one room
+    into three sections."""
+    slugs = [s["slug"] for s in result["scopes"]]
+
+    assert slugs == ["bedroom", "dining_room", "utility"]
+
+
+def test_the_two_strategies_do_not_claim_each_others_sensors(result):
+    """`sensor.x_flare_tracking` ends with `_flare` PLUS MORE, so the
+    schedule test has to be endsWith, not includes.
+
+    `sensor.hallway_flare_tracking` in the fixture carries `points` for
+    this test alone: every real tracking sensor is rejected on the
+    missing attribute instead, so without it the suffix could be relaxed
+    and nothing would notice. It must land in neither view - wrong shape
+    for a schedule, wrong attribute for a scope."""
+    schedule_slugs = {s["slug"] for s in result["sensors"]}
+    tracking_slugs = {s["slug"] for s in result["scopes"]}
+
+    assert schedule_slugs == {"downstairs", "loft", "upstairs"}
+    assert tracking_slugs == {"bedroom", "dining_room", "utility"}
+    assert not schedule_slugs & tracking_slugs
+    assert not any("hallway" in slug for slug in schedule_slugs | tracking_slugs)
+
+
+def test_a_scope_shows_both_counts_and_a_clear_button(result):
+    entities = [c.get("entity") for c in _tracking_section(result)["cards"]]
+
+    assert "sensor.bedroom_flare_controlled" in entities
+    assert "sensor.bedroom_flare_overridden" in entities
+    assert "button.bedroom_flare_clear" in entities
+
+
+def test_the_clear_button_presses_rather_than_opening_a_dialog(result):
+    """An explicit tap_action, not the tile card's per-domain default:
+    pressing is the only thing anyone wants from this tile, and a default
+    that changes upstream would silently turn it into a more-info
+    dialog."""
+    clear = next(
+        c for c in _tracking_section(result)["cards"] if c.get("entity", "").startswith("button.")
+    )
+
+    assert clear["tap_action"] == {
+        "action": "perform-action",
+        "perform_action": "button.press",
+        "target": {"entity_id": "button.bedroom_flare_clear"},
+    }
+
+
+def test_the_overridden_lights_are_named_only_while_there_are_any(result):
+    """Naming them is the reason to open this view - "which light stopped
+    following". Showing an empty line the rest of the time would make
+    every section a line taller for nothing, so it is hidden at zero."""
+    card = next(c for c in _tracking_section(result)["cards"] if c.get("type") == "markdown")
+
+    assert card["visibility"] == [
+        {"condition": "numeric_state", "entity": "sensor.bedroom_flare_overridden", "above": 0}
+    ]
+    # expand() turns the entity_ids into states so real names show, and
+    # the `or []` keeps it from throwing before the attribute exists.
+    assert "expand(" in card["content"]
+    assert "or []" in card["content"]
+
+
+def test_no_scopes_explains_itself_rather_than_rendering_blank(result):
+    content = result["emptyTracking"]["sections"][0]["cards"][1]["content"]
+
+    assert "No FLARE tracking scopes found" in content
+    assert "Add state device" in content
