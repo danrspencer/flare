@@ -834,6 +834,31 @@ trigger/condition machinery only looks at entity state, not origin.
 - **An opt-out for the two-step repair** - HA's issue registry already
   provides Ignore, and an ignored issue survives version bumps.
   Documented in `docs/helpers.md` rather than reimplemented.
+- **Virtual per-phase `light` entities** replacing the eight curve
+  `number`s, so a phase is set from a normal light card (and gains RGB).
+  Rejected on Liskov: a phase target has no off state, so `turn_off`
+  would have to lie - and it must, because `light.turn_off` with
+  `entity_id: all` reaches it regardless of `entity_category` or
+  `hidden_by` (`helpers/service.py`'s `target_all_entities` branch is
+  `return list(entities.values())`; `all` skips target resolution by
+  definition). An always-on light also reports `on` in every
+  `states.light` template.
+  **Revisit if HA changes either half of that** - a colour-picker card
+  feature, or card features usable on a non-light entity. Today all
+  three light features gate on `computeDomain(...) === "light"` and
+  write via `light.turn_on`, and there is no colour-picker feature at
+  all (the wheel lives only in `ha-more-info-light`) - which is the
+  whole reason `flare-kelvin-feature.js` /
+  `flare-brightness-feature.js` / `flare-value-slider.js` exist.
+  **The gate is always the entity_id's domain PREFIX** - `computeDomain()`
+  in the features, and again when more-info picks its control element
+  (no aliasing, no fallback for an unknown domain). Python class
+  hierarchy, `device_class` and state attributes are all invisible to
+  it, so a bespoke `virtual_light` domain inheriting `LightEntity` gets
+  none of these controls. An empty light group is not a route either:
+  `group/light.py` derives every attribute from its members and
+  *forwards* `turn_on` to them, so with none it stores nothing, offers
+  `{ColorMode.ONOFF}` and reports unavailable.
 
 ### Parked: scene handling in `apply_lighting`
 
