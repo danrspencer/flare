@@ -42,7 +42,7 @@ FEATURE_JS = CARD_JS.parent / "flare-kelvin-feature.js"
 
 
 DRIVER = CARD_SHIMS + f"""
-const {{ supportsKelvinFeature, sliderColor }} =
+const {{ supportsKelvinFeature, sliderColor, handleColor, relativeLuminance }} =
   await import({json.dumps(FEATURE_JS.as_posix())});
 const {{ kelvinToRgb }} = await import({json.dumps(CARD_JS.as_posix())});
 
@@ -61,6 +61,8 @@ process.stdout.write(JSON.stringify({{
   emptyContext: supportsKelvinFeature(hass, {{}}),
   colors: input.paintKelvins.map(sliderColor),
   rgbs: input.paintKelvins.map(kelvinToRgb),
+  handles: input.handleKelvins.map(handleColor),
+  luminance: [relativeLuminance([0, 0, 0]), relativeLuminance([255, 255, 255])],
   feature: (() => {{
     const entry = globalThis.window.customCardFeatures.find(
       (f) => f.type === 'flare-kelvin-feature'
@@ -115,12 +117,25 @@ ENTITY_IDS = list(STATES)
 # Bottom, middle and top of the usual range.
 PAINT_KELVINS = [1000, 5500, 10000]
 
+# Spans the crossover. The white handle's contrast against the fill falls
+# steadily as the ramp pales: 3.45 at 1000K, 1.92 at 2700K, 1.69 at
+# 3200K, then under the 1.6 floor from ~3500K, bottoming at 1.03 at
+# 6667K - where it is simply not visible, which is what prompted this.
+HANDLE_KELVINS = [1000, 2000, 2700, 3200, 4000, 5000, 6000, 6667, 8000, 10000]
+WHITE = "#ffffff"
+NEAR_BLACK = "#1f1f1f"
+
 
 @pytest.fixture(scope="module")
 def result():
     return _node_eval(
         DRIVER,
-        {"states": STATES, "entityIds": ENTITY_IDS, "paintKelvins": PAINT_KELVINS},
+        {
+            "states": STATES,
+            "entityIds": ENTITY_IDS,
+            "paintKelvins": PAINT_KELVINS,
+            "handleKelvins": HANDLE_KELVINS,
+        },
     )
 
 
@@ -230,6 +245,63 @@ def test_both_halves_of_the_bar_take_the_values_colour(prop):
     # IS in the static block.
     assert f"{prop}:" not in style_block, f"{prop} is pinned statically as well as per value"
     assert f"setProperty('{prop}'" in source, f"{prop} is never set per value"
+
+
+def test_relative_luminance_is_anchored_at_black_and_white(result):
+    """A sanity check on the maths the handle rule depends on - a sign
+    error or a missing gamma step still produces plausible-looking
+    numbers in the middle of the range."""
+    black, white = result["luminance"]
+
+    assert black == 0
+    assert white == 1
+
+
+def test_the_handle_stays_white_while_white_is_still_visible(result):
+    """The white handle is the native look, and it is kept wherever it
+    still works rather than flipped for the sake of it - a saturated warm
+    fill contrasts with white perfectly well (1.92 at 2700K)."""
+    by_kelvin = dict(zip(HANDLE_KELVINS, result["handles"]))
+
+    for kelvin in (1000, 2000, 2700, 3200):
+        assert by_kelvin[kelvin] == WHITE, f"{kelvin}K should keep the native handle"
+
+
+def test_the_handle_flips_near_white_where_it_would_vanish(result):
+    """The reason for the whole rule: at 6667K - FLARE's own Day default
+    - the fill is very nearly white and a white handle contrasts at
+    1.03:1, i.e. is not there at all."""
+    by_kelvin = dict(zip(HANDLE_KELVINS, result["handles"]))
+
+    for kelvin in (4000, 5000, 6000, 6667, 8000, 10000):
+        assert by_kelvin[kelvin] == NEAR_BLACK, f"{kelvin}K needs a dark handle"
+
+
+def test_the_handle_is_not_simply_whichever_contrasts_more(result):
+    """Near-black out-contrasts white at every temperature on this ramp,
+    even deep amber (5.0 vs 3.5 at 1000K), so a maximise-contrast rule
+    would flip every handle dark and diverge from the built-in slider
+    everywhere. This pins that it is a minimum-visibility floor instead -
+    which is only observable at the warm end."""
+    by_kelvin = dict(zip(HANDLE_KELVINS, result["handles"]))
+
+    assert by_kelvin[1000] == WHITE
+
+
+def test_the_handle_rule_targets_the_sliders_own_handle_and_fails_soft():
+    """The one place this file reaches into another component's shadow
+    DOM, because the handle colour is hardcoded upstream with no custom
+    property and no part= to hook.
+
+    The rule must go through a variable rather than writing a colour
+    literal, so _paint can change it per value, and it must carry a
+    fallback so that if the injection lands but _paint has not run the
+    handle is stock white rather than transparent."""
+    source = FEATURE_JS.read_text()
+
+    assert ".slider .slider-track-bar::after" in source
+    assert "background-color: var(--flare-handle-color, #ffffff);" in source
+    assert "setProperty('--flare-handle-color'" in source
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

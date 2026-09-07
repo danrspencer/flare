@@ -902,7 +902,20 @@ HA derives the id from the name at creation.
   the fill is solid and the remainder is that same colour at the same
   native 0.2 opacity. So the handle, rounded fill cap, tooltip and
   keyboard behaviour are HA's, and only the hue is ours; the tile's
-  phase colour still shows on the icon. **Two earlier versions are
+  phase colour still shows on the icon. **The one place it reaches into
+  another component's shadow DOM is the drag handle**, which
+  `ha-control-slider` hardcodes to `background-color: white` on
+  `.slider .slider-track-bar::after` - no custom property, and the
+  element declares no `part=`, so there is no supported hook. A near-
+  white fill therefore leaves it invisible. `_adoptHandleRule` appends
+  one declaration to that instance's own shadow root pointing at a
+  variable set per value; it is scoped to elements we created (the
+  substantive difference from card-mod) and fails soft - if the class
+  name changes upstream the selector matches nothing and the handle
+  reverts to stock white. The flip is a minimum-visibility floor
+  (white below 1.6:1 contrast against the fill, crossover ~3500K), NOT
+  "whichever contrasts more" - near-black wins at every temperature on
+  this ramp, so maximising would flip every handle dark. **Two earlier versions are
   recorded in the file's header so they aren't re-attempted:** a
   full warm-to-cool gradient track (reads as a colour picker, not as one
   of a column of sliders), then a hand-rolled `<input type="range">`
