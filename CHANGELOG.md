@@ -7,6 +7,31 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.11.0] - 2026-09-07
+
+### Changed
+
+- **The curve chart is no longer blocky.** It was drawing each of its 289
+  five-minute samples as a separate flat-topped column, so every
+  brightness ramp rendered as a visible staircase and the colour changed
+  in hard vertical bands. It is now a single filled shape whose top edge
+  runs through the sample points, filled with one smooth gradient.
+
+  Straight lines between samples are exact rather than an approximation,
+  since the underlying curve is already piecewise linear in time — so
+  this is strictly more faithful than what it replaced, not a smoothing
+  fudge.
+
+- **Corners where a ramp meets a flat are now very slightly eased.** The
+  one deliberate inaccuracy, and it can only ever round a corner off,
+  never overshoot it: the easing is a quadratic whose control point sits
+  on the corner itself, so it is mathematically contained within the
+  corner it cuts. An interpolating spline would have invented brightness
+  the schedule never asks for.
+
+- The chart's markup shrank considerably as a side effect — the curve's
+  shape went from 289 elements to a single path of a few hundred bytes.
+
 ## [0.10.7] - 2026-09-07
 
 ### Reverted
