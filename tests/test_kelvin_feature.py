@@ -8,9 +8,9 @@ editor for every entity unless this says otherwise, so an over-broad
 check turns up on every entity in the house, and an over-narrow one
 means the feature simply never appears - neither surfaces as an error.
 
-The second is that the gradient is the *card's* Kelvin conversion. The
-whole point of this feature over a plain coloured slider is that it
-agrees with the curve drawn above it in the same dashboard section; a
+The second is that the bar is painted from the *card's* Kelvin
+conversion, at the current value. That is the entire feature - it has to
+agree with the curve drawn above it in the same dashboard section, and a
 second, drifting copy of the conversion would look fine and be subtly
 wrong, which is exactly the failure a test is for.
 
@@ -35,9 +35,9 @@ FEATURE_JS = CARD_JS.parent / "flare-kelvin-feature.js"
 
 
 DRIVER = CARD_SHIMS + f"""
-const {{ supportsKelvinFeature, kelvinGradient, labelIsDark, labelKelvin }} =
+const {{ supportsKelvinFeature, sliderBackground, valueFraction }} =
   await import({json.dumps(FEATURE_JS.as_posix())});
-const {{ kelvinToRgb, rgbToHex }} = await import({json.dumps(CARD_JS.as_posix())});
+const {{ kelvinToRgb }} = await import({json.dumps(CARD_JS.as_posix())});
 
 const input = JSON.parse(await new Promise((resolve) => {{
   let buf = '';
@@ -52,23 +52,12 @@ process.stdout.write(JSON.stringify({{
   supported: input.entityIds.map((id) => supportsKelvinFeature(hass, {{ entity_id: id }})),
   noContext: supportsKelvinFeature(hass, undefined),
   emptyContext: supportsKelvinFeature(hass, {{}}),
-  gradient: kelvinGradient(1000, 10000),
-  narrowGradient: kelvinGradient(2000, 3000),
-  reversed: kelvinGradient(10000, 1000),
-  stopCount: kelvinGradient(1000, 10000, 4),
-  // The card's own conversion, to compare the gradient's stops against.
-  endpoints: [rgbToHex(kelvinToRgb(1000)), rgbToHex(kelvinToRgb(10000))],
-  // The 8th of 16 stops (t = 7/15), plus what a plain two-point RGB
-  // blend between the endpoints would put at that same position.
-  sampledStop: rgbToHex(kelvinToRgb(1000 + 9000 * (7 / 15))),
-  blendedStop: (() => {{
-    const a = kelvinToRgb(1000);
-    const b = kelvinToRgb(10000);
-    const t = 7 / 15;
-    return rgbToHex(a.map((v, i) => Math.round(v + (b[i] - v) * t)));
-  }})(),
-  dark: input.labelKelvins.map(labelIsDark),
-  labelPositions: [labelKelvin(1000, 10000), labelKelvin(10000, 1000), labelKelvin(2000, 3000)],
+  // The same value painted at three points of the same range, plus the
+  // card's own conversion for each, so the test can assert the bar is
+  // that colour rather than merely "some colour".
+  backgrounds: input.paintCases.map((c) => sliderBackground(c.k, valueFraction(c.k, c.min, c.max))),
+  rgbs: input.paintCases.map((c) => kelvinToRgb(c.k)),
+  fractions: input.fractionCases.map((c) => valueFraction(c[0], c[1], c[2])),
   feature: (() => {{
     const entry = globalThis.window.customCardFeatures.find(
       (f) => f.type === 'flare-kelvin-feature'
@@ -120,14 +109,33 @@ STATES = {s["entity_id"]: s for s in (
 )}
 ENTITY_IDS = list(STATES)
 
-LABEL_KELVINS = [1000, 2000, 3000, 6500, 10000]
+# Bottom, middle and top of one range, so the colour and the fill point
+# can be checked as moving together.
+PAINT_CASES = [
+    {"k": 1000, "min": 1000, "max": 10000},
+    {"k": 5500, "min": 1000, "max": 10000},
+    {"k": 10000, "min": 1000, "max": 10000},
+]
+
+FRACTION_CASES = [
+    (5500, 1000, 10000),  # midpoint
+    (500, 1000, 10000),  # below the range
+    (99999, 1000, 10000),  # above it
+    (2500, 2000, 3000),  # a narrower range of its own
+    (4000, 4000, 4000),  # degenerate: min == max
+]
 
 
 @pytest.fixture(scope="module")
 def result():
     return _node_eval(
         DRIVER,
-        {"states": STATES, "entityIds": ENTITY_IDS, "labelKelvins": LABEL_KELVINS},
+        {
+            "states": STATES,
+            "entityIds": ENTITY_IDS,
+            "paintCases": PAINT_CASES,
+            "fractionCases": [list(c) for c in FRACTION_CASES],
+        },
     )
 
 
@@ -174,68 +182,64 @@ def test_a_missing_or_empty_context_is_not_supported(result):
     assert result["emptyContext"] is False
 
 
-def test_the_gradient_uses_the_cards_own_conversion(result):
-    """The reason for this feature over any coloured slider: it has to
-    agree with the curve card drawn above it in the same section. Both
-    ends come from kelvinToRgb, which is already parity-tested against
-    curve.py, so a second copy of the conversion would fail here."""
-    low, high = result["endpoints"]
+def test_the_bar_is_a_solid_fill_in_the_colour_of_the_current_value(result):
+    """The whole feature. The bar is one solid colour - the colour of the
+    value it is set to - not a gradient across the range: an earlier
+    version painted the full warm-to-cool sweep and read as a colour
+    picker rather than as one of a column of matching sliders."""
+    for background, rgb in zip(result["backgrounds"], result["rgbs"]):
+        fill = "rgb({}, {}, {})".format(*rgb)
 
-    assert result["gradient"].startswith(f"linear-gradient(to right, {low} 0.00%")
-    assert result["gradient"].endswith(f"{high} 100.00%)")
-
-
-def test_the_gradient_is_sampled_not_a_two_point_blend(result):
-    """Kelvin->RGB is not linear in RGB space - a straight blend from the
-    1000K red to the 10000K blue passes through purple, which is not a
-    colour any temperature on that scale is - so the stops have to be
-    real samples, and this asserts the difference rather than merely
-    counting them."""
-    assert result["sampledStop"] in result["gradient"]
-    assert result["blendedStop"] not in result["gradient"]
-    assert result["gradient"].count("#") == 16
+        assert background.count(fill) == 2, f"expected two hard stops of {fill}"
+        assert background.startswith(f"linear-gradient(to right, {fill} 0%"), background
 
 
-def test_the_stop_count_is_configurable(result):
-    assert result["stopCount"].count("#") == 4
+def test_the_two_stops_meet_at_the_fill_point_with_no_blend(result):
+    """A fill level, not a gradient: both stops sit at the same position,
+    so the edge is crisp. A single stop either side would fade the bar
+    across its whole width."""
+    low, mid, high = result["backgrounds"]
+
+    assert "0.00%, rgba(" in low, "at the bottom of the range the bar is empty"
+    assert "100.00%, rgba(" in high, "at the top it is full"
+    assert "50.00%, rgba(" in mid
 
 
-def test_the_gradient_tracks_the_entitys_own_range(result):
-    """A narrower entity range means a narrower slice of the scale, not
-    the same gradient squeezed - a 2000-3000K entity is warm end to end.
-    This is what makes the feature correct for a foreign entity whose
-    min/max are nothing like FLARE's."""
-    assert result["narrowGradient"] != result["gradient"]
-    assert result["narrowGradient"].startswith("linear-gradient(to right, ")
+def test_the_unfilled_remainder_is_neutral_not_tinted(result):
+    """The one place this deliberately departs from the built-in slider,
+    which tints its remainder with its own colour.
+
+    An honest orange-to-blue colour-temperature ramp has to pass through
+    white in the middle - 6667K, FLARE's own Day default, is very nearly
+    white - so a white fill above a white-tinted remainder on a white
+    tile is an invisible control. A neutral remainder keeps the fill edge
+    legible at every temperature, including the pale ones."""
+    for background, rgb in zip(result["backgrounds"], result["rgbs"]):
+        assert "rgba(128, 128, 128, 0.18)" in background, background
+        assert "rgba({}, {}, {}".format(*rgb) not in background, background
 
 
-def test_a_reversed_range_still_runs_cold_to_warm_left_to_right(result):
-    """min/max arriving the wrong way round would otherwise paint the
-    track backwards while the thumb still moved left-to-right."""
-    assert result["reversed"] == result["gradient"]
+def test_the_colour_actually_moves_with_the_value(result):
+    """Guards the case the tests above would all still pass on: a bar
+    painted from a fixed colour rather than the current value."""
+    low, mid, high = result["backgrounds"]
+
+    assert low != mid != high
+    assert len({tuple(rgb) for rgb in result["rgbs"]}) == 3
 
 
-def test_the_value_label_flips_with_the_track_behind_it(result):
-    """The track spans deep amber to pale blue, so one fixed label colour
-    is unreadable at one end whichever end you choose."""
-    by_kelvin = dict(zip(LABEL_KELVINS, result["dark"]))
+def test_the_fill_point_is_clamped_to_the_entitys_own_range(result):
+    """A `number` can report outside its own min/max - a restored value
+    from before the range changed, say - and an unclamped fraction paints
+    a stop at -5% or 300%, which CSS renders as a bar that is simply
+    wrong rather than as an error."""
+    mid, below, above, narrow, degenerate = result["fractions"]
 
-    assert by_kelvin[1000] is False, "deep amber needs a light label"
-    assert by_kelvin[10000] is True, "pale blue needs a dark label"
-
-
-def test_the_label_is_coloured_for_where_it_sits_not_for_the_value(result):
-    """The label is pinned to the left of the track and does not ride the
-    thumb, so the colour under it is the range's low end whatever the
-    value is. Colouring it by the current value instead reads correctly
-    only at the bottom of the range and puts dark text on deep amber
-    everywhere else - the first version did exactly that, and it was
-    caught by eye rather than here, which is why this test exists."""
-    full, reversed_, narrow = result["labelPositions"]
-
-    assert full == 1000
-    assert reversed_ == 1000, "min/max the wrong way round must not flip the label"
-    assert narrow == 2000, "a narrow range's label sits over its own low end"
+    assert mid == 0.5
+    assert below == 0
+    assert above == 1
+    assert narrow == 0.5
+    assert degenerate == 0, "min == max must not divide by zero"
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):

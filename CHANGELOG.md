@@ -7,6 +7,29 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.10.3] - 2026-09-06
+
+### Changed
+
+- **The colour-temperature slider now looks like an ordinary slider.**
+  0.10.2 painted its whole track as a warm-to-cool Kelvin gradient with
+  a thumb and a value label. That read as a colour picker rather than as
+  one of a column of matching controls. It is now visually identical to
+  the built-in `numeric-input` slider — same height, same corner radius,
+  a solid fill to the current value, no thumb, no label — with the fill
+  painted in the colour temperature it is set to, changing colour as you
+  drag it.
+
+  Its one deliberate difference from the built-in is that the *unfilled*
+  remainder is neutral rather than a dimmed tint of the fill, and the bar
+  carries a hairline border. An honest orange-to-blue ramp passes through
+  white in the middle — 6667 K, the Day default, is very nearly white —
+  so a white fill above a white-tinted remainder on a white tile would be
+  an invisible control.
+
+  No configuration change: the feature type is unchanged, so existing
+  dashboards pick this up as-is.
+
 ## [0.10.2] - 2026-09-06
 
 ### Added

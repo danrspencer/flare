@@ -140,9 +140,10 @@ permalink: /dashboard/
 
 <p>
   The four colour-temperature controls use <strong>FLARE Colour temperature</strong>
-  (<code>type: custom:flare-kelvin-feature</code>) rather than the built-in slider: its
-  track is painted with the actual colour temperature it sets, running across the
-  entity's own range, with the value written on it.
+  (<code>type: custom:flare-kelvin-feature</code>) rather than the built-in slider. It
+  looks exactly like the built-in one — same height, same corner radius, a solid fill to
+  the current value — except the fill is painted in the colour temperature it's set to,
+  and the whole bar changes colour as you drag it.
 </p>
 
 <p>
@@ -155,11 +156,19 @@ permalink: /dashboard/
 </p>
 
 <p>
-  The gradient is sampled from the same Kelvin-to-RGB conversion the curve card draws
-  with, so the slider and the curve directly above it in the same section agree by
-  construction. It's sampled rather than blended between the two ends because that curve
-  isn't linear in RGB — a straight blend from the warm end to the cool one passes
-  through purple, which is not a colour any temperature on the scale actually is.
+  The colour comes from the same Kelvin-to-RGB conversion the curve card draws with, so
+  the bar and the curve directly above it in the same section agree by construction.
+</p>
+
+<p>
+  One deliberate departure from the built-in slider: the <em>unfilled</em> part of the
+  bar is neutral grey rather than a dimmed tint of the fill colour, and the bar carries
+  a hairline border. An honest orange-to-blue colour-temperature ramp has to pass
+  through white in the middle — 6667&nbsp;K, FLARE's own Day default, is very nearly
+  white — so a white fill above a white-tinted remainder on a white tile would be an
+  invisible control. Dimming the whole ramp to compensate was tried and looks worse: the
+  middle goes muddy grey-brown and stops reading as warm white at all. So the colour
+  stays physically true and the contrast is fixed instead.
 </p>
 
 <p>

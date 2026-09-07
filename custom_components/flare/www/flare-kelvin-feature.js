@@ -1,22 +1,35 @@
 /**
  * A custom card feature that renders a `number` entity measured in Kelvin
- * as a slider whose track IS the colour temperature it sets.
+ * as an ordinary Home Assistant slider whose SOLID COLOUR is the colour
+ * temperature it is currently set to. Slide it and the whole bar changes
+ * colour with the value.
  *
- * Why this exists rather than the built-in `numeric-input` feature: the
- * built-in slider paints itself in the tile's own colour, because
- * hui-tile-card sets `--feature-color: var(--tile-color)`. That is one
- * knob for two jobs - the FLARE dashboard section uses a tile's `color`
- * to encode which PHASE a control belongs to, so the slider can't also
- * carry the value. A tile card's `color` takes no template either (no
- * Lovelace core card renders Jinja), so "tint it by the current Kelvin"
- * is not expressible in the built-in feature at all.
+ * Visually it is the built-in `numeric-input` slider and nothing more: a
+ * solid fill from the left to the current value, same height, same
+ * corner radius, no thumb, no text of its own (the tile already shows
+ * the value). The only difference is where the colour comes from - and
+ * the remainder, see TRACK below.
  *
- * This feature paints its own track and never reads `--feature-color`,
- * which is what lets both things be true at once: the icon keeps the
- * phase colour, and the slider shows the colour.
+ * Why it can't be the built-in one: that slider takes its colour from
+ * `--feature-color`, which hui-tile-card sets to `var(--tile-color)`.
+ * That is one knob for two jobs - the FLARE dashboard section spends a
+ * tile's `color` on encoding which PHASE a control belongs to, so the
+ * slider can't also carry the value. A tile card's `color` takes no
+ * template either (no Lovelace core card renders Jinja), so "tint it by
+ * the current Kelvin" is not expressible there at all. This feature
+ * paints itself and never reads `--feature-color`, so both can be true
+ * at once: the icon keeps the phase colour, the bar shows the value.
+ *
+ * An earlier version painted the track as a full Kelvin GRADIENT, warm
+ * to cool across the entity's range, with a thumb and a value label. It
+ * worked and it looked wrong - a rainbow bar reads as a colour picker,
+ * not as one of a column of matching sliders. Matching the built-in
+ * exactly, and changing only the colour, is the whole point. Don't
+ * reintroduce the gradient. See TRACK below for the one place this
+ * deliberately does NOT match the built-in, and why.
  *
  * The alternative was card-mod, which can template `--feature-color`
- * independently - rejected because the docs generator's whole promise is
+ * independently - rejected because the docs generator's promise is
  * paste-and-go with no third-party dependencies, and card-mod works by
  * patching frontend shadow-DOM internals, a well-known source of
  * breakage across Home Assistant upgrades. This file ships inside the
@@ -24,15 +37,14 @@
  * costs the user nothing to have.
  *
  * Deliberately built on a plain <input type="range"> rather than Home
- * Assistant's own ha-control-slider. ha-control-slider is an internal
- * frontend element with no compatibility promise, and the whole point of
- * not using card-mod was to avoid depending on internals. A native range
- * input brings pointer drag, keyboard stepping, focus and correct ARIA
- * semantics with no code, and is styled below to match the built-in
- * features' dimensions via the documented --feature-* variables.
+ * Assistant's own ha-control-slider, which is an internal frontend
+ * element with no compatibility promise - avoiding exactly the class of
+ * dependency card-mod was rejected for. The native input brings pointer
+ * drag, keyboard stepping, focus and correct ARIA semantics with no
+ * code, and is sized from the documented --feature-* variables.
  */
 
-import { kelvinToRgb, rgbToHex } from './flare-curve-card.js';
+import { kelvinToRgb } from './flare-curve-card.js';
 
 // Matches number.py's _CurveNumber, which sets this unit on the Kelvin
 // values and no others. Keyed on the unit rather than the entity_id
@@ -40,6 +52,24 @@ import { kelvinToRgb, rgbToHex } from './flare-curve-card.js';
 // number entity, not just FLARE's, and it cannot go stale if the
 // integration's own naming changes.
 const KELVIN_UNIT = 'K';
+
+// The unfilled remainder, and the hairline around the whole bar.
+//
+// The built-in slider tints its remainder with its own colour, and that
+// is wrong here for a reason worth recording: an honest orange-to-blue
+// colour-temperature ramp HAS to pass through white in the middle -
+// 6667K, FLARE's own Day default, is very nearly white - and a white
+// fill on a white tile with a white-tinted remainder is an invisible
+// control. Dimming the whole ramp to compensate was tried and looks
+// worse still: the middle goes muddy grey-brown and stops reading as
+// warm white at all.
+//
+// So the colour stays physically true and the CONTRAST is fixed
+// instead. A neutral remainder plus a hairline means the fill edge is
+// legible at every temperature, including the pale ones. One fixed
+// grey works in both themes - it is barely-there over a light card and
+// a soft lift over a dark one. Verified in both.
+const TRACK = 'rgba(128, 128, 128, 0.18)';
 
 export function supportsKelvinFeature(hass, context) {
   const entityId = context && context.entity_id;
@@ -49,59 +79,31 @@ export function supportsKelvinFeature(hass, context) {
   return (stateObj.attributes || {}).unit_of_measurement === KELVIN_UNIT;
 }
 
-/**
- * A CSS gradient sampling kelvinToRgb across the entity's own range.
- *
- * Sampled rather than interpolated between two endpoints because the
- * Kelvin -> RGB curve is not linear in RGB space - a straight blend from
- * the 1000K red to the 10000K blue would pass through purple, which is
- * not a colour any temperature on that scale actually is. Sixteen stops
- * is comfortably past the point where the banding is visible at slider
- * widths, and CSS interpolates between them.
- *
- * Uses the card's own kelvinToRgb so the slider and the curve drawn
- * above it in the same dashboard section agree by construction - that
- * function is already parity-tested against curve.py's Python version.
- */
-export function kelvinGradient(min, max, stops = 16) {
-  const lo = Math.min(min, max);
-  const hi = Math.max(min, max);
-  const parts = [];
-  for (let i = 0; i < stops; i += 1) {
-    const t = stops === 1 ? 0 : i / (stops - 1);
-    parts.push(`${rgbToHex(kelvinToRgb(lo + (hi - lo) * t))} ${(t * 100).toFixed(2)}%`);
-  }
-  return `linear-gradient(to right, ${parts.join(', ')})`;
+/** How far along its own range the value sits, clamped to 0..1. */
+export function valueFraction(value, min, max) {
+  if (!(max > min)) return 0;
+  return Math.min(Math.max((value - min) / (max - min), 0), 1);
 }
 
 /**
- * Whether to draw the value label dark or light.
+ * The slider's background: solid colour to the fill point, neutral
+ * beyond it.
  *
- * The track spans deep amber to pale blue, so a single fixed label
- * colour is unreadable at one end whichever end you pick. Rec. 601 luma
- * of the colour actually under the label, thresholded at mid-grey.
+ * Two hard stops at the same position rather than a blend, so the edge
+ * is crisp - this is a fill level, not a gradient. The colour is a
+ * single sample at the CURRENT VALUE, which is what makes the whole bar
+ * change colour as it moves.
  *
- * Call it with labelKelvin() below, never with the current value.
+ * Uses the card's own kelvinToRgb, already parity-tested against
+ * curve.py, so the bar and the curve drawn above it in the same
+ * dashboard section agree by construction rather than by a second copy
+ * of the conversion.
  */
-export function labelIsDark(kelvin) {
+export function sliderBackground(kelvin, fraction) {
   const [r, g, b] = kelvinToRgb(kelvin);
-  return 0.299 * r + 0.587 * g + 0.114 * b > 140;
-}
-
-/**
- * The colour temperature sitting UNDER the value label.
- *
- * The label is pinned to the left of the track and does not ride the
- * thumb, so that is the low end of the range - not the current value.
- * A one-line function purely so the distinction is testable: the first
- * version of this passed the current value, which looks right in a
- * screenshot taken at the bottom of the range and picks dark text on
- * deep amber everywhere else. Caught by eye, not by a test, which is
- * the reason it is a named function now rather than an expression
- * buried in the render path.
- */
-export function labelKelvin(min, max) {
-  return Math.min(min, max);
+  const fill = `rgb(${r}, ${g}, ${b})`;
+  const stop = `${(Math.min(Math.max(fraction, 0), 1) * 100).toFixed(2)}%`;
+  return `linear-gradient(to right, ${fill} 0%, ${fill} ${stop}, ${TRACK} ${stop}, ${TRACK} 100%)`;
 }
 
 class FlareKelvinFeature extends HTMLElement {
@@ -135,70 +137,52 @@ class FlareKelvinFeature extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
-        .wrap { position: relative; height: var(--feature-height, 42px); }
         input {
           -webkit-appearance: none;
           appearance: none;
+          display: block;
           margin: 0;
           padding: 0;
           width: 100%;
-          height: 100%;
+          height: var(--feature-height, 42px);
           border-radius: var(--feature-border-radius, 12px);
           cursor: pointer;
-          /* The gradient is set per-render; this is only the fallback
-             for the moment before the entity's range is known. */
+          /* See TRACK above: without this a near-white fill has no
+             visible edge against a light tile. */
+          box-shadow: inset 0 0 0 1px rgba(120, 120, 120, 0.35);
+          /* Only ever seen for an unavailable entity - every other path
+             sets a real background before paint. */
           background: var(--disabled-color, #bdbdbd);
         }
         input:focus-visible {
           outline: 2px solid var(--primary-color, #03a9f4);
           outline-offset: 2px;
         }
-        /* A thin full-height bar rather than a round knob: at 42px tall
-           a circular thumb reads as a separate control sitting on the
-           track, where the built-in features read as one solid object. */
+        /* No visible thumb: the built-in slider has none, and the fill
+           edge is the indicator. Kept 2px wide rather than 0 so the
+           browser still has something to grab for the drag. */
         input::-webkit-slider-thumb {
           -webkit-appearance: none;
           appearance: none;
-          width: 6px;
+          width: 2px;
           height: var(--feature-height, 42px);
-          border-radius: 3px;
-          background: #ffffff;
-          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+          background: transparent;
         }
         input::-moz-range-thumb {
-          width: 6px;
+          width: 2px;
           height: var(--feature-height, 42px);
           border: none;
-          border-radius: 3px;
-          background: #ffffff;
-          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
-        }
-        .value {
-          position: absolute;
-          top: 0;
-          left: 12px;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          font-size: 14px;
-          font-weight: 500;
-          /* Never eat the pointer - the input underneath owns every
-             interaction, including a click that lands on the text. */
-          pointer-events: none;
+          background: transparent;
         }
       </style>
-      <div class="wrap">
-        <input type="range" />
-        <span class="value"></span>
-      </div>
+      <input type="range" />
     `;
     this._input = this.shadowRoot.querySelector('input');
-    this._label = this.shadowRoot.querySelector('.value');
     // `change` rather than `input`: `input` fires continuously through a
     // drag, which would be one service call per pixel.
     this._input.addEventListener('change', (ev) => this._setValue(ev.target.value));
-    // Still track `input` so the label and thumb follow the drag live,
-    // without committing anything.
+    // `input` too, but only to repaint - so the colour follows the drag
+    // live instead of snapping when the state comes back.
     this._input.addEventListener('input', (ev) => this._paint(Number(ev.target.value)));
   }
 
@@ -212,10 +196,10 @@ class FlareKelvinFeature extends HTMLElement {
   }
 
   _paint(kelvin) {
-    this._label.textContent = `${Math.round(kelvin)} K`;
-    this._label.style.color = labelIsDark(this._labelKelvin)
-      ? 'rgba(0,0,0,0.85)'
-      : 'rgba(255,255,255,0.95)';
+    this._input.style.background = sliderBackground(
+      kelvin,
+      valueFraction(kelvin, this._min, this._max)
+    );
   }
 
   _render() {
@@ -224,28 +208,24 @@ class FlareKelvinFeature extends HTMLElement {
     if (!this.shadowRoot) this._build();
 
     const attrs = stateObj.attributes || {};
-    const min = Number(attrs.min ?? 1000);
-    const max = Number(attrs.max ?? 10000);
-    const step = Number(attrs.step ?? 1);
+    this._min = Number(attrs.min ?? 1000);
+    this._max = Number(attrs.max ?? 10000);
     const value = Number(stateObj.state);
 
-    this._input.min = min;
-    this._input.max = max;
-    this._input.step = step;
+    this._input.min = this._min;
+    this._input.max = this._max;
+    this._input.step = Number(attrs.step ?? 1);
     this._input.setAttribute('aria-label', attrs.friendly_name || stateObj.entity_id);
     // An unavailable/unknown entity parses to NaN, which a range input
-    // silently snaps to its own minimum - showing a confident 1000 K for
-    // a value we do not have. Disable instead.
+    // silently snaps to its own minimum - painting a confident 1000 K
+    // bar for a value we do not have. Disable and go grey instead.
     if (Number.isNaN(value)) {
       this._input.disabled = true;
       this._input.style.background = '';
-      this._label.textContent = '—';
       return;
     }
     this._input.disabled = false;
     this._input.value = value;
-    this._input.style.background = kelvinGradient(min, max);
-    this._labelKelvin = labelKelvin(min, max);
     this._paint(value);
   }
 }
