@@ -890,10 +890,19 @@ HA derives the id from the name at creation.
   `window.customCardFeatures`, not `customCards`; the older
   `customTileFeatures` name is not used). One StaticPathConfig serves
   the directory, so each new file needs only its own
-  `add_extra_js_url`. The feature imports `kelvinToRgb`/`rgbToHex` from
-  the card rather than copying them, so its gradient and the chart
-  agree by construction - ES modules are per-URL singletons, so the
-  shared import costs nothing. It exists because a tile's slider takes
+  `add_extra_js_url`. The feature imports `kelvinToRgb` from the card
+  rather than copying it, so its fill colour and the chart agree by
+  construction - ES modules are per-URL singletons, so the shared
+  import costs nothing. It renders as the built-in slider with a solid
+  fill in the colour of the current value; an earlier version painted
+  the whole track as a warm-to-cool gradient, with a thumb and a value
+  label, and was rejected on sight - a rainbow bar reads as a colour
+  picker, not as one of a column of matching sliders. Its one
+  deliberate departure from the built-in is a *neutral* unfilled
+  remainder plus a hairline border, because an honest ramp passes
+  through white near 6667K (the Day default) and a white fill over a
+  white-tinted remainder on a white tile is an invisible control;
+  dimming the whole ramp instead was tried and goes muddy grey-brown. It exists because a tile's slider takes
   its colour from `--feature-color`, which `hui-tile-card` sets to
   `var(--tile-color)`, and a tile `color` accepts no template - so the
   built-in `numeric-input` cannot show a value as a colour while the
