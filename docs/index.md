@@ -84,25 +84,3 @@ Assistant action you can call yourself from YAML, scripts, Node-RED or AppDaemon
 override-protection machinery is available standalone, whether or not you use the rest.
 
 [Go deeper →]({{ site.baseurl }}/advanced/){: .btn .btn-outline }
-
----
-
-## What "reconciliation" means
-
-FLARE knows what every light it drives should be showing right now, and keeps working to
-get it there.
-
-That matters because lighting commands go missing. A Zigbee message drops, a bulb is
-busy, the mesh hiccups — and the light quietly stays where it was. FLARE doesn't assume a
-command landed just because it was sent:
-
-- It **re-checks on a timer** and re-sends anything that isn't where it should be, so a
-  command lost on first try is simply sent again.
-- A bulb that was unreachable is **caught up as soon as it comes back**, rather than
-  sitting wrong until the next phase.
-- A bulb already at the target, within tolerance, is **left alone** — so nothing gets
-  spammed, and bulbs that round values off aren't fought with.
-
-It also expects to share a room. A **scene** can own part of one while FLARE keeps the
-rest on the curve, and **tracking scopes** — one named device per room — show you at a
-glance which lights FLARE is currently driving and which have been taken.
