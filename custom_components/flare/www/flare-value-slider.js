@@ -67,9 +67,10 @@ function ensureSlider() {
  *             for, and which it refuses to render
  *   fillFor   (value, attributes) => CSS colour for the filled part
  *   trackFor  optional; the same for the unfilled remainder. Omit it and
- *             the remainder keeps the tile's own colour, exactly as the
- *             built-in slider does - which is what you want when the
- *             fill's colour is not itself the entity's identity.
+ *             the remainder falls through to ha-control-slider's own
+ *             default, a neutral grey - which is what you want when the
+ *             fill's colour is not itself the entity's identity, and
+ *             tinting the track would just add a second meaning.
  */
 export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
   class FlareValueSlider extends HTMLElement {
@@ -103,18 +104,25 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
       await ensureSlider();
 
       const style = document.createElement('style');
-      // Copied from the frontend's cardFeatureStyles, minus the colour
-      // properties _paint sets per value. Keep the rest identical: any
-      // divergence is a divergence from the slider sitting next to this
-      // one in the same row.
+      // The frontend's cardFeatureStyles rule for ha-control-slider,
+      // minus its two COLOUR properties.
       //
-      // --control-slider-background is only declared here when the
-      // feature does NOT set it per value, so it never appears twice
-      // (whichever won would depend silently on specificity).
+      // cardFeatureStyles points both of those at --feature-color, the
+      // tile's own colour. Neither is wanted here: the fill is the
+      // value's, and the unfilled track is deliberately left to
+      // ha-control-slider's own default - --disabled-color at 0.2, a
+      // neutral grey that moves with the theme. Tinting the track with
+      // the tile's colour is what made a brightness slider read as a
+      // phase indicator with a bar on it.
+      //
+      // So --control-slider-background is never declared statically: a
+      // feature that wants it sets it per value, and one that does not
+      // gets Home Assistant's default. Declaring it here as well would
+      // mean the per-value feature has it set twice, where whichever
+      // wins depends silently on specificity.
       style.textContent = `
         :host { display: block; }
         ${SLIDER_TAG} {
-          ${trackFor ? '' : '--control-slider-background: var(--feature-color);'}
           --control-slider-background-opacity: 0.2;
           --control-slider-thickness: var(--feature-height);
           --control-slider-border-radius: var(--feature-border-radius);

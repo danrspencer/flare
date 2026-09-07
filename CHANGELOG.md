@@ -7,6 +7,17 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.14.3] - 2026-09-07
+
+### Changed
+
+- **The brightness slider's unfilled track is neutral again.** It was
+  tinted with the tile's phase colour, which put a phase indicator
+  underneath a value indicator and read as two things fighting. It now
+  falls through to Home Assistant's own default for a slider — a neutral
+  grey that follows the theme — leaving the fill to carry the value and
+  the tile's icon to carry the phase.
+
 ## [0.14.2] - 2026-09-07
 
 ### Changed

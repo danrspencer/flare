@@ -77,8 +77,9 @@ defineValueSlider({
   name: 'FLARE Brightness',
   supported: supportsBrightnessFeature,
   fillFor: brightnessColor,
-  // No trackFor: the unfilled remainder keeps the tile's own colour, as
-  // the built-in slider does. Fading that too would leave a dim value
-  // with almost no visible control at all, and the phase colour is
-  // still worth carrying somewhere in the row.
+  // No trackFor: the unfilled remainder falls back to
+  // ha-control-slider's own default, a neutral grey. Not the tile's
+  // colour, which is what the built-in feature uses - a phase-tinted
+  // track under a value-tinted fill reads as two different things
+  // fighting, and the phase is still carried by the tile's icon.
 });

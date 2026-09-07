@@ -235,19 +235,29 @@ def test_colour_temperature_paints_both_halves_from_one_conversion():
     assert "trackFor: sliderColor," in source
 
 
-def test_the_background_is_never_declared_both_ways_at_once():
-    """A feature that sets the track per value must NOT also pin it in
-    the static CSS: with both, whichever wins would depend silently on
-    specificity. The shared CSS therefore emits that declaration only
-    when the feature has no trackFor."""
+def test_the_track_colour_is_never_pinned_statically():
+    """The shared CSS declares neither colour property.
+
+    The frontend's own rule points both at --feature-color, the tile's
+    colour. Neither is wanted: the fill is the value's, and a feature
+    with no trackFor deliberately falls through to ha-control-slider's
+    own default (--disabled-color, a neutral grey) rather than being
+    tinted with the tile's phase colour.
+
+    Pinning it here would also mean a feature that sets it per value has
+    it declared twice, where whichever wins depends silently on
+    specificity."""
     source = SLIDER_JS.read_text()
     style_block = source[source.index("style.textContent = `") : source.index("this._slider = document")]
 
     # Match on the colon: a bare `--control-slider-background` is also a
     # prefix of `--control-slider-background-opacity`, which legitimately
-    # IS in the static block unconditionally.
-    assert "--control-slider-background:" in style_block, "no static fallback for the track"
-    assert "trackFor ?" in style_block, "the static track colour is not conditional"
+    # IS in the static block.
+    assert "--control-slider-background:" not in style_block
+    assert "--control-slider-color:" not in style_block
+    # The opacity is still ours - it matches cardFeatureStyles, and the
+    # default happens to agree.
+    assert "--control-slider-background-opacity: 0.2;" in style_block
 
 
 def test_the_feature_is_registered_for_the_card_editor(result):
