@@ -220,7 +220,7 @@ def expected_lingering_timers():
 
 
 class TestAdaptiveScheduleAndTransitions:
-    """docs/blueprint.md#brightness--colour-temperature-schedule"""
+    """docs/blueprint.md#timing"""
 
     async def test_an_unavailable_sensor_skips_the_tick_instead_of_erroring(self, hass, apply_lighting_calls):
         """brightness/color_temp_kelvin are plain state_attr() reads, and
@@ -532,7 +532,7 @@ class TestAdaptiveScheduleAndTransitions:
 
 
 class TestRoomTargetResolution:
-    """docs/blueprint.md#one-target-two-jobs - room_target does double
+    """docs/blueprint.md#setting-up-a-room - room_target does double
     duty: lights within it are controlled, occupancy-class sensors
     within it govern occupancy. Entity-list resolution is covered
     throughout the rest of this file; this class is specifically about
@@ -643,7 +643,7 @@ class TestRoomTargetResolution:
 
 
 class TestOccupancyDrivenOnOff:
-    """docs/blueprint.md#occupancy-driven-onoff"""
+    """docs/blueprint.md#when-lights-turn-on-and-off"""
 
     async def test_occupancy_detected_turns_on_off_lights_in_the_room(self, hass, apply_lighting_calls):
         _occupancy(hass, "binary_sensor.occ", "off")
@@ -917,7 +917,7 @@ class TestAllowTurnOn:
 
 
 class TestOverrideDetection:
-    """docs/blueprint.md#override-detection"""
+    """docs/blueprint.md#why-didnt-my-light-change"""
 
     async def test_apply_lighting_sends_no_scope_when_none_resolves(self, hass, apply_lighting_calls):
         """An entity-only Room Target whose light has no area, and no
@@ -1132,7 +1132,7 @@ class TestRecoveredTrigger:
 
 
 class TestSceneHandoff:
-    """docs/blueprint.md#scene-handoff"""
+    """docs/blueprint.md#handing-a-room-to-a-scene"""
 
     async def test_valid_scene_activates_via_a_phase_change_and_flare_only_covers_uncovered_entities(
         self, hass, apply_lighting_calls, scene_turn_on_calls
@@ -1383,7 +1383,7 @@ class TestSceneHandoff:
 
 
 class TestBrightnessScaling:
-    """docs/blueprint.md#per-light-brightness-scaling"""
+    """docs/blueprint.md#turning-lights-off-during-a-phase"""
 
     async def test_phase_exclude_list_sets_a_zero_multiplier_for_that_light(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on")
@@ -1528,7 +1528,7 @@ class TestBrightnessScaling:
 
 
 class TestRgbColour:
-    """docs/blueprint.md#rgb-colour"""
+    """docs/blueprint.md#colour"""
 
     async def test_prefer_rgb_color_is_true_only_during_a_configured_phase(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on")
@@ -1576,7 +1576,7 @@ class TestAdditionalTriggers:
 
 
 class TestSelfHealing:
-    """docs/blueprint.md#self-healing"""
+    """docs/blueprint.md#other-behaviour-worth-knowing"""
 
     async def test_reconcile_retries_turning_off_a_light_left_on_with_no_occupancy(
         self, hass, light_turn_off_calls, apply_lighting_calls, frozen_time
@@ -1676,3 +1676,311 @@ class TestSelfHealing:
         await hass.async_block_till_done()
 
         assert light_turn_off_calls == []
+
+
+def _effective(call, entity_id):
+    """The brightness a light actually ends up at for an apply_lighting
+    call - the idle path sends brightness 255 plus a per-entity
+    multiplier of level/255, so the level is only visible once the two
+    are combined the way grouping.py combines them."""
+    multipliers = call.data.get("brightness_multipliers") or {}
+    return round(call.data["brightness"] * multipliers.get(entity_id, 1))
+
+
+class TestIdleBrightness:
+    """docs/blueprint.md#leaving-a-room-dimly-lit"""
+
+    async def test_an_empty_room_dims_instead_of_going_off(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "the room went dark instead of dimming"
+        assert _effective(apply_lighting_calls[-1], "light.a") == 20
+        for call in light_turn_off_calls:
+            assert "light.a" not in call.data["entity_id"], "an idle light was switched off"
+
+    async def test_lights_without_an_idle_level_still_go_off(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """The per-entity template names one lamp as the nightlight; the
+        rest of the room still goes dark in the same run."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        _light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            idle_brightness_template="{{ {'light.a': 20} }}",
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.b"]
+        assert _effective(apply_lighting_calls[-1], "light.a") == 20
+
+    async def test_a_dark_empty_room_is_lit_to_the_idle_level(
+        self, hass, apply_lighting_calls, frozen_time
+    ):
+        """The widened invariant, stated as its own test. A room with an
+        idle brightness DOES get its lights switched on while empty -
+        that is the point of the feature, and it is the one thing in
+        this blueprint outside the allow_turn_on gate."""
+        _light(hass, "light.a", "off")
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            update_interval="/5",
+            day_idle_brightness=20,
+        )
+        apply_lighting_calls.clear()
+
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "a dark empty room never reached its idle level"
+        assert apply_lighting_calls[-1].data["entities"] == ["light.a"]
+        assert _effective(apply_lighting_calls[-1], "light.a") == 20
+
+    async def test_a_room_with_no_occupancy_sensor_never_dims(
+        self, hass, apply_lighting_calls, frozen_time
+    ):
+        """occupancy.is_detected is vacuously FALSE over a target with no
+        occupancy-class sensors, so without the room_occupancy_entities
+        guard a light-only room would read as permanently empty, sit at
+        the idle level forever and never reach the curve."""
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a"]},
+            update_interval="/5",
+            day_idle_brightness=20,
+        )
+        apply_lighting_calls.clear()
+
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "the tick should still have applied the curve"
+        # Every call, not just the last: the idle branch runs BEFORE the
+        # curve branch, so checking only the last one would miss a
+        # wrongly-dimmed room entirely.
+        assert not any(_effective(c, "light.a") == 20 for c in apply_lighting_calls), (
+            "dimmed a room that has no occupancy sensor"
+        )
+
+    async def test_it_waits_for_the_wait_time_before_dimming(
+        self, hass, apply_lighting_calls, frozen_time
+    ):
+        """The idle branch runs on every tick, so without its own timing
+        gate a room would dim within a minute of motion stopping,
+        ignoring Wait time entirely - and these are PIR sensors, which
+        flap by design."""
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            update_interval="/5",
+            no_motion_wait=3600,
+            day_idle_brightness=20,
+        )
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        apply_lighting_calls.clear()
+
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "the tick should still have run"
+        assert not any(_effective(c, "light.a") == 20 for c in apply_lighting_calls), (
+            "dimmed before the Wait time had elapsed"
+        )
+
+    async def test_motion_applies_the_full_curve_not_the_idle_level(self, hass, apply_lighting_calls):
+        _light(hass, "light.a", "off")
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        assert _effective(apply_lighting_calls[-1], "light.a") == 200
+
+    async def test_the_per_phase_value_only_applies_in_its_phase(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """Night configured, Day not - so during Day, empty still means
+        dark. This is how a hall is a nightlight at night and an
+        ordinary room the rest of the time, with no second input."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            night_idle_brightness=20,
+        )
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+
+    async def test_the_template_wins_over_the_phase_value_per_entity(
+        self, hass, apply_lighting_calls, light_turn_off_calls
+    ):
+        """Same precedence as the brightness multipliers: the phase value
+        fills in every light in the room, the template overrides the
+        ones it names."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        _light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+            idle_brightness_template="{{ {'light.b': 60} }}",
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        call = apply_lighting_calls[-1]
+        assert _effective(call, "light.a") == 20, "the phase value should fill in light.a"
+        assert _effective(call, "light.b") == 60, "the template should win for light.b"
+
+    async def test_self_heal_does_not_retry_turning_off_an_idle_light(
+        self, hass, light_turn_off_calls, frozen_time
+    ):
+        """An idle light is deliberately on. Without excluding it from
+        entities_still_on, self-heal would see "still on with no
+        occupancy" and retry turning it off every tick, against the
+        branch that just turned it on."""
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            update_interval="/5",
+            day_idle_brightness=20,
+        )
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        light_turn_off_calls.clear()
+
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert light_turn_off_calls == []
+
+    async def test_a_handed_off_light_is_not_given_an_idle_level(
+        self, hass, apply_lighting_calls
+    ):
+        """A null multiplier means "something else owns this", which
+        outranks an idle level - otherwise this would switch on a light
+        the room was explicitly told to keep its hands off."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+            brightness_multiplier_template="{{ {'light.a': None} }}",
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        for call in apply_lighting_calls:
+            assert "light.a" not in call.data["entities"]
+
+    async def test_an_idle_light_does_not_ramp_itself_back_up(
+        self, hass, apply_lighting_calls, frozen_time
+    ):
+        """The subtle one, and the reason room_is_idle exists.
+
+        An idle light being ON makes `occupied` true, which makes
+        allow_turn_on true - so without suppressing the curve while the
+        room is idle, the tick after the nightlight switches on would
+        apply full brightness and the room would quietly stop being a
+        nightlight. Found by mutation testing: the first version of this
+        feature had exactly that bug, and every other test passed,
+        because they only ever looked at a single tick."""
+        _light(hass, "light.a", "off")
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            update_interval="/5",
+            day_idle_brightness=20,
+        )
+
+        # First tick lights it to the idle level...
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+        assert _effective(apply_lighting_calls[-1], "light.a") == 20
+        # ...which makes the room read as occupied. The next tick must
+        # not take that as licence to apply the curve.
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        apply_lighting_calls.clear()
+
+        frozen_time.tick(timedelta(minutes=6))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "the second tick should still have run"
+        assert not any(_effective(c, "light.a") == 200 for c in apply_lighting_calls), (
+            "the idle light ramped itself back up to full brightness"
+        )

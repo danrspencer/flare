@@ -124,3 +124,43 @@ def test_no_page_links_to_a_markdown_file(page):
     targets = re.findall(r"\]\(([^)]+)\)", body)
     stale = [t for t in targets if ".md" in t and "github.com" not in t]
     assert not stale, f"{page.name} links to Markdown files that aren't published: {stale[:5]}"
+
+
+# --- Inbound links to the blueprint reference ---------------------------
+
+
+def test_every_referenced_blueprint_anchor_exists():
+    """The blueprint's own input descriptions deep-link into
+    docs/blueprint.md, and each test class names the section it covers.
+    Nothing checks those, so renaming a heading silently breaks every
+    link pointing at it - which is exactly what happened when the page
+    was restructured: six anchors were left pointing at headings that no
+    longer existed, in the file a user clicks through from the automation
+    editor.
+
+    Anchors are derived the way kramdown derives them (lowercase,
+    non-alphanumerics to hyphens) rather than by building the site, so
+    this runs in the unit layer with no Jekyll."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    page = (root / "docs" / "blueprint.md").read_text()
+
+    def slug(heading: str) -> str:
+        """kramdown's own rule: drop everything that isn't a word
+        character, space or hyphen, then spaces become hyphens. Runs are
+        NOT collapsed - "Brightness & Exclusions" really does become
+        `brightness--exclusions`, and an apostrophe is removed rather
+        than hyphenated."""
+        return re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", heading.lower()).strip())
+
+    have = {slug(m) for m in re.findall(r"^#{2,3} (.+)$", page, re.MULTILINE)}
+
+    referenced = set()
+    for path in ("blueprints/automation/danspencer/flare.yaml", "tests/integration/test_blueprint.py"):
+        for anchor in re.findall(r"blueprint(?:/|\.md)#([a-z0-9-]+)", (root / path).read_text()):
+            referenced.add(anchor)
+
+    assert referenced, "found no inbound links at all - has the link shape changed?"
+    assert referenced <= have, f"dead anchors in docs/blueprint.md: {sorted(referenced - have)}"
