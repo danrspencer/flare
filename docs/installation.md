@@ -69,9 +69,10 @@ Scopes can be added, retargeted or removed at any time from the Tracking entry.
 Each schedule sensor gets its own device, with the phase boundaries, curve values and
 transition durations as ordinary entities you can edit from the device page.
 
-## Step 3 — import the blueprint and create an automation
+## Step 3 — install the blueprint and create an automation
 
-[![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fdanrspencer%2Fflare%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fdanspencer%2Fflare.yaml)
+FLARE will spot that its blueprint isn't installed and offer it in
+**Settings → System → Repairs**. Press **Fix** and it downloads it.
 
 Create an automation from it and fill in two things:
 
@@ -83,10 +84,8 @@ Create an automation from it and fill in two things:
 That's the minimum. Everything else has a working default.
 
 {: .note }
-> **Skipped this step?** FLARE notices when the blueprint isn't installed and offers to
-> install it for you from **Settings → System → Repairs**. You'll still need to create
-> the automation yourself. If you'd rather call FLARE's actions from your own
-> automations, ignore that repair — the blueprint is optional.
+> Building your own automations on FLARE's actions instead? Ignore that repair — the
+> blueprint is optional. See [Power users]({{ site.baseurl }}/advanced/).
 
 {: .note }
 > **You won't have to remember to update it.** The integration and the blueprint update

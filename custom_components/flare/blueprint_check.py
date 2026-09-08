@@ -54,6 +54,10 @@ MISSING_ISSUE_ID = "blueprint_not_installed"
 # ending up with two copies at two paths.
 INSTALL_PATH = "danrspencer/flare.yaml"
 
+# Home Assistant renders this as a "Learn more" link on the issue, so
+# the description does not have to carry a URL in prose.
+QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
+
 # Pinned to the tag the stamp names, for the reason in the module
 # docstring. The path is this repo's own folder spelling; where it lands
 # on the user's disk is decided by Home Assistant from the URL's owner,
@@ -158,6 +162,7 @@ async def async_check(hass: HomeAssistant) -> None:
             is_fixable=True,
             severity=ir.IssueSeverity.WARNING,
             translation_key=MISSING_ISSUE_ID,
+            learn_more_url=QUICKSTART_URL,
         )
         return
 

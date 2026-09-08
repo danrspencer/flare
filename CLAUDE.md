@@ -977,9 +977,14 @@ raising, so a house moving between the two states leaves nothing behind.
   than the severity carrying it.
 - **The install path is `danrspencer/flare.yaml`** (`INSTALL_PATH`), the
   owner spelling HA derives from a GitHub import, NOT this repo's
-  `danspencer/` folder - so a user who later clicks the docs' import
-  badge overwrites the same file instead of ending up with two copies
-  at two paths. See lesson 13.
+  `danspencer/` folder. The docs no longer carry an import badge, so
+  nothing routine collides with it - but anyone importing by URL by hand
+  lands on that same path, and matching it means they overwrite rather
+  than collecting two copies. See lesson 13.
+- **The quickstart's import badge is gone**, replaced by this repair -
+  at the user's direction. Don't reintroduce it: it went through
+  `my.home-assistant.io` to a `main` raw URL, which is lessons 12 and 13
+  in a single link.
 - **The install uses `allow_override=False`**, unlike the update path:
   it exists only for the no-blueprint case, and silently overwriting
   something that appeared between the check and the Fix press is what
