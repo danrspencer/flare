@@ -29,7 +29,7 @@ Each field is documented in full in Developer Tools → Actions.
 
 Takes a brightness and colour temperature as plain values and turns entities on or off,
 handling reachability, tolerance, override protection, two-step transitions and
-RGB-vs-colour-temp dispatch.
+RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
 sensor's attributes is an ordinary template on your side — see
@@ -53,9 +53,9 @@ data:
 FLARE stops driving a light once something else has taken it — a switch, a scene, another
 automation — and picks it up again when released.
 
-**You say which scope a call belongs to.** A state device is a named tracking scope you configure
-(Settings → Devices & Services → **FLARE Tracking** → Add state device), pointed at an area, some
-devices, or specific lights — each one is a real HA device. Pass its `tracking_device_id` on any of
+**You say which scope a call belongs to.** A tracking scope is a named record of which lights FLARE is
+driving, usually one per room, configured at Settings → Devices & Services → **FLARE Tracking** →
+Add tracking scope. Each one is a real HA device. Pass its `tracking_device_id` on any of
 `apply_lighting`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
 ```yaml
@@ -69,7 +69,7 @@ data:
 ```
 
 **`tracking_device_id` is optional on `apply_lighting` and `compute_lighting_groups`** — both do
-something useful (dispatch or plan lights) with no scope at all. **Omitting it writes the light but
+something useful (set or plan lights) with no scope at all. **Omitting it writes the light but
 tracks nothing** — no claim is recorded, and nothing is excluded as already externally-set. Tracking
 is opt-in per call, not something the integration goes looking for on your behalf.
 
@@ -94,7 +94,7 @@ The blueprint resolves this for you from `room_target` — see [One target, two 
 
 #### The two claims
 
-Each tracked light carries two claims on its state device:
+Each tracked light carries two claims on its tracking scope:
 
 - **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, the
   pre-write baseline for a first write, or the snapshot taken when a device returns from unavailable.
@@ -122,13 +122,12 @@ five seconds, and a room turned off at bedtime could never be turned on again.
 **A scope releases every claim it holds once none of its lights are on.** Nobody is using the room, so handing
 it back overrides nobody's choice — and it is what ends a hand turn-off. Two things to know:
 
-- **"The room" is the scope, not the physical room.** A light that no state device tracks is not consulted, so
+- **"The room" is the scope, not the physical room.** A light no tracking scope covers is not consulted, so
   it holds nothing open.
 - **Anything not reporting `on` counts as dark**, including unavailable. Requiring every tracked light to report
   `off` would let one permanently unavailable entity — an orphaned Zigbee group, say — veto the release forever.
 
-This is also the automatic way out of `overridden`, which previously needed the Clear button or the light going
-off and on again.
+This is also the automatic way out of `overridden`.
 
 ### The hand-over event
 
@@ -137,7 +136,7 @@ Every time a tracked light passes into someone else's hands, this fires
 
 ```yaml
 entity_id: light.kitchen_1
-scope: Kitchen                        # the state device that lost it
+scope: Kitchen                        # the tracking scope that lost it
 device_id: ...                        # so the row lands in that device's Activity
 previous_status: controlled
 live_context_id: 01M11...
@@ -165,9 +164,9 @@ trigger:
     event_type: flare_light_overridden
 ```
 
-### The state device's entities
+### A tracking scope's entities
 
-Each state device carries four entities, all on its own device so they're renamed and deleted together:
+Each tracking scope carries four entities, all on its own device so they're renamed and deleted together:
 
 | entity | |
 |---|---|
@@ -239,10 +238,10 @@ there is no state left to observe. Runs at startup and hourly; nothing to config
 
 The pure-planner version of `apply_lighting`: given a set of light entities, a target brightness/colour-temperature,
 and optional per-light brightness multipliers, returns the minimal set of groups actually needing a
-`light.turn_on`/`light.turn_off` call — filters out unreachable lights, buckets by multiplier, skips anything
+`light.turn_on`/`light.turn_off` call — filters out unreachable lights, groups by multiplier, skips anything
 already within tolerance of the target, leaves externally-set lights alone, and separates out lights tagged for
 two-step transitions — without touching any light itself. Use this instead of `apply_lighting` if you want to
-dispatch the calls yourself (custom transition curves, logging, etc.).
+issue the calls yourself (custom transition curves, logging, etc.).
 
 ```yaml
 action: flare.compute_lighting_groups

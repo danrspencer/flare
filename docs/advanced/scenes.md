@@ -1,5 +1,5 @@
 ---
-title: Scene handoff & reconciliation
+title: Scene handoff
 parent: Power users
 nav_order: 2
 permalink: /advanced/scenes/
@@ -9,12 +9,12 @@ render_with_liquid: false
 # as empty strings and nothing errors - see tests/test_docs_site.py.
 ---
 
-# Scene handoff & reconciliation
+# Scene handoff
 {: .no_toc }
 
-FLARE is built to share a room. A scene, a wall switch, or another automation can take
-a light at any time; reconciliation is how FLARE notices and steps back, and how it
-picks the light up again afterwards.
+FLARE is built to share a room. A scene, a wall switch, or another automation can take a
+light at any time — this is how FLARE notices, steps back, and picks the light up again
+afterwards.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -62,5 +62,5 @@ classifies as `overridden` and is excluded from the next tick — see
 
 Switching it **off** by hand counts too: that's a choice like any other, so FLARE leaves it
 off rather than relighting it on the next tick. It comes back under FLARE's control once
-every light in its scope is off, when the device drops and reconnects, or when you press
-the scope's **Clear** button.
+every light in its tracking scope is off, when the device drops and reconnects, or when
+you press that scope's **Clear** button.

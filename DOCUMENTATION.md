@@ -28,9 +28,33 @@ makes Z work", not "the trade-off is". A reader wants to know what it
 does and how to use it. If a decision feels worth writing down, that is
 a signal it belongs in CLAUDE.md, not that the docs need a paragraph.
 
-**2. Don't narrate history.** No "previously", "used to", "as of 0.14",
-"this replaced". The changelog is the changelog. The docs describe what
-is true now, in the present tense, as though it had always been that way.
+**2. Don't narrate history — with one exception.** No "previously",
+"used to", "this replaced". The changelog is the changelog. The docs
+describe what is true now, in the present tense, as though it had always
+been that way.
+
+The exception is a **breaking change**, where someone upgrading has to
+do something. Say so, say which version it changed in, and put it in an
+info block so it reads as an aside rather than as part of the
+explanation:
+
+```markdown
+{: .note }
+> **Changed in 0.14.0** — the schedule view was `custom:flare` before.
+> A view still using the old name shows "Custom element doesn't exist".
+```
+
+Rules for these:
+
+- Only for changes that **break an existing setup**. A renamed input, a
+  renamed strategy, a removed service. Not new features, not fixes, not
+  anything that keeps working untouched.
+- Always name the version. "Recently" and "in a previous release" are
+  useless to someone working out whether it applies to them.
+- Always an info block, never running prose. A reader who installed
+  today should be able to skip it at a glance.
+- Delete it once it stops being plausible that anyone is upgrading
+  across it. These are not permanent.
 
 **3. Reference goes first, and reference is a table.** A page called a
 reference opens with the complete list of inputs or fields, not with
@@ -72,8 +96,8 @@ describing one. If both are needed, the example comes first.
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
 | tracking scope | external | The named thing that remembers which lights FLARE is driving, one per room. |
-| ~~state device~~ | internal | The subentry type behind a tracking scope. **The config flow currently says this to users and should not.** |
-| ~~scope~~ (bare) | internal | Always write *tracking scope* in `docs/`. |
+| ~~state device~~ | internal | The subentry type behind a tracking scope. Code only — the UI and docs both say *tracking scope*. |
+| scope (bare) | both | Write *tracking scope* on first use in a section. Bare *scope* is fine afterwards in `docs/advanced/`, where it reads better than repeating the full term; spell it out every time elsewhere. |
 
 ### Behaviour
 
@@ -88,7 +112,7 @@ describing one. If both are needed, the example comes first.
 | brightness multiplier | external | The per-light scaling factor. |
 | ~~adaptive tick~~ | internal | Say *the regular update* or *the next update*. |
 | ~~adaptive step~~ | internal | Say *when FLARE next sets the lights*. |
-| ~~dispatch~~ | internal | Say *sends* or *sets*. |
+| ~~dispatch~~ | internal | As a noun for FLARE's own sending step. The ordinary verb (*issue the calls yourself*) is fine in `docs/advanced/`. |
 | ~~bucket~~ / ~~bucketing~~ | internal | Grouping lights by multiplier. Never in `docs/`. |
 | ~~the recovered trigger~~ | internal | Say *when a light comes back online*. |
 | ~~grouping~~ | internal | The module. Users see its effects, never its name. |
@@ -118,6 +142,10 @@ Never paraphrase these. They are what the user types or clicks.
 
 The lexicon is only worth having if it is applied. When a term here
 changes, or a new one is added, grep `docs/` for the old one in the same
-change. The known outstanding gap is `state device`, which the config
-flow still says to users; the strings should move to *tracking scope*,
-and that is a user-facing fix rather than the code rename it looks like.
+change — and check `strings.json` too, since a term the UI says is a term
+the docs are then obliged to say.
+
+Known gap: the code still calls a tracking scope's subentry type
+`state`, and `SUBENTRY_TYPE_STATE` / `StateInstance` follow from that.
+Nothing user-facing says it any more, so this is a rename to do when
+something else is already touching those files, not on its own.

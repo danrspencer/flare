@@ -26,7 +26,7 @@ views:
 - **Tracking** — which lights FLARE is driving, which ones something else has taken
   over, and a Clear button to hand them back.
 
-There's nothing to fill in. Both find their own entities, and a schedule or tracking
+There's nothing to fill in. Both find their own entities, and a schedule sensor or tracking
 scope you add later appears without you touching the dashboard again.
 
 ![The FLARE Lighting view: the day's curve, a phase override, the schedule times, and
@@ -76,9 +76,9 @@ control** from the dashboard's three-dot menu.
 
 {: .note }
 > Take control is one-way. Once you've taken control a view stops picking up changes to
-> FLARE's layout, and newly added schedules or scopes won't appear on their own.
+> FLARE's layout, and newly added schedule sensors or tracking scopes won't appear on their own.
 
 {: .note }
-> Upgrading from 0.12 or 0.13? The schedule view was `custom:flare` then. Change the
-> type to `custom:flare-schedule` — a view still using the old name shows "Custom
-> element doesn't exist".
+> **Changed in 0.14.0** — the schedule view was `custom:flare` before. Change the type to
+> `custom:flare-schedule`; a view still using the old name shows "Custom element doesn't
+> exist".

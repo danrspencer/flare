@@ -7,6 +7,25 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.5] - 2026-09-08
+
+### Changed
+
+- **"State device" is now called a "tracking scope" everywhere.** The
+  setup screen used to say "Add state device" and then define it, one
+  sentence later, as "a named tracking scope" — two names for the same
+  thing, on the same screen. Only the wording changes; nothing is
+  renamed, moved or reconfigured, and existing scopes are untouched.
+
+### Docs
+
+- The blueprint page leads with its input table instead of ending with
+  it, and is organised around what you're trying to do rather than which
+  part of FLARE does it. It also named an input that doesn't exist — it
+  called **Lights & Occupancy** "Room".
+- New "Why didn't my light change?" section, covering the handful of
+  reasons FLARE deliberately leaves a light alone.
+
 ## [0.15.4] - 2026-09-08
 
 ### Fixed

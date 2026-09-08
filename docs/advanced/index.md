@@ -18,7 +18,7 @@ yourself.
 
 - **[Integration reference]({{ site.baseurl }}/advanced/reference/)** — every service, the claim
   registry, tracking scopes, and how override protection decides to leave a light alone.
-- **[Scene handoff & reconciliation]({{ site.baseurl }}/advanced/scenes/)** — how FLARE coexists
-  with native scenes and with someone reaching for a switch.
+- **[Scene handoff]({{ site.baseurl }}/advanced/scenes/)** — how FLARE coexists with native
+  scenes and with someone reaching for a switch.
 - **[Building without the blueprint]({{ site.baseurl }}/advanced/custom-automations/)** — calling
   the services directly from your own YAML, scripts, Node-RED or AppDaemon.
