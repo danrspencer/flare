@@ -1,10 +1,14 @@
 """
 Solar adaptive-lighting brightness/colour-temperature schedule.
 
-Pure functions, no Home Assistant dependency - a direct port of the
-Jinja macros that used to live in custom_templates/adaptive_lighting.jinja.
-Same inputs, same outputs, just testable with plain pytest instead of
-having to render templates to check the math.
+Curve logic, a direct port of the Jinja macros that used to live in
+custom_templates/adaptive_lighting.jinja. Same inputs, same outputs,
+just testable with plain pytest instead of having to render templates
+to check the math.
+
+Free of Home Assistant except for one colour conversion - see
+kelvin_to_rgb, which delegates to homeassistant.util.color rather than
+carrying a copy of the same approximation.
 
 All timestamps are unix seconds. Boundary timestamps (morning/day
 start/evening start/night start) are today's, computed elsewhere from
@@ -12,6 +16,14 @@ the user's input_datetime helpers plus sunset.
 """
 
 import math
+
+# The one Home Assistant import in this otherwise-pure module, and a
+# deliberate exception to the rule in the docstring above: a colour
+# conversion is not curve logic, and reimplementing a battle-tested
+# one to keep the module import-free is the wrong trade. Note the
+# pure test suite already requires homeassistant to be importable -
+# override_protection.py has the same exception, for mireds.
+from homeassistant.util.color import color_temperature_to_rgb
 
 # The brightness/Kelvin literals every phase would use if nothing
 # overrides them - ported faithfully from the original Jinja package
@@ -97,31 +109,33 @@ def _clamp(v: float, lo: float, hi: float) -> float:
 
 
 def kelvin_to_rgb(kelvin: float) -> tuple:
-    """Tanner Helland's Kelvin -> RGB approximation - same algorithm as
-    www/flare-curve-card.js's kelvinToRgb(), so the dashboard
-    card and whatever RGB actually gets sent to a light agree exactly.
+    """Kelvin -> RGB, via Home Assistant's own conversion.
 
-    Uses round-half-up (math.floor(x + 0.5)) rather than Python's
-    round(), which rounds half-to-even - JS's Math.round (what the card
-    uses) always rounds .5 up, so plain round() would silently disagree
-    with the card on tie values."""
+    `homeassistant.util.color.color_temperature_to_rgb` is Tanner
+    Helland's approximation - it says so in its own docstring - and this
+    used to be a hand-written copy of the same formula. The copy was
+    checked against it across 1000-10000K and did not differ by a single
+    unit on any channel, so it was 25 lines of arithmetic this repo had
+    no reason to own.
 
-    def _round(x: float) -> int:
-        return int(math.floor(x + 0.5))
+    What stays ours is the ROUNDING. Home Assistant returns floats;
+    www/flare-curve-card.js's kelvinToRgb() rounds with JavaScript's
+    Math.round, which is half-UP, while Python's round() is
+    half-to-even. Matching it is deliberate but, measured, currently
+    unobservable: no integer Kelvin in 1000-10000 produces a channel
+    landing on an exact .5, and kelvin_for_phase only ever hands this
+    integers. So round() would pass every test today - which is exactly
+    why this says so rather than leaving a future reader to "simplify"
+    it and assume the equivalence holds for good.
 
-    temp = kelvin / 100
-    r = 255 if temp <= 66 else _clamp(329.698727446 * (temp - 60) ** -0.1332047592, 0, 255)
-    if temp <= 66:
-        g = _clamp(99.4708025861 * math.log(temp) - 161.1195681661, 0, 255)
-    else:
-        g = _clamp(288.1221695283 * (temp - 60) ** -0.0755148492, 0, 255)
-    if temp >= 66:
-        b = 255
-    elif temp <= 19:
-        b = 0
-    else:
-        b = _clamp(138.5177312231 * math.log(temp - 10) - 305.0447927307, 0, 255)
-    return (_round(r), _round(g), _round(b))
+    One behavioural difference from the old copy, and it is an
+    improvement: Home Assistant clamps its input to 1000-40000K, where
+    the hand-written version extrapolated. Tanner Helland's formula
+    isn't meaningful below 1000K, and the Kelvin `number` entities are
+    bounded 1000-10000 anyway - but `compute_curve`'s schema is not, so
+    a direct caller can reach it.
+    """
+    return tuple(int(math.floor(c + 0.5)) for c in color_temperature_to_rgb(kelvin))
 
 
 def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> str:

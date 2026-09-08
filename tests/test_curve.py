@@ -456,3 +456,13 @@ def test_every_overridden_phase_holds_its_own_value_at_a_real_time_outside_its_s
     assert _bri("Morning", now_ts) == 255 and _kel("Morning", now_ts) == 6667
     assert _bri("Day", now_ts) == 255 and _kel("Day", now_ts) == 6667
     assert _bri("Night", now_ts) == 80 and _kel("Night", now_ts) == 2700
+
+
+def test_below_1000k_clamps_instead_of_extrapolating():
+    """kelvin_to_rgb delegates to Home Assistant, which clamps its input
+    to 1000-40000K. The hand-written copy this replaced extrapolated
+    below that, where the approximation is not meaningful. The Kelvin
+    entities are bounded 1000-10000, but compute_curve's schema is not,
+    so a direct caller can reach it."""
+    assert kelvin_to_rgb(500) == kelvin_to_rgb(1000)
+    assert kelvin_to_rgb(999) == kelvin_to_rgb(1000)
