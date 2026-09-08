@@ -77,18 +77,18 @@ lives at the repo root as `CONTRIBUTING.md` (repo layout, tests, how to
 build the site) - it is for people working on the code, who are already
 on GitHub, so it is not a site page.
 
-**The site pages are END-USER docs. Keep engineering rationale out of
-them.** This has gone wrong twice: `docs/dashboard.html` grew to ~145
-lines of prose explaining `--feature-color`, `cardFeatureStyles`,
-`ha-control-slider` internals, `column_span` grid arithmetic, contrast
-ratios and why card-mod was rejected - none of which a person pasting
-YAML into a dashboard needs, and all of which already lives in CLAUDE.md
-and the code comments. A reader of these pages wants what it does and
-how to use it, not why it is built that way. `docs/advanced/` is the one
-place more depth is appropriate, and even there it is about *using* the
-services, not about their implementation. When a design decision feels
-worth writing down, it goes in the code comment or here - not on the
-site.
+**The rules for writing docs, and the lexicon of terms, live in
+`DOCUMENTATION.md`** - one home, so a style guide doesn't end up in
+three places disagreeing. Read it before touching `docs/`. What belongs
+here rather than there is the *history*: this has gone wrong three
+times. `docs/dashboard.html` once grew to ~145 lines explaining
+`--feature-color`, `cardFeatureStyles`, `ha-control-slider` internals,
+`column_span` arithmetic and why card-mod was rejected. The homepage
+carried the same class of thing. Most recently `docs/blueprint.md` had
+grown to 300 lines of design rationale with its actual reference table
+last, and naming an input ("Room") that does not exist in the UI. The
+pattern each time is the same: a decision felt worth writing down, and
+it went onto a site page instead of into a code comment or this file.
 
 These pages are **site pages, not files meant to be read on GitHub** -
 that distinction is load-bearing. An earlier arrangement kept

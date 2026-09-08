@@ -10,7 +10,7 @@ render_with_liquid: false
 # paths, which need no baseurl to be right.
 ---
 
-# The FLARE blueprint — feature reference
+# The FLARE blueprint
 {: .no_toc }
 
 <details open markdown="block">
@@ -20,281 +20,236 @@ render_with_liquid: false
 {:toc}
 </details>
 
-
-Every input, feature by feature. To install it, see the
-[Quickstart](../installation/); for the services underneath, the
+One automation per room, following the
+[four phases of your day](../#four-phases-not-one-curve). To install it,
+see the [Quickstart](../installation/); for the services underneath, the
 [integration reference](../advanced/reference/).
 
-## Brightness & colour temperature schedule
+## Inputs
 
-The room's lights follow the [Morning/Day/Evening/Night schedule](../#four-phases-not-one-curve),
-reapplied once a minute to whichever of them are already on so they drift with the curve rather than jumping.
-This runs whether or not the room reads as occupied; occupancy only decides whether to switch lights on or off.
+Only **FLARE Sensor** is required. Everything else has a working default.
 
-The blueprint reads `brightness`/`color_temp`/`rgb_color` off the FLARE Sensor and passes them to
-`apply_lighting` as plain values.
+| Input | Default | What it does |
+|---|---|---|
+| **FLARE Sensor** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
+| **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
+| **Additional Triggers** | none | Extra entities that make the room re-evaluate immediately. See [additional triggers](#additional-triggers). |
 
-### Bring your own sensor
+### Colour
+{: .no_toc }
 
-The FLARE Sensor input can point at any entity exposing this attribute shape, not just this
-integration's own schedule sensors:
+| Input | Default | What it does |
+|---|---|---|
+| **Prefer RGB During** | Evening, Night | Phases that send RGB colour rather than colour temperature, to lights that support it. Lights without RGB are unaffected. |
+
+### Scene Handoff
+{: .no_toc }
+
+| Input | Default | What it does |
+|---|---|---|
+| **Scene Template** | none | Template returning a scene's entity_id. Wins over the per-phase pickers whenever it returns a valid scene. |
+| **Morning / Day / Evening / Night Scene** | none | A scene to hand the room to during that phase. |
+
+### Brightness & Exclusions
+{: .no_toc }
+
+| Input | Default | What it does |
+|---|---|---|
+| **Brightness Multiplier Template** | none | Template mapping entity_id to a brightness multiplier. Wins over the lists below for any light it names. |
+| **Lights Off During Morning / Day / Evening / Night** | none | Lights to switch off during that phase. |
+
+### Timing
+{: .no_toc }
+
+| Input | Default | What it does |
+|---|---|---|
+| **Wait time** | 120s | How long after occupancy clears before the lights go off. |
+| **Update Interval** | every minute | How often the room re-applies the curve. |
+| **Update Jitter** | 15s | Random delay so rooms sharing a sensor don't all command at once. `0` disables it. |
+| **Motion On Transition** | | How quickly lights change when someone walks in, or you run the automation by hand. |
+| **Motion Off Transition** | | How quickly lights fade when the room empties. |
+| **Background Transition** | | How quickly lights change on the regular update — nobody is waiting on these, so they can be slow and smooth. |
+
+## Setting up a room
+
+Point **FLARE Sensor** at a schedule sensor and **Lights & Occupancy**
+at the room's area. That's it.
+
+One target does both jobs: every light in that area is controlled, and
+every occupancy sensor in it decides when. Lights you add to the area
+later are picked up automatically. Pick individual entities instead if
+you want to mix and match — your lights plus one sensor from elsewhere,
+say.
+
+Occupancy uses Home Assistant's built-in occupancy triggers, which only
+count `binary_sensor` entities with `device_class: occupancy`.
+Motion-class sensors are not picked up. To drive a room from one, see
+[additional triggers](#additional-triggers).
+
+{: .note }
+> Lights are only found through entities, devices and areas. A floor or
+> label works for occupancy but won't control any lights, so name the
+> lights directly if you need one of those.
+
+A room with no occupancy sensor works fine — it simply never switches
+anything on by itself.
+
+## When lights turn on and off
+
+Lights come on when occupancy is detected, and go off **Wait time**
+after it clears.
+
+Three things — and only these three — may switch on a light that is off:
+
+- occupancy being detected
+- running the automation by hand
+- the room already being in use, meaning one of its other lights is on
+
+Everything else may only adjust lights that are already on. A phase
+changing will never light an empty room, and a bulb that reconnects
+after a power cut stays off if the rest of the room is dark.
+
+If a room has several occupancy sensors, it only counts as empty once
+**all** of them are clear.
+
+## Turning lights off during a phase
+
+Put them in **Lights Off During Night** (or whichever phase). That's the
+whole feature for the common case.
+
+For anything the lists can't express — a specific dim level rather than
+off, or a condition unrelated to phase — use **Brightness Multiplier
+Template**, which maps each light to a multiplier:
+
+| Value | Effect |
+|---|---|
+| a number | Scales that light's brightness. Values above `1` just mean "as bright as this bulb goes". |
+| `0` | Turns the light off. |
+| `null` or `false` | Hands the light over entirely — FLARE never touches it, on or off. |
+
+```yaml
+{% if is_state('media_player.tv', 'playing') %}
+  {{ {'light.lounge_ceiling': 0.4, 'light.lounge_lamp': null} }}
+{% else %}
+  {{ {} }}
+{% endif %}
+```
+
+`0` and `null` are different. `0` is still FLARE's light, it just wants
+it dark right now. `null` means the light belongs to something else, so
+it is left out of the turn-off when the room empties too — if you want
+it dark then, whatever owns it has to do that.
+
+The template wins over the phase lists for any light it names; the
+lists fill in the rest.
+
+## Handing a room to a scene
+
+Pick a scene in **Night Scene** (or whichever phase) and the room uses
+that instead of the curve.
+
+For cases a phase alone can't express — a different scene while the TV
+is on — use **Scene Template**, which returns a scene's entity_id and
+wins whenever it returns a valid one.
+
+A scene is only used if every entity it touches is one this room
+controls. A scene reaching outside the room, or one that doesn't exist,
+is ignored. Scenes follow the same rule as everything else: a phase
+change alone won't light an empty room, so the scene is applied when
+someone next walks in.
+
+## Using a nightlight override
+
+Make a template `binary_sensor` with `device_class: occupancy` and name
+it directly in **Lights & Occupancy**. Home Assistant can't tell it from
+a real sensor, and because a room is only empty once *all* its sensors
+are clear, leaving yours on keeps the room lit however long you like.
+
+```yaml
+template:
+  - binary_sensor:
+      - name: "Landing nightlight"
+        device_class: occupancy
+        state: "{{ is_state('input_boolean.nightlight', 'on') }}"
+```
+
+Name it as an entity rather than relying on area membership, so it's a
+deliberate addition.
+
+## Using your own sensor
+
+**FLARE Sensor** accepts any entity with these attributes, not just
+FLARE's own schedule sensors:
 
 | Attribute | Type | Required |
 |---|---|---|
-| `brightness` | 0-255 | yes |
+| `brightness` | 0–255 | yes |
 | `color_temp` | Kelvin | yes |
-| `rgb_color` | `[r, g, b]` | no — only needed if you're using `prefer_rgb_color` |
-
-A minimal hand-written template sensor satisfying that contract:
+| `rgb_color` | `[r, g, b]` | only with **Prefer RGB During** |
 
 ```yaml
 template:
   - sensor:
       - name: "My Room's FLARE"
-        # The state can be anything. Only the phase-keyed inputs (Prefer RGB
-        # During, the per-phase scenes and exclusions) read a phase name, and
-        # those read it from this integration's own sensor.
         state: "{{ 'Evening' if now().hour >= 18 else 'Day' }}"
         attributes:
           brightness: "{{ 180 if now().hour >= 18 else 255 }}"
           color_temp: "{{ 3200 if now().hour >= 18 else 5500 }}"
-          # Optional - only needed for prefer_rgb_color
-          rgb_color: "{{ [255, 200, 150] if now().hour >= 18 else [255, 255, 255] }}"
 ```
 
-The picker is filtered to this integration's own sensors, so a hand-written one won't appear in it — point at
-it through the automation's **Edit in YAML** view instead.
+The picker only lists FLARE's own sensors, so point at yours through the
+automation's **Edit in YAML** view.
 
-Two triggers drive the cadence. The Update Interval time pattern (default every minute) does the routine work,
-and is what keeps the room correcting itself during Morning and Night, where the curve is flat and nothing else
-would fire. The sensor's state trigger fires only on an actual phase change, so a room doesn't wait up to a full
-interval to notice one. The same tick drives [self-healing](#self-healing).
-
-Update Jitter (default up to 15s) delays both, so rooms sharing a sensor don't all command in the same second —
-most noticeable at a phase boundary. Motion, manual runs and Additional Triggers are never delayed.
-
-## One target, two jobs
-
-The Room input is a single entity/device/area/floor/label target that does double duty: the light entities within
-it are what gets controlled, and any occupancy-class `binary_sensor` entities within it govern occupancy — no
-separate sensor input to fill in. Pointing Room at a room's area picks up every light *and* every occupancy sensor
-in that area automatically, including ones added later; picking specific entities instead lets you mix and match
-(e.g. your lights plus one specific sensor from elsewhere, or a "virtual occupancy" template sensor — see below).
-
-Occupancy detection uses Home Assistant's built-in Occupancy triggers/conditions, which only count `binary_sensor`
-entities with `device_class: occupancy` — motion-class sensors aren't picked up this way, so a room with only
-motion sensors won't have anything to trigger on here. To drive a room from a motion-class sensor, have a
-separate automation of your own watch it and call this one (see [Additional triggers](#additional-triggers)).
-Area/device selections only resolve *light* entities via entity/device/area (not floor/label) — a floor or label
-selection works for occupancy but won't control any lights, so pick specific entities directly if you need one of
-those to also light a room.
-
-## Occupancy-driven on/off
-
-Occupancy turns a room on when it's detected, and off `no_motion_wait` seconds after it clears. That is its
-entire scope. It's optional: a Room with no occupancy-class sensor just never turns anything on by itself.
-Lights handed off via a `null` multiplier are exempt from the turn-off — see
-[Per-light brightness scaling](#per-light-brightness-scaling).
-
-A room with no real occupancy sensor at all (or one you want to override manually — e.g. a nightlight mode) can
-use a template `binary_sensor` with `device_class: occupancy` as a stand-in - Home Assistant's occupancy machinery
-can't tell it apart from a real sensor. Pick it directly as an entity in Room (rather than relying on area
-membership) so it's a deliberate addition, not something automatically swept in.
-
-If Room contains more than one occupancy-class sensor (for example, a real motion sensor *plus* the nightlight
-override sensor above), the room only counts as clear once **all** of them report clear — one sensor switching
-off while another is still "on" doesn't turn the lights off. This is what makes the nightlight pattern actually
-work as an override: leaving the override sensor "on" keeps the room lit through the night even while real motion
-has stopped, rather than racing against whichever sensor happens to report clear first.
-
-## When a light is allowed to turn on
-
-Only three things may bring an off light on: motion actually being detected, running the automation manually, or
-the room already being in active use (at least one of its *other* lights is already on). Every other trigger that
-updates a room's lighting — the periodic adaptive tick, an Additional Trigger firing, or a light recovering from a
-dropped connection (see [Override detection](#override-detection) below) — may only ever update lights that are
-already on; it never switches a dark room's light on by itself.
-
-The rule matters most after a Zigbee drop or a power cut: a light that reconnects off, in a room with nothing
-else on, stays off rather than coming back on simply because it reconnected.
-
-The "room already in use" branch looks at the whole room, not the individual light, so a tick can top up one
-lamp that's off while the others are lit.
-
-## Override detection
-
-A light changed by anything other than this integration's own last write — a wall switch, an app, a voice
-assistant, or another automation entirely (including one with no identifiable "user" of its own, such as one
-triggered directly by a physical button) — is left alone rather than being overwritten on the next adaptive tick.
-Switching a light **off** by hand counts as an override too, not just dimming or recolouring it — FLARE leaves
-it off rather than relighting it on the next tick. Its scope releases every claim once none of its lights are
-on, which is what ends that.
-
-A light with no recorded write yet — brand new, or just after a restart — counts as free to manage.
-[Override protection](../advanced/reference/#override-protection) covers the mechanism in full.
-
-**Which state device tracks the room comes from Room Target**, resolved once per tick — not a separate input.
-Room Target naming an area uses that area's own tracking scope directly; naming entities or a device with no
-area falls back to the resolved lights' own area. Nothing to configure: point Room Target at the room the usual
-way and the right scope follows. Two rooms sharing one Room Target therefore share that room's claims and
-co-operate; give them separate targets to track them apart.
-
-**Running the automation manually** — "Run" in the UI, or `automation.trigger` — forces the tick through
-regardless of override protection, the same as calling `apply_lighting` with `force: true`.
-
-A device regaining power reports its own state under a fresh context, indistinguishable from an external change.
-The integration handles that by clearing a light's record when it is observed going unavailable, so it comes back
-free to manage.
-
-The blueprint adds promptness: a `recovered` trigger arms while *every* light in the room is
-`unavailable`/`unknown` and fires as the first one returns, running a tick immediately instead of waiting for the
-next unrelated trigger.
-
-{: .note }
-> It asks whether *anything* is reachable rather than whether nothing is unavailable. One permanently
-> unavailable entity — an orphaned Zigbee group, say — would make the second form false forever and disable
-> recovery for the whole room. The trade-off is that a single flaky bulb returning alongside healthy siblings
-> doesn't move the aggregate, so `recovered` won't fire for it; the periodic tick picks it up instead.
-
-To force a light back under control from your own script without turning it off first, call `apply_lighting`
-with `force: true`.
-
-## Scene handoff
-
-Two ways to hand a room over to a scene instead of the adaptive curve, usable together:
-
-- **Per-phase scene pickers** - four optional entity pickers, one per phase (e.g. pick `scene.kitchen_night` for
-  Night). The simple, explicit case: no template to write.
-- **Scene Template** - an optional template returning the entity_id of a scene to activate, for cases a phase
-  alone can't express — a different scene while the TV is on, say.
-
-**The template wins whenever it returns a valid scene** - the matching phase picker is only used as the fallback,
-for phases the template doesn't have an opinion on (or when no template is set at all). A scene only qualifies -
-from either source - if every entity it touches is within the blueprint's own scope (the controlled lights, plus
-sibling entities on the same device, such as a light strip's effect selector); a scene reaching outside that
-scope, or one that doesn't exist (a typo, a renamed scene), is treated the same as returning nothing.
-
-**A scene is only activated when the room may switch lights on** - motion detected, a manual run, or the room
-already in use (at least one of its lights on). This is the same rule the adaptive curve follows, so a phase
-change on its own will never light an empty room: if nobody's there when Evening becomes Night, the room stays
-dark, and the scene is applied whenever someone next walks in.
-
-## Per-light brightness scaling
-
-Two ways to scale brightness down, usable together:
-
-- **Per-phase "lights off" lists** - four optional multi-entity pickers, one per phase. Any light picked for the
-  current phase gets turned off during the adaptive step - the simple, explicit case for "this light should
-  always be off during Night," with no template to write.
-- **Brightness Multiplier Template** - an optional template mapping `entity_id` to a brightness multiplier, for
-  anything the lists above can't express (a specific dim level rather than fully off, or a condition unrelated to
-  phase - illuminance, a TV being on, etc.):
-
-  | Value | Effect |
-  |---|---|
-  | a number | scales that light's brightness, clamped to 1-255 |
-  | `0` | turns the light off during the adaptive step |
-  | `null` / `false` | hands the light off entirely — this automation never touches it, on or off |
-
-  Values above `1` are allowed and simply mean *"as bright as this bulb goes"* — the result is capped at 255,
-  so a template can say `1.5` without having to know what the curve is currently at and do arithmetic to avoid
-  overshooting.
-
-  **`0` and `null` are not the same thing.** `0` means *"turn this light off"* — it's still this automation's
-  light, it just wants it dark right now. `null` means *"this light belongs to something else"* — another
-  automation, a fixed scene, a gradient effect — so it's excluded from the adaptive step *and* from both
-  turn-off paths ([occupancy clearing](#occupancy-driven-onoff) and the [self-healing](#self-healing) retry).
-  Handing a light off is all-or-nothing; if you want it dark when the room empties, that's something the owning
-  automation has to do.
-
-**The template's own per-entity values always win over the phase lists** on any light both mention - the lists
-only fill in lights the template doesn't already cover. This is additive, not a replacement: a room whose
-template already fully covers its own dimming logic doesn't need the phase lists at all, and adding one only
-affects lights the template leaves untouched.
+The state can be anything. Only the phase-keyed inputs — **Prefer RGB
+During**, the per-phase scenes and the per-phase off lists — read a
+phase name from it.
 
 ## Additional triggers
 
-Both templates above are re-rendered fresh on every run, regardless of what triggered it — so an entity that
-one of them depends on (a TV, for a brightness multiplier that dims the room while it's on; whatever a scene
-template checks) can be added to Additional Triggers to take effect immediately, rather than waiting for the
-next adaptive tick.
+Both templates are re-rendered on every run, so an entity one of them
+depends on — the TV in the example above — can go in **Additional
+Triggers** to take effect immediately rather than at the next update.
 
-If you want an event to actually *light* the room rather than just refresh it, don't reach for this input — it
-deliberately can't turn a dark room on. Have a separate automation watch whatever the event is and call
-`automation.trigger` on this room's automation, which counts as a manual run and is allowed to turn lights on
-(see [When a light is allowed to turn on](#when-a-light-is-allowed-to-turn-on)).
+This deliberately cannot light a dark room. If you want an event to
+switch lights on, have your own automation call `automation.trigger` on
+this room's automation, which counts as running it by hand.
 
-## Two-step transitions
+## Why didn't my light change?
 
-Bulbs that can't transition brightness and colour temperature in one command (some IKEA TRÅDFRI models) are
-tagged with a `no_combined_transition` label and sent as two sequential half-length transitions instead.
-Everything else gets a single combined call. There is nothing to configure in the blueprint — it's a label you
-add to a light or its device, and `apply_lighting` does the rest.
+Most often, one of these:
 
-If a bulb whose model is known to need this isn't labelled, the integration raises a repair with a Fix button.
-See [two-step transition bulbs](../advanced/reference/#two-step-transition-bulbs) for the label rules and the
-model list.
+- **Somebody else changed it.** A light changed by a wall switch, an
+  app, a voice assistant or another automation is left alone until the
+  whole room goes dark. Switching a light off by hand counts too — FLARE
+  won't turn it back on. See
+  [override protection](../advanced/reference/#override-protection).
+- **The room is empty and the light was off.** Only occupancy, a manual
+  run, or the room already being in use can switch a light on.
+- **It's already close enough.** Lights within ±2 brightness or ±10 K of
+  the target are left alone, so bulbs that round values off aren't
+  fought with every minute.
+- **It's unavailable.** Unreachable lights are skipped, and picked up
+  when they come back.
+- **A scene owns it**, or a **`null` multiplier** hands it over.
 
-## RGB colour
+To take a light back without switching it off first, call
+`flare.apply_lighting` with `force: true`. Running the automation by
+hand does the same for the whole room.
 
-Prefer RGB During is a multi-select - pick which phases send RGB colour instead of colour temperature to lights
-that support it (auto-detected per light, nothing to configure per bulb). Some bulbs render colour more
-accurately in RGB mode than colour-temperature mode, which is the main reason to turn it on. Lights without RGB
-support are unaffected either way.
+## Other behaviour worth knowing
 
-Defaults to Evening and Night selected, Morning and Day not - at the high colour temperatures used during
-Morning/Day (the Kelvin→RGB conversion saturates the blue channel above ~6600K), RGB can render as a blue-tinted
-white rather than the clean white a bulb's native colour-temperature mode produces at the same value. Evening/Night's
-warmer values don't hit that saturation point, so RGB there looks correct. Select all four (or none) if you want it
-on/off unconditionally.
+**Two-step transitions.** Some bulbs can't change brightness and colour
+in one command. Label the light or its device `no_combined_transition`
+and FLARE sends two commands instead. Nothing to set in the blueprint;
+if FLARE recognises a bulb that needs it, a repair appears with a Fix
+button. See
+[two-step transition bulbs](../advanced/reference/#two-step-transition-bulbs).
 
-## Transition durations
+**Self-healing.** If the room has been empty for the full **Wait time**
+but a light is still on, the off command is sent again — recovering from
+a command that didn't land. Lights handed over with a `null` multiplier
+are left out.
 
-Three separate transition times, so a room can respond quickly to someone actually walking in while still
-drifting smoothly the rest of the time:
-
-| Duration | Used for |
-|---|---|
-| Background Transition | The periodic Update tick, Additional Triggers, and a light recovering from a dropped connection (see [Override detection](#override-detection)) - none of these are a person waiting on a response in real time, so there's no reason to snap. Covers both the scene-activation step and the main FLARE dispatch |
-| Motion On Transition | Motion being detected, and running the automation manually - "something happened, respond promptly" triggers |
-| Motion Off Transition | Turning lights off - both the motion-cleared turn-off and the [self-healing](#self-healing) retry |
-
-## Reachability and redundancy filtering
-
-Lights reported `unavailable` or `unknown` are skipped. Lights already within tolerance of the target
-(±2 brightness, ±10K, absorbing the rounding some bulbs report back) are left alone rather than re-commanded on
-every tick.
-
-## Self-healing
-
-On each Update tick, if the room's occupancy sensors have been continuously clear for the full Wait time but a
-light is still on, the off command is retried instead of the normal reapply. This recovers from a dropped
-command — a missed Zigbee message, say — without intervention.
-
-The Wait time is measured over the whole period rather than read instantaneously, so an occupancy sensor that
-blips clear and back doesn't trip an early turn-off.
-
-Lights handed off via a `null` multiplier are excluded, and don't count as "still on" for triggering it.
-
-## Configuration
-
-Add an automation using the "FLARE" blueprint per room, and set:
-
-| Input | Required | Description |
-|---|---|---|
-| FLARE Sensor | yes | Sensor providing brightness/colour temperature - filtered to this integration's own sensors (see [Bring your own sensor](#bring-your-own-sensor) for pointing at a different one) |
-| Room | no | Entity/device/area/floor/label - lights within it are controlled, occupancy sensors within it govern on/off (see [One target, two jobs](#one-target-two-jobs)) |
-| Additional Triggers | no | Entities that trigger immediate re-evaluation (see [Additional triggers](#additional-triggers)) |
-| **Colour** section | | |
-| Prefer RGB During | no | Phases to send RGB colour instead of colour temperature to lights that support it - defaults to Evening/Night selected (see [RGB colour](#rgb-colour)) |
-| **Scene Handoff** section | | |
-| Scene Template | no | Template returning a scene entity_id to hand the room over to - wins over the phase pickers below when it returns one |
-| Morning / Day / Evening / Night Scene | no | Per-phase scene to hand the room over to - the fallback for phases Scene Template doesn't cover (see [Scene handoff](#scene-handoff)) |
-| **Brightness & Exclusions** section | | |
-| Brightness Multiplier Template | no | Per-light brightness scaling - its own per-entity values win over the phase lists below |
-| Lights Off During Morning / Day / Evening / Night | no | Lights to turn off during that phase - fills in whatever Brightness Multiplier Template doesn't already cover (see [Per-light brightness scaling](#per-light-brightness-scaling)) |
-| **Timing** section | | |
-| Wait time | no | Seconds to keep lights on after motion stops (default 120) |
-| Update Interval | no | How often to reapply the schedule on a fixed interval - also the self-healing check interval, there's no separate one (default every minute, see [Brightness & colour temperature schedule](#brightness--colour-temperature-schedule)) |
-| Update Jitter | no | Max random delay (seconds) on a phase change or the periodic tick, so many rooms don't fire in the same instant (default 15s, 0 disables) |
-| Motion On / Motion Off / Background Transition | no | Transition durations for each trigger type (see [Transition durations](#transition-durations)) |
+**Lights that come back online.** When a light reappears after a
+dropout, the room updates straight away rather than waiting for the next
+scheduled update.
