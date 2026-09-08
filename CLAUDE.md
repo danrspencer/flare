@@ -958,6 +958,32 @@ instead. `description` is free text, survives any import route, is
 readable via `Blueprint.metadata` with no filesystem access, and shows
 the version to the user in the automation editor.
 
+**Two repairs, mutually exclusive.** `blueprint_not_installed` fires
+when no copy of our blueprint exists at all; `outdated_blueprint` when
+an in-use copy is stale. `async_check` clears whichever it isn't
+raising, so a house moving between the two states leaves nothing behind.
+
+- **The missing check deliberately does NOT ask whether anyone is using
+  it.** Chosen at the user's direction over a narrower "FLARE is set up
+  and nothing is driving it" guard, and the reasoning is the point:
+  someone can arrive from the HACS store with no idea a blueprint
+  exists, install the integration, and reasonably wonder why nothing
+  happened. An installed-but-unused blueprint still counts as installed
+  (mid-setup, not stuck), which is the one case where the two checks
+  genuinely differ. Anyone going services-only ignores it, which HA
+  remembers across version bumps.
+- **`IssueSeverity` has no INFO level** - WARNING is the floor, which is
+  why the wording carries the "the blueprint is optional" line rather
+  than the severity carrying it.
+- **The install path is `danrspencer/flare.yaml`** (`INSTALL_PATH`), the
+  owner spelling HA derives from a GitHub import, NOT this repo's
+  `danspencer/` folder - so a user who later clicks the docs' import
+  badge overwrites the same file instead of ending up with two copies
+  at two paths. See lesson 13.
+- **The install uses `allow_override=False`**, unlike the update path:
+  it exists only for the no-blueprint case, and silently overwriting
+  something that appeared between the check and the Fix press is what
+  the other repair is for.
 - **Only blueprints an automation actually uses are reported**
   (`automations_with_blueprint`). HA never removes an unreferenced
   blueprint, and lesson 13's owner-vs-folder mismatch means a house can

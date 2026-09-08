@@ -83,6 +83,12 @@ Create an automation from it and fill in two things:
 That's the minimum. Everything else has a working default.
 
 {: .note }
+> **Skipped this step?** FLARE notices when the blueprint isn't installed and offers to
+> install it for you from **Settings → System → Repairs**. You'll still need to create
+> the automation yourself. If you'd rather call FLARE's actions from your own
+> automations, ignore that repair — the blueprint is optional.
+
+{: .note }
 > **You won't have to remember to update it.** The integration and the blueprint update
 > separately, so when a release changes the blueprint FLARE raises a repair in
 > **Settings → System → Repairs**. Press Fix and it downloads the new one and reloads
