@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.15.7-beta.1 - the integration raises a repair when a
+    Blueprint version 0.15.7-beta.2 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -178,36 +178,48 @@ blueprint:
             template: {}
         morning_idle_brightness:
           name: Morning Idle Brightness (Optional)
+          description: >
+            What this phase dims to when the room is empty, instead of
+            switching off. 0 means it goes dark, which is the default.
+          default: 0
           selector:
             number:
-              min: 1
+              min: 0
               max: 255
               mode: box
-          default: null
         day_idle_brightness:
           name: Day Idle Brightness (Optional)
+          description: >
+            What this phase dims to when the room is empty, instead of
+            switching off. 0 means it goes dark, which is the default.
+          default: 0
           selector:
             number:
-              min: 1
+              min: 0
               max: 255
               mode: box
-          default: null
         evening_idle_brightness:
           name: Evening Idle Brightness (Optional)
+          description: >
+            What this phase dims to when the room is empty, instead of
+            switching off. 0 means it goes dark, which is the default.
+          default: 0
           selector:
             number:
-              min: 1
+              min: 0
               max: 255
               mode: box
-          default: null
         night_idle_brightness:
           name: Night Idle Brightness (Optional)
+          description: >
+            What this phase dims to when the room is empty, instead of
+            switching off. 0 means it goes dark, which is the default.
+          default: 0
           selector:
             number:
-              min: 1
+              min: 0
               max: 255
               mode: box
-          default: null
     timing:
       name: Timing
       icon: mdi:timer-outline
@@ -631,7 +643,7 @@ variables:
   phase_idle_brightness: >
     {% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,
                 'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}
-    {{ m.get(states(adaptive_sensor)) }}
+    {{ m.get(states(adaptive_sensor), 0) | int }}
   # Same precedence as brightness_multipliers, and deliberately the same
   # construct: the per-phase value fills in every light in the room, and
   # the template's own per-entity values overwrite it on collision. So a
@@ -639,7 +651,7 @@ variables:
   # lamp as the only thing that stays lit.
   idle_brightness: >
     {% set ns = namespace(m={}) %}
-    {% if phase_idle_brightness is not none %}
+    {% if phase_idle_brightness %}
       {% for e in resolved_entities %}
         {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}
       {% endfor %}
@@ -649,8 +661,13 @@ variables:
   # off with a null multiplier is excluded - that means "something else
   # owns this", which outranks an idle level.
   idle_entities: >
-    {{ idle_brightness | list | select('in', resolved_entities)
-       | reject('in', hands_off_entities) | list }}
+    {% set ns = namespace(items=[]) %}
+    {% for e, level in idle_brightness.items() %}
+      {% if level and e in resolved_entities and e not in hands_off_entities %}
+        {% set ns.items = ns.items + [e] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.items }}
   # Entities HA already knows it can't reach right now - no point
   # commanding them - minus anything the multiplier template handed off
   # (see hands_off_entities above). Only feeds the motion_off turn-off.
