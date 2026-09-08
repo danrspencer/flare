@@ -66,8 +66,7 @@ services.
 
 | | |
 |---|---|
-| [Home Assistant](https://www.home-assistant.io) | The whole platform. FLARE has no runtime dependencies beyond it. |
-| Tanner Helland's [colour-temperature approximation](https://tannerhelland.com/2012/09/18/convert-temperature-rgb-algorithm-code.html) | The Kelvin→RGB conversion in `curve.py`, used for the chart and for RGB-capable bulbs. |
+| [Home Assistant](https://www.home-assistant.io) | The whole platform. FLARE has no runtime dependencies beyond it, and uses its colour utilities for the Kelvin→RGB and mired conversions. |
 | [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) | Runs the integration tests against a real Home Assistant. |
 | [just-the-docs](https://just-the-docs.com) | The documentation site's Jekyll theme. |
 | [He et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36058557/) | The morning-light research cited above. |

@@ -657,8 +657,27 @@ facts:
   `coordinator.py` passes a manually-overridden phase alongside the real
   time, so phase and instant can legitimately disagree. Every ramp
   clamps its interpolation factor for that reason.
-- `kelvin_to_rgb` uses round-half-up (`math.floor(x+0.5)`), matching the
-  dashboard card's `Math.round`, not Python's banker's rounding.
+- `kelvin_to_rgb` **delegates to
+  `homeassistant.util.color.color_temperature_to_rgb`** rather than
+  carrying its own copy. HA's is Tanner Helland's approximation (its own
+  docstring says so) and was measured identical to the hand-written copy
+  it replaced across 1000-10000K - zero units of difference on any
+  channel. Don't reimplement it again.
+  What is still ours is the round-half-up wrapper
+  (`math.floor(x+0.5)`), matching the card's `Math.round` rather than
+  Python's banker's rounding. **Measured, that is currently
+  unobservable** - no integer Kelvin in range lands on an exact .5, and
+  `kelvin_for_phase` only ever passes integers - so `round()` would pass
+  every test today. It is kept deliberately, and the docstring says as
+  much so nobody "simplifies" it on the assumption the equivalence is
+  permanent. Truncating instead DOES break three tests including both
+  parity tests.
+  One behaviour change came with the delegation: HA clamps input to
+  1000-40000K where the old copy extrapolated. The `number` entities are
+  bounded 1000-10000, but `compute_curve`'s schema is not.
+  `test_below_1000k_clamps_instead_of_extrapolating` pins it - and note
+  that test is a **dependency contract**, not a logic test: the clamping
+  is HA's code, so there is nothing of ours to mutate against it.
 
 **Do not re-add `night_floor_kelvin` or `kelvin_rgb`.** Both were cut
 deliberately at the user's direction. RGB is just the Kelvin→RGB
@@ -1174,8 +1193,8 @@ Two layers:
   modules rather than through the package (which would pull in
   `homeassistant` via `__init__.py`); `tests/fakes.py` provides a fake
   `EntityLookup` so `grouping.py` runs on plain dicts. Note these still
-  need `homeassistant` importable - `override_protection.py` imports
-  `homeassistant.util.color`, and pytest's own `testpaths` collects
+  need `homeassistant` importable - `override_protection.py` and
+  `curve.py` both import `homeassistant.util.color`, and pytest's own `testpaths` collects
   `tests/integration/conftest.py` regardless of which file you target.
 - **Integration** (`tests/integration/`), real HA via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
