@@ -62,19 +62,7 @@ are respected, and lights that don't reach their target get corrected automatica
 blueprint it isn't a black box: take it, change it, or rip it apart to build something different on the same
 services.
 
-## Attribution
-
-**Written with [Claude Code](https://claude.com/claude-code).** The design decisions, the
-direction and the review are mine; a lot of the typing isn't. Commits carry a
-`Co-Authored-By` trailer where that's the case, so the history is honest about which is
-which.
-
-That doesn't stand in for review, so it's worth saying what does exist: a test suite of
-~480 unit and integration tests, the integration ones running against a real Home
-Assistant instance, and a working practice of deliberately breaking each fix to confirm
-the tests actually catch it. A full human read-through of the code is still on my list.
-
-Other people's work this builds on:
+## Acknowledgements
 
 | | |
 |---|---|
@@ -83,6 +71,11 @@ Other people's work this builds on:
 | [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) | Runs the integration tests against a real Home Assistant. |
 | [just-the-docs](https://just-the-docs.com) | The documentation site's Jekyll theme. |
 | [He et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36058557/) | The morning-light research cited above. |
+
+## AI disclosure
+
+Written with [Claude Code](https://claude.com/claude-code). Commits carry a
+`Co-Authored-By` trailer where Claude wrote them.
 
 ## License
 
