@@ -1072,6 +1072,16 @@ caught. Don't "simplify" it back to the shared fixture.
 
 ### Deployment / operational notes
 
+- **Releases are BETAS by default.** `vX.Y.Z-beta.N` is the normal tag;
+  a bare `vX.Y.Z` is a promotion the user asks for explicitly, not a
+  call to make because a change looks safe. Set at his direction on
+  2026-09-08 - *"for most changes now we auto tag them as beta and only
+  on my say so promote to a real release"* - because FLARE has external
+  testers now and a stable tag reaches their houses. Promoting moves
+  `manifest.json`, `BLUEPRINT_VERSION` and the blueprint's description
+  stamp to the bare version together; `release.yml` refuses a
+  prerelease stamp on a stable tag, so a half-done promotion fails the
+  build.
 - **Versioning**: `manifest.json`'s `version` is what HACS reports, and
   it must match the release tag - enforced by `tests/test_version.py`
   and again by `.github/workflows/release.yml`, which refuses to publish

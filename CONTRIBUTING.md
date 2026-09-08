@@ -196,6 +196,21 @@ checked twice: `tests/test_version.py` runs on every PR, and
 `.github/workflows/release.yml` re-checks at tag time and refuses to publish a
 mismatch.
 
+### Beta by default
+
+**A release is tagged as a beta unless it has been explicitly promoted.**
+`vX.Y.Z-beta.N` is the normal thing to push; `vX.Y.Z` is a deliberate
+decision someone makes about a build that has had some use.
+
+That is the whole point of the channels: FLARE has beta testers now, so
+a stable tag reaches other people's houses. Betas let this iterate at
+the pace it actually iterates at without that.
+
+Promoting means moving the three versions below to the bare `X.Y.Z` and
+tagging it. The release workflow refuses a prerelease stamp on a stable
+tag, so a half-done promotion fails the build rather than shipping a
+beta blueprint to everyone.
+
 ### Two channels
 
 The tag decides, and nothing else does:
@@ -223,7 +238,8 @@ need to enable the entity before you can turn it on.
 
 1. Bump `version` in `custom_components/flare/manifest.json`.
    Breaking changes bump the **minor** while below 1.0. A beta carries the version it
-   is working toward plus a suffix — `0.16.0-beta.1`.
+   is working toward plus a suffix — `0.16.0-beta.1` — and that is the default; see
+   **Beta by default** above.
 2. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`, calling out anything
    breaking explicitly — this integration ships in two halves (integration and
    blueprint) that deploy separately, so "you must deploy both" is a real
