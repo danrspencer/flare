@@ -64,7 +64,7 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 | Input | Default | What it does |
 |---|---|---|
 | **Idle Brightness Template** | none | Template mapping entity_id to a brightness for when the room is empty. Wins over the settings below for any light it names. |
-| **Morning / Day / Evening / Night Idle Brightness** | none | What the room dims to during that phase instead of switching off. |
+| **Morning / Day / Evening / Night Idle Brightness** | `0` | What the room dims to during that phase instead of switching off. `0` means it goes dark. |
 
 ### Timing
 {: .no_toc }
@@ -173,7 +173,7 @@ brightens to the curve when you walk in, then settles back to that
 instead of going dark.
 
 It's per phase, so a hall can be a nightlight after dark and an ordinary
-room during the day — leave the other three unset and empty still means
+room during the day — leave the other three at `0` and empty still means
 dark in those phases.
 
 For naming one lamp as the nightlight while the rest of the room goes

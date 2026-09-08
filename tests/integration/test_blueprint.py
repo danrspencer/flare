@@ -1984,3 +1984,53 @@ class TestIdleBrightness:
         assert not any(_effective(c, "light.a") == 200 for c in apply_lighting_calls), (
             "the idle light ramped itself back up to full brightness"
         )
+
+    async def test_zero_means_the_room_still_goes_dark(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """0 is the default and means "no idle brightness" - the room
+        goes dark exactly as it did before this feature existed. It is 0
+        rather than null because a number selector with no value renders
+        no control at all in the blueprint editor, and because 0 already
+        means "off" everywhere else here."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=0,
+        )
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+
+    async def test_a_zero_in_the_template_is_not_an_idle_light(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """Same rule wherever the 0 comes from. Without filtering it out
+        of idle_entities, a 0 would make the light "idle", exclude it
+        from the turn-off, and then be applied as a multiplier of 0 -
+        the same outcome by a much stranger route."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+            idle_brightness_template="{{ {'light.a': 0} }}",
+        )
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
