@@ -957,9 +957,13 @@ the version to the user in the automation editor.
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
   hence the `isinstance` check, not a `None` check.
 - **Promoting a beta:** if the blueprint changed during a beta the stamp
-  holds that beta's version. Set it to the stable version when
-  promoting, or stable users carry a beta stamp and the fix URL points
-  at a beta tag.
+  holds that beta's version, and it must be set to the stable version
+  when promoting. `release.yml` enforces this rather than trusting
+  anyone to remember - a stable tag whose stamp carries a prerelease
+  suffix fails the release outright. It also refuses a stamp naming a
+  tag that doesn't exist, since that is the URL the Fix button
+  downloads from, and both failures are otherwise silent until a user
+  presses Fix.
 
 **`tests/integration/test_blueprint_version_repair.py` overrides
 `hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The

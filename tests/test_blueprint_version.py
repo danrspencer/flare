@@ -107,3 +107,38 @@ def test_only_the_current_version_is_up_to_date():
     assert not is_outdated(BLUEPRINT_VERSION)
     assert is_outdated("0.0.1")
     assert is_outdated("99.0.0")
+
+
+# --- The release-time guards -------------------------------------------
+
+RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
+
+
+def test_a_stable_release_cannot_ship_a_beta_stamped_blueprint():
+    """If the blueprint changes during a beta, the stamp holds that
+    beta's version - and promoting without moving it would point every
+    STABLE user's Fix button at a beta blueprint, quietly undoing the
+    two channels. Silent until somebody presses Fix, so it is checked
+    where the channel is already known: at tag time."""
+    workflow = RELEASE_WORKFLOW.read_text()
+
+    assert "stamp_is_beta" in workflow, "nothing classifies the stamp"
+    assert 'PRERELEASE" = "false" ] && [ "$stamp_is_beta" = "true"' in workflow
+
+
+def test_the_stamp_must_name_a_tag_that_exists():
+    """The stamp names the tag the Fix button downloads from. A stamp
+    naming a tag that was never cut - a typo, or a bump that got ahead
+    of its release - makes Fix fail with a download error the user can
+    do nothing about."""
+    workflow = RELEASE_WORKFLOW.read_text()
+
+    assert "git ls-remote --exit-code --tags origin" in workflow
+
+
+def test_the_release_workflow_reads_the_stamp_from_its_one_source():
+    """Re-deriving it from the blueprint YAML, or hardcoding it in the
+    workflow, would give the release a second opinion about the version
+    that the tests don't pin."""
+    assert "blueprint_version.BLUEPRINT_VERSION" in RELEASE_WORKFLOW.read_text()
+
