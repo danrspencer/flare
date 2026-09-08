@@ -26,6 +26,8 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .blueprint_check import ISSUE_ID as BLUEPRINT_ISSUE_ID
+from .blueprint_check import MISSING_ISSUE_ID as BLUEPRINT_MISSING_ISSUE_ID
+from .blueprint_check import async_install_blueprint
 from .blueprint_check import async_update_blueprints, describe as describe_blueprints, outdated_blueprints
 from .blueprint_version import BLUEPRINT_VERSION
 from .two_step import TWO_STEP_LABEL_NAME, describe
@@ -107,6 +109,37 @@ class OutdatedBlueprintRepairFlow(RepairsFlow):
         )
 
 
+class MissingBlueprintRepairFlow(RepairsFlow):
+    """Installs the blueprint for a house that has none.
+
+    Raised whenever no copy is present, without asking whether anyone
+    wanted one. Someone can arrive at this integration from the HACS
+    store with no idea the blueprint exists, install it, and reasonably
+    wonder why nothing happened - so the default has to be to say so.
+    Anyone driving the services from their own automations can ignore
+    the repair, which Home Assistant remembers across version bumps.
+    """
+
+    async def async_step_init(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResult:
+        return await self.async_step_confirm()
+
+    async def async_step_confirm(
+        self, user_input: dict[str, str] | None = None
+    ) -> data_entry_flow.FlowResult:
+        if user_input is not None:
+            try:
+                path = await async_install_blueprint(self.hass)
+            except Exception:  # noqa: BLE001
+                # Reaches GitHub, so this fails for reasons that have
+                # nothing to do with the user. Aborting leaves the repair
+                # in place to try again rather than reporting a success
+                # that didn't happen.
+                return self.async_abort(reason="install_failed")
+            return self.async_create_entry(title="", data={"installed": path})
+
+        return self.async_show_form(step_id="confirm", data_schema=vol.Schema({}))
+
+
 async def async_create_fix_flow(
     hass: HomeAssistant,
     issue_id: str,
@@ -119,4 +152,6 @@ async def async_create_fix_flow(
         return MissingTwoStepLabelRepairFlow(entry_id)
     if issue_id == BLUEPRINT_ISSUE_ID:
         return OutdatedBlueprintRepairFlow()
+    if issue_id == BLUEPRINT_MISSING_ISSUE_ID:
+        return MissingBlueprintRepairFlow()
     raise ValueError(f"Unknown repair issue for {DOMAIN}: {issue_id}")

@@ -44,6 +44,19 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 ISSUE_ID = "outdated_blueprint"
+MISSING_ISSUE_ID = "blueprint_not_installed"
+
+# Where an install from the repair lands. Home Assistant derives this
+# path from the GitHub URL's OWNER, not from the folder name in this
+# repo - `danrspencer` with an r, where the repo says `danspencer`
+# without. Matching it is deliberate: someone who later uses the
+# import badge in the docs overwrites this same file instead of
+# ending up with two copies at two paths.
+INSTALL_PATH = "danrspencer/flare.yaml"
+
+# Home Assistant renders this as a "Learn more" link on the issue, so
+# the description does not have to carry a URL in prose.
+QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
 # Pinned to the tag the stamp names, for the reason in the module
 # docstring. The path is this repo's own folder spelling; where it lands
@@ -81,22 +94,39 @@ def _is_ours(blueprint: Blueprint) -> bool:
     return _OUR_REPO in (metadata.get("source_url") or "")
 
 
-async def outdated_blueprints(hass: HomeAssistant) -> list[InstalledBlueprint]:
-    """Every copy of our blueprint that is in use and out of date."""
+async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:
+    """Every copy of our blueprint Home Assistant can load, by path."""
     try:
-        domain_blueprints = async_get_blueprints(hass)
-        installed = await domain_blueprints.async_get_blueprints()
+        installed = await async_get_blueprints(hass).async_get_blueprints()
     except Exception:  # noqa: BLE001 - the check is advisory, never fatal
         _LOGGER.debug("Could not read automation blueprints", exc_info=True)
-        return []
+        return {}
+    # async_get_blueprints returns the EXCEPTION for a blueprint that
+    # failed to load, not a Blueprint - so this is a type check, not a
+    # None check.
+    return {
+        path: bp
+        for path, bp in installed.items()
+        if isinstance(bp, Blueprint) and _is_ours(bp)
+    }
+
+
+async def blueprint_is_installed(hass: HomeAssistant) -> bool:
+    """Is our blueprint present at all, in use or not?
+
+    Deliberately NOT "is anyone using it". Someone who imported it and
+    has not built an automation yet is mid-setup, not stuck, and telling
+    them to install what they already have would be wrong.
+    """
+    return bool(await _ours(hass))
+
+
+async def outdated_blueprints(hass: HomeAssistant) -> list[InstalledBlueprint]:
+    """Every copy of our blueprint that is in use and out of date."""
+    installed = await _ours(hass)
 
     outdated = []
     for path, blueprint in installed.items():
-        # async_get_blueprints returns the EXCEPTION for a blueprint that
-        # failed to load, not a Blueprint - so this is a type check, not
-        # a None check.
-        if not isinstance(blueprint, Blueprint) or not _is_ours(blueprint):
-            continue
         using = automations_with_blueprint(hass, path)
         if not using:
             continue
@@ -116,7 +146,28 @@ def describe(blueprints: list[InstalledBlueprint]) -> str:
 
 
 async def async_check(hass: HomeAssistant) -> None:
-    """Raise the repair if any in-use copy is stale, clear it if not."""
+    """Raise whichever of the two blueprint repairs applies.
+
+    They are mutually exclusive by construction: a house with no
+    blueprint has nothing that can be out of date, and a house with one
+    is not missing it. Both are cleared on the path that doesn't raise
+    them, so switching between the two states leaves nothing stale.
+    """
+    if not await blueprint_is_installed(hass):
+        ir.async_delete_issue(hass, DOMAIN, ISSUE_ID)
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            MISSING_ISSUE_ID,
+            is_fixable=True,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=MISSING_ISSUE_ID,
+            learn_more_url=QUICKSTART_URL,
+        )
+        return
+
+    ir.async_delete_issue(hass, DOMAIN, MISSING_ISSUE_ID)
+
     outdated = await outdated_blueprints(hass)
     if not outdated:
         ir.async_delete_issue(hass, DOMAIN, ISSUE_ID)
@@ -136,6 +187,37 @@ async def async_check(hass: HomeAssistant) -> None:
     )
 
 
+async def _fetch(hass: HomeAssistant):
+    """The shipped blueprint, from a commit-pinned tag.
+
+    A tag rather than `main` because raw.githubusercontent.com can serve
+    a branch URL stale for minutes after a push while still reporting
+    success - so a tag, which GitHub treats as immutable, is the only
+    way to be sure the file that lands is the one this release was
+    tested against.
+    """
+    from homeassistant.components.blueprint.importer import fetch_blueprint_from_url
+
+    return await fetch_blueprint_from_url(
+        hass, BLUEPRINT_URL.format(version=BLUEPRINT_VERSION)
+    )
+
+
+async def async_install_blueprint(hass: HomeAssistant) -> str:
+    """Install the blueprint for a house that has none.
+
+    `allow_override=False`: this path exists only for the no-blueprint
+    case, and if something did appear at that path between the check and
+    the user pressing Fix, overwriting it silently would be the wrong
+    answer - updating is what the other repair is for.
+    """
+    imported = await _fetch(hass)
+    await async_get_blueprints(hass).async_add_blueprint(
+        imported.blueprint, INSTALL_PATH, allow_override=False
+    )
+    return INSTALL_PATH
+
+
 async def async_update_blueprints(hass: HomeAssistant) -> list[str]:
     """Overwrite every stale in-use copy with the shipped version.
 
@@ -145,15 +227,11 @@ async def async_update_blueprints(hass: HomeAssistant) -> list[str]:
     Assistant would pick by itself. async_add_blueprint reloads the
     automations using each path for us.
     """
-    from homeassistant.components.blueprint.importer import fetch_blueprint_from_url
-
     outdated = await outdated_blueprints(hass)
     if not outdated:
         return []
 
-    imported = await fetch_blueprint_from_url(
-        hass, BLUEPRINT_URL.format(version=BLUEPRINT_VERSION)
-    )
+    imported = await _fetch(hass)
     domain_blueprints = async_get_blueprints(hass)
 
     updated = []

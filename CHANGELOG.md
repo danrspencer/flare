@@ -7,6 +7,20 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.6] - 2026-09-08
+
+### Added
+
+- **FLARE now tells you when its blueprint isn't installed, and offers to
+  install it.** The integration on its own doesn't drive any lights — an
+  automation does, and the ready-made one is the blueprint. If it isn't
+  there, a repair appears in **Settings → System → Repairs** and Fix
+  downloads it. You'll still create the automation yourself.
+
+  If you'd rather call FLARE's actions from automations you write, ignore
+  the repair — the blueprint is optional and Home Assistant remembers an
+  ignored repair across updates.
+
 ## [0.15.5] - 2026-09-08
 
 ### Changed

@@ -22,7 +22,16 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
-from custom_components.flare.blueprint_check import outdated_blueprints
+from homeassistant.helpers import issue_registry as ir
+
+from custom_components.flare.blueprint_check import (
+    ISSUE_ID,
+    MISSING_ISSUE_ID,
+    async_check,
+    blueprint_is_installed,
+    outdated_blueprints,
+)
+from custom_components.flare.const import DOMAIN
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -146,3 +155,88 @@ async def test_a_broken_blueprint_does_not_break_the_check(hass: HomeAssistant):
     outdated = await outdated_blueprints(hass)
 
     assert [b.path for b in outdated] == ["stale/flare.yaml"]
+
+
+# --- No blueprint at all ------------------------------------------------
+
+
+def _remove_ours(hass: HomeAssistant) -> None:
+    """Leave the config dir with no FLARE blueprint in it."""
+    (Path(hass.config.config_dir) / "blueprints" / "automation" / BLUEPRINT_PATH).unlink()
+
+
+async def test_a_house_with_no_blueprint_reports_it_missing(hass: HomeAssistant):
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    assert await blueprint_is_installed(hass) is False
+
+
+async def test_an_installed_but_unused_blueprint_still_counts(hass: HomeAssistant):
+    """Someone who imported it and hasn't built an automation yet is
+    mid-setup, not stuck. Telling them to install what they already have
+    would be wrong - and this is the case the outdated check
+    deliberately ignores, so the two checks genuinely differ."""
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    assert await blueprint_is_installed(hass) is True
+    assert await outdated_blueprints(hass) == []
+
+
+async def test_somebody_elses_blueprint_does_not_count_as_ours(hass: HomeAssistant):
+    _remove_ours(hass)
+    _write(hass, "someone/other.yaml", FOREIGN)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    assert await blueprint_is_installed(hass) is False
+
+
+# --- Which repair gets raised -------------------------------------------
+
+
+def _issues(hass: HomeAssistant) -> set[str]:
+    return {
+        issue_id
+        for (domain, issue_id) in ir.async_get(hass).issues
+        if domain == DOMAIN
+    }
+
+
+async def test_no_blueprint_raises_missing_and_not_outdated(hass: HomeAssistant):
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    await async_check(hass)
+
+    assert _issues(hass) == {MISSING_ISSUE_ID}
+
+
+async def test_a_stale_blueprint_raises_outdated_and_not_missing(hass: HomeAssistant):
+    _remove_ours(hass)
+    _write(hass, "stale/flare.yaml", STALE)
+    await _automation_using(hass, "stale/flare.yaml", "room")
+
+    await async_check(hass)
+
+    assert _issues(hass) == {ISSUE_ID}
+
+
+async def test_installing_clears_the_missing_repair(hass: HomeAssistant):
+    """The two are mutually exclusive, so the check that raises one has
+    to clear the other - otherwise a house that fixes the missing
+    blueprint keeps the repair forever."""
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+    await async_check(hass)
+    assert _issues(hass) == {MISSING_ISSUE_ID}
+
+    # The blueprint arrives, by whatever route.
+    _write(hass, BLUEPRINT_PATH, (REPO_ROOT / "blueprints" / "automation" / BLUEPRINT_PATH).read_text())
+    await async_check(hass)
+
+    assert _issues(hass) == set()
