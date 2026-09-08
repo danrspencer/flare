@@ -76,6 +76,9 @@ from .const import (
     ENTRY_TYPE_TRACKING,
     SUBENTRY_TYPE_STATE,
 )
+from homeassistant.helpers.start import async_at_started
+
+from .blueprint_check import async_check as async_check_blueprint
 from .config_flow import _areas_with_lights
 from .coordinator import CURVE_KEYS, ScheduleCoordinator, schedule_instances
 from .curve import phase_at, targets_for_phase
@@ -502,6 +505,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # they forget (see two_step.py).
     if is_tracking:
         entry.async_on_unload(async_start_watching(hass, entry))
+
+    # Raises a fixable repair when the installed blueprint is older than
+    # the one this release ships with - the two halves deploy separately
+    # and nothing else tells you they have drifted (see
+    # blueprint_check.py).
+    #
+    # Deferred to "started" rather than run here: automations are what
+    # decide whether a blueprint is in use at all, and during setup they
+    # may not have loaded yet, so checking now would find every
+    # blueprint orphaned and report nothing. Tracking only, so a house
+    # with both entries doesn't run it twice.
+    if is_tracking:
+        async def _check_blueprint(_event=None) -> None:
+            await async_check_blueprint(hass)
+
+        entry.async_on_unload(async_at_started(hass, _check_blueprint))
 
     async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
         """flare.compute_lighting_groups

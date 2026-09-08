@@ -75,6 +75,20 @@
           "entry_gone": "FLARE was removed, so there's nothing to label."
         }
       }
+    },
+    "outdated_blueprint": {
+      "title": "FLARE blueprint is out of date",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Update the FLARE blueprint",
+            "description": "FLARE's integration and blueprint are installed separately, and the blueprint you have is older than the one this release ships with ({current}).\n\n{blueprints}\n\nSubmitting downloads version {current} and replaces the copies above, then reloads the automations using them. Your automations keep their settings.\n\nIf you've edited the blueprint yourself, don't submit this - ignore the repair instead, since updating would overwrite your changes."
+          }
+        },
+        "abort": {
+          "update_failed": "Couldn't download the blueprint. Check Home Assistant can reach GitHub and try again."
+        }
+      }
     }
   },
   "options": {

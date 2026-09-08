@@ -27,3 +27,33 @@ jobs:
       # as-is.
       - run: pip install pytest pytest-homeassistant-custom-component
       - run: pytest -v
+
+  # The blueprint's version stamp is what tells an installed copy it has
+  # fallen behind, and it is bumped by hand. Forgetting fails SILENTLY -
+  # no error, no repair, users simply never hear about the update - so
+  # it needs catching at review time rather than in a release.
+  #
+  # Only meaningful on a pull request, where there is a base branch to
+  # diff against; a plain push has nothing to compare with.
+  blueprint-stamp:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The default shallow clone has no base branch to diff.
+          fetch-depth: 0
+      - name: A blueprint change must move its version stamp
+        env:
+          BASE: origin/${{ github.base_ref }}
+        run: |
+          if git diff --quiet "$BASE" -- blueprints/; then
+            echo "blueprints/ unchanged - nothing to check"
+            exit 0
+          fi
+          if git diff "$BASE" -- blueprints/ | grep -q '^+.*Blueprint version'; then
+            echo "blueprints/ changed and the stamp moved with it"
+            exit 0
+          fi
+          echo "::error::blueprints/ changed but the version stamp did not. Bump it in the blueprint's description AND in custom_components/flare/blueprint_version.py, or nobody running an older copy will be told to update."
+          exit 1

@@ -52,6 +52,49 @@ jobs:
             *)   echo "prerelease=false" >> "$GITHUB_OUTPUT"; echo "base=$tag"       >> "$GITHUB_OUTPUT" ;;
           esac
 
+      # The blueprint's stamp names the tag the repair's Fix button
+      # downloads from, so it has to be a tag that exists AND one that
+      # suits this release's audience. Two separate ways to get that
+      # wrong, both silent until a user presses Fix:
+      #
+      #   - a stable release carrying a beta stamp would hand every
+      #     stable user a beta blueprint, quietly undoing the whole
+      #     point of having two channels
+      #   - a stamp naming a tag that was never cut (a typo, or a bump
+      #     that got ahead of its release) makes Fix fail with a
+      #     download error and no way for the user to fix it themselves
+      - name: The blueprint stamp must suit this release
+        env:
+          PRERELEASE: ${{ steps.channel.outputs.prerelease }}
+        run: |
+          stamp=$(python -c "import sys; sys.path.insert(0, 'custom_components/flare'); import blueprint_version; print(blueprint_version.BLUEPRINT_VERSION)")
+          tag="${GITHUB_REF_NAME#v}"
+          echo "release $tag (prerelease=$PRERELEASE), blueprint stamped $stamp"
+
+          case "$stamp" in
+            *-*) stamp_is_beta=true ;;
+            *)   stamp_is_beta=false ;;
+          esac
+
+          if [ "$PRERELEASE" = "false" ] && [ "$stamp_is_beta" = "true" ]; then
+            echo "::error::this is a stable release but the blueprint is stamped $stamp, a prerelease. Set BLUEPRINT_VERSION and the blueprint's description to $tag before promoting, or every stable user is pointed at a beta blueprint."
+            exit 1
+          fi
+
+          # Either the blueprint changed in THIS release (the tag is
+          # being created right now, so it cannot be looked up yet), or
+          # it changed in an earlier one and that tag must already exist.
+          if [ "$stamp" = "$tag" ]; then
+            echo "blueprint changed in this release"
+            exit 0
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$stamp" >/dev/null 2>&1; then
+            echo "blueprint unchanged since v$stamp, which exists"
+            exit 0
+          fi
+          echo "::error::the blueprint is stamped $stamp but there is no v$stamp tag, so the repair's Fix button would download from a URL that does not exist. Either bump the stamp to $tag, or correct it to a released version."
+          exit 1
+
       # The BASE version, so a run of betas can share the one section
       # that describes what they are building toward. Requiring a section
       # per beta would make the changelog a build log, and would put a

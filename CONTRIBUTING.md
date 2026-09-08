@@ -220,7 +220,14 @@ need to enable the entity before you can turn it on.
    Betas are matched on their **base** version, so `0.16.0-beta.3` is described by the
    `## [0.16.0]` section. Write that section once, before the first beta, and keep
    adding to it. A section per beta would make the changelog a build log.
-3. Merge, then tag the merge commit and push it:
+3. **If the blueprint changed**, bump `BLUEPRINT_VERSION` in
+   `custom_components/flare/blueprint_version.py` and the matching line in the
+   blueprint's own `description` to the version you're about to release. A pull
+   request touching `blueprints/` without moving the stamp fails CI, and a stable
+   release whose stamp still carries a beta suffix - or names a tag that was never
+   cut - fails the release workflow. Both matter because the stamp is the URL the
+   out-of-date repair's Fix button downloads from.
+4. Merge, then tag the merge commit and push it:
 
    ```bash
    git tag v0.16.0-beta.1 && git push origin v0.16.0-beta.1

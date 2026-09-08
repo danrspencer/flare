@@ -83,6 +83,13 @@ Create an automation from it and fill in two things:
 That's the minimum. Everything else has a working default.
 
 {: .note }
+> **You won't have to remember to update it.** The integration and the blueprint update
+> separately, so when a release changes the blueprint FLARE raises a repair in
+> **Settings → System → Repairs**. Press Fix and it downloads the new one and reloads
+> your automations — they keep their settings. If you've edited your own copy, ignore
+> the repair instead, since updating replaces the file.
+
+{: .note }
 > Occupancy is optional. With no occupancy sensor in the target, FLARE keeps the room's
 > lights on the curve but never turns them on or off by itself.
 

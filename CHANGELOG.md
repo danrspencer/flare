@@ -7,6 +7,25 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.3] - 2026-09-08
+
+### Added
+
+- **FLARE now tells you when your blueprint is out of date, and offers to
+  update it.** The integration and the blueprint install separately, so
+  it was easy to end up running an old blueprint against new services
+  with nothing to say so. When they drift, a repair appears in Settings;
+  pressing Fix downloads the matching blueprint and reloads the
+  automations using it. Your automations keep their settings.
+
+  The repair only appears when the blueprint itself has actually
+  changed, so a release that only touches the integration won't ask you
+  to re-import an identical file. It also ignores copies no automation
+  is using, which Home Assistant leaves lying around forever.
+
+  If you've edited your own copy of the blueprint, ignore the repair
+  rather than submitting it - updating overwrites the file.
+
 ## [0.15.2] - 2026-09-07
 
 ### Added
