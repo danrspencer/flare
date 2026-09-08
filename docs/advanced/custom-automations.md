@@ -81,7 +81,7 @@ data:
     light.kitchen_1: { brightness: 200, color_temp_kelvin: 3000 }
 ```
 
-`claims_check`'s `status` values are the same ones a state device's `claims` attribute
+`claims_check`'s `status` values are the same ones a tracking scope's `claims` attribute
 shows, and `targets` is the same shape `apply_lighting` records on every write.
 
 `claims_clear` is the escape hatch for a light stuck on `overridden`. An excluded light
@@ -96,14 +96,14 @@ data:
 ```
 
 The next write to a cleared entity is treated like a brand-new entity's first write. Each
-state device exposes the same thing as a `button.<name>_flare_clear` entity, which clears
+tracking scope exposes the same thing as a `button.<name>_flare_clear` entity, which clears
 every claim in that scope.
 
-## Doing your own dispatch
+## Sending the commands yourself
 
 If you want to issue `light.turn_on` yourself — because you need an effect, a colour mode
 FLARE doesn't handle, or a device outside the light domain — use the planner instead of
-the dispatcher:
+the sending step:
 
 1. `flare.claims_check` to ask which entities you should leave alone.
 2. Your own writes for the rest.
@@ -115,5 +115,5 @@ the dispatcher:
 > external, so a bulb that confirms slowly gets misread as overridden.
 
 `flare.compute_lighting_groups` is the same planner `apply_lighting` uses internally,
-exposed without the dispatch — it returns the groups it *would* have written, so you can
+exposed without sending anything — it returns the groups it *would* have written, so you can
 apply them however you like.

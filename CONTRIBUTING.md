@@ -176,6 +176,18 @@ both the routing decision (a real bulb correctly bucketed by its actual `support
 `apply_lighting`'s context.id-based override protection confirmed live too: a foreign write is correctly left
 alone, our own write correctly isn't, and `force: true` correctly writes through regardless. See CLAUDE.md's "Current status" section for the full rundown.
 
+## Writing the docs
+
+`DOCUMENTATION.md` has the rules and the lexicon - who each page is for,
+what belongs on a site page versus in a code comment, and the one
+correct word for each concept. Read it before changing anything under
+`docs/`.
+
+The short version: site pages are for end users, they describe what is
+true now rather than what changed, reference tables come before prose,
+headings are the reader's question, and inputs are named exactly as the
+UI labels them.
+
 ## Cutting a release
 
 HACS reads the version out of `manifest.json`, not out of the tag, so the two must

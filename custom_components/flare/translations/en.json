@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "FLARE",
-        "description": "Installs both halves. Schedules provides the day-phase and colour curve sensors; Tracking registers the apply_lighting, compute_lighting_groups, compute_curve, compute_scene_coverage and ownership services and keeps track of which lights are currently being driven.\n\nPick the rooms to track - each becomes a state device with its own controlled/overridden counts and a Clear button. Lights in an area you don't pick simply aren't tracked, which means they're never left alone when something else takes them. You can add, retarget or remove these at any time, and add schedule sensors from the Schedules entry once it exists.",
+        "description": "Installs both halves. Schedules provides the day-phase and colour curve sensors; Tracking registers the apply_lighting, compute_lighting_groups, compute_curve, compute_scene_coverage and ownership services and keeps track of which lights are currently being driven.\n\nPick the rooms to track - each becomes a tracking scope with its own controlled/overridden counts and a Clear button. Lights in an area you don't pick simply aren't tracked, which means they're never left alone when something else takes them. You can add, retarget or remove these at any time, and add schedule sensors from the Schedules entry once it exists.",
         "data": {
           "areas": "Rooms to track"
         }
@@ -33,31 +33,31 @@
       }
     },
     "state": {
-      "entry_type": "State device",
+      "entry_type": "Tracking scope",
       "initiate_flow": {
-        "user": "Add state device",
-        "reconfigure": "Reconfigure state device"
+        "user": "Add tracking scope",
+        "reconfigure": "Reconfigure tracking scope"
       },
       "step": {
         "user": {
-          "title": "Add state device",
-          "description": "A state device is a named tracking scope for override protection. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices for tidiness.",
+          "title": "Add tracking scope",
+          "description": "A tracking scope is a named record of which lights FLARE is currently driving, usually one per room. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices for tidiness.",
           "data": {
             "name": "Name",
             "target": "Lights, devices or areas"
           }
         },
         "reconfigure": {
-          "title": "Edit state device",
+          "title": "Edit tracking scope",
           "data": {
             "name": "Name",
             "target": "Lights, devices or areas"
           },
-          "description": "A state device is a named tracking scope for override protection. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices for tidiness."
+          "description": "A tracking scope is a named record of which lights FLARE is currently driving, usually one per room. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices for tidiness."
         }
       },
       "error": {
-        "already_configured": "A sensor or state device with that name already exists"
+        "already_configured": "A schedule sensor or tracking scope with that name already exists"
       }
     }
   },
