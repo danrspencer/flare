@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.15.3 - the integration raises a repair when a
+    Blueprint version 0.15.7 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -35,7 +35,7 @@ blueprint:
       description: >
         Entity, device, area, floor, or label - lights within it are
         controlled, occupancy-class sensors within it decide when.
-        [Details](https://danrspencer.github.io/flare/blueprint/#one-target-two-jobs).
+        [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
       default: {}
       selector:
         target:
@@ -68,7 +68,7 @@ blueprint:
             blue-tinted rather than a clean white, so those phases are
             off by default - Evening/Night's warmer values don't have
             that problem.
-            [Details](https://danrspencer.github.io/flare/blueprint/#rgb-colour).
+            [Details](https://danrspencer.github.io/flare/blueprint/#colour).
           default: [Evening, Night]
           selector:
             select:
@@ -87,7 +87,7 @@ blueprint:
             precedence over the per-phase scenes below whenever it
             returns one - they're the fallback for phases it doesn't
             cover.
-            [Details](https://danrspencer.github.io/flare/blueprint/#scene-handoff).
+            [Details](https://danrspencer.github.io/flare/blueprint/#handing-a-room-to-a-scene).
           default: ""
           selector:
             template: {}
@@ -127,7 +127,7 @@ blueprint:
             off, null = skip entirely). Its own per-entity values always
             win over the per-phase exclusions below - those only fill in
             entities it doesn't already mention.
-            [Details](https://danrspencer.github.io/flare/blueprint/#per-light-brightness-scaling).
+            [Details](https://danrspencer.github.io/flare/blueprint/#turning-lights-off-during-a-phase).
           default: "{{ {} }}"
           selector:
             template: {}
@@ -159,6 +159,55 @@ blueprint:
               domain: light
               multiple: true
           default: []
+    idle_brightness:
+      name: Idle Brightness
+      icon: mdi:lightbulb-night
+      collapsed: true
+      input:
+        idle_brightness_template:
+          name: Idle Brightness Template (Optional)
+          description: >
+            Template returning entity_id → brightness (1-255) for lights
+            that should stay dimly lit when the room is empty, instead
+            of switching off. Its own per-entity values always win over
+            the per-phase settings below - those only fill in entities
+            it doesn't already mention.
+            [Details](https://danrspencer.github.io/flare/blueprint/#leaving-a-room-dimly-lit).
+          default: "{{ {} }}"
+          selector:
+            template: {}
+        morning_idle_brightness:
+          name: Morning Idle Brightness (Optional)
+          selector:
+            number:
+              min: 1
+              max: 255
+              mode: box
+          default: null
+        day_idle_brightness:
+          name: Day Idle Brightness (Optional)
+          selector:
+            number:
+              min: 1
+              max: 255
+              mode: box
+          default: null
+        evening_idle_brightness:
+          name: Evening Idle Brightness (Optional)
+          selector:
+            number:
+              min: 1
+              max: 255
+              mode: box
+          default: null
+        night_idle_brightness:
+          name: Night Idle Brightness (Optional)
+          selector:
+            number:
+              min: 1
+              max: 255
+              mode: box
+          default: null
     timing:
       name: Timing
       icon: mdi:timer-outline
@@ -565,12 +614,68 @@ variables:
     {% endif %}
     {% set tracking_entities = area_entities(aid) | select('search', '^sensor\\..*_flare_tracking$') | list if aid is not none else [] %}
     {{ device_id(tracking_entities | first) if tracking_entities | length > 0 else none }}
+  # What the room sits at when nobody is in it. Unset everywhere and
+  # this is empty, which is exactly today's behaviour: empty means dark.
+  #
+  # Declared HERE, after resolved_entities (the per-phase value applies
+  # to every light in the room, so it needs the list) and before
+  # reachable_entities/entities_still_on, which both have to exclude
+  # these - an idle light is meant to stay on, so neither the motion_off
+  # turn-off nor the self-heal retry may touch it. variables: renders
+  # strictly top to bottom, so this block cannot move either way.
+  template_idle_brightness: !input idle_brightness_template
+  morning_idle_brightness: !input morning_idle_brightness
+  day_idle_brightness: !input day_idle_brightness
+  evening_idle_brightness: !input evening_idle_brightness
+  night_idle_brightness: !input night_idle_brightness
+  phase_idle_brightness: >
+    {% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,
+                'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}
+    {{ m.get(states(adaptive_sensor)) }}
+  # Same precedence as brightness_multipliers, and deliberately the same
+  # construct: the per-phase value fills in every light in the room, and
+  # the template's own per-entity values overwrite it on collision. So a
+  # room can set one dim level for the phase and still name a single
+  # lamp as the only thing that stays lit.
+  idle_brightness: >
+    {% set ns = namespace(m={}) %}
+    {% if phase_idle_brightness is not none %}
+      {% for e in resolved_entities %}
+        {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}
+      {% endfor %}
+    {% endif %}
+    {{ dict(ns.m, **template_idle_brightness) }}
+  # Lights that should stay lit when the room empties. A light handed
+  # off with a null multiplier is excluded - that means "something else
+  # owns this", which outranks an idle level.
+  idle_entities: >
+    {{ idle_brightness | list | select('in', resolved_entities)
+       | reject('in', hands_off_entities) | list }}
   # Entities HA already knows it can't reach right now - no point
   # commanding them - minus anything the multiplier template handed off
   # (see hands_off_entities above). Only feeds the motion_off turn-off.
   reachable_entities: >
     {{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')
        | reject('in', hands_off_entities) | list }}
+  # What motion_off actually switches off: everything reachable except
+  # the lights that are meant to stay dimly lit.
+  turn_off_entities: >
+    {{ reachable_entities | reject('in', idle_entities) | list }}
+  # The idle levels expressed the way apply_lighting takes them.
+  #
+  # apply_lighting has one `brightness` plus per-entity MULTIPLIERS, and
+  # idle levels are per-entity ABSOLUTE brightnesses - so the call sends
+  # brightness 255 and a multiplier of level/255, which grouping.py
+  # turns back into `level` (it computes round(brightness * multiplier),
+  # clamped 1-255, and every idle level is already inside that range).
+  # That is deliberate rather than adding a per-entity brightness field
+  # to the service, which nothing else would use.
+  idle_multipliers: >
+    {% set ns = namespace(m={}) %}
+    {% for e in idle_entities %}
+      {% set ns.m = dict(ns.m, **{e: (idle_brightness[e] | float) / 255}) %}
+    {% endfor %}
+    {{ ns.m }}
   # room_target's occupancy-class binary_sensor entities. Only used to
   # decide *whether* Room has an occupancy sensor at all, for the
   # condition:/self-heal branches below - occupancy.is_detected itself
@@ -578,6 +683,45 @@ variables:
   room_occupancy_entities: >
     {{ all_target_entities | select('match', '^binary_sensor\\.')
        | select('is_state_attr', 'device_class', 'occupancy') | list }}
+  # "Every occupancy sensor in the room has been off for the full Wait
+  # time." Two branches need this now - self-heal's turn-off retry and
+  # the idle-brightness branch - and a second copy of the rule would be
+  # a second thing to keep in step.
+  #
+  # Hand-written rather than occupancy.is_not_detected's native `for:`
+  # because that needs the recorder to prime a duration already
+  # satisfied before the condition started watching, which is not
+  # reliable right after a restart. last_changed is a plain property
+  # answered from memory, needing no priming and no recorder.
+  #
+  # False when the room has no occupancy sensor at all - the caller has
+  # to check room_occupancy_entities itself, because "no sensors" is
+  # vacuously clear and would otherwise read as permanently empty.
+  occupancy_clear_for_wait: >
+    {% set ns = namespace(all_clear=true) %}
+    {% for e in room_occupancy_entities %}
+      {% if not is_state(e, 'off') or
+            (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}
+        {% set ns.all_clear = false %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.all_clear }}
+  # "This room is empty and has lights that stay dimly lit when it is."
+  #
+  # LOAD-BEARING, and the subtle part of the whole feature: an idle
+  # light being on makes `occupied` true, which makes allow_turn_on
+  # true, which would let the curve apply at full brightness on the very
+  # next tick - the nightlight would ramp itself back up to an ordinary
+  # lit room one tick after switching on. So this suppresses the curve
+  # for as long as the room is idle, and the two branches in default:
+  # are mutually exclusive on it.
+  #
+  # Motion ends it immediately: occupancy detected makes
+  # occupancy_clear_for_wait false, so the curve applies again.
+  room_is_idle: >
+    {{ idle_entities | length > 0
+       and room_occupancy_entities | length > 0
+       and occupancy_clear_for_wait }}
   occupied: >
     {#
       Is the room "in use" right now - originally for the
@@ -602,17 +746,38 @@ variables:
   # back on from a network blip. The `occupied` branch is room-level, not
   # per-light, so one lamp off in an in-use room still gets topped up.
   #
-  # STRUCTURAL INVARIANT - keep this true. Exactly two things in this
-  # blueprint can switch a light on: scene.turn_on and
-  # flare.apply_lighting. Both sit inside the single `if allow_turn_on`
-  # block in default: below, and nothing else in action: writes an "on"
-  # state (the other calls are two light.turn_off and three claims_*
-  # bookkeeping steps). Anything added later that can switch a light on
-  # belongs inside that same block. This used to be enforced two
-  # different ways - apply_lighting by filtering its own entity list
-  # here in variables:, the scene not at all - and the scene path
-  # bypassing it is exactly how a phase change came to light an empty
-  # Dining Room at 23:00, which self-heal then undid 9 seconds later.
+  # STRUCTURAL INVARIANT - keep this true. Three things in this
+  # blueprint can switch a light on, and each is gated:
+  #
+  #   scene.turn_on        ) both inside the single `if allow_turn_on`
+  #   flare.apply_lighting  ) block in default: below
+  #   flare.apply_lighting for IDLE BRIGHTNESS - twice, in the
+  #     motion_off branch and in default: - gated instead on
+  #     idle_entities being non-empty AND the room's occupancy sensors
+  #     having been clear for the full Wait time.
+  #
+  # Nothing else in action: writes an "on" state. Anything added later
+  # that can switch a light on needs one of those two gates.
+  #
+  # The idle gate is NARROWER than allow_turn_on, not wider, and that is
+  # the whole reason it is a separate condition rather than a new way
+  # for allow_turn_on to be true: it fires only for lights a room has
+  # explicitly named as staying lit when empty, so a room that
+  # configures no idle brightness cannot reach it at all. Widening
+  # allow_turn_on itself would let the CURVE light an empty room, which
+  # is the bug below.
+  #
+  # It also must not be gated on `occupied`, for a reason that is easy
+  # to miss: `occupied` is "a light is on", so an idle light would make
+  # the room read as occupied, allow_turn_on would become true, and the
+  # curve would take over at full brightness - the nightlight would
+  # silently become an ordinary lit room.
+  #
+  # This used to be enforced two different ways - apply_lighting by
+  # filtering its own entity list here in variables:, the scene not at
+  # all - and the scene path bypassing it is exactly how a phase change
+  # came to light an empty Dining Room at 23:00, which self-heal then
+  # undid 9 seconds later.
   allow_turn_on: >
     {{ manual_run
        or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')
@@ -621,8 +786,14 @@ variables:
   # anything still on - excluding handed-off lights (see
   # hands_off_entities above), which also keeps reconcile from firing at
   # all in a room where the only thing still lit is one we don't own.
+  # idle_entities are excluded for the same reason hands_off_entities
+  # are, and it matters more here: an idle light is deliberately on, so
+  # self-heal seeing it as "still on with no occupancy" would retry
+  # turning it off every single tick, against the branch that just
+  # turned it on.
   entities_still_on: >
-    {{ resolved_entities | select('is_state', 'on') | reject('in', hands_off_entities) | list }}
+    {{ resolved_entities | select('is_state', 'on')
+       | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}
   # Same as resolved_entities, but widened to every entity on each light's
   # device (not just the light itself) - lets scene-compatibility checking
   # below account for sibling entities, e.g. a light strip's effect selector.
@@ -766,9 +937,29 @@ action:
           - alias: "Turn off the light(s)"
             action: light.turn_off
             target:
-              entity_id: "{{ reachable_entities }}"
+              entity_id: "{{ turn_off_entities }}"
             data:
               transition: !input motion_off_transition
+          # Lights with an idle brightness are dimmed instead of being
+          # switched off - that is the whole feature. This can switch a
+          # light ON, which is why it is gated on idle_entities being
+          # non-empty: a room that configures no idle brightness reaches
+          # an empty list here and this step does nothing.
+          - alias: "Leave the idle-brightness lights dimly lit"
+            if:
+              - condition: template
+                value_template: "{{ idle_entities | length > 0 }}"
+            then:
+              - action: flare.apply_lighting
+                data:
+                  entities: "{{ idle_entities }}"
+                  brightness_multipliers: "{{ idle_multipliers }}"
+                  brightness: 255
+                  color_temp_kelvin: "{{ color_temp_kelvin }}"
+                  rgb_color: "{{ rgb_color }}"
+                  transition: !input motion_off_transition
+                  prefer_rgb_color: "{{ prefer_rgb_color }}"
+                  tracking_device_id: "{{ tracking_scope_device_id }}"
           - alias: "Record the turn-off as ours"
             # Without this the integration sees a light go off under a
             # context it has no claim for and reads it as someone else
@@ -779,18 +970,20 @@ action:
             # tracking_device_id rather than treating it as optional.
             if:
               - condition: template
-                value_template: "{{ tracking_scope_device_id is not none }}"
+                value_template: >-
+                  {{ tracking_scope_device_id is not none
+                     and turn_off_entities | length > 0 }}
             then:
               - action: flare.claims_record
                 data:
-                  entities: "{{ reachable_entities }}"
+                  entities: "{{ turn_off_entities }}"
                   tracking_device_id: "{{ tracking_scope_device_id }}"
                   # dict(a, **b) rather than dict.fromkeys: the same
                   # construct used for the brightness multipliers below,
                   # and known to work in HA's Jinja.
                   targets: >-
                     {% set ns = namespace(t={}) %}
-                    {% for e in reachable_entities %}
+                    {% for e in turn_off_entities %}
                       {% set ns.t = dict(ns.t, **{e: {'state': 'off'}}) %}
                     {% endfor %}
                     {{ ns.t }}
@@ -833,15 +1026,7 @@ action:
           # last_changed is a plain property answered from memory,
           # needing no priming and no recorder.
           - condition: template
-            value_template: >-
-              {% set ns = namespace(all_clear=true) %}
-              {% for e in room_occupancy_entities %}
-                {% if not is_state(e, 'off') or
-                      (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}
-                  {% set ns.all_clear = false %}
-                {% endif %}
-              {% endfor %}
-              {{ ns.all_clear }}
+            value_template: "{{ occupancy_clear_for_wait }}"
           - condition: template
             value_template: "{{ entities_still_on | length > 0 }}"
         sequence:
@@ -885,10 +1070,45 @@ action:
       # gate has to decide whether the step runs. Putting both under the
       # same gate is what stops the rule being expressed two different
       # ways, which is how the scene path came to miss it.
+      # An empty room settles to its idle brightness rather than staying
+      # dark. Deliberately OUTSIDE the allow_turn_on gate above, and the
+      # only thing in this blueprint that is: see the STRUCTURAL
+      # INVARIANT comment in variables: for why this gate is narrower
+      # than that one rather than a widening of it.
+      #
+      # Reached when the room is genuinely empty - occupancy sensors all
+      # clear for the full Wait time - so it does not fight motion: a
+      # motion_on tick has allow_turn_on true and occupancy detected, so
+      # this is false and the curve applies at full brightness.
+      #
+      # room_occupancy_entities is checked because occupancy.is_detected
+      # is vacuously FALSE over a target with no occupancy sensors, so a
+      # sensor-less room would otherwise read as permanently empty and
+      # sit at the idle level forever, never reaching the curve.
+      - alias: "Settle an empty room to its idle brightness"
+        if:
+          - condition: template
+            value_template: "{{ room_is_idle and color_temp_kelvin is not none }}"
+        then:
+          - alias: "Apply idle brightness (FLARE)"
+            action: flare.apply_lighting
+            data:
+              entities: "{{ idle_entities }}"
+              brightness_multipliers: "{{ idle_multipliers }}"
+              brightness: 255
+              color_temp_kelvin: "{{ color_temp_kelvin }}"
+              rgb_color: "{{ rgb_color }}"
+              transition: "{{ script_transition }}"
+              prefer_rgb_color: "{{ prefer_rgb_color }}"
+              tracking_device_id: "{{ tracking_scope_device_id }}"
       - alias: "Only motion, a manual run, or a room already in use may switch a light on"
         if:
           - condition: template
-            value_template: "{{ allow_turn_on }}"
+            # `not room_is_idle` is what stops the nightlight ramping
+            # itself back up: an idle light being on makes the room read
+            # as occupied, which would otherwise satisfy allow_turn_on
+            # and hand the room straight back to the curve.
+            value_template: "{{ allow_turn_on and not room_is_idle }}"
         then:
           - if:
               - condition: template

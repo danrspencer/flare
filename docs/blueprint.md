@@ -58,6 +58,14 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 | **Brightness Multiplier Template** | none | Template mapping entity_id to a brightness multiplier. Wins over the lists below for any light it names. |
 | **Lights Off During Morning / Day / Evening / Night** | none | Lights to switch off during that phase. |
 
+### Idle Brightness
+{: .no_toc }
+
+| Input | Default | What it does |
+|---|---|---|
+| **Idle Brightness Template** | none | Template mapping entity_id to a brightness for when the room is empty. Wins over the settings below for any light it names. |
+| **Morning / Day / Evening / Night Idle Brightness** | none | What the room dims to during that phase instead of switching off. |
+
 ### Timing
 {: .no_toc }
 
@@ -158,7 +166,37 @@ is ignored. Scenes follow the same rule as everything else: a phase
 change alone won't light an empty room, so the scene is applied when
 someone next walks in.
 
-## Using a nightlight override
+## Leaving a room dimly lit
+
+Set **Night Idle Brightness** to 20 (or whatever suits) and the room
+brightens to the curve when you walk in, then settles back to that
+instead of going dark.
+
+It's per phase, so a hall can be a nightlight after dark and an ordinary
+room during the day — leave the other three unset and empty still means
+dark in those phases.
+
+For naming one lamp as the nightlight while the rest of the room goes
+out, use **Idle Brightness Template**, which maps each light to its own
+level:
+
+```yaml
+{{ {'light.landing_lamp': 20} }}
+```
+
+The template wins over the phase setting for any light it names; the
+phase setting fills in the rest.
+
+This is the one thing that will switch a light on in an empty room, and
+only for lights you've given an idle brightness. It waits out the same
+**Wait time** as switching off does, so a sensor flickering doesn't make
+the room flash. A light you switched off by hand stays off, and one
+handed over with a `null` multiplier is left alone.
+
+## Keeping a room lit regardless of motion
+
+Different from the above: this keeps the room at the **full** curve
+rather than dimming it.
 
 Make a template `binary_sensor` with `device_class: occupancy` and name
 it directly in **Lights & Occupancy**. Home Assistant can't tell it from
@@ -168,9 +206,9 @@ are clear, leaving yours on keeps the room lit however long you like.
 ```yaml
 template:
   - binary_sensor:
-      - name: "Landing nightlight"
+      - name: "Landing override"
         device_class: occupancy
-        state: "{{ is_state('input_boolean.nightlight', 'on') }}"
+        state: "{{ is_state('input_boolean.keep_lit', 'on') }}"
 ```
 
 Name it as an entity rather than relying on area membership, so it's a
@@ -201,8 +239,8 @@ The picker only lists FLARE's own sensors, so point at yours through the
 automation's **Edit in YAML** view.
 
 The state can be anything. Only the phase-keyed inputs — **Prefer RGB
-During**, the per-phase scenes and the per-phase off lists — read a
-phase name from it.
+During**, the per-phase scenes, the per-phase off lists and the per-phase
+idle brightnesses — read a phase name from it.
 
 ## Additional triggers
 
@@ -231,6 +269,8 @@ Most often, one of these:
 - **It's unavailable.** Unreachable lights are skipped, and picked up
   when they come back.
 - **A scene owns it**, or a **`null` multiplier** hands it over.
+- **It's dim rather than off on purpose** — check whether that phase
+  has an [idle brightness](#leaving-a-room-dimly-lit) set.
 
 To take a light back without switching it off first, call
 `flare.apply_lighting` with `force: true`. Running the automation by

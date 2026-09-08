@@ -776,6 +776,54 @@ could only ever return `unavailable`/`unknown` entities, which
 `grouping.py` drops as unreachable. Answering a room-level permission
 question per-entity is exactly what let the scene path miss it.
 
+**Idle Brightness** lets a room's "off" be dim rather than dark - the
+nightlight feature. Four per-phase `*_idle_brightness` inputs plus
+`idle_brightness_template`, same precedence idiom as the multipliers
+(`dict(phase_base, **template_result)`).
+
+**This is the one thing in the blueprint that can switch a light on
+outside `allow_turn_on`**, added at the user's explicit request - *"yes
+its a nightlight so it can turn on (because we're redefining what 'off'
+means)"* - which is the standard CLAUDE.md sets for widening that rule.
+`allow_turn_on` itself is untouched: the idle gate is `room_is_idle`,
+which is *narrower*, so the curve still cannot light an empty room.
+
+- **`room_is_idle` is load-bearing and non-obvious.** An idle light
+  being on makes `occupied` true, which makes `allow_turn_on` true,
+  which would let the curve apply full brightness on the very next tick
+  - the nightlight ramps itself back up and quietly stops being one. So
+  the curve's gate is `allow_turn_on and not room_is_idle`, and the two
+  branches in `default:` are mutually exclusive. **Mutation testing
+  found this**: the first version had the bug and every test passed,
+  because they each only ran a single tick.
+  `test_an_idle_light_does_not_ramp_itself_back_up` is the regression.
+- **It must not be gated on `occupied` or `allow_turn_on`** for the same
+  reason - both are true the moment an idle light is lit.
+- **`room_occupancy_entities | length > 0` is required**, because
+  `occupancy.is_detected` is vacuously false over zero sensors, so a
+  light-only room would read as permanently empty, sit at the idle level
+  forever and never reach the curve.
+- **`occupancy_clear_for_wait`** was extracted from the self-heal
+  branch's inline condition so both use one rule. The idle branch runs
+  on every tick, so without it a room would dim within a minute of
+  motion stopping, ignoring Wait time - and these are PIR sensors, which
+  flap by design.
+- `entities_still_on` excludes `idle_entities`, or self-heal retries
+  turning off the light the idle branch just turned on, every tick.
+- A `null` multiplier outranks an idle level - "something else owns
+  this" wins over "stay dimly lit".
+- **Levels travel as multipliers.** `apply_lighting` takes one
+  `brightness` plus per-entity multipliers, and idle levels are
+  per-entity *absolute* brightnesses, so the call sends `brightness:
+  255` with a multiplier of `level/255`. Deliberate, rather than adding
+  a per-entity brightness field nothing else would use.
+
+**Inbound doc links are now tested.** `docs/blueprint.md`'s headings are
+deep-linked from the blueprint's own input descriptions and from every
+test class docstring, and the #172 restructure silently broke six of
+them. `tests/test_docs_site.py::test_every_referenced_blueprint_anchor_exists`
+derives kramdown's slugs and fails on a dead anchor.
+
 **Self-heal** shares `adaptive_tick` rather than its own interval. Its
 eligibility checks sit in the `choose:` branch's own `conditions:`, so a
 tick that doesn't qualify falls through to `default:` and reapplies

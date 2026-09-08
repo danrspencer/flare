@@ -7,6 +7,24 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.7] - 2026-09-08
+
+### Added
+
+- **Idle Brightness — a room's "off" can now be dim rather than dark.**
+  Set **Night Idle Brightness** on a hall and it brightens to the curve
+  when you walk through, then settles back to a dim glow instead of
+  going out. There's an **Idle Brightness Template** too, for naming one
+  lamp as the nightlight while the rest of the room goes dark.
+
+  This is the one thing in the blueprint that can switch a light on in
+  an empty room, and only for lights you've explicitly given an idle
+  brightness. Everything else still can't: a phase change will never
+  light an empty room.
+
+  Set it per phase, so a hall can be a nightlight at night and an
+  ordinary room the rest of the day. Leave it unset and nothing changes.
+
 ## [0.15.6] - 2026-09-08
 
 ### Added
