@@ -911,6 +911,63 @@ covers every light entity the device exposes. It also *creates* the
 label if absent, which is what guarantees the `label_id` is right, since
 HA derives the id from the name at creation.
 
+### Blueprint version checking
+
+`blueprint_version.py` is pure (the stamp constant + parsing),
+`blueprint_check.py` is the HA adapter, `repairs.py` carries the fix
+flow - the same three-way split `two_step.py`/`two_step_check.py`/
+`repairs.py` already uses.
+
+**`BLUEPRINT_VERSION` is the version the BLUEPRINT last changed in, not
+the integration's.** Chosen at the user's direction over "any
+difference", so a release touching only Python doesn't tell every user
+to re-import an identical file. That is the whole reason it is a
+separate constant rather than read from `manifest.json`, and it is why
+it must be bumped BY HAND whenever the blueprint changes - forgetting
+fails silently (no repair, no error, nobody hears about the update).
+Two things guard it: `tests/test_blueprint_version.py` pins the constant
+against the stamp in the blueprint's own description, and a
+`blueprint-stamp` job in `tests.yml` fails any PR that touches
+`blueprints/` without moving the stamp.
+
+**The stamp lives in the blueprint's `description`** because there is
+nowhere else. `blueprint/schemas.py` validates the `blueprint:` block
+against a CLOSED voluptuous schema (name/description/domain/source_url/
+author/homeassistant/input), so there is no custom key; a top-level key
+alongside `blueprint:` lands in the generated *automation* config
+instead. `description` is free text, survives any import route, is
+readable via `Blueprint.metadata` with no filesystem access, and shows
+the version to the user in the automation editor.
+
+- **Only blueprints an automation actually uses are reported**
+  (`automations_with_blueprint`). HA never removes an unreferenced
+  blueprint, and lesson 13's owner-vs-folder mismatch means a house can
+  hold an orphan at a second path forever - a repair about a file
+  nothing reads is noise the user can't silence.
+- **The fix fetches a commit-pinned tag**, not `main` (lesson 12), and
+  writes to whatever path the stale copy was found at rather than the
+  path HA would derive. `async_add_blueprint(..., allow_override=True)`
+  reloads the consuming automations itself.
+- **The check runs via `async_at_started`, not during setup** -
+  automations decide whether a blueprint is in use, and during setup
+  they may not have loaded, so checking early finds every blueprint
+  orphaned and reports nothing. Tracking entry only, so a house with
+  both entries doesn't run it twice.
+- A blueprint that fails to load comes back from
+  `async_get_blueprints()` as the **exception**, not a `Blueprint` -
+  hence the `isinstance` check, not a `None` check.
+- **Promoting a beta:** if the blueprint changed during a beta the stamp
+  holds that beta's version. Set it to the stable version when
+  promoting, or stable users carry a beta stamp and the fix URL points
+  at a beta tag.
+
+**`tests/integration/test_blueprint_version_repair.py` overrides
+`hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The
+shared fixture symlinks the real directory, so a test writing blueprint
+files writes them into the actual repo - which happened while this was
+being written, and four junk blueprints were staged before it was
+caught. Don't "simplify" it back to the shared fixture.
+
 ### Deployment / operational notes
 
 - **Versioning**: `manifest.json`'s `version` is what HACS reports, and
