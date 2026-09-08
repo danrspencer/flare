@@ -7,6 +7,21 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.15.4] - 2026-09-08
+
+### Fixed
+
+- **The integration's icon had a white square behind it.** The PNGs Home
+  Assistant serves were rendered by a thumbnailer that composites onto
+  white, so the rounded tile's corners were opaque white instead of
+  transparent. They're now drawn directly, with the corners actually
+  transparent.
+
+  The icon also shifts very slightly: it is generated from `curve.py`'s
+  own defaults, and the generator had been unable to run since the
+  integration was renamed, so the shipped icon was drawn from older
+  values than the ones FLARE actually uses.
+
 ## [0.15.3] - 2026-09-08
 
 ### Added
