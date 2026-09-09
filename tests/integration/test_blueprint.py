@@ -1385,6 +1385,28 @@ class TestSceneHandoff:
 class TestBrightnessScaling:
     """docs/blueprint.md#turning-lights-off-during-a-phase"""
 
+    async def test_a_schedule_at_zero_brightness_still_reaches_one_not_off(
+        self, hass, apply_lighting_calls
+    ):
+        """A curve brightness of 0 is a legal setting (the number entity's
+        minimum), and it has always meant "as dim as this goes" rather than
+        "off" - grouping.py clamps a computed brightness into 1-255. Levels
+        travel as a fraction of 255, so the curve has to be floored at 1
+        before it becomes one; without that it would divide to a multiplier
+        of 0, which grouping.py reads as the turn-it-off sentinel and the
+        whole room would go dark instead."""
+        _light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+
+        await _setup_room_automation(hass, room_target={"entity_id": "light.a"})
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 0, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        assert _effective(apply_lighting_calls[-1], "light.a") == 1
+
     async def test_phase_exclude_list_sets_a_zero_multiplier_for_that_light(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on")
         _light(hass, "light.excluded", "on")
