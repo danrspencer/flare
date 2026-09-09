@@ -98,8 +98,8 @@ That's the minimum. Everything else has a working default.
 > Occupancy is optional. With no occupancy sensor in the target, FLARE keeps the room's
 > lights on the curve but never turns them on or off by itself.
 
-Repeat per room. Rooms can share a schedule sensor — the update jitter setting exists so
-they don't all issue commands in the same instant.
+Repeat per room. Rooms can share a schedule sensor — FLARE only sends a command to a
+light that isn't already where it should be, so sharing one costs very little traffic.
 
 ## Step 4 — add the dashboard (optional)
 

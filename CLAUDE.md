@@ -733,11 +733,22 @@ phase names so attribute-only ticks don't fire), `adaptive_tick`
   afterwards for the fired action only. An earlier version referenced
   `trigger.entity_id` there and could never fire at all.
 
-**Jitter:** a `delay:` step, first in `action:`, renders
-`range(0, update_jitter+1) | random` for `adaptive`/`adaptive_tick` and
-`0` otherwise (HA short-circuits a zero delay synchronously). Spreads
-writes so rooms sharing one sensor don't all command at the same instant.
-`mode: restart` means a genuine trigger mid-jitter correctly preempts.
+**There is no delay anywhere in `action:`, and there must not be.**
+`variables:` render once, at trigger time, so anything reached after a
+delay acts on a snapshot. `update_jitter` (a 0-15s `delay:` step, first
+in `action:`) is why: it made every room hold a stale answer for up to a
+quarter of each minute, and a light switched off by hand inside that
+window was relit by a run that had already decided the room was in use.
+`test_nothing_delays_the_action_before_it_decides` pins this.
+
+Note what could NOT save it, because it is the obvious wrong answer:
+override protection. Turning off the last light in a scope releases every
+claim it holds (`_release_if_dark`, from the state_changed listener),
+which is correct - it is what stops a room being locked out forever - so
+there is no claim left to judge the hand turn-off against. The only thing
+that says no at that point is `allow_turn_on`, and a delay is precisely
+what makes it stale. Anything reintroducing a delay must re-derive the
+whole gate after it, not rely on the integration to catch the mistake.
 
 **`condition:`** only decides whether the tick is relevant at all. It
 does **not** check occupancy: occupancy's only two jobs are turning a
@@ -932,6 +943,23 @@ trigger/condition machinery only looks at entity state, not origin.
 - **`activating_triggers`** (a second Additional Triggers input allowed
   to turn lights on). Built, shipped, then reverted: "added complexity
   for something that someone can just do via another automation".
+- **Jitter, in any form** - removed in 0.16.0, don't reintroduce it
+  without new evidence. It was added preventively in #73 with no observed
+  congestion, and the evidence against keeping it was concrete: it caused
+  a live relight bug (see the no-delay rule above), `grouping.py`'s
+  tolerance check already suppresses most writes so a routine tick sends
+  almost nothing, and 11h of this house's log showed zero Zigbee command
+  failures across 72 MQTT lights. The alternatives were all worse: a
+  delay anywhere in the decision path needs `allow_turn_on` re-derived
+  after it; moving it into `apply_lighting` cannot work, because the
+  service has no concept of room-level permission and so cannot re-check
+  the half that actually matters; and trigger-side jitter (`for:` on the
+  `adaptive` state trigger) covers phase changes only - `time_pattern`
+  has no offset, so it misses `adaptive_tick`, which is where the
+  exposure is. If congestion is ever actually observed, the right shape
+  is a bounded rate limiter at dispatch, not a random pre-decision delay.
+  Note also the general Zigbee mitigation is group addressing, not
+  spreading unicasts.
 - **`night_floor_kelvin` / `kelvin_rgb`** - see Curve math above.
 - **An opt-out for the two-step repair** - HA's issue registry already
   provides Ignore, and an ignored issue survives version bumps.
@@ -1365,3 +1393,15 @@ section headings so it reads as a spec of what the blueprint does.
 - A real entity-registry change triggers `two_step_check.py`'s
   5s-debounced watcher; flush it or the harness fails on a lingering
   timer.
+- **Waiting out real elapsed time in this harness does not work**, found
+  while testing the since-removed jitter delay and kept because it will
+  bite anything else that waits. Under the file-wide `frozen_time`, a
+  nonzero `await asyncio.sleep(...)` in the test's own coroutine (not an
+  HA-tracked task) hangs indefinitely - confirmed with a minimal repro.
+  `hass.async_block_till_done()` intermittently returns early with the
+  delayed call never having landed. And force-firing a delay's own timer
+  with a second `async_fire_time_changed` can also match a freshly
+  rescheduled `time_pattern` boundary, causing a spurious `mode: restart`
+  - confirmed via the trace log showing an unwanted second "Restarting".
+  A zero-length `await asyncio.sleep(0)` is safe (routed via `call_soon`,
+  not `call_later`) and is the way to let a task start.
