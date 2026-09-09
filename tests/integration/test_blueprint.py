@@ -34,10 +34,11 @@ room state.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
+import yaml
 from freezegun import freeze_time
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
@@ -49,6 +50,16 @@ from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
 
 BLUEPRINT_PATH = "danspencer/flare.yaml"
+BLUEPRINT_FILE = Path(__file__).resolve().parents[2] / "blueprints" / "automation" / BLUEPRINT_PATH
+
+
+class _RawLoader(yaml.SafeLoader):
+    """Reads the blueprint as plain YAML, for the one assertion below
+    that is about its structure rather than its behaviour. Plain
+    SafeLoader refuses `!input`."""
+
+
+_RawLoader.add_constructor("!input", lambda loader, node: None)
 
 
 async def _setup_room_automation(
@@ -62,11 +73,6 @@ async def _setup_room_automation(
     input_ = {
         "adaptive_sensor": "sensor.test_adaptive",
         "room_target": room_target,
-        # Deterministic by default - the blueprint's own default (15s)
-        # would make every test relying on a synchronous check after
-        # adaptive/adaptive_tick fires flaky/slow. Jitter-specific tests
-        # override this explicitly via extra_inputs.
-        "update_jitter": 0,
         **extra_inputs,
     }
     assert await async_setup_component(
@@ -378,9 +384,7 @@ class TestAdaptiveScheduleAndTransitions:
     async def test_genuine_phase_transition_calls_apply_lighting(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
-        # jitter=0 explicit - isolating "does it fire on a transition"
-        # from the jitter-delay test below.
-        await _setup_room_automation(hass, room_target={"entity_id": "light.a"}, update_jitter=0)
+        await _setup_room_automation(hass, room_target={"entity_id": "light.a"})
         apply_lighting_calls.clear()
 
         hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
@@ -388,6 +392,41 @@ class TestAdaptiveScheduleAndTransitions:
 
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
+
+    async def test_nothing_delays_the_action_before_it_decides(self):
+        """The blueprint must not defer its own decision.
+
+        `variables:` render once, at trigger time. Any `delay:` reached
+        before the action decides therefore acts on a snapshot: it was a
+        0-15s jitter step, and a light switched off by hand inside that
+        window was relit by a run that had already concluded the room was
+        in use. Confirmed live on a real trace, not reasoned about - the
+        gate said yes at 17:08:00 and apply_lighting fired at 17:08:08,
+        seven seconds after the switch turned the light off.
+
+        Override protection cannot be the backstop for this. Turning off
+        the last light in a scope releases every claim it holds
+        (write_tracking._release_if_dark), which is correct - it is what
+        stops a room being locked out forever - but it means there is no
+        claim left to judge the hand turn-off against. The only thing
+        that says no at that point is allow_turn_on, and a delay is
+        exactly what makes it stale.
+
+        So this is structural: re-derive whatever a delay would outdate,
+        or don't delay. See CLAUDE.md's standing decision on jitter."""
+        blueprint = yaml.load(BLUEPRINT_FILE.read_text(), Loader=_RawLoader)
+
+        def delays(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key == "delay":
+                        yield value
+                    yield from delays(value)
+            elif isinstance(node, list):
+                for item in node:
+                    yield from delays(item)
+
+        assert list(delays(blueprint["action"])) == []
 
     async def test_first_ever_sensor_value_counts_as_a_real_transition(self, hass, apply_lighting_calls):
         """Not covered by any other test in this class - they all
@@ -404,7 +443,6 @@ class TestAdaptiveScheduleAndTransitions:
             hass,
             room_target={"entity_id": "light.a"},
             adaptive_sensor="sensor.brand_new_adaptive",
-            update_jitter=0,
         )
 
         hass.states.async_set("sensor.brand_new_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
@@ -412,81 +450,6 @@ class TestAdaptiveScheduleAndTransitions:
 
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
-
-    async def test_jitter_delays_adaptive_and_adaptive_tick_but_nothing_else(
-        self, hass, apply_lighting_calls, monkeypatch
-    ):
-        """Jitter renders `range(0, N+1) | random` (HA's own `random`
-        filter, homeassistant/helpers/template/extensions/functional.py's
-        `_random_every_time`, which - like Jinja's own - calls stdlib
-        random.choice) - forcing random.choice to always pick the
-        sequence's last item makes the delay deterministic (here,
-        exactly 1s) instead of genuinely random, rather than actually
-        waiting it out.
-
-        Deliberately does not try to also prove the delayed call
-        eventually lands - that's HA core's own `delay:` mechanism,
-        already reliable in production (confirmed live), not something
-        specific to this blueprint. What's specific here is *which*
-        triggers get delayed at all, which "not immediate" already
-        establishes. Proving "and later resolves" needs genuinely
-        waiting out real elapsed time or force-firing the delay's own
-        timer, and both turned out to be unreliable in this exact test
-        harness once the file gained its file-wide `frozen_time` fixture
-        (`real_asyncio=True`) from a different session mid-flight:
-        - A real, nonzero `await asyncio.sleep(...)` in the test's own
-          coroutine (not an HA-tracked task) hung indefinitely -
-          confirmed with a minimal repro outside this test.
-        - `hass.async_block_till_done()` (which normally blocks on every
-          task HA is tracking until it genuinely finishes) intermittently
-          returned early, with the delayed call never having landed -
-          confirmed by running this test's own earlier draft repeatedly,
-          not a one-off.
-        - Force-firing the delay's own real timer with a second
-          `async_fire_time_changed` call (the mechanism every
-          `time_pattern` trigger in this file is normally force-fired
-          with) works for `adaptive`, but not `adaptive_tick`: once the
-          mock clock has been pushed past one minute boundary to fire
-          the tick, a later `async_fire_time_changed` call can *also*
-          match the freshly-rescheduled next boundary, causing a second,
-          spurious `mode: restart` - confirmed live via the trace log
-          showing an unwanted second "Restarting", not just reasoned
-          about.
-        `await asyncio.sleep(0)` (zero-length) does not hang under the
-        same repro - likely routed via `call_soon`, not `call_later` +
-        `select()` - so it's used below only to let the automation's
-        task start and reach its own delay step, never to wait out real
-        elapsed time."""
-        monkeypatch.setattr("random.choice", lambda seq: seq[-1])
-        _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
-        await hass.async_block_till_done()
-        await _setup_room_automation(hass, room_target={"entity_id": "light.a"}, update_jitter=1)
-        apply_lighting_calls.clear()
-
-        # Not jittered - a manual run completes synchronously (a 0s
-        # delay short-circuits with no real wait at all - HA core's
-        # own _async_step_delay returns immediately for `if not delay`).
-        await hass.services.async_call("automation", "trigger", {"entity_id": "automation.room"}, blocking=True)
-        assert apply_lighting_calls
-        apply_lighting_calls.clear()
-
-        # Jittered - a genuine phase transition doesn't land immediately.
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
-        await asyncio.sleep(0)
-        assert apply_lighting_calls == []
-
-        # Jittered - adaptive_tick doesn't either.
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
-        await asyncio.sleep(0)
-        assert apply_lighting_calls == []
-
-        # Cleanup: a manual run's own mode: restart cancels the still-
-        # pending delayed run above before the test ends - otherwise
-        # teardown fails on a lingering task (a real in-flight delay
-        # left running past the end of the test, not just a scheduled-
-        # but-not-yet-due time_pattern timer, which is separately
-        # expected and tolerated by this file's own teardown fixture).
-        await hass.services.async_call("automation", "trigger", {"entity_id": "automation.room"}, blocking=True)
 
     async def test_update_interval_actually_changes_cadence(
         self, hass, apply_lighting_calls, frozen_time

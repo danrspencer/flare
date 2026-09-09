@@ -43,7 +43,7 @@ import re
 # checks the two agree; nothing checks that you remembered to move them,
 # except the CI step that fails a pull request touching the blueprint
 # without touching the stamp.
-BLUEPRINT_VERSION = "0.16.0-beta.1"
+BLUEPRINT_VERSION = "0.16.0-beta.2"
 
 # Matches the line the blueprint's description carries. Deliberately
 # loose about what follows the number so the sentence around it can be

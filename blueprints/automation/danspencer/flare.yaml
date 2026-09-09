@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.1 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.2 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -251,19 +251,6 @@ blueprint:
           default: "/1"
           selector:
             text: {}
-        update_jitter:
-          name: Update Jitter (Optional)
-          description: >
-            Spreads scheduled updates over a random delay, in seconds,
-            so multiple rooms using the same FLARE Sensor don't all
-            send commands at the same instant. Set to 0 to
-            disable.
-          default: 15
-          selector:
-            number:
-              min: 0
-              max: 59
-              unit_of_measurement: seconds
         motion_on_transition:
           name: Motion On Transition
           description: Transition duration when turning on via motion or a manual run.
@@ -479,10 +466,6 @@ variables:
   # condition's own comment for why it's a template rather than
   # occupancy.is_not_detected's native `for:` option.
   no_motion_wait: !input no_motion_wait
-  # Exposed as a variable for the same reason as no_motion_wait above -
-  # the jitter delay step in action: below needs to reference it inside
-  # a Jinja template.
-  update_jitter: !input update_jitter
   rgb_phases: !input rgb_phases
   prefer_rgb_color: "{{ states(adaptive_sensor) in rgb_phases }}"
   script_transition: >
@@ -959,25 +942,6 @@ variables:
   adaptive_target_entities: >
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
-  # Spreads a phase change or the periodic tick's writes across a random
-  # window, so rooms sharing one sensor don't all command in the same
-  # wall-clock second - most acute at a phase boundary, where every such
-  # room fires at literally the same instant. Placed first so it applies
-  # regardless of which branch below runs. Every other trigger renders 0,
-  # which HA short-circuits synchronously; extra/recovered are inherently
-  # per-room, so there is no cascade for jitter to address there.
-  #
-  # mode: restart means a genuine trigger mid-delay preempts a jittered
-  # run: a new run stops the in-flight one, resolving the delay's awaited
-  # stop future, and it aborts before reaching the choose: block.
-  - alias: "Jitter: spread a phase change or the periodic Update tick's writes across a random window"
-    delay:
-      seconds: >-
-        {% if trigger is defined and trigger.id is defined and trigger.id in ['adaptive', 'adaptive_tick'] %}
-          {{ range(0, (update_jitter | int) + 1) | random }}
-        {% else %}
-          0
-        {% endif %}
   - choose:
       # Motion timed out: turn everything reachable off - but only if
       # Room's occupancy is clear in aggregate right now.
