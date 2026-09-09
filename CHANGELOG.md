@@ -9,6 +9,24 @@ CI — see `.github/workflows/release.yml`.
 
 ## [0.16.0]
 
+### Removed
+
+- **Update Jitter is gone.** It spread each room's updates over a random
+  0–15s delay so rooms sharing a schedule sensor wouldn't all command at
+  once. The problem is that it delayed the *decision*, not the write:
+  the blueprint works out whether a room may be lit at trigger time, so
+  for up to 15 seconds of every minute each room was acting on a stale
+  answer — and a light switched off by hand inside that window got
+  turned straight back on.
+
+  Nothing replaces it. FLARE only sends a command to a light that isn't
+  already where it should be, which is the mitigation that was doing the
+  real work; the jitter was added as a precaution and there is no
+  evidence it was preventing anything.
+
+  You don't need to do anything. An `update_jitter` left in a room's
+  configuration is simply ignored.
+
 ### Changed
 
 - **Brightness Multiplier Template is now Brightness Template, and takes a

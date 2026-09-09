@@ -73,7 +73,6 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 |---|---|---|
 | **Wait time** | 120s | How long after occupancy clears before the lights go off. |
 | **Update Interval** | every minute | How often the room re-applies the curve. |
-| **Update Jitter** | 15s | Random delay so rooms sharing a sensor don't all command at once. `0` disables it. |
 | **Motion On Transition** | | How quickly lights change when someone walks in, or you run the automation by hand. |
 | **Motion Off Transition** | | How quickly lights fade when the room empties. |
 | **Background Transition** | | How quickly lights change on the regular update — nobody is waiting on these, so they can be slow and smooth. |
