@@ -277,7 +277,7 @@ class TestAdaptiveScheduleAndTransitions:
         # sets that attribute, which is also the live exercise of the
         # vol.Any(None, ...) schema fix: a bare vol.All(...) would have
         # rejected this call outright.
-        assert calls[-1].data["brightness"] == 210
+        assert _effective(calls[-1], "light.a") == 210
         assert calls[-1].data["color_temp_kelvin"] == 4000
         assert calls[-1].data["rgb_color"] is None
 
@@ -1274,7 +1274,7 @@ class TestSceneHandoff:
         self, hass, apply_lighting_calls, scene_turn_on_calls
     ):
         """Live incident, 2026-08-21: automation.bathroom_spots' scene_template
-        was accidentally set to "{{ {} }}" (brightness_multiplier_template's
+        was accidentally set to "{{ {} }}" (brightness_template's
         own default, pasted into the wrong field) - rendered, that's the
         text "{}", which desired_scene passed straight to states[...], and
         HA rejects "{}" as a malformed entity_id with a hard TemplateError.
@@ -1399,9 +1399,10 @@ class TestBrightnessScaling:
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
-        assert calls[-1].data["brightness_multipliers"] == {"light.excluded": 0}
+        assert _effective(calls[-1], "light.excluded") == 0
+        assert _effective(calls[-1], "light.a") == 210, "the rest still follows the curve"
 
-    async def test_brightness_multiplier_template_wins_over_the_phase_exclude_list_on_collision(
+    async def test_brightness_template_wins_over_the_phase_exclude_list_on_collision(
         self, hass, apply_lighting_calls
     ):
         _light(hass, "light.a", "on")
@@ -1412,7 +1413,7 @@ class TestBrightnessScaling:
             hass,
             room_target={"entity_id": ["light.a", "light.b"]},
             day_exclude_lights=["light.a", "light.b"],
-            brightness_multiplier_template="{{ {'light.a': 0.5} }}",
+            brightness_template="{{ {'light.a': 128} }}",
         )
 
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
@@ -1420,9 +1421,10 @@ class TestBrightnessScaling:
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
-        # light.a: template's own value (0.5) wins over the phase list's 0.
+        # light.a: the template's own level wins over the phase list's 0.
         # light.b: not in the template, so the phase list's 0 fills in.
-        assert calls[-1].data["brightness_multipliers"] == {"light.a": 0.5, "light.b": 0}
+        assert _effective(calls[-1], "light.a") == 128, "the template should win"
+        assert _effective(calls[-1], "light.b") == 0, "the exclude list fills in the rest"
 
     async def test_a_null_multiplier_light_is_not_turned_off_when_occupancy_clears(
         self, hass, light_turn_off_calls
@@ -1440,7 +1442,7 @@ class TestBrightnessScaling:
         await _setup_room_automation(
             hass,
             room_target={"entity_id": ["light.a", "light.handed_off", "binary_sensor.occ"]},
-            brightness_multiplier_template="{{ {'light.handed_off': None} }}",
+            brightness_template="{{ {'light.handed_off': None} }}",
             no_motion_wait=0,
         )
 
@@ -1470,7 +1472,7 @@ class TestBrightnessScaling:
         await _setup_room_automation(
             hass,
             room_target={"entity_id": ["light.a", "light.handed_off"]},
-            brightness_multiplier_template="{{ {'light.handed_off': None} }}",
+            brightness_template="{{ {'light.handed_off': None} }}",
         )
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
@@ -1492,7 +1494,7 @@ class TestBrightnessScaling:
         await _setup_room_automation(
             hass,
             room_target={"entity_id": ["light.a", "light.dimmed_out", "binary_sensor.occ"]},
-            brightness_multiplier_template="{{ {'light.dimmed_out': 0} }}",
+            brightness_template="{{ {'light.dimmed_out': 0} }}",
             no_motion_wait=0,
         )
 
@@ -1518,7 +1520,7 @@ class TestBrightnessScaling:
         await _setup_room_automation(
             hass,
             room_target={"entity_id": ["light.a", "light.handed_off", "binary_sensor.occ"]},
-            brightness_multiplier_template="{{ {'light.handed_off': None} }}",
+            brightness_template="{{ {'light.handed_off': None} }}",
         )
 
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=6))
@@ -1680,7 +1682,7 @@ class TestSelfHealing:
 
 def _effective(call, entity_id):
     """The brightness a light actually ends up at for an apply_lighting
-    call - the idle path sends brightness 255 plus a per-entity
+    call. Every level travels as a `brightness` of 255 plus a per-entity
     multiplier of level/255, so the level is only visible once the two
     are combined the way grouping.py combines them."""
     multipliers = call.data.get("brightness_multipliers") or {}
@@ -1931,7 +1933,7 @@ class TestIdleBrightness:
             room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
             no_motion_wait=0,
             day_idle_brightness=20,
-            brightness_multiplier_template="{{ {'light.a': None} }}",
+            brightness_template="{{ {'light.a': None} }}",
         )
         apply_lighting_calls.clear()
 
