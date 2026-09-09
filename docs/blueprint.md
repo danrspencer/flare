@@ -149,6 +149,14 @@ the lounge ceiling above stays at 40 for as long as the TV is on,
 whatever time of day it is. Leave a light out of the template and it
 tracks the curve as usual.
 
+If you do want one that stays *relative* to the curve — half the room's
+brightness, whatever that is right now — read the curve and scale it
+yourself:
+
+```yaml
+{{ {'light.lounge_ceiling': state_attr('sensor.downstairs_flare', 'brightness') | int * 0.5} }}
+```
+
 `0` and `null` are different. `0` is still FLARE's light, it just wants
 it dark right now. `null` means the light belongs to something else, so
 it is left out of the turn-off when the room empties too — if you want

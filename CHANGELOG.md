@@ -40,6 +40,10 @@ CI — see `.github/workflows/release.yml`.
   | `0` | `0` |
   | `null` | `null` |
 
+  A light that should stay *relative* to the curve is still expressible —
+  read the curve and scale it yourself:
+  `{{ state_attr('sensor.downstairs_flare', 'brightness') | int * 0.5 }}`.
+
 - **Idle Brightness levels are unchanged at 0-255** — they were already on
   that scale, and now match the Brightness Template exactly. Both are
   absolute brightnesses, so a level means the same thing whether the room
