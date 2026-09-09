@@ -7,6 +7,48 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.16.0]
+
+### Changed
+
+- **Brightness Multiplier Template is now Brightness Template, and takes a
+  brightness rather than a multiplier.** It was the only place in FLARE
+  where you had to think in multiples of the curve instead of in the
+  brightness you actually wanted, and it showed: getting a fixed level out
+  of it meant dividing by the curve's current brightness, and getting
+  "flat out" meant passing an absurd multiplier and relying on the clamp.
+
+  A value is now a plain 0-255 brightness — the same scale the per-phase
+  brightness numbers already use — and it is flat: the light sits at that
+  brightness whatever the curve is doing, rather than tracking the curve
+  scaled down.
+
+  `0` (turn it off) and `null`/`false` (hands off entirely) are unchanged.
+
+  **This is breaking, and it fails loudly rather than silently.** The input
+  was renamed, so a room automation still setting `brightness_multiplier_template`
+  raises a `Missing input` repair rather than quietly reading an old
+  multiplier as a brightness — `0.4` would otherwise have become "brightness
+  0.4", i.e. off. To migrate, replace the old input with `brightness_template`
+  and rewrite each value as the brightness you want:
+
+  | Was | Now |
+  |---|---|
+  | `0.1` while the curve is at 50 | `5` |
+  | `10 / state_attr(sensor, 'brightness')` | `10` |
+  | `255` (a multiplier, meaning "clamp to maximum") | `255` |
+  | `0` | `0` |
+  | `null` | `null` |
+
+  A light that should stay *relative* to the curve is still expressible —
+  read the curve and scale it yourself:
+  `{{ state_attr('sensor.downstairs_flare', 'brightness') | int * 0.5 }}`.
+
+- **Idle Brightness levels are unchanged at 0-255** — they were already on
+  that scale, and now match the Brightness Template exactly. Both are
+  absolute brightnesses, so a level means the same thing whether the room
+  is in use or idle.
+
 ## [0.15.7] - 2026-09-08
 
 ### Added

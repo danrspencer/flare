@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.15.7-beta.2 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.1 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -120,13 +120,15 @@ blueprint:
       icon: mdi:brightness-percent
       collapsed: true
       input:
-        brightness_multiplier_template:
-          name: Brightness Multiplier Template (Optional)
+        brightness_template:
+          name: Brightness Template (Optional)
           description: >
-            Template returning entity_id → brightness multiplier (0 =
-            off, null = skip entirely). Its own per-entity values always
-            win over the per-phase exclusions below - those only fill in
-            entities it doesn't already mention.
+            Template returning entity_id → brightness, 0-255, replacing
+            the curve's brightness for the lights it names (0 = off, null
+            = skip entirely). The same scale the phase brightnesses use.
+            Its own per-entity values always win over the per-phase
+            exclusions below - those only fill in entities it doesn't
+            already mention.
             [Details](https://danrspencer.github.io/flare/blueprint/#turning-lights-off-during-a-phase).
           default: "{{ {} }}"
           selector:
@@ -167,11 +169,11 @@ blueprint:
         idle_brightness_template:
           name: Idle Brightness Template (Optional)
           description: >
-            Template returning entity_id → brightness (1-255) for lights
-            that should stay dimly lit when the room is empty, instead
-            of switching off. Its own per-entity values always win over
-            the per-phase settings below - those only fill in entities
-            it doesn't already mention.
+            Template returning entity_id → brightness, 1-255, for
+            lights that should stay dimly lit when the room is empty,
+            instead of switching off. Its own per-entity values always
+            win over the per-phase settings below - those only fill in
+            entities it doesn't already mention.
             [Details](https://danrspencer.github.io/flare/blueprint/#leaving-a-room-dimly-lit).
           default: "{{ {} }}"
           selector:
@@ -180,7 +182,8 @@ blueprint:
           name: Morning Idle Brightness (Optional)
           description: >
             What this phase dims to when the room is empty, instead of
-            switching off. 0 means it goes dark, which is the default.
+            switching off, on the same 0-255 scale as the phase
+            brightnesses. 0 means it goes dark, which is the default.
           default: 0
           selector:
             number:
@@ -191,7 +194,8 @@ blueprint:
           name: Day Idle Brightness (Optional)
           description: >
             What this phase dims to when the room is empty, instead of
-            switching off. 0 means it goes dark, which is the default.
+            switching off, on the same 0-255 scale as the phase
+            brightnesses. 0 means it goes dark, which is the default.
           default: 0
           selector:
             number:
@@ -202,7 +206,8 @@ blueprint:
           name: Evening Idle Brightness (Optional)
           description: >
             What this phase dims to when the room is empty, instead of
-            switching off. 0 means it goes dark, which is the default.
+            switching off, on the same 0-255 scale as the phase
+            brightnesses. 0 means it goes dark, which is the default.
           default: 0
           selector:
             number:
@@ -213,7 +218,8 @@ blueprint:
           name: Night Idle Brightness (Optional)
           description: >
             What this phase dims to when the room is empty, instead of
-            switching off. 0 means it goes dark, which is the default.
+            switching off, on the same 0-255 scale as the phase
+            brightnesses. 0 means it goes dark, which is the default.
           default: 0
           selector:
             number:
@@ -333,7 +339,7 @@ trigger:
     platform: time_pattern
     minutes: !input update_interval
   # Anything named in Additional Triggers changed - e.g. a TV for a
-  # brightness multiplier, or whatever the scene template depends on
+  # brightness template, or whatever the scene template depends on
   - id: extra
     platform: state
     entity_id: !input extra_triggers
@@ -498,12 +504,12 @@ variables:
   # earlier `trigger is not defined` version of this check silently
   # never fired), it's `trigger.id` that isn't.
   manual_run: "{{ not (trigger is defined and trigger.id is defined) }}"
-  # The brightness-multiplier chain is resolved up here, before
+  # The brightness chain is resolved up here, before
   # reachable_entities/entities_still_on below, because those two now
   # need hands_off_entities to build their turn-off lists. HA renders
   # variables: strictly top to bottom, each key only seeing the ones
   # declared above it, so this block cannot be moved back down.
-  template_brightness_multipliers: !input brightness_multiplier_template
+  template_brightness_levels: !input brightness_template
   morning_exclude_lights: !input morning_exclude_lights
   day_exclude_lights: !input day_exclude_lights
   evening_exclude_lights: !input evening_exclude_lights
@@ -517,14 +523,14 @@ variables:
   # collision, so a room's existing template logic (e.g. dining_room_lighting's
   # illuminance-based override, unrelated to phase) can't be silently
   # discarded by also setting a phase exclusion.
-  brightness_multipliers: >
+  brightness_levels: >
     {% set ns = namespace(m={}) %}
     {% for e in phase_exclude_lights %}
       {% set ns.m = dict(ns.m, **{e: 0}) %}
     {% endfor %}
-    {{ dict(ns.m, **template_brightness_multipliers) }}
-  # Lights the multiplier template handed off entirely: a null/false
-  # multiplier means "something else owns this, don't touch it", as
+    {{ dict(ns.m, **template_brightness_levels) }}
+  # Lights the brightness template handed off entirely: a null/false
+  # level means "something else owns this, don't touch it", as
   # opposed to 0, which means "turn this one off". Those two must not be
   # conflated - and in Jinja, as in Python, `0 == false` is true, so an
   # `in [none, false]` membership test would wrongly swallow every 0 as
@@ -540,8 +546,8 @@ variables:
   # motion-clear and reconcile tick.
   hands_off_entities: >
     {% set ns = namespace(items=[]) %}
-    {% for entity_id, multiplier in brightness_multipliers.items() %}
-      {% if multiplier is none or multiplier is sameas false %}
+    {% for entity_id, level in brightness_levels.items() %}
+      {% if level is none or level is sameas false %}
         {% set ns.items = ns.items + [entity_id] %}
       {% endif %}
     {% endfor %}
@@ -598,6 +604,43 @@ variables:
   # also directly name occupancy-class sensor entities, hence the filter.
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
+  # Brightness levels converted to what apply_lighting actually takes.
+  #
+  # The service has one `brightness` plus per-entity MULTIPLIERS, so the
+  # call sends 255 and every multiplier is that entity's level over full
+  # scale: grouping.py computes round(255 * multiplier), landing back on
+  # the level itself. That is what makes a level FLAT - it is the
+  # brightness the bulb ends up at, not a scaling of wherever the curve
+  # happens to be. The idle path below sends its own levels exactly the
+  # same way, deliberately: one rule, and a level means the same thing
+  # in both places, on the same 0-255 scale the phase brightness numbers
+  # already use.
+  #
+  # EVERY resolved entity needs an entry, because grouping.py defaults a
+  # missing one to a multiplier of 1, which against a brightness of 255
+  # would mean full blast rather than the curve. The curve's own value is
+  # floored at 1 first so a schedule whose brightness is set to 0 still
+  # lands on 1 - grouping.py clamps a computed brightness into 1-255
+  # anyway, so this only keeps the previous behaviour intact rather than
+  # silently turning such a room off.
+  #
+  # 0 and null/false pass through unchanged: they are the two sentinels
+  # grouping.py matches on identity (0 = turn it off, null/false = don't
+  # touch it at all), and 0/255 is still 0.
+  brightness_multipliers: >
+    {% set curve = ([brightness | float(0), 1] | max) / 255 %}
+    {% set ns = namespace(m={}) %}
+    {% for e in resolved_entities %}
+      {% set ns.m = dict(ns.m, **{e: curve}) %}
+    {% endfor %}
+    {% for entity_id, level in brightness_levels.items() %}
+      {% if level is none or level is sameas false %}
+        {% set ns.m = dict(ns.m, **{entity_id: level}) %}
+      {% else %}
+        {% set ns.m = dict(ns.m, **{entity_id: (level | float) / 255}) %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.m }}
   # Which FLARE tracking scope this room's writes belong to - resolved
   # here, once, rather than left for the integration to search for.
   # Room Target names an area directly, that area's own state device
@@ -644,7 +687,7 @@ variables:
     {% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,
                 'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}
     {{ m.get(states(adaptive_sensor), 0) | int }}
-  # Same precedence as brightness_multipliers, and deliberately the same
+  # Same precedence as brightness_levels, and deliberately the same
   # construct: the per-phase value fills in every light in the room, and
   # the template's own per-entity values overwrite it on collision. So a
   # room can set one dim level for the phase and still name a single
@@ -658,7 +701,7 @@ variables:
     {% endif %}
     {{ dict(ns.m, **template_idle_brightness) }}
   # Lights that should stay lit when the room empties. A light handed
-  # off with a null multiplier is excluded - that means "something else
+  # off with a null level is excluded - that means "something else
   # owns this", which outranks an idle level.
   idle_entities: >
     {% set ns = namespace(items=[]) %}
@@ -669,7 +712,7 @@ variables:
     {% endfor %}
     {{ ns.items }}
   # Entities HA already knows it can't reach right now - no point
-  # commanding them - minus anything the multiplier template handed off
+  # commanding them - minus anything the brightness template handed off
   # (see hands_off_entities above). Only feeds the motion_off turn-off.
   reachable_entities: >
     {{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')
@@ -682,11 +725,14 @@ variables:
   #
   # apply_lighting has one `brightness` plus per-entity MULTIPLIERS, and
   # idle levels are per-entity ABSOLUTE brightnesses - so the call sends
-  # brightness 255 and a multiplier of level/255, which grouping.py
-  # turns back into `level` (it computes round(brightness * multiplier),
-  # clamped 1-255, and every idle level is already inside that range).
-  # That is deliberate rather than adding a per-entity brightness field
-  # to the service, which nothing else would use.
+  # brightness 255 and a multiplier of level/255, which grouping.py turns
+  # back into `level` (it computes round(brightness * multiplier),
+  # clamped 1-255). That is deliberate rather than adding a per-entity
+  # brightness field to the service, which nothing else would use.
+  #
+  # Identical in shape to brightness_multipliers above, which is the
+  # point: both are levels over full scale, so a level means the same
+  # thing whether the room is in use or idle.
   idle_multipliers: >
     {% set ns = namespace(m={}) %}
     {% for e in idle_entities %}
@@ -860,7 +906,7 @@ variables:
   scene_valid: "{{ scene_covered_entities | reject('in', scope_entities) | list | length == 0 }}"
   scene_active: "{{ desired_scene | length > 0 and scene_valid }}"
   # Lights this tick has deliberately handed off - to an active scene,
-  # or to whatever owns them via a null/false multiplier. apply_lighting
+  # or to whatever owns them via a null/false level. apply_lighting
   # never writes these, so their override-protection claims would freeze
   # at the last real write and get reported as "overridden", which is
   # indistinguishable from someone grabbing a light by hand. The action
@@ -996,7 +1042,7 @@ action:
                   entities: "{{ turn_off_entities }}"
                   tracking_device_id: "{{ tracking_scope_device_id }}"
                   # dict(a, **b) rather than dict.fromkeys: the same
-                  # construct used for the brightness multipliers below,
+                  # construct used for the brightness levels below,
                   # and known to work in HA's Jinja.
                   targets: >-
                     {% set ns = namespace(t={}) %}
@@ -1161,7 +1207,7 @@ action:
                 data:
                   entities: "{{ adaptive_target_entities }}"
                   brightness_multipliers: "{{ brightness_multipliers }}"
-                  brightness: "{{ brightness }}"
+                  brightness: 255
                   color_temp_kelvin: "{{ color_temp_kelvin }}"
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"

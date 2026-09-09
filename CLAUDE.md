@@ -810,13 +810,10 @@ which is *narrower*, so the curve still cannot light an empty room.
   flap by design.
 - `entities_still_on` excludes `idle_entities`, or self-heal retries
   turning off the light the idle branch just turned on, every tick.
-- A `null` multiplier outranks an idle level - "something else owns
-  this" wins over "stay dimly lit".
-- **Levels travel as multipliers.** `apply_lighting` takes one
-  `brightness` plus per-entity multipliers, and idle levels are
-  per-entity *absolute* brightnesses, so the call sends `brightness:
-  255` with a multiplier of `level/255`. Deliberate, rather than adding
-  a per-entity brightness field nothing else would use.
+- A `null` level outranks an idle level - "something else owns this"
+  wins over "stay dimly lit".
+- **Levels travel as multipliers** - see "Brightness levels" below,
+  which both paths now share.
 
 **Inbound doc links are now tested.** `docs/blueprint.md`'s headings are
 deep-linked from the blueprint's own input descriptions and from every
@@ -844,22 +841,52 @@ explicitly chosen. All phase-keyed dict lookups use `.get(key, default)`,
 never direct indexing: `states(adaptive_sensor)` can legitimately be
 `unknown`/`unavailable`, and direct indexing would crash the whole tick.
 `scene_template` wins over the per-phase pick whenever it returns a valid
-scene; `brightness_multiplier_template`'s per-entity values likewise win
-over the phase exclude lists (`dict(phase_base, **template_result)`).
+scene; `brightness_template`'s per-entity values likewise win over the
+phase exclude lists (`dict(phase_base, **template_result)`).
 
-**`0` and `null` multipliers are not the same thing.** `0` means "turn
-this light off"; `null`/`false` means "hands off, something else owns
-it" - excluded from the turn-off paths too, not just the adaptive step.
-In Jinja as in Python `0 == false`, so membership tests like
-`in [none, false]` silently swallow every `0`; the identity form
-`multiplier is none or multiplier is sameas false` is required, mirroring
-`grouping.py`'s own bucketing.
+**Brightness levels are ABSOLUTE 0-255, not multipliers of the curve.**
+`brightness_template` (renamed from `brightness_multiplier_template` in
+0.16.0) and the four `*_idle_brightness` inputs all name the brightness a
+light sits at, on the same scale as the per-phase brightness `number`
+entities. Changed at the user's direction: the multiplier form was the
+one place you had to think in multiples of the curve, and the
+workarounds were visible in his own live configs - dividing by
+`state_attr(sensor, 'brightness')` to pin a light at 10, and passing a
+multiplier of 255 purely to land on `MAX_BRIGHTNESS`.
+
+**The service contract did NOT change.** `apply_lighting` still takes one
+`brightness` plus per-entity *multipliers*, which is a fine primitive for
+a caller wiring it up themselves. The blueprint converts: it sends
+`brightness: 255` and a multiplier of `level/255` on both the adaptive
+and idle paths, so `round(255 * multiplier)` lands back on the level.
+Two consequences worth knowing:
+
+- **Every resolved entity needs an entry**, because `_bucket_by_multiplier`
+  defaults a missing one to `1` - against a brightness of 255 that is
+  full blast, not the curve. So the untemplated majority carry an
+  explicit `curve/255`.
+- **The curve is floored at 1 before dividing.** A schedule brightness of
+  0 is legal (the `number`'s minimum) and has always meant "as dim as
+  this goes", since `grouping.py` clamps into 1-255. Unfloored it would
+  divide to a multiplier of 0, which is the turn-it-off sentinel, and the
+  room would go dark instead. `test_a_schedule_at_zero_brightness_still_reaches_one_not_off`
+  pins it - mutation testing found nothing covered this.
+
+**`0` and `null` levels are not the same thing.** `0` means "turn this
+light off"; `null`/`false` means "hands off, something else owns it" -
+excluded from the turn-off paths too, not just the adaptive step. Both
+are sentinels `grouping.py` matches on identity, so both pass through the
+percentage conversion untouched rather than being divided. In Jinja as in
+Python `0 == false`, so membership tests like `in [none, false]` silently
+swallow every `0`; the identity form `level is none or level is sameas
+false` is required, mirroring `grouping.py`'s own bucketing.
 
 **`variables:` renders strictly top to bottom**, each key seeing only
 those above it, and failures are silent (`x | length` on an undefined
-name returns `0` with no log and no trace entry). The brightness-
-multiplier chain sits near the top specifically because the turn-off
-lists depend on it.
+name returns `0` with no log and no trace entry). The brightness-level
+chain sits near the top specifically because the turn-off lists depend on
+it - though `brightness_multipliers` itself is derived later, after
+`resolved_entities`, since it now needs the full entity list.
 
 **Sensor reads are guarded before dispatch.** `brightness`/
 `color_temp_kelvin` are plain `state_attr()` reads and `apply_lighting`
@@ -894,7 +921,7 @@ trigger/condition machinery only looks at entity state, not origin.
   monkey-patching the shared template engine. Deduplicating *within*
   `variables:` has none of those blockers and is what's actually done.
 - **Condition/action-selector inputs replacing `scene_template` /
-  `brightness_multiplier_template`.** Investigated properly against
+  `brightness_template`.** Investigated properly against
   `blueprint/models.py` and `annotatedyaml`. A blueprint input's
   `default:` cannot reference another input's value (the `blueprint:`
   key is discarded before substitution). Brightness has no viable

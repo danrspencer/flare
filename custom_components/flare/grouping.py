@@ -242,7 +242,7 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
 def _bucket_by_multiplier(entities: list, brightness_multipliers: dict) -> dict:
     """Groups entities whose multiplier isn't null/false (that means
     "don't touch this on power-on, something else owns it" - see the
-    blueprint's brightness_multiplier_template input) by multiplier
+    blueprint's brightness_template input, converted) by multiplier
     value, so each bucket can share one command."""
     buckets: dict = {}
     for e in entities:

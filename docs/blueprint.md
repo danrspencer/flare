@@ -55,7 +55,7 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 
 | Input | Default | What it does |
 |---|---|---|
-| **Brightness Multiplier Template** | none | Template mapping entity_id to a brightness multiplier. Wins over the lists below for any light it names. |
+| **Brightness Template** | none | Template mapping entity_id to a brightness, 0–255. Wins over the lists below for any light it names. |
 | **Lights Off During Morning / Day / Evening / Night** | none | Lights to switch off during that phase. |
 
 ### Idle Brightness
@@ -63,8 +63,8 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 
 | Input | Default | What it does |
 |---|---|---|
-| **Idle Brightness Template** | none | Template mapping entity_id to a brightness for when the room is empty. Wins over the settings below for any light it names. |
-| **Morning / Day / Evening / Night Idle Brightness** | `0` | What the room dims to during that phase instead of switching off. `0` means it goes dark. |
+| **Idle Brightness Template** | none | Template mapping entity_id to a brightness, 0–255, for when the room is empty. Wins over the settings below for any light it names. |
+| **Morning / Day / Evening / Night Idle Brightness** | `0` | What the room dims to during that phase instead of switching off, 0–255. `0` means it goes dark. |
 
 ### Timing
 {: .no_toc }
@@ -126,21 +126,35 @@ Put them in **Lights Off During Night** (or whichever phase). That's the
 whole feature for the common case.
 
 For anything the lists can't express — a specific dim level rather than
-off, or a condition unrelated to phase — use **Brightness Multiplier
-Template**, which maps each light to a multiplier:
+off, or a condition unrelated to phase — use **Brightness Template**,
+which maps each light to the brightness it should sit at:
 
 | Value | Effect |
 |---|---|
-| a number | Scales that light's brightness. Values above `1` just mean "as bright as this bulb goes". |
+| `1`–`255` | That light sits at this brightness. The same scale the phase brightnesses use. |
 | `0` | Turns the light off. |
 | `null` or `false` | Hands the light over entirely — FLARE never touches it, on or off. |
 
 ```yaml
 {% if is_state('media_player.tv', 'playing') %}
-  {{ {'light.lounge_ceiling': 0.4, 'light.lounge_lamp': null} }}
+  {{ {'light.lounge_ceiling': 40, 'light.lounge_lamp': null} }}
 {% else %}
   {{ {} }}
 {% endif %}
+```
+
+A brightness here is **flat**. The light sits at it for as long as the
+template returns it, rather than following the curve up and down — so
+the lounge ceiling above stays at 40 for as long as the TV is on,
+whatever time of day it is. Leave a light out of the template and it
+tracks the curve as usual.
+
+If you do want one that stays *relative* to the curve — half the room's
+brightness, whatever that is right now — read the curve and scale it
+yourself:
+
+```yaml
+{{ {'light.lounge_ceiling': state_attr('sensor.downstairs_flare', 'brightness') | int * 0.5} }}
 ```
 
 `0` and `null` are different. `0` is still FLARE's light, it just wants
@@ -191,7 +205,7 @@ This is the one thing that will switch a light on in an empty room, and
 only for lights you've given an idle brightness. It waits out the same
 **Wait time** as switching off does, so a sensor flickering doesn't make
 the room flash. A light you switched off by hand stays off, and one
-handed over with a `null` multiplier is left alone.
+handed over with a `null` brightness is left alone.
 
 ## Keeping a room lit regardless of motion
 
@@ -268,7 +282,7 @@ Most often, one of these:
   fought with every minute.
 - **It's unavailable.** Unreachable lights are skipped, and picked up
   when they come back.
-- **A scene owns it**, or a **`null` multiplier** hands it over.
+- **A scene owns it**, or a **`null` brightness** hands it over.
 - **It's dim rather than off on purpose** — check whether that phase
   has an [idle brightness](#leaving-a-room-dimly-lit) set.
 
@@ -287,7 +301,7 @@ button. See
 
 **Self-healing.** If the room has been empty for the full **Wait time**
 but a light is still on, the off command is sent again — recovering from
-a command that didn't land. Lights handed over with a `null` multiplier
+a command that didn't land. Lights handed over with a `null` brightness
 are left out.
 
 **Lights that come back online.** When a light reappears after a

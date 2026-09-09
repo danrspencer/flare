@@ -27,7 +27,7 @@ the moment you want something else.
 - **It works with lights on a physical wall switch.** Cut the power to a room and
   restore it, and FLARE catches each bulb as it reappears, putting it straight onto the
   current phase instead of leaving it at whatever it powered up as.
-- **It bends to fit the room.** A brightness multiplier per light, a scene per phase,
+- **It bends to fit the room.** A brightness of your own per light, a scene per phase,
   and templates for either when a fixed value isn't enough.
 - **It gets out of your way.** Change a bulb yourself — app, wall switch, another
   automation — and FLARE stops driving that one until the room next goes dark.
