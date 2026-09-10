@@ -9,6 +9,17 @@ CI — see `.github/workflows/release.yml`.
 
 ## [0.16.0]
 
+### Fixed
+
+- **Motion into a room sitting at its idle brightness now brightens it
+  immediately.** It used to wait for the next scheduled update — up to a
+  minute — and then fade in at the background transition rather than the
+  motion one. A short walk through often didn't brighten the room at all.
+
+  The cause was a check that skipped the motion run when nothing in the
+  room was off, which stopped being a fair question once a room's "off"
+  could be dim.
+
 ### Removed
 
 - **Update Jitter is gone.** It spread each room's updates over a random

@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.2 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.3 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -47,7 +47,7 @@ blueprint:
       name: Additional Triggers (Optional)
       description: >
         Entities that trigger an immediate re-evaluation, e.g. a
-        dependency of Scene Template or Brightness Multiplier Template.
+        dependency of Scene Template or Brightness Template.
         Only updates lights that are already on - never switches one on.
         [Details](https://danrspencer.github.io/flare/blueprint/#additional-triggers).
       default: []
@@ -442,6 +442,23 @@ condition:
   # of who is in the room. motion_on keeps an efficiency check only (skip
   # the call if there is nothing to turn on); allow_turn_on below is what
   # actually decides permission.
+  #
+  # The `or idle_entities` half is what makes motion work in a room whose
+  # "off" is dim. The first half asks "is anything off?", which was a
+  # sound proxy for "is there anything to do?" until Idle Brightness:
+  # an idle room has every light ON, at the idle level, and motion is
+  # precisely when they should go up to the curve. Without this the
+  # motion_on run aborted here, so the room only brightened on the next
+  # adaptive_tick - up to a minute later, and with background_transition
+  # instead of motion_on_transition, since script_transition keys off the
+  # trigger id. A brief passage never brightened the room at all.
+  #
+  # It must be `idle_entities`, NOT `room_is_idle`: the latter includes
+  # occupancy_clear_for_wait, which is false the instant motion is
+  # detected, so it would still abort. `idle_entities` is derived from
+  # the configured levels alone and says the thing that matters here -
+  # this room has lights whose "off" is dim. A room with no idle
+  # brightness configured has it empty and is unaffected.
   - or:
       - condition: not
         conditions:
@@ -452,7 +469,9 @@ condition:
           - condition: trigger
             id: motion_on
           - condition: template
-            value_template: "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0 }}"
+            value_template: >-
+              {{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0
+                 or idle_entities | length > 0 }}
 
 variables:
   room_target: !input room_target

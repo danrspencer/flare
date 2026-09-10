@@ -185,9 +185,15 @@ Set **Night Idle Brightness** to 20 (or whatever suits) and the room
 brightens to the curve when you walk in, then settles back to that
 instead of going dark.
 
-It's per phase, so a hall can be a nightlight after dark and an ordinary
-room during the day — leave the other three at `0` and empty still means
-dark in those phases.
+It's per phase — leave the other three at `0` and empty still means dark
+in those phases.
+
+{: .warning }
+> **Night is a phase, not "night-time".** Setting only **Night Idle
+> Brightness** gives you a nightlight from your Night boundary — 22:00 by
+> default — and nothing during Evening, when it is already dark outside.
+> Set **Evening Idle Brightness** too if you want it lit from dusk, and
+> **Morning Idle Brightness** for dark winter mornings.
 
 For naming one lamp as the nightlight while the rest of the room goes
 out, use **Idle Brightness Template**, which maps each light to its own
@@ -199,6 +205,14 @@ level:
 
 The template wins over the phase setting for any light it names; the
 phase setting fills in the rest.
+
+{: .note }
+> With the phase setting at `0`, the template isn't an override on top of
+> anything — it *is* the whole idle set. So a template naming one lamp
+> makes that lamp the room's only nightlight and every other light goes
+> dark, even if you only meant to give that one a different level. If you
+> want the rest of the room dim too, set the phase value as well and let
+> the template adjust the one light on top of it.
 
 This is the one thing that will switch a light on in an empty room, and
 only for lights you've given an idle brightness. It waits out the same
