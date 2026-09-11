@@ -54,6 +54,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, EVENT_LIGHT_OVERRIDDEN
@@ -136,7 +137,7 @@ def _assign_scope_area(hass: HomeAssistant, entity, instance: StateInstance) -> 
     registry.async_update_device(device.id, area_id=areas[0])
 
 
-class _StateTrackingSensor(SensorEntity):
+class _StateTrackingSensor(SensorEntity, RestoreEntity):
     """One state device's claims - the actual storage, not a view of it.
 
     `claims` is the dict ClaimRegistry reads and mutates, published as
@@ -149,9 +150,11 @@ class _StateTrackingSensor(SensorEntity):
     enormous and useless. The same `_unrecorded_attributes` treatment
     the day-curve `points` attribute already gets.
 
-    Deliberately not restored across a restart either - see
-    write_tracking.py's module docstring. A cold start tracks nothing,
-    which leaves every light manageable, which is the desired state."""
+    Restored across a restart, through HA's own restore state - see
+    extra_restore_state_data, and write_tracking.py's module docstring
+    for why that is safe. "Not recorded" and "not restored" are
+    different things: restore state is its own store, separate from the
+    recorder's history."""
 
     _attr_has_entity_name = True
     _attr_name = "Tracking"
@@ -176,8 +179,25 @@ class _StateTrackingSensor(SensorEntity):
         self._attr_device_info = instance.device_info
 
     async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # Restored BEFORE registering, so the registry never routes a
+        # write into an empty dict that the restore then replaces.
+        last = await self.async_get_last_extra_data()
+        if last is not None:
+            self.claims = dict(last.as_dict().get("claims") or {})
         self._registry.register(self._instance.subentry_id, self)
+        # The setup-time prune in __init__.py runs before any tracking
+        # entity exists, so without this a restored claim over a day old
+        # would survive until the first hourly prune.
+        await self._registry.async_prune_stale()
         _assign_scope_area(self.hass, self, self._instance)
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData:
+        """What HA saves for this entity at shutdown and every 15 minutes:
+        the claims dict itself, so what comes back is the same object
+        override protection reads rather than a copy kept in step."""
+        return RestoredExtraData({"claims": self.claims})
 
     async def async_will_remove_from_hass(self) -> None:
         self._registry.unregister(self._instance.subentry_id)

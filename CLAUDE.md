@@ -538,7 +538,9 @@ rather than assumed:
   unavailable included - requiring an explicit `off` would let one
   permanently unavailable entity veto the release forever, the same
   trap the blueprint's `recovered` trigger avoids. Note "the room" is
-  the *scope*: an untracked light being on holds nothing open.
+  the *scope*: an untracked light being on holds nothing open. It fires
+  only on a transition that STARTS from a real on/off state - see
+  "Claims survive a restart" below for why `unknown -> off` mustn't.
 
 **Known limitation, partly mitigated.** Once `classify()` returns
 `overridden`, `build_groups()` excludes the entity from every group, so
@@ -549,6 +551,61 @@ whenever the room empties, which covers the ordinary case; `claims_clear`
 (and the Clear button) remains the escape hatch for a room that never
 fully goes dark. The underlying rot is unchanged: an excluded entity
 never gets a refreshed claim.
+
+### Claims survive a restart
+
+The tracking entity (`_StateTrackingSensor`) is a `RestoreEntity`: its
+claims are its `extra_restore_state_data`, restored in
+`async_added_to_hass` before it registers. One source of truth, on the
+entity - which is what #99 wanted when it deleted the old `Store`.
+
+**This was tried once and reverted, so the history matters.** Claims
+were `Store`-persisted from 2026-08-14. A restart gives every entity a
+fresh `context.id`, matching was context-only then, and so every restart
+excluded all 57 tracked lights (#69). A startup resync patched that, then
+raced (#70, which added a "recovery" re-baseline to the listener), and
+#99 deleted persistence outright. What makes it safe now is #78's value
+fallback (2026-08-22): a restored claim can't match on context, but a
+light still showing what FLARE asked for matches on value and reads
+`controlled`.
+
+Two listener rules changed with it, both pinned in
+`tests/integration/test_claim_persistence.py`:
+
+- **No recovery re-baseline.** The listener used to replace `observed`
+  with the live context whenever a light arrived in a real state from
+  unavailable/unknown/nothing. A genuine dropout has its claim popped
+  first, so that branch only ever fired on restarts and reloads - and
+  with claims restored it would mark every override `controlled` moments
+  after the restore. Deleted rather than gated: HA's `restored: True`
+  placeholder attribute can't gate it, because MQTT lights reach `on`
+  from their own untagged `unknown` (unavailable -> unknown -> on,
+  confirmed live on `light.landing_pendant_1`).
+- **`went_off` needs a real starting state.** Lights reconnect one at a
+  time; if the first back is `off`, its siblings are still `unknown`,
+  which `_release_if_dark` counts as dark, and the whole scope's restored
+  claims would go. Only a real on/off -> off releases.
+
+The setup-time prune in `__init__.py` runs before any tracking entity
+exists, so the restore prunes for itself.
+
+**A restart is no longer an escape hatch** for a light stuck `overridden`
+(see the known limitation above) - the room going dark, or the Clear
+button, are. Known residuals, both ending when the room goes dark: a bulb
+that power-cycles while HA is down comes back at its default and reads
+`overridden`; and a write that dropped just before a restart, on a light
+with no confirmed write yet (its only `observed` is the target-less
+first-write baseline), reads `overridden`. HA saves restore state every
+15 minutes and at shutdown, so a crash loses up to 15 minutes of claims,
+which fail open.
+
+**Testing it needs a real entity add.** The other harnesses attach the
+tracking entity with a capturing `async_add_entities`, so
+`async_added_to_hass` never runs and nothing is ever saved or restored.
+`test_claim_persistence.py` adds it through the plugin's
+`MockEntityPlatform` and seeds `mock_restore_cache_with_extra_data`; the
+save side goes through `async_mock_restore_state_shutdown_restart`, which
+also proves a claim survives HA's JSON encoder.
 
 ### Two config entries
 
@@ -1409,10 +1466,6 @@ section headings so it reads as a spec of what the blueprint does.
   collapse into one `state_reported` event, and the second call's
   explicit `context=` is silently discarded. Echo a *slightly*
   different value when a test needs a real state change.
-- The plugin's `mock_storage` caches a `Store` instance's first load
-  and never refreshes it, so reading back a write made through a
-  different `Store` for the same key needs a **fresh** instance. Never
-  an issue in production, where exactly one tracker is created.
 - A real entity-registry change triggers `two_step_check.py`'s
   5s-debounced watcher; flush it or the harness fails on a lingering
   timer.

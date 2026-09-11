@@ -36,26 +36,35 @@ never once read. grouping.py's externally_set() and
 override_protection.classify() own the comparison itself; this module
 only records.
 
-Deliberately not persisted. Claims live on each state device's tracking
-entity and die with a restart, which is correct rather than merely
-tolerable: these are lighting overrides, and losing them means a bulb
-someone wanted purple goes back to being managed. A cold start tracks
-nothing, classify() therefore returns `untracked`, and every light is
-manageable - which is exactly the state the old startup resync existed
-to reconstruct.
+Persisted across restarts, on the tracking entity itself.
+_StateTrackingSensor is a RestoreEntity, so its claims ride HA's own
+restore state: one source of truth, the same object override protection
+reads, rather than a separate Store kept in step - which is why #99
+removed the original Store. A restart therefore no longer hands every
+overridden light back; a bulb someone set purple stays theirs.
+
+Restored claims are judged by VALUE, not context. A restart gives every
+entity a fresh context.id, so no restored claim can match on context;
+classify() falls back to comparing live values against each claim's
+recorded target. Unchanged across the restart reads `controlled`,
+different reads `overridden`. That value fallback (#78) is what makes
+this safe - the first persisted version predated it, and excluded every
+tracked light in the house after every restart (#69).
+
+HA saves restore state every 15 minutes and at shutdown, so a crash can
+lose up to 15 minutes of claims. Those lights fail open - untracked, and
+so manageable - which is what every restart used to do.
 
 Two claims per entity, not one
 ------------------------------
 - `observed` - a state we have seen and know is safe to write over.
 - `latest`   - the most recent write we sent, not yet re-observed.
 
-`observed` is deliberately not "a write of ours". It is populated four
+`observed` is deliberately not "a write of ours". It is populated two
 ways, only one of which we authored: a write an earlier call saw the
-bulb adopt, the pre-write baseline for a first-ever write, the startup
-snapshot, and the snapshot taken when a device returns from
-unavailable. What they share is confidence, not authorship - in each
-case nothing unexplained has happened to the light, so writing over it
-is safe.
+bulb adopt, and the pre-write baseline for a first-ever write. What they
+share is confidence, not authorship - in both cases nothing unexplained
+has happened to the light, so writing over it is safe.
 
 apply_lighting records the context it *issued*; nothing waits to confirm
 the bulb adopted it. With a single record, one dropped write locks a
@@ -93,20 +102,28 @@ concluding "external".
 
 Device recovery and restarts
 -----------------------------
-A reconnecting device's own state report also gets a fresh context (any
-state write with no explicit context does - core.py).
-async_start_listening() watches both directions of the
-unavailable/unknown boundary: it clears an entity's record when it is
-observed dropping from a real on/off state, and snapshots the
-newly-observed context as a fresh `observed` baseline when it comes
-back. There is no startup equivalent, and none is needed - nothing is
-tracked at startup.
+async_start_listening() clears an entity's record when it is observed
+dropping from a real on/off state to unavailable/unknown, so a genuine
+reconnect - a state report we can't intercept, carrying a fresh context
+- finds no claim to conflict with, and the light is simply managed again.
 
-The drop direction must *start* from a real on/off state, not merely end
-at unavailable/unknown: nearly every entity passes through
-unavailable/unknown on every restart, and clearing on the destination
-alone wiped override protection for practically every managed light in
-the house on each one.
+There is deliberately NO "recovery" re-baseline. There used to be: any
+transition into a real state from unavailable/unknown or no prior state
+replaced `observed` with the live context. But a genuine dropout has
+already had its record cleared by then, so that branch only ever fired
+on a restart or an integration reload - and with claims restored, it
+would re-baseline every light as ours, overrides included, moments after
+the restore. The value fallback in classify() does that job properly
+now. It could not have been kept by keying on HA's `restored: True`
+placeholder attribute: MQTT lights reach `on` from their own untagged
+`unknown` state (unavailable -> unknown -> on, confirmed live).
+
+Both remaining rules must START from a real on/off state, not merely end
+somewhere. Nearly every entity passes through unavailable/unknown on
+every restart. Clearing on the destination alone wiped protection for
+practically every light in the house (#57); releasing a scope on any
+transition to `off` would let the first light to reconnect as `off`
+release restored overrides on siblings still reconnecting.
 """
 
 from __future__ import annotations
@@ -261,34 +278,6 @@ class ClaimRegistry:
         for store in stores:
             store.async_claims_changed()
         async_dispatcher_send(self._hass, SIGNAL_WRITE_TRACKING_UPDATED)
-
-    def _snapshot_observed(self, entity_id: str, context_id: str) -> ClaimStore | None:
-        """Replace `observed` with a fresh baseline built from a live
-        context.id just observed for this entity - recorded_at=None,
-        since this is merely *observed*, not a write
-        this integration actually made (the same convention
-        async_record's synthetic first-write baseline uses - see its own
-        docstring). `latest` is left untouched: a claim from before
-        this observation can never match this fresh context either way,
-        so it's simply inert until the next real write overwrites it.
-        Used by async_start_listening's recovery branch. Returns the
-        store it touched so the caller can publish it, or None when the
-        light belongs to no scope."""
-        store = self._store_for(entity_id)
-        if store is None:
-            return None
-        record = store.claims.get(entity_id)
-        store.claims[entity_id] = {
-            "observed": {
-                "context_id": context_id,
-                "secondary_context_id": None,
-                "recorded_at": None,
-                "target": None,
-            },
-            "latest": record.get("latest") if record else None,
-            "last_seen": dt_util.utcnow().isoformat(),
-        }
-        return store
 
     def observed_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
         record = self._record(subentry_id, entity_id)
@@ -525,26 +514,23 @@ class ClaimRegistry:
         store.claims.clear()
 
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
-        """Watches both directions of the unavailable/unknown boundary for
-        every tracked entity, via one hass-wide "state_changed" listener -
-        cheaper than keeping per-entity subscriptions in sync with
-        the tracked set as apply_lighting adds entities over time.
+        """Watches every tracked entity through one hass-wide
+        "state_changed" listener - cheaper than keeping per-entity
+        subscriptions in sync with the tracked set as apply_lighting adds
+        entities over time. The module docstring's "Device recovery and
+        restarts" explains the shape of each rule.
 
         - **Drop** (a real on/off state -> unavailable/unknown): clears
-          the record entirely, so the eventual reconnect - a write we
-          can't intercept, since it isn't a service call at all - finds
-          no claim to conflict with.
-        - **Recovery** (unavailable/unknown, or no prior state, -> a real
-          state): snapshots the observed context as the new `observed`
-          baseline, so a reconnect - a write we can't intercept, since
-          it isn't a service call at all - doesn't read as an override.
+          the record, so the eventual reconnect finds nothing to
+          conflict with.
+        - **Off** (a real on/off state -> off): re-checks whether the
+          scope has gone dark, and releases it if so.
 
-        Both directions require the *other* endpoint to be a genuine
-        on/off state, not just the destination. Almost every entity
-        passes through unavailable/unknown on every restart, and treating
-        that as a real drop cleared protection for practically every
-        light in the house each time - a light dimmed by hand hours later
-        was then silently overwritten, its record long since wiped."""
+        Both require the STARTING state to be a real on/off state. Almost
+        every entity passes through unavailable/unknown on every restart,
+        and reacting to the destination alone either wiped protection
+        house-wide or, with claims restored, would release a scope while
+        half its lights were still reconnecting."""
 
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
@@ -555,38 +541,27 @@ class ClaimRegistry:
             old_state = event.data["old_state"]
             new_state = event.data["new_state"]
             old_available = old_state is not None and old_state.state not in ("unavailable", "unknown")
-            new_available = new_state is not None and new_state.state not in ("unavailable", "unknown")
             # Drop requires new_state to explicitly report "unavailable"/
-            # "unknown" as a string - not just new_state being absent
-            # entirely (entity removed from the state machine, e.g. a
-            # fresh process's own state machine having no entry for it
-            # yet). That distinction matters: treating "gone" the same
-            # as "unavailable" here would clear the record the instant
-            # an entity's old in-memory state vanishes as a routine part
-            # of every restart, before its own reconnect event ever
-            # fires - reopening the exact "wiped on every restart, not
-            # just real drops" incident this listener exists to prevent
-            # (see the module docstring). Recovery has no equivalent
-            # asymmetry: old_state being absent entirely is exactly the
-            # "no prior state, now reporting real" case it's meant to
-            # catch too (a fresh process's first-ever report for this
-            # entity, functionally identical to recovering from a drop).
+            # "unknown" - not new_state being absent entirely (an entity
+            # removed from the state machine, as every entity is across a
+            # restart before it re-registers). Treating "gone" as
+            # "unavailable" would clear every record at every restart.
             new_explicitly_unavailable = new_state is not None and new_state.state in ("unavailable", "unknown")
+            dropped = old_available and new_explicitly_unavailable
+            # A real on/off -> off only. `unknown -> off` is a light
+            # reconnecting after a restart, not somebody switching it off,
+            # and releasing on it would let the first light back release
+            # restored overrides on siblings still reconnecting.
+            went_off = old_available and new_state is not None and new_state.state == "off"
 
-            went_off = new_state is not None and new_state.state == "off"
-
-            if old_available and new_explicitly_unavailable:
+            if dropped:
                 store.claims.pop(entity_id, None)
-            elif not old_available and new_available:
-                self._snapshot_observed(entity_id, new_state.context.id)
             elif not went_off:
                 return
 
-            # Any transition that can darken a scope re-checks it: a
-            # light going off, and a light dropping (whose claim has
-            # just been popped, possibly leaving the rest all dark).
-            if went_off or new_explicitly_unavailable:
-                self._release_if_dark(store)
+            # Either way the scope may now be dark: a light went off, or
+            # a light dropped and its claim was just popped.
+            self._release_if_dark(store)
 
             self._notify([store])
 

@@ -108,7 +108,7 @@ A context mismatch alone isn't proof either. HA's `Entity._context` expires 5 se
 a bulb whose round-trip takes longer reports back under an unrelated context while echoing exactly what was
 asked for. Each claim also records its `target`, and the comparison falls back to values.
 
-Claims are **not persisted**. After a restart nothing is tracked, so every light is manageable.
+Claims **survive a restart**. A light somebody else had taken before the restart is still theirs after it. A restart gives every light a fresh context, so restored claims are matched on value alone: a light still showing what FLARE asked for is FLARE's, anything else is left alone.
 
 #### Turning a light off is an override
 
