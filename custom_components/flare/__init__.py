@@ -473,10 +473,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Shared across every apply_lighting call, from whichever automation
     # made it - see write_tracking.py for why (grouping.py's
     # externally_set() check only cares "did adaptive control write this
-    # most recently", not which specific caller). Deliberately not
-    # persisted - claims live on the state devices' tracking entities and
-    # die with a restart, which leaves every light manageable. See
-    # write_tracking.py's module docstring.
+    # most recently", not which specific caller). The claims themselves
+    # live on the state devices' tracking entities and are restored with
+    # them across a restart - see write_tracking.py's module docstring.
     write_tracker = ClaimRegistry(hass, entry)
     # An entity deleted from HA outright (not just restarting - e.g. a
     # Zigbee2MQTT group removed at the source) never triggers the

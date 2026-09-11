@@ -40,6 +40,13 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **Overrides now survive a restart.** A light somebody else had taken —
+  set by hand, from an app, by another automation — used to be handed back
+  to FLARE every time Home Assistant restarted, and put straight back on
+  the curve. FLARE now remembers who had each light across a restart. A
+  light still showing what FLARE last asked for is picked up as normal; one
+  showing anything else is left alone until the room next goes dark.
+
 - **Brightness Multiplier Template is now Brightness Template, and takes a
   brightness rather than a multiplier.** It was the only place in FLARE
   where you had to think in multiples of the curve instead of in the
