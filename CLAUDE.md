@@ -821,6 +821,29 @@ which is *narrower*, so the curve still cannot light an empty room.
   flap by design.
 - `entities_still_on` excludes `idle_entities`, or self-heal retries
   turning off the light the idle branch just turned on, every tick.
+- **`condition:`'s motion_on efficiency check had to learn about idle
+  too.** It asks "is anything off?" as a proxy for "is there anything to
+  do?", which an idle room breaks: everything is ON, at the idle level,
+  and motion is exactly when it should go up to the curve. The run
+  aborted there, so the room brightened only on the next `adaptive_tick`
+  - up to a minute late and with `background_transition` instead of
+  `motion_on_transition`, since `script_transition` keys off the trigger
+  id; a brief passage never brightened it at all. Fixed with
+  `or idle_entities | length > 0`. It must be `idle_entities`, NOT
+  `room_is_idle` - the latter includes `occupancy_clear_for_wait`, false
+  the instant motion fires, so it would still abort. Reported live;
+  `test_motion_into_an_already_lit_idle_room_brightens_it` is the
+  regression, and it asserts the TRANSITION, which is what pins which
+  trigger the call came from.
+- **A template level with the phase value at 0 is the whole idle set,
+  not an override on top of one** - so it silently makes that lamp the
+  room's only nightlight, and `room_is_idle` goes true for the whole
+  room on the strength of it, suppressing the curve for every other
+  light. Working as documented, but it caught out this repo's own
+  landing config, where a template written to make one pendant *dimmer*
+  quietly became "this is the only nightlight" in every phase with no
+  value set. `test_a_template_level_alone_makes_that_lamp_the_only_nightlight`
+  pins it.
 - A `null` level outranks an idle level - "something else owns this"
   wins over "stay dimly lit".
 - **Levels travel as multipliers** - see "Brightness levels" below,

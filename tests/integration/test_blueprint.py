@@ -1828,6 +1828,78 @@ class TestIdleBrightness:
         assert apply_lighting_calls
         assert _effective(apply_lighting_calls[-1], "light.a") == 200
 
+    async def test_motion_into_an_already_lit_idle_room_brightens_it(self, hass, apply_lighting_calls):
+        """Motion in a room sitting at its idle level must raise it to the
+        curve, promptly and at the motion transition.
+
+        The room is ALREADY LIT here, which is the whole point - every
+        other motion test starts from a dark room. condition: carries an
+        efficiency check that skips a motion_on run when nothing is off,
+        and an idle room has everything on, just dim. That aborted the
+        run, so the room only brightened on the next adaptive_tick: up to
+        a minute late, and with background_transition rather than
+        motion_on_transition, because script_transition keys off the
+        trigger id. A brief passage never brightened it at all.
+
+        Asserting the transition is what pins the trigger it came from -
+        1 is motion_on's, 5 is the background one a tick would use."""
+        _light(hass, "light.a", "on", brightness=20)
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            day_idle_brightness=20,
+            motion_on_transition=1,
+            background_transition=5,
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls, "motion into an idle room did not reach apply_lighting"
+        call = apply_lighting_calls[-1]
+        assert _effective(call, "light.a") == 200, "brightened to the idle level, not the curve"
+        assert call.data["transition"] == 1, "used the background transition, so this came from a tick"
+
+    async def test_a_template_level_alone_makes_that_lamp_the_only_nightlight(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """With no per-phase value set, the template IS the whole idle
+        set rather than an override on top of one - so the light it names
+        stays lit and every other light in the room goes dark.
+
+        That is the documented behaviour, but it surprises anyone who
+        wrote the template meaning "adjust this one lamp's level",
+        because with the phase value at 0 there is no level to adjust.
+        It also makes room_is_idle true for the WHOLE room on the
+        strength of one lamp, which suppresses the curve for the rest.
+        Caught live on a real landing, where one pendant sat lit all
+        evening while the other cycled off on every motion clear."""
+        _light(hass, "light.a", "on")
+        _light(hass, "light.b", "on")
+        _occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            idle_brightness_template="{{ {'light.a': 20} }}",
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        assert _effective(apply_lighting_calls[-1], "light.a") == 20
+        assert any("light.b" in c.data["entity_id"] for c in light_turn_off_calls), (
+            "light.b has no idle level of its own, so it should go dark"
+        )
+
     async def test_the_per_phase_value_only_applies_in_its_phase(
         self, hass, light_turn_off_calls, apply_lighting_calls
     ):
