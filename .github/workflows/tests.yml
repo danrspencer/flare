@@ -37,12 +37,30 @@ jobs:
         if: always()
         run: python scripts/test_summary.py junit.xml >> "$GITHUB_STEP_SUMMARY"
 
+      # The behaviour tests capture the blueprint's real HA automation
+      # trace (tests/behaviour/conftest.py). Rendering it here is the
+      # closest thing to reading a trace in Home Assistant's own UI,
+      # which cannot be done with these: HA's websocket API is read-only
+      # and it never reads its trace store back at startup, so a trace
+      # from CI can't be loaded into a live instance.
+      - name: Blueprint traces
+        if: always()
+        run: python scripts/trace_summary.py trace-dumps >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload junit.xml
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: junit-results
           path: junit.xml
+
+      - name: Upload blueprint traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blueprint-traces
+          path: trace-dumps/
+          if-no-files-found: ignore
 
   # The blueprint's version stamp is what tells an installed copy it has
   # fallen behind, and it is bumped by hand. Forgetting fails SILENTLY -
