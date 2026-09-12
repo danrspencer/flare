@@ -19,6 +19,8 @@ thing pytest resolves per-directory, and a cross-directory fixture
 import is more fragile than ten lines.
 """
 
+import json
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -42,6 +44,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 BLUEPRINT_PATH = "danspencer/flare.yaml"
 SCHEDULE_SENSOR = "sensor.test_flare"
+
+# Where captured automation traces land. Build output, never committed -
+# see .gitignore. CI uploads the directory as an artifact and renders
+# the traces into the job summary.
+TRACE_DIR = REPO_ROOT / "trace-dumps"
 
 # What the schedule sensor publishes for every test in this layer, so a
 # brightness assertion has one obvious expected value to name.
@@ -186,6 +193,67 @@ async def flare(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
+@pytest.fixture(autouse=True)
+def capture_trace(request, hass: HomeAssistant):
+    """Write the blueprint's real automation trace to TRACE_DIR.
+
+    HA's trace machinery is already running in these tests - setting up
+    the real `automation` component is all it takes - so every blueprint
+    run here is traced exactly as it would be on a live instance, and
+    without this we simply threw that away. The trace carries what you
+    actually read a trace for: which conditions passed or failed, which
+    `choose:` branch was taken, and the resolved value of every variable
+    at each step (`changed_variables`), keyed by HA's own step paths
+    (e.g. `action/0/default/1/then/1/if/condition/0`).
+
+    It cannot be loaded into HA's own trace viewer, which is worth
+    knowing before anyone tries: the websocket API is read-only
+    (trace/get, trace/list, trace/contexts - no import), and the trace
+    store is written only on EVENT_HOMEASSISTANT_STOP and never read
+    back at startup. So the JSON here is for our own renderer, not for
+    HA.
+
+    Depends on `hass` deliberately: that makes this fixture tear down
+    BEFORE hass does, so the trace data is still live when it is read.
+    Reading it after hass teardown gets nothing.
+    """
+    yield
+
+    from homeassistant.components.trace.const import DATA_TRACE
+    from homeassistant.helpers.json import JSONEncoder
+
+    traces = hass.data.get(DATA_TRACE) or {}
+    captured = [
+        trace.as_extended_dict()
+        for bucket in traces.values()
+        for trace in bucket.all_traces()
+    ]
+    if not captured:
+        return
+
+    TRACE_DIR.mkdir(exist_ok=True)
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", request.node.name)
+    payload = {
+        "test": request.node.nodeid,
+        "outcome": "failed" if getattr(request.node, "behaviour_failed", False) else "passed",
+        "traces": captured,
+    }
+    (TRACE_DIR / f"{safe}.json").write_text(json.dumps(payload, cls=JSONEncoder, indent=2))
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Tag the test item with its outcome so capture_trace can record it.
+
+    A fixture cannot otherwise see whether the test that just ran
+    passed, and a trace is most worth reading when it failed.
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call" and report.failed:
+        item.behaviour_failed = True
+
+
 @pytest.fixture
 def add_bulbs(hass: HomeAssistant):
     """Registers fake bulbs against HA's real light component.
@@ -231,6 +299,11 @@ def setup_room(hass: HomeAssistant):
             {
                 "automation": [
                     {
+                        # A stable id keys the trace as automation.room
+                        # rather than automation.None - without it every
+                        # automation collides on one key and the dump is
+                        # unreadable.
+                        "id": "room",
                         "alias": "room",
                         "use_blueprint": {
                             "path": BLUEPRINT_PATH,
