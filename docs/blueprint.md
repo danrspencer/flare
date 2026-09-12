@@ -142,6 +142,13 @@ which maps each light to the brightness it should sit at:
 {% endif %}
 ```
 
+If every light in the room should go to the same brightness, return a
+single number instead of a mapping:
+
+```yaml
+{{ 40 if is_state('media_player.tv', 'playing') else none }}
+```
+
 A brightness here is **flat**. The light sits at it for as long as the
 template returns it, rather than following the curve up and down — so
 the lounge ceiling above stays at 40 for as long as the TV is on,
@@ -201,6 +208,13 @@ level:
 
 ```yaml
 {{ {'light.landing_lamp': 20} }}
+```
+
+A single number instead of a mapping applies to every light in the room,
+which is all a whole-room nightlight needs:
+
+```yaml
+{{ 20 }}
 ```
 
 The template wins over the phase setting for any light it names; the

@@ -1411,6 +1411,29 @@ class TestBrightnessScaling:
         assert _effective(calls[-1], "light.a") == 128, "the template should win"
         assert _effective(calls[-1], "light.b") == 0, "the exclude list fills in the rest"
 
+    async def test_a_bare_number_from_the_brightness_template_applies_to_every_light(
+        self, hass, apply_lighting_calls
+    ):
+        """The scalar form of Brightness Template - one number for the
+        whole room, rather than naming every light."""
+        _light(hass, "light.a", "on")
+        _light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b"]},
+            brightness_template="{{ 40 }}",
+        )
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        call = apply_lighting_calls[-1]
+        assert _effective(call, "light.a") == 40
+        assert _effective(call, "light.b") == 40
+
     async def test_a_null_multiplier_light_is_not_turned_off_when_occupancy_clears(
         self, hass, light_turn_off_calls
     ):
@@ -1899,6 +1922,64 @@ class TestIdleBrightness:
         assert any("light.b" in c.data["entity_id"] for c in light_turn_off_calls), (
             "light.b has no idle level of its own, so it should go dark"
         )
+
+    async def test_a_bare_number_from_the_idle_template_applies_to_every_light(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """A template returning one number means "every light in the
+        room", so a whole-room nightlight needs no entity names at all."""
+        _occupancy(hass, "binary_sensor.occ", "on")
+        _light(hass, "light.a", "on")
+        _light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            idle_brightness_template="{{ 20 }}",
+        )
+        apply_lighting_calls.clear()
+
+        _occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        call = apply_lighting_calls[-1]
+        assert _effective(call, "light.a") == 20
+        assert _effective(call, "light.b") == 20
+
+    async def test_leaving_a_phase_with_an_idle_level_turns_the_lights_off_not_up(
+        self, hass, light_turn_off_calls, apply_lighting_calls
+    ):
+        """Live at 06:00: Night has an idle level, Morning does not, so at
+        the boundary idle_entities empties and the room stops reading as
+        idle - but its lights are still ON, so `occupied` is true, so
+        allow_turn_on is true, and the curve turned a 10% nightlight up to
+        full. The lights only went off a minute later, on the next tick.
+
+        The phase change must reach self-heal, which turns them off."""
+        _occupancy(hass, "binary_sensor.occ", "off")
+        _light(hass, "light.a", "on", brightness=20)
+        await hass.async_block_till_done()
+        await _setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            day_idle_brightness=20,
+        )
+        apply_lighting_calls.clear()
+        light_turn_off_calls.clear()
+
+        # Day -> Evening, and Evening has no idle level of its own.
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        await hass.async_block_till_done()
+
+        assert any("light.a" in c.data["entity_id"] for c in light_turn_off_calls), (
+            "the phase change left the light on rather than turning it off"
+        )
+        assert apply_lighting_calls == [], "the curve was applied, turning the nightlight up"
 
     async def test_the_per_phase_value_only_applies_in_its_phase(
         self, hass, light_turn_off_calls, apply_lighting_calls
