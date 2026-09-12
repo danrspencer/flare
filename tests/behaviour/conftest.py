@@ -219,6 +219,34 @@ def capture_trace(request, hass: HomeAssistant):
     """
     yield
 
+    dump_traces(
+        hass,
+        TRACE_DIR,
+        test_id=request.node.nodeid,
+        outcome="failed" if getattr(request.node, "behaviour_failed", False) else "passed",
+        filename=request.node.name,
+    )
+
+
+def dump_traces(
+    hass: HomeAssistant,
+    directory: Path,
+    *,
+    test_id: str,
+    outcome: str,
+    filename: str | None = None,
+) -> Path | None:
+    """Write every trace hass currently holds to `directory`.
+
+    Split out of capture_trace so the write half is testable on its own.
+    A fixture writes at teardown, so a test can never see its own file -
+    without this, the only way to check the capture works is to assert
+    on a file some OTHER test left behind, which makes the test
+    order-dependent and have it fail in isolation for reasons unrelated
+    to the capture (tried; it did exactly that).
+
+    Returns the path written, or None when there was nothing to write.
+    """
     from homeassistant.components.trace.const import DATA_TRACE
     from homeassistant.helpers.json import JSONEncoder
 
@@ -229,16 +257,14 @@ def capture_trace(request, hass: HomeAssistant):
         for trace in bucket.all_traces()
     ]
     if not captured:
-        return
+        return None
 
-    TRACE_DIR.mkdir(exist_ok=True)
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", request.node.name)
-    payload = {
-        "test": request.node.nodeid,
-        "outcome": "failed" if getattr(request.node, "behaviour_failed", False) else "passed",
-        "traces": captured,
-    }
-    (TRACE_DIR / f"{safe}.json").write_text(json.dumps(payload, cls=JSONEncoder, indent=2))
+    directory.mkdir(parents=True, exist_ok=True)
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", filename or test_id)
+    path = directory / f"{safe}.json"
+    payload = {"test": test_id, "outcome": outcome, "traces": captured}
+    path.write_text(json.dumps(payload, cls=JSONEncoder, indent=2))
+    return path
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
