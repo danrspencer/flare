@@ -217,6 +217,29 @@ which is all a whole-room nightlight needs:
 {{ 20 }}
 ```
 
+### A nightlight that follows the sun
+{: .no_toc }
+
+**Night** is a phase, not "after dark" — outside midsummer the sun sets
+well before your Night boundary. For a hall that lights up whenever it is
+genuinely dark outside, leave all four phase settings at `0` and drive the
+template from the sun instead:
+
+```yaml
+{{ 10 if is_state('sun.sun', 'below_horizon') else {} }}
+```
+
+`{}` means "no opinion", so the room goes fully dark while the sun is up,
+and the one template covers dusk, the small hours and dark winter
+mornings without naming a phase at all.
+
+The sun changing state is picked up by the next scheduled update rather
+than instantly, so the hall can take up to your **Update Interval** to
+dim in at dusk. Adding `sun.sun` to **Additional Triggers** would make it
+immediate, but it is deliberately not suggested here: at sunrise the idle
+level disappears while the lights are still on, and an additional trigger
+reaches the curve rather than the self-heal that switches them off.
+
 The template wins over the phase setting for any light it names; the
 phase setting fills in the rest.
 
