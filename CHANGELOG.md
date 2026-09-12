@@ -11,6 +11,13 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
+- **Leaving a phase that had an idle brightness no longer turns the lights
+  up.** A hall set to a 10% nightlight overnight went to full brightness at
+  the morning boundary, and only switched off a minute later. The lights
+  were still on, which made the room look occupied, so the curve took over
+  before anything noticed the room was empty. It now switches them off at
+  the boundary itself.
+
 - **Motion into a room sitting at its idle brightness now brightens it
   immediately.** It used to wait for the next scheduled update — up to a
   minute — and then fade in at the background transition rather than the
@@ -39,6 +46,11 @@ CI — see `.github/workflows/release.yml`.
   configuration is simply ignored.
 
 ### Changed
+
+- **Brightness Template and Idle Brightness Template now accept a single
+  number**, meaning "every light in this room", so a whole-room dim level
+  no longer has to name each light. Returning a mapping of light to
+  brightness works exactly as before.
 
 - **Overrides now survive a restart.** A light somebody else had taken —
   set by hand, from an app, by another automation — used to be handed back

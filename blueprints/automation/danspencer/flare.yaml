@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.3 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.5 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -506,67 +506,6 @@ variables:
   # earlier `trigger is not defined` version of this check silently
   # never fired), it's `trigger.id` that isn't.
   manual_run: "{{ not (trigger is defined and trigger.id is defined) }}"
-  # The brightness chain is resolved up here, before
-  # reachable_entities/entities_still_on below, because those two now
-  # need hands_off_entities to build their turn-off lists. HA renders
-  # variables: strictly top to bottom, each key only seeing the ones
-  # declared above it, so this block cannot be moved back down.
-  template_brightness_levels: !input brightness_template
-  morning_exclude_lights: !input morning_exclude_lights
-  day_exclude_lights: !input day_exclude_lights
-  evening_exclude_lights: !input evening_exclude_lights
-  night_exclude_lights: !input night_exclude_lights
-  phase_exclude_lights: >
-    {% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,
-                'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}
-    {{ m.get(states(adaptive_sensor), []) }}
-  # The per-phase exclude list only fills in entities the template
-  # doesn't already mention - its own per-entity values always win on
-  # collision, so a room's existing template logic (e.g. dining_room_lighting's
-  # illuminance-based override, unrelated to phase) can't be silently
-  # discarded by also setting a phase exclusion.
-  brightness_levels: >
-    {% set ns = namespace(m={}) %}
-    {% for e in phase_exclude_lights %}
-      {% set ns.m = dict(ns.m, **{e: 0}) %}
-    {% endfor %}
-    {{ dict(ns.m, **template_brightness_levels) }}
-  # Lights the brightness template handed off entirely: a null/false
-  # level means "something else owns this, don't touch it", as
-  # opposed to 0, which means "turn this one off". Those two must not be
-  # conflated - and in Jinja, as in Python, `0 == false` is true, so an
-  # `in [none, false]` membership test would wrongly swallow every 0 as
-  # well. `is sameas false` is an identity check, mirroring exactly what
-  # grouping.py's own `m is None or m is False` bucketing does.
-  #
-  # Used by the two turn-off paths below (motion_off and reconcile).
-  # apply_lighting already skips these on its own, so a hands-off light
-  # was never *dimmed* by this blueprint - but until this existed it was
-  # still being switched off with the rest of the room, which made the
-  # handoff only half-honoured. Caught live: a kitchen strip offloaded to
-  # its own gradient automation was still being turned off on every
-  # motion-clear and reconcile tick.
-  hands_off_entities: >
-    {% set ns = namespace(items=[]) %}
-    {% for entity_id, level in brightness_levels.items() %}
-      {% if level is none or level is sameas false %}
-        {% set ns.items = ns.items + [entity_id] %}
-      {% endif %}
-    {% endfor %}
-    {{ ns.items }}
-  # Extracted here as plain state_attr() reads and passed to
-  # apply_lighting as literal values - it reads no sensor entity itself,
-  # matching compute_lighting_groups exactly. It did read one internally
-  # once; that was reverted deliberately and is meant to stay reverted
-  # (see CLAUDE.md).
-  brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
-  color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
-  # None whenever adaptive_sensor doesn't populate this attribute (a
-  # hand-rolled "bring your own sensor" entity not using prefer_rgb_color
-  # is free to omit it - see docs/blueprint.md) - apply_lighting's own
-  # rgb_color field explicitly tolerates an explicit null, not just an
-  # omitted key, for exactly this reason.
-  rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
   # room_target resolved once here; the three consumers below are filters
   # over the result. Entity/device/area only - floor/label aren't
   # resolvable in hand-rolled Jinja the way they are through the native
@@ -606,6 +545,86 @@ variables:
   # also directly name occupancy-class sensor entities, hence the filter.
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
+  # The brightness chain is resolved up here, before
+  # reachable_entities/entities_still_on below, because those two now
+  # need hands_off_entities to build their turn-off lists. HA renders
+  # variables: strictly top to bottom, each key only seeing the ones
+  # declared above it, so this block cannot be moved back down.
+  template_brightness_levels: !input brightness_template
+  morning_exclude_lights: !input morning_exclude_lights
+  day_exclude_lights: !input day_exclude_lights
+  evening_exclude_lights: !input evening_exclude_lights
+  night_exclude_lights: !input night_exclude_lights
+  phase_exclude_lights: >
+    {% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,
+                'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}
+    {{ m.get(states(adaptive_sensor), []) }}
+  # The per-phase exclude list only fills in entities the template
+  # doesn't already mention - its own per-entity values always win on
+  # collision, so a room's existing template logic (e.g. dining_room_lighting's
+  # illuminance-based override, unrelated to phase) can't be silently
+  # discarded by also setting a phase exclusion.
+  # A template may return a mapping of entity_id -> level, or a single
+  # number meaning "every light in this room". The scalar form is
+  # expanded here, once, so everything downstream only ever sees a
+  # mapping - which is also why resolved_entities is resolved above.
+  # Anything else (an empty box, a template that rendered to nothing)
+  # means "no opinion", the same as an empty mapping.
+  template_brightness_map: >
+    {% set t = template_brightness_levels %}
+    {% if t is mapping %}
+      {{ t }}
+    {% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}
+      {% set ns = namespace(m={}) %}
+      {% for e in resolved_entities %}
+        {% set ns.m = dict(ns.m, **{e: t | float}) %}
+      {% endfor %}
+      {{ ns.m }}
+    {% else %}
+      {{ {} }}
+    {% endif %}
+  brightness_levels: >
+    {% set ns = namespace(m={}) %}
+    {% for e in phase_exclude_lights %}
+      {% set ns.m = dict(ns.m, **{e: 0}) %}
+    {% endfor %}
+    {{ dict(ns.m, **template_brightness_map) }}
+  # Lights the brightness template handed off entirely: a null/false
+  # level means "something else owns this, don't touch it", as
+  # opposed to 0, which means "turn this one off". Those two must not be
+  # conflated - and in Jinja, as in Python, `0 == false` is true, so an
+  # `in [none, false]` membership test would wrongly swallow every 0 as
+  # well. `is sameas false` is an identity check, mirroring exactly what
+  # grouping.py's own `m is None or m is False` bucketing does.
+  #
+  # Used by the two turn-off paths below (motion_off and reconcile).
+  # apply_lighting already skips these on its own, so a hands-off light
+  # was never *dimmed* by this blueprint - but until this existed it was
+  # still being switched off with the rest of the room, which made the
+  # handoff only half-honoured. Caught live: a kitchen strip offloaded to
+  # its own gradient automation was still being turned off on every
+  # motion-clear and reconcile tick.
+  hands_off_entities: >
+    {% set ns = namespace(items=[]) %}
+    {% for entity_id, level in brightness_levels.items() %}
+      {% if level is none or level is sameas false %}
+        {% set ns.items = ns.items + [entity_id] %}
+      {% endif %}
+    {% endfor %}
+    {{ ns.items }}
+  # Extracted here as plain state_attr() reads and passed to
+  # apply_lighting as literal values - it reads no sensor entity itself,
+  # matching compute_lighting_groups exactly. It did read one internally
+  # once; that was reverted deliberately and is meant to stay reverted
+  # (see CLAUDE.md).
+  brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
+  color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
+  # None whenever adaptive_sensor doesn't populate this attribute (a
+  # hand-rolled "bring your own sensor" entity not using prefer_rgb_color
+  # is free to omit it - see docs/blueprint.md) - apply_lighting's own
+  # rgb_color field explicitly tolerates an explicit null, not just an
+  # omitted key, for exactly this reason.
+  rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
   # Brightness levels converted to what apply_lighting actually takes.
   #
   # The service has one `brightness` plus per-entity MULTIPLIERS, so the
@@ -694,6 +713,20 @@ variables:
   # the template's own per-entity values overwrite it on collision. So a
   # room can set one dim level for the phase and still name a single
   # lamp as the only thing that stays lit.
+  # Same scalar-or-mapping handling as template_brightness_map above.
+  template_idle_map: >
+    {% set t = template_idle_brightness %}
+    {% if t is mapping %}
+      {{ t }}
+    {% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}
+      {% set ns = namespace(m={}) %}
+      {% for e in resolved_entities %}
+        {% set ns.m = dict(ns.m, **{e: t | float}) %}
+      {% endfor %}
+      {{ ns.m }}
+    {% else %}
+      {{ {} }}
+    {% endif %}
   idle_brightness: >
     {% set ns = namespace(m={}) %}
     {% if phase_idle_brightness %}
@@ -701,7 +734,7 @@ variables:
         {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}
       {% endfor %}
     {% endif %}
-    {{ dict(ns.m, **template_idle_brightness) }}
+    {{ dict(ns.m, **template_idle_map) }}
   # Lights that should stay lit when the room empties. A light handed
   # off with a null level is excluded - that means "something else
   # owns this", which outranks an idle level.
@@ -1048,8 +1081,20 @@ action:
       # on. The next tick resumes tracking, a one-tick lag this check
       # already had.
       - conditions:
+          # adaptive too, not just the tick: leaving a phase whose idle
+          # brightness was set for one whose isn't empties idle_entities,
+          # so the room stops reading as idle - but its lights are still
+          # ON, which makes `occupied` true, which makes allow_turn_on
+          # true, and default: would hand the room to the curve and turn
+          # a 10% nightlight up to full. Seen live at 06:00: both halls
+          # went up at the phase change and only went off at 06:01, on
+          # the next tick. Reaching self-heal on the phase change itself
+          # turns them off instead, and the branch's own occupancy checks
+          # below still decide whether that is right.
           - condition: trigger
-            id: adaptive_tick
+            id:
+              - adaptive_tick
+              - adaptive
           # No occupancy sensor in Room means no independent "not
           # occupied" signal at all (see the occupied variable's
           # docstring) - so there's nothing to reconcile against and
