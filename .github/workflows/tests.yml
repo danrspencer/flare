@@ -26,7 +26,23 @@ jobs:
       # dev extra is a versions reference, not something installed
       # as-is.
       - run: pip install pytest pytest-homeassistant-custom-component
-      - run: pytest -v
+      - run: pytest -v --junitxml=junit.xml
+
+      # Renders on the run page itself, so "what ran" doesn't mean
+      # expanding the pytest step and scrolling 500+ verbose lines.
+      # if: always() because the report matters MOST when pytest failed -
+      # without it, the one run you actually want explained is the one
+      # that never produces a summary.
+      - name: Test report
+        if: always()
+        run: python scripts/test_summary.py junit.xml >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload junit.xml
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: junit.xml
 
   # The blueprint's version stamp is what tells an installed copy it has
   # fallen behind, and it is bumped by hand. Forgetting fails SILENTLY -
