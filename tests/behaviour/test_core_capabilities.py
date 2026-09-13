@@ -28,10 +28,16 @@ from tests.behaviour.test_lighting import HALL_BULBS, HALL_SENSOR
 PAST_THE_WAIT = 120
 
 
-async def lit_room(hass, add_bulbs, setup_room, **inputs):
+async def lit_room(hass, add_bulbs, setup_room, tracking_scope, **inputs):
     """An occupied room at the curve - the starting point for most of
-    these, since "and then something changes" is the interesting half."""
-    bulbs = await add_bulbs(*HALL_BULBS)
+    these, since "and then something changes" is the interesting half.
+
+    tracking_scope is the (parametrized) area id from conftest.py - see
+    that fixture for why every test below runs twice, once with the
+    room's lights untracked and once with a real FLARE Tracking scope
+    claiming them.
+    """
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=tracking_scope)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], **inputs)
     occupancy(hass, HALL_SENSOR, "on")
@@ -40,7 +46,7 @@ async def lit_room(hass, add_bulbs, setup_room, **inputs):
 
 
 async def test_the_room_ends_up_dark_once_it_is_empty(
-    hass: HomeAssistant, flare, add_bulbs, setup_room, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """Outcome, not mechanism, and deliberately so.
 
@@ -52,7 +58,7 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
     is the promise; which branch delivered it is not), but the name has
     to say so, because it does NOT pin motion_off specifically.
     """
-    bulbs = await lit_room(hass, add_bulbs, setup_room, no_motion_wait=0)
+    bulbs = await lit_room(hass, add_bulbs, setup_room, tracking_scope, no_motion_wait=0)
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
 
     occupancy(hass, HALL_SENSOR, "off")
@@ -65,10 +71,10 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
 
 
 async def test_a_phase_change_repaints_a_lit_room(
-    hass: HomeAssistant, flare, add_bulbs, setup_room
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
 ) -> None:
     """Evening becomes Night: the room follows, without anyone moving."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room)
+    bulbs = await lit_room(hass, add_bulbs, setup_room, tracking_scope)
 
     set_phase(hass, "Night", brightness=40, kelvin=2200)
     await hass.async_block_till_done()
@@ -79,13 +85,25 @@ async def test_a_phase_change_repaints_a_lit_room(
 
 
 async def test_the_periodic_tick_keeps_a_lit_room_on_the_curve(
-    hass: HomeAssistant, flare, add_bulbs, setup_room, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """The curve is flat in Morning and Night, so the sensor re-writes
     identical state and no state_changed fires. adaptive_tick exists to
     cover exactly that, and a light knocked off-curve by anything else
-    is pulled back by it."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room)
+    is pulled back by it - UNLESS "anything else" is exactly what
+    override protection exists to recognise.
+
+    Tracked and untracked genuinely diverge here, and both are correct.
+    `light.turn_on` from outside flare is indistinguishable from a
+    person reaching for the switch - untracked, there is no claim to
+    protect it, so the tick pulls it straight back; tracked, the room's
+    real Tracking scope classifies it as overridden (see CLAUDE.md's
+    Override protection) and the tick leaves that one fitting alone
+    while still correcting every other. Caught by tracking_scope
+    actually wiring a real scope: this assertion originally expected a
+    full restore in both cases, and only the untracked half is that.
+    """
+    bulbs = await lit_room(hass, add_bulbs, setup_room, tracking_scope)
 
     # Something else moves one fitting off the curve.
     await hass.services.async_call(
@@ -99,17 +117,20 @@ async def test_the_periodic_tick_keeps_a_lit_room_on_the_curve(
 
     await let_time_pass(hass, frozen_time, 60)
 
-    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}, (
-        "the periodic tick did not restore the room to the curve"
+    expected = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    if tracking_scope is not None:
+        expected[bulbs[0].entity_id] = 5  # protected, not overwritten
+    assert room_brightness(hass, bulbs) == expected, (
+        "the periodic tick did not do the right thing for this fitting"
     )
 
 
 async def test_a_room_settles_to_its_idle_level_instead_of_going_dark(
-    hass: HomeAssistant, flare, add_bulbs, setup_room, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """Idle Brightness redefines "off" for a room - the nightlight."""
     bulbs = await lit_room(
-        hass, add_bulbs, setup_room, no_motion_wait=0, evening_idle_brightness=25
+        hass, add_bulbs, setup_room, tracking_scope, no_motion_wait=0, evening_idle_brightness=25
     )
 
     occupancy(hass, HALL_SENSOR, "off")
@@ -122,13 +143,13 @@ async def test_a_room_settles_to_its_idle_level_instead_of_going_dark(
 
 
 async def test_motion_brightens_a_room_sitting_at_its_idle_level(
-    hass: HomeAssistant, flare, add_bulbs, setup_room, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """The other half of the nightlight, and the one that broke live:
     everything is already ON at the idle level, so "is anything off?"
     is the wrong question to ask about whether there is work to do."""
     bulbs = await lit_room(
-        hass, add_bulbs, setup_room, no_motion_wait=0, evening_idle_brightness=25
+        hass, add_bulbs, setup_room, tracking_scope, no_motion_wait=0, evening_idle_brightness=25
     )
     occupancy(hass, HALL_SENSOR, "off")
     await hass.async_block_till_done()
@@ -144,7 +165,7 @@ async def test_motion_brightens_a_room_sitting_at_its_idle_level(
 
 
 async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
-    hass: HomeAssistant, flare, add_bulbs, setup_room
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
 ) -> None:
     """Absolute 0-255, not a multiplier of the curve - the rest of the
     room stays on the curve around it."""
@@ -153,6 +174,7 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
         hass,
         add_bulbs,
         setup_room,
+        tracking_scope,
         brightness_template=f"{{{{ {{'{lamp}': 60}} }}}}",
     )
 
@@ -164,7 +186,7 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
 
 
 async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
-    hass: HomeAssistant, flare, add_bulbs, setup_room
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
 ) -> None:
     """Some fittings are wrong for some phases - a bright spot at night.
 
@@ -185,7 +207,9 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     can see the groups themselves.
     """
     spot = "light.hall_spot_1"
-    bulbs = await lit_room(hass, add_bulbs, setup_room, night_exclude_lights=[spot])
+    bulbs = await lit_room(
+        hass, add_bulbs, setup_room, tracking_scope, night_exclude_lights=[spot]
+    )
 
     assert room_brightness(hass, bulbs)[spot] == CURVE_BRIGHTNESS, (
         "precondition: the spot must be lit before the exclusion applies"
@@ -201,25 +225,18 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     )
 
 
-# NOT covered here: a light switched off by hand staying off.
+# STILL NOT covered here: a light switched off by hand staying off.
 #
 # It looks like a basic, and it is a real guarantee - classify() does
 # not short-circuit on `not is_on`, so an off light with an `observed`
 # claim that asked for brightness reads as `overridden` and is excluded.
-# But none of that is reachable from this fixture. setup_room creates no
-# FLARE Tracking state device, so the blueprint resolves
-# tracking_scope_device_id to null and calls apply_lighting with
-# tracking_device_id: null - which means "write, but track nothing". No
-# claim is ever recorded, classify() sees no claims at all and returns
-# "untracked", and every light stays fair game.
 #
-# Written as a test first, and it failed: the lamp came back on at the
-# next tick. That is the harness having no scope, not the blueprint
-# relighting an override - confirmed from the captured trace, which
-# shows tracking_device_id = null on every apply_lighting call.
-#
-# Covering it needs setup_room to build a real state device in the
-# room's area, the way tests/integration/test_blueprint.py's
-# _register_tracking_scope does. Worth doing, but it is a fixture
-# feature rather than one of the basics, so it is deliberately left out
-# of this pass rather than left in as a test that cannot pass.
+# The original reason this was out of reach is gone: conftest.py's
+# tracking_scope/tracked_scope fixtures now build a real FLARE Tracking
+# state device and assign every bulb its area, exactly what was missing
+# below. What's still missing is the test itself - depend on
+# tracked_scope (not tracking_scope; there is no meaningful untracked
+# half of "does an override stick"), turn a bulb off by hand, and assert
+# it stays off through the next adaptive_tick. Left out of this pass
+# because writing and mutation-verifying it is its own piece of work,
+# not because it can't be done.
