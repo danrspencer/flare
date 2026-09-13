@@ -39,9 +39,19 @@ async def lit_room(hass, add_bulbs, setup_room, **inputs):
     return bulbs
 
 
-async def test_it_turns_the_lights_off_once_the_room_is_empty(
+async def test_the_room_ends_up_dark_once_it_is_empty(
     hass: HomeAssistant, flare, add_bulbs, setup_room, frozen_time
 ) -> None:
+    """Outcome, not mechanism, and deliberately so.
+
+    Two branches can satisfy this - the motion_off turn-off, and
+    self-heal retrying it on the next tick. Mutation testing showed as
+    much: breaking `turn_off_entities` so motion_off switches nothing
+    off still leaves the room dark, because self-heal gets there. That
+    is the right answer for a behaviour test (an empty room going dark
+    is the promise; which branch delivered it is not), but the name has
+    to say so, because it does NOT pin motion_off specifically.
+    """
     bulbs = await lit_room(hass, add_bulbs, setup_room, no_motion_wait=0)
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
 
@@ -159,11 +169,20 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     """Some fittings are wrong for some phases - a bright spot at night.
 
     The room is lit WITHOUT the exclusion first, so the spot is
-    genuinely on before the excluding phase arrives. Otherwise this
-    only proves an excluded fitting is never switched on, and the
-    turn-off path never runs at all - which is how the first version of
-    this test passed while grouping.py's `if brightness <= 0` branch was
-    disabled outright.
+    genuinely on before the excluding phase arrives. Otherwise this only
+    proves an excluded fitting is never switched ON, and no turn-off
+    ever runs - which is what the first version of this test did.
+
+    Known limit, and not fixable from this layer: it pins the OUTCOME,
+    not which mechanism delivers it. Disabling grouping.py's
+    `if brightness <= 0` branch still passes, because the fitting then
+    falls into group.combined and gets light.turn_on at brightness 0 -
+    and HA's light component redirects exactly that to async_turn_off
+    (components/light/__init__.py: "If brightness is set to 0, this
+    service will turn the light off"). Both routes end with the bulb
+    off, so no assertion on bulb state can tell them apart. Pinning
+    `needing_off` specifically belongs in tests/test_grouping.py, which
+    can see the groups themselves.
     """
     spot = "light.hall_spot_1"
     bulbs = await lit_room(hass, add_bulbs, setup_room, night_exclude_lights=[spot])
