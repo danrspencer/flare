@@ -29,9 +29,9 @@ HALL_BULBS = (
 
 
 async def test_it_turns_the_lights_on_when_a_room_becomes_occupied(
-    hass: HomeAssistant, flare, add_bulbs, setup_room
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
 ) -> None:
-    bulbs = await add_bulbs(*HALL_BULBS)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=tracking_scope)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
 

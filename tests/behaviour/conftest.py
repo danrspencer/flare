@@ -36,6 +36,9 @@ from homeassistant.components.light import (
 )
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
@@ -239,9 +242,10 @@ def schedule_sensor(hass: HomeAssistant) -> None:
     )
 
 
-@pytest.fixture
-async def flare(hass: HomeAssistant) -> MockConfigEntry:
-    """The real tracking entry, so the real flare.* services register.
+async def _setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[MockConfigEntry, str | None]:
+    """The real Tracking config entry, so the real flare.* services
+    register - optionally with a real state-device scope over one area,
+    "behaviour_test_room".
 
     async_forward_entry_setups is patched out for the duration of setup.
     It would set up the sensor and button COMPONENTS successfully and
@@ -255,23 +259,183 @@ async def flare(hass: HomeAssistant) -> MockConfigEntry:
     That combination is unique to this layer: test_services.py forwards
     but never sets up `automation`, and test_blueprint.py sets up
     `automation` but never calls async_setup_entry at all, so neither
-    hits it. Nothing here needs the diagnostic sensor - a test that
-    wants claims should attach the platform directly, the way
-    test_services.py's _attach_tracking_sensors does.
+    hits it.
+
+    A device_id a caller passes as tracking_device_id must belong to
+    THIS SAME entry's own subentries (write_tracking.py's
+    resolve_scope_device checks `self._entry.subentries`, not the
+    device registry at large) - so unlike
+    tests/integration/test_blueprint.py's own _register_tracking_scope
+    (fine there, because that suite mocks flare.apply_lighting and so
+    never reaches real validation), a scope built for a REAL service
+    call has to be a subentry of the exact entry these services were
+    registered against. That's also why this can't be two separate
+    config entries: flare.* services are hass-global, so a test wanting
+    a real scope has to build it into the one Tracking entry that
+    registers them, not alongside it.
+
+    Returns (entry, area_id) - area_id is None for the untracked half.
     """
     from custom_components.flare import async_setup_entry
     from custom_components.flare.const import (
         CONF_ENTRY_TYPE,
+        CONF_TARGET,
         DOMAIN,
         ENTRY_TYPE_TRACKING,
+        SUBENTRY_TYPE_STATE,
+    )
+    from homeassistant.config_entries import ConfigSubentryData
+
+    area_id = ar.async_get(hass).async_get_or_create("behaviour_test_room").id if tracked else None
+    subentries_data = (
+        [
+            ConfigSubentryData(
+                subentry_type=SUBENTRY_TYPE_STATE,
+                title="behaviour_test_room",
+                unique_id="behaviour_test_room",
+                data={CONF_TARGET: {"area_id": [area_id]}},
+            )
+        ]
+        if tracked
+        else []
     )
 
-    entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING})
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING}, subentries_data=subentries_data
+    )
     entry.add_to_hass(hass)
     entry.mock_state(hass, ConfigEntryState.LOADED)
     with patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()):
         assert await async_setup_entry(hass, entry)
     await hass.async_block_till_done()
+
+    if tracked:
+        await _attach_tracking_sensor(hass, entry, area_id)
+
+    return entry, area_id
+
+
+async def _attach_tracking_sensor(hass: HomeAssistant, entry: MockConfigEntry, area_id: str) -> None:
+    r"""Creates the one state device's real tracking entity and a
+    matching device, so claims have somewhere to live and
+    resolve_scope_device has a device to resolve.
+
+    Same shape as tests/integration/test_services.py's own
+    _attach_tracking_sensors: async_forward_entry_setups is patched out
+    for the whole entry above, so nothing else creates either. The real
+    sensor platform is invoked directly with a capturing
+    async_add_entities, exercising the real _StateTrackingSensor and the
+    real registry routing; only HA's state publication is stubbed out.
+
+    That stub is also why both the DEVICE and the sensor ENTITY need
+    hand-built registry entries here, unlike test_services.py's own
+    version (which relies on neither): that suite reads a scope's
+    tracking_device_id straight off the device registry, but the
+    blueprint has no device_id to start from - it has to find the scope
+    itself, via tracking_scope_device_id's own Jinja: search this room's
+    AREA for an entity matching `^sensor\..*_flare_tracking$`, the same
+    path a real room with no explicit Area Target takes. `area_entities`
+    reads the entity registry, not hass.states, so without a real
+    registry entry (entity_id, device_id, and - since sensor.py's
+    _assign_scope_area only runs from
+    _StateTrackingSensor.async_added_to_hass, which a plain list-append
+    add_entities never calls - area_id set by hand too) the search finds
+    nothing and silently falls back to untracked. Caught by a throwaway
+    probe test asserting a claim actually lands in
+    registry.records_for_scope after a real run; every test in this file
+    up to that point still passed, because none of them assert anything
+    about tracking itself.
+    """
+    from custom_components.flare.const import DOMAIN
+    from custom_components.flare.coordinator import state_instances
+    from custom_components.flare.sensor import async_setup_entry as sensor_setup
+    from custom_components.flare.write_tracking import ClaimRegistry
+
+    added: list = []
+    await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
+    registry = next(v for v in hass.data[DOMAIN].values() if isinstance(v, ClaimRegistry))
+    for instance, entity in zip(state_instances(entry), [e for e in added if hasattr(e, "claims")]):
+        entity.async_claims_changed = lambda: None
+        registry.register(instance.subentry_id, entity)
+        # The stub async_add_entities above is a plain list-append, not
+        # the real entity platform - it never triggers the device
+        # registration a real add_entities call does for an entity
+        # carrying device_info. resolve_scope_device needs a real device
+        # to resolve, so create it explicitly, the same identifiers
+        # StateInstance.device_info would produce.
+        device = dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name=instance.title
+        )
+        dr.async_get(hass).async_update_device(device.id, area_id=area_id)
+        er.async_get(hass).async_get_or_create(
+            "sensor",
+            DOMAIN,
+            entity.unique_id,
+            suggested_object_id=f"{instance.prefix}flare_tracking",
+            device_id=device.id,
+        )
+        hass.states.async_set(entity.entity_id, "0")
+
+
+@pytest.fixture(params=[False, True], ids=["untracked", "tracked"])
+async def tracking_scope(request, hass: HomeAssistant) -> str | None:
+    """The real Tracking entry (so flare.* services register), and
+    whether the room's lights sit inside a real FLARE Tracking scope.
+
+    Use this INSTEAD OF the plain `flare` fixture, never alongside it -
+    both load a Tracking config entry, and flare.* services are
+    hass-global, so a test can only sensibly have one such entry loaded
+    (see _setup_tracking_entry).
+
+    Parametrized so an ordinary behaviour test runs twice: once exactly
+    as every behaviour test ran before this fixture existed (no state
+    device at all - the blueprint's tracking_scope_device_id resolves to
+    none, and apply_lighting is called with tracking_device_id: null,
+    "write but track nothing" - see the NOT COVERED note at the bottom
+    of test_core_capabilities.py), and once with a real FLARE Tracking
+    scope claiming every light in the room. A capability whose outcome
+    should not depend on tracking existing gets that proven for free,
+    for no extra lines in the test itself.
+
+    A test that is specifically ABOUT tracking - override protection,
+    say - should depend on `tracked_scope` below instead: it always
+    builds the scope, so such a test runs once, not twice. There is no
+    meaningful "untracked" variant of a test whose whole point is
+    tracking.
+
+    Returns the AREA id, never the device id, because that is what
+    add_bulbs(..., area_id=...) needs: the blueprint never names an area
+    directly in these tests' room_target, so tracking_scope_device_id
+    falls back to resolved_entities' own area - the same path a real
+    room with no explicit Area Target takes (see the blueprint's own
+    comment above that variable). None means the untracked half, and
+    add_bulbs treats None as "assign no area at all".
+    """
+    _entry, area_id = await _setup_tracking_entry(hass, tracked=request.param)
+    return area_id
+
+
+@pytest.fixture
+async def tracked_scope(hass: HomeAssistant) -> str:
+    """Always builds a real FLARE Tracking scope. Use instead of `flare`
+    (see tracking_scope's docstring for why) for a test that is itself
+    about tracking rather than one of the ordinary capabilities
+    `tracking_scope` parametrizes both sides of - such a test has no
+    meaningful untracked half, so this runs it once, not twice.
+    """
+    _entry, area_id = await _setup_tracking_entry(hass, tracked=True)
+    assert area_id is not None
+    return area_id
+
+
+@pytest.fixture
+async def flare(hass: HomeAssistant) -> MockConfigEntry:
+    """The real tracking entry, so the real flare.* services register -
+    with no state-device scope over anything. A test that wants claims
+    should depend on `tracking_scope` or `tracked_scope` instead, not on
+    this fixture as well.
+    """
+    entry, _area_id = await _setup_tracking_entry(hass, tracked=False)
     return entry
 
 
@@ -375,15 +539,27 @@ def add_bulbs(hass: HomeAssistant):
 
     Call once per test - setup_test_component_platform registers the
     whole platform, so a second call in the same test is not additive.
+
+    `area_id`, when given, is applied to every bulb's own entity
+    registry entry afterwards - the same shape sensor.py's
+    _assign_scope_area produces for a real light, and what a room needs
+    for the blueprint's tracking_scope_device_id fallback to find a
+    scope. Pass tracking_scope or tracked_scope's return value; leave it
+    unset for a room with no area at all, which is what every call here
+    did before those fixtures existed.
     """
 
-    async def _add(*names: str) -> list[FakeBulb]:
+    async def _add(*names: str, area_id: str | None = None) -> list[FakeBulb]:
         bulbs = [FakeBulb(name) for name in names]
         setup_test_component_platform(hass, "light", bulbs)
         assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
         await hass.async_block_till_done()
         for bulb in bulbs:
             assert bulb.entity_id, f"{bulb.name} never got an entity_id"
+        if area_id is not None:
+            registry = er.async_get(hass)
+            for bulb in bulbs:
+                registry.async_update_entity(bulb.entity_id, area_id=area_id)
         return bulbs
 
     return _add
