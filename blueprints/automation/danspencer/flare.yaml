@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.5 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.6 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -486,7 +486,8 @@ variables:
   # occupancy.is_not_detected's native `for:` option.
   no_motion_wait: !input no_motion_wait
   rgb_phases: !input rgb_phases
-  prefer_rgb_color: "{{ states(adaptive_sensor) in rgb_phases }}"
+  phase: "{{ states(adaptive_sensor) }}"
+  prefer_rgb_color: "{{ phase in rgb_phases }}"
   script_transition: >
     {# Slow, smooth transition for adaptive/extra/recovered updates -
        none of these are a person waiting on a response in real time,
@@ -558,7 +559,7 @@ variables:
   phase_exclude_lights: >
     {% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,
                 'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}
-    {{ m.get(states(adaptive_sensor), []) }}
+    {{ m.get(phase, []) }}
   # The per-phase exclude list only fills in entities the template
   # doesn't already mention - its own per-entity values always win on
   # collision, so a room's existing template logic (e.g. dining_room_lighting's
@@ -707,7 +708,7 @@ variables:
   phase_idle_brightness: >
     {% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,
                 'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}
-    {{ m.get(states(adaptive_sensor), 0) | int }}
+    {{ m.get(phase, 0) | int }}
   # Same precedence as brightness_levels, and deliberately the same
   # construct: the per-phase value fills in every light in the room, and
   # the template's own per-entity values overwrite it on collision. So a
@@ -911,7 +912,7 @@ variables:
   night_scene: !input night_scene
   phase_scene: >
     {% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %}
-    {{ m.get(states(adaptive_sensor)) }}
+    {{ m.get(phase) }}
   # scene_template wins whenever it returns something valid (it can react
   # to things a phase alone can't, e.g. "if the TV is on"); the per-phase
   # pick is the fallback. A typo or a renamed/removed scene is treated as
