@@ -21,11 +21,13 @@ import is more fragile than ten lines.
 
 import json
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from freezegun import freeze_time
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
@@ -35,8 +37,10 @@ from homeassistant.components.light import (
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
+from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_fire_time_changed,
     setup_test_component_platform,
 )
 
@@ -66,6 +70,50 @@ def hass_config_dir(tmp_path) -> str:
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     yield
+
+
+@pytest.fixture(autouse=True)
+def frozen_time():
+    """Wall-clock control for every test here.
+
+    Each test sets up a real automation carrying a live `adaptive_tick`
+    (time_pattern, every minute), so a test whose setup-and-assert
+    window straddles a real minute boundary can have one fire for real
+    mid-test - indistinguishable from the thing being asserted.
+
+    `real_asyncio=True` is not optional and not cosmetic: without it
+    freezegun also mocks `time.monotonic`, which is the clock asyncio
+    uses to schedule every pending timer, and a live loop does not
+    tolerate that - it hangs, or fires timers wildly out of order. See
+    tests/integration/test_blueprint.py's own frozen_time for the full
+    account; this is deliberately the same shape.
+
+    Anchoring a couple of seconds PAST the minute (rather than at
+    utcnow() verbatim, which could land arbitrarily close to a boundary)
+    leaves ~58 real seconds before `adaptive_tick` could next fire -
+    longer than this whole directory takes to run.
+
+    A test needing time to pass takes this fixture by name and calls
+    `.tick()` on it. Never open a nested freeze_time.
+    """
+    anchor = dt_util.utcnow().replace(second=2, microsecond=0)
+    with freeze_time(anchor, real_asyncio=True) as frozen:
+        yield frozen
+
+
+async def let_time_pass(hass: HomeAssistant, frozen, seconds: int) -> None:
+    """Advance the clock AND fire the timers that should have run.
+
+    Two separate things, which is the trap: `async_fire_time_changed`
+    fires the event a time_pattern trigger waits on but does NOT move
+    `now()`, so any template comparing `now() - last_changed` (the
+    blueprint's own wait-time check does exactly that) still sees no
+    elapsed time. Ticking the freeze moves `now()` but schedules
+    nothing. Both are needed.
+    """
+    frozen.tick(timedelta(seconds=seconds))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
 
 
 @pytest.fixture(autouse=True)
@@ -140,6 +188,40 @@ def occupancy(hass: HomeAssistant, entity_id: str, state: str) -> None:
     does the same.
     """
     hass.states.async_set(entity_id, state, {"device_class": "occupancy"})
+
+
+def set_phase(
+    hass: HomeAssistant,
+    phase: str,
+    *,
+    brightness: int = CURVE_BRIGHTNESS,
+    kelvin: int = CURVE_KELVIN,
+) -> None:
+    """Repaint the schedule sensor, as the coordinator would.
+
+    The blueprint's `adaptive` trigger filters `to:` the four phase
+    names, so moving between them is what a real phase change looks
+    like. Changing only the attributes fires nothing.
+    """
+    hass.states.async_set(
+        SCHEDULE_SENSOR, phase, {"brightness": brightness, "color_temp": kelvin}
+    )
+
+
+def room_brightness(hass: HomeAssistant, bulbs) -> dict[str, object]:
+    """Every bulb as {entity_id: brightness or 'off'}.
+
+    Asserting on the whole room at once means a failure names which
+    fittings were wrong rather than stopping at the first - "two spots
+    missed it" is a different bug from "the room didn't light".
+    """
+    result: dict[str, object] = {}
+    for bulb in bulbs:
+        state = hass.states.get(bulb.entity_id)
+        result[bulb.entity_id] = (
+            state.attributes.get("brightness") if state.state == "on" else "off"
+        )
+    return result
 
 
 @pytest.fixture(autouse=True)
@@ -248,7 +330,14 @@ def dump_traces(
     Returns the path written, or None when there was nothing to write.
     """
     from homeassistant.components.trace.const import DATA_TRACE
-    from homeassistant.helpers.json import JSONEncoder
+    # ExtendedJSONEncoder, not JSONEncoder - the same encoder HA's own
+    # trace store uses. A trigger carrying `for:` (motion_off does)
+    # puts a timedelta in changed_variables, which plain JSONEncoder
+    # cannot serialise: the capture then raises at teardown and every
+    # test in the run errors. ExtendedJSONEncoder encodes a timedelta
+    # as total_seconds and falls back to repr() for anything else, so
+    # an unexpected object can never take the suite down again.
+    from homeassistant.helpers.json import ExtendedJSONEncoder as JSONEncoder
 
     traces = hass.data.get(DATA_TRACE) or {}
     captured = [
