@@ -153,18 +153,32 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
     )
 
 
-async def test_a_phase_exclusion_turns_one_fitting_off(
+async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     hass: HomeAssistant, flare, add_bulbs, setup_room
 ) -> None:
-    """Some fittings are wrong for some phases - a bright spot at
-    night. Excluding one turns it off while the room stays lit."""
+    """Some fittings are wrong for some phases - a bright spot at night.
+
+    The room is lit WITHOUT the exclusion first, so the spot is
+    genuinely on before the excluding phase arrives. Otherwise this
+    only proves an excluded fitting is never switched on, and the
+    turn-off path never runs at all - which is how the first version of
+    this test passed while grouping.py's `if brightness <= 0` branch was
+    disabled outright.
+    """
     spot = "light.hall_spot_1"
-    bulbs = await lit_room(hass, add_bulbs, setup_room, evening_exclude_lights=[spot])
+    bulbs = await lit_room(hass, add_bulbs, setup_room, night_exclude_lights=[spot])
+
+    assert room_brightness(hass, bulbs)[spot] == CURVE_BRIGHTNESS, (
+        "precondition: the spot must be lit before the exclusion applies"
+    )
+
+    set_phase(hass, "Night", brightness=CURVE_BRIGHTNESS, kelvin=2200)
+    await hass.async_block_till_done()
 
     expected = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
     expected[spot] = "off"
     assert room_brightness(hass, bulbs) == expected, (
-        "the excluded fitting should be off and the rest of the room lit"
+        "the excluded fitting should have been turned off, the rest left lit"
     )
 
 
