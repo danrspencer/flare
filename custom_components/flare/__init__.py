@@ -71,6 +71,7 @@ from homeassistant.util import slugify
 from .const import (
     CONF_ENTRY_TYPE,
     CONF_TARGET,
+    CONF_TWO_STEP_MODELS,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -85,7 +86,7 @@ from .curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
 from .override_protection import classify, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
-from .two_step_check import async_start_watching
+from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from .write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # One list per entry type - see const.py's CONF_ENTRY_TYPE for why this
@@ -104,7 +105,7 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
         vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
-        vol.Optional("two_step_label", default="no_combined_transition"): cv.string,
+        vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # vol.Any(None, ...) rather than a bare vol.All(...) - a caller
         # templating this from a sensor attribute that may not exist
@@ -165,7 +166,7 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         vol.Required("transition"): vol.Coerce(float),
         vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
-        vol.Optional("two_step_label", default="no_combined_transition"): cv.string,
+        vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # See COMPUTE_LIGHTING_GROUPS_SCHEMA's own rgb_color comment for
         # why vol.Any(None, ...) rather than a bare vol.All(...).
@@ -239,6 +240,15 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
         entry = er.async_get(hass).async_get(entity_id)
         return entry.device_id if entry else None
 
+    def manufacturer_model(entity_id: str) -> tuple[str | None, str | None]:
+        entity_entry = er.async_get(hass).async_get(entity_id)
+        if entity_entry is None or entity_entry.device_id is None:
+            return None, None
+        device_entry = dr.async_get(hass).async_get(entity_entry.device_id)
+        if device_entry is None:
+            return None, None
+        return device_entry.manufacturer, device_entry.model
+
     def labels(id_: str | None) -> list:
         # id_ may be an entity_id or a device_id - EntityLookup.tags()
         # calls this with both, mirroring how HA's own `labels()`
@@ -262,6 +272,7 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
         state_attr=state_attr,
         device_id=device_id,
         labels=labels,
+        manufacturer_model=manufacturer_model,
         context_id=context_id,
         observed_context_id=lambda eid: tracker.observed_context_id(subentry_id, eid),
         latest_context_id=lambda eid: tracker.latest_context_id(subentry_id, eid),
@@ -270,6 +281,16 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
         latest_secondary_context_id=lambda eid: tracker.latest_secondary_context_id(subentry_id, eid),
         observed_secondary_context_id=lambda eid: tracker.observed_secondary_context_id(subentry_id, eid),
     )
+
+
+def _two_step_model_patterns(entry: ConfigEntry) -> list[str]:
+    """Whatever entry.options[CONF_TWO_STEP_MODELS] holds, or the shipped
+    defaults if unset/empty - not additive, a saved value replaces the
+    defaults outright (see two_step.py's own module docstring for why).
+    Read fresh on every call rather than cached, so an options change
+    (which reloads the entry anyway) never risks a stale list."""
+    configured = parse_patterns(entry.options.get(CONF_TWO_STEP_MODELS))
+    return configured or list(DEFAULT_TWO_STEP_MODEL_PATTERNS)
 
 
 def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
@@ -497,14 +518,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         entry.async_on_unload(write_tracker.async_start_listening(hass))
 
-    # Raises a fixable repair when a bulb that's known to need two-step
-    # transitions isn't carrying the label that routes it there - the
-    # one part of this integration's behaviour that depends on registry
-    # data a user has to maintain by hand, and which fails silently when
-    # they forget (see two_step.py).
-    if is_tracking:
-        entry.async_on_unload(async_start_watching(hass, entry))
-
     # Raises a fixable repair when the installed blueprint is older than
     # the one this release ships with - the two halves deploy separately
     # and nothing else tells you they have drifted (see
@@ -539,6 +552,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             brightness_tolerance=call.data["brightness_tolerance"],
             color_temp_tolerance=call.data["color_temp_tolerance"],
             two_step_label=call.data["two_step_label"],
+            two_step_model_patterns=_two_step_model_patterns(entry),
             prefer_rgb_color=call.data["prefer_rgb_color"],
             rgb_color=tuple(rgb_color) if rgb_color else None,
             rgb_color_tolerance=call.data["rgb_color_tolerance"],
@@ -612,6 +626,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             brightness_tolerance=call.data["brightness_tolerance"],
             color_temp_tolerance=call.data["color_temp_tolerance"],
             two_step_label=call.data["two_step_label"],
+            two_step_model_patterns=_two_step_model_patterns(entry),
             prefer_rgb_color=call.data["prefer_rgb_color"],
             rgb_color=rgb_color,
             rgb_color_tolerance=call.data["rgb_color_tolerance"],

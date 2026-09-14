@@ -12,6 +12,7 @@ def make_lookup(
     states: dict,
     device_of: Optional[dict] = None,
     labels_of: Optional[dict] = None,
+    device_identity: Optional[dict] = None,
     observed_context_ids: Optional[dict] = None,
     latest_context_ids: Optional[dict] = None,
     latest_targets: Optional[dict] = None,
@@ -24,6 +25,10 @@ def make_lookup(
                "context_id" is optional and defaults to None.
     device_of: {entity_id: device_id}
     labels_of: {entity_id_or_device_id: [label, ...]}
+    device_identity: {device_id: (manufacturer, model)} - what
+               EntityLookup.matches_two_step_pattern() checks. Looked up
+               via device_of, so an entity with no device (or a device
+               id absent from this dict) reports (None, None).
     observed_context_ids: {entity_id: value} - what
                write_tracking.LastWriteTracker would report as the
                "observed" claim for that entity - a write some earlier
@@ -48,6 +53,7 @@ def make_lookup(
     """
     device_of = device_of or {}
     labels_of = labels_of or {}
+    device_identity = device_identity or {}
     observed_context_ids = observed_context_ids or {}
     latest_context_ids = latest_context_ids or {}
     latest_targets = latest_targets or {}
@@ -66,6 +72,9 @@ def make_lookup(
 
     def labels(target_id):
         return labels_of.get(target_id, [])
+
+    def manufacturer_model(entity_id):
+        return device_identity.get(device_of.get(entity_id), (None, None))
 
     def context_id(entity_id):
         return states.get(entity_id, {}).get("context_id")
@@ -93,6 +102,7 @@ def make_lookup(
         state_attr=state_attr,
         device_id=device_id,
         labels=labels,
+        manufacturer_model=manufacturer_model,
         context_id=context_id,
         observed_context_id=observed_context_id,
         latest_context_id=latest_context_id,

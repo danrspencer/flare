@@ -301,7 +301,11 @@ differently from colour-temperature ones.
 
 Some bulbs can't take brightness and colour temperature in one command — sent together, they snap or drop one of
 the two. `apply_lighting` sends those as two sequential half-length calls instead, and picks which bulbs get that
-treatment from a Home Assistant **label**:
+treatment two ways:
+
+- **Automatically**, by comparing the bulb's device manufacturer/model against a configurable pattern list — no
+  label needed.
+- **Manually**, via a Home Assistant **label**, for anything a pattern doesn't (yet) cover:
 
 | | |
 |---|---|
@@ -312,33 +316,20 @@ treatment from a Home Assistant **label**:
 The match is on the label's *id*, not its display name. A label whose id doesn't line up produces no error and
 no log line — the bulb silently goes back to combined transitions.
 
-### Keeping the list current
-
-Any light whose device matches a known two-step model but has no label raises a **repair** with a Fix button,
-which applies the label and creates it with the correct id if needed. The check re-runs on registry changes, so
-a newly paired bulb surfaces without a restart, and the repair clears once the labels are in place.
-
 The model list is in the integration's options (Settings → Devices & Services → FLARE → **Configure**), one
 case-insensitive glob per line, matched against `"<manufacturer> <model>"` — both `*TRADFRI bulb*` and `IKEA*`
-work. The box is pre-filled with the shipped defaults, so what you see is the complete list in use; a pattern
-you delete is genuinely gone. Clearing the box entirely falls back to the defaults rather than disabling
-detection — to stop being told about unlabelled bulbs, [ignore the repair](#dismissing-the-repair).
+work. Any light whose device matches a pattern is routed into two-step transitions automatically, immediately,
+with no repair or confirmation step in the way. The box is pre-filled with the shipped defaults, so what you see
+is the complete list in use; a pattern you delete is genuinely gone. Clearing the box entirely falls back to the
+defaults, so it can't quietly switch off detection.
 
 {: .note }
 > Once you save your own list it's yours: later releases adding models won't change it. Adding a bulb to
 > `DEFAULT_TWO_STEP_MODEL_PATTERNS` in `two_step.py` is a one-line PR and reaches every install that hasn't
 > customised the field.
 
-Keep patterns narrow. Too broad is worse than missing — it recommends a label that makes those bulbs transition
-*worse*, two calls where one was fine.
-
-### Dismissing the repair
-
-Use the standard **Ignore** action on the repair card. It stays ignored across upgrades. To bring it back, open
-**Settings → Repairs** and enable **Show ignored issues** from the overflow menu.
-
-Ignoring only silences the notification — the check keeps running, so labelling the bulbs later clears the issue
-as normal.
+Keep patterns narrow. Too broad is worse than missing — it routes those bulbs into two-step transitions live,
+which makes them transition *worse*, two calls where one was fine.
 
 ## Optional: day-phase/curve sensors
 

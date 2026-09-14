@@ -75,7 +75,10 @@ compute_lighting_groups:
         Entities or devices carrying this label are returned separately
         (as "two_step") so you can send brightness and colour temperature
         as two sequential calls instead of one combined call - for bulbs
-        that can't transition both together.
+        that can't transition both together. Entities are also routed
+        this way automatically if their device's manufacturer/model
+        matches FLARE's configured two-step model patterns, even
+        without this label.
       default: no_combined_transition
       selector:
         text:
@@ -229,6 +232,9 @@ apply_lighting:
         Entities or devices carrying this label get brightness and
         colour temperature sent as two sequential calls instead of one
         combined call - for bulbs that can't transition both together.
+        Entities are also routed this way automatically if their
+        device's manufacturer/model matches FLARE's configured
+        two-step model patterns, even without this label.
       default: no_combined_transition
       selector:
         text:

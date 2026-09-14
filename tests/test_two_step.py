@@ -3,30 +3,14 @@ Pure-logic tests for two_step.py - no Home Assistant dependency, same
 as test_curve.py/test_grouping.py/test_scenes.py (see tests/conftest.py
 for how the module is imported bare).
 
-The end-to-end half - registry scanning, the repair actually appearing,
-and the fix flow applying labels - lives in
-tests/integration/test_two_step_repair.py, since none of that can be
-exercised without a real entity/device/label registry.
+The end-to-end half - a real device/entity registry, and grouping.py's
+EntityLookup.matches_two_step_pattern() actually being reached by a real
+apply_lighting/compute_lighting_groups call - lives in
+tests/integration/test_services.py, since none of that can be exercised
+without a real registry and a real Tracking config entry.
 """
 
-from two_step import (
-    DEFAULT_TWO_STEP_MODEL_PATTERNS,
-    CandidateLight,
-    describe,
-    find_unlabelled_two_step_lights,
-    model_matches,
-    parse_patterns,
-)
-
-
-def _light(entity_id="light.a", manufacturer="IKEA", model="TRADFRI bulb GU10, color/white spectrum, 345 lm"):
-    return CandidateLight(
-        entity_id=entity_id,
-        device_id="dev-" + entity_id,
-        name=entity_id.split(".")[-1].replace("_", " ").title(),
-        manufacturer=manufacturer,
-        model=model,
-    )
+from two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, model_matches, parse_patterns
 
 
 class TestModelMatching:
@@ -68,63 +52,3 @@ class TestParseExtraPatterns:
         assert parse_patterns("") == []
         assert parse_patterns(None) == []
         assert parse_patterns("\n  \n") == []
-
-
-class TestFindUnlabelled:
-    def test_reports_a_matching_light_with_no_label(self):
-        lights = [_light("light.spot_1")]
-        found = find_unlabelled_two_step_lights(lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: False)
-        assert [c.entity_id for c in found] == ["light.spot_1"]
-
-    def test_ignores_a_matching_light_that_is_already_labelled(self):
-        lights = [_light("light.spot_1")]
-        found = find_unlabelled_two_step_lights(lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: True)
-        assert found == []
-
-    def test_ignores_a_non_matching_light_even_without_a_label(self):
-        lights = [_light("light.hue", manufacturer="Signify", model="Hue color spot")]
-        found = find_unlabelled_two_step_lights(lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: False)
-        assert found == []
-
-    def test_a_configured_pattern_detects_a_bulb_the_defaults_do_not_know(self):
-        lights = [_light("light.odd", manufacturer="Acme", model="Weird Bulb 9000")]
-        assert find_unlabelled_two_step_lights(lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: False) == []
-
-        found = find_unlabelled_two_step_lights(lights, parse_patterns("*weird bulb*"), lambda c: False)
-        assert [c.entity_id for c in found] == ["light.odd"]
-
-    def test_a_configured_list_replaces_the_defaults_rather_than_adding_to_them(self):
-        """The point of pre-populating the options field: what's in the
-        box is the whole list, so a shipped pattern the user deleted is
-        really gone rather than silently re-added underneath."""
-        tradfri = _light("light.spot_1")
-        odd = _light("light.odd", manufacturer="Acme", model="Weird Bulb 9000")
-
-        found = find_unlabelled_two_step_lights([tradfri, odd], parse_patterns("*weird bulb*"), lambda c: False)
-        assert [c.entity_id for c in found] == ["light.odd"]
-
-    def test_results_are_sorted_so_the_repair_text_is_stable(self):
-        lights = [_light("light.c"), _light("light.a"), _light("light.b")]
-        found = find_unlabelled_two_step_lights(lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: False)
-        assert [c.entity_id for c in found] == ["light.a", "light.b", "light.c"]
-
-    def test_per_light_label_check_is_respected_not_all_or_nothing(self):
-        lights = [_light("light.a"), _light("light.b")]
-        found = find_unlabelled_two_step_lights(
-            lights, DEFAULT_TWO_STEP_MODEL_PATTERNS, lambda c: c.entity_id == "light.a"
-        )
-        assert [c.entity_id for c in found] == ["light.b"]
-
-
-class TestDescribe:
-    def test_lists_names_and_entity_ids(self):
-        assert describe([_light("light.a")]) == "A (light.a)"
-
-    def test_truncates_a_long_list(self):
-        lights = [_light(f"light.spot_{i}") for i in range(12)]
-        text = describe(lights, limit=3)
-        assert text.endswith("and 9 more")
-        assert text.count("(") == 3
-
-    def test_empty_is_empty(self):
-        assert describe([]) == ""

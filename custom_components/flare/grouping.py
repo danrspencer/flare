@@ -20,7 +20,7 @@ namespace-loop Jinja.
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 try:
     # Real package context (production HA, tests/integration/) - grouping.py
@@ -31,15 +31,17 @@ try:
         is_blocked,
         target_matches_values,
     )
+    from .two_step import TWO_STEP_LABEL_ID, model_matches
 except ImportError:
     # Bare top-level module context (tests/test_grouping.py, via
     # tests/conftest.py putting this directory straight on sys.path -
-    # see its own comment for why). override_protection.py sits
-    # alongside this file, so a plain top-level import resolves the
+    # see its own comment for why). override_protection.py/two_step.py
+    # sit alongside this file, so a plain top-level import resolves the
     # same way curve.py/scenes.py already do for their own bare-module
     # test usage. Note this module now needs homeassistant importable
     # either way - see override_protection.py's own docstring.
     from override_protection import _color_temp_matches, classify, is_blocked, target_matches_values  # noqa: F401
+    from two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
@@ -63,6 +65,11 @@ class EntityLookup:
     state_attr: Callable[[str, str], object]
     device_id: Callable[[str], Optional[str]]
     labels: Callable[[str], list]
+    # The entity's device manufacturer/model, or (None, None) if it has
+    # no device - feeds matches_two_step_pattern() below. A single
+    # tuple-returning accessor rather than two callables, since
+    # model_matches() always consumes both together.
+    manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
     context_id: Callable[[str], Optional[str]]
     # Two independent claims per entity, not one - see write_tracking.py's
     # module docstring for why. "observed" is a write some earlier call
@@ -100,6 +107,17 @@ class EntityLookup:
         """Labels on the entity itself plus its device (if any)."""
         did = self.device_id(entity_id)
         return self.labels(entity_id) + (self.labels(did) if did else [])
+
+    def matches_two_step_pattern(self, entity_id: str, patterns: Iterable[str]) -> bool:
+        """True if this entity's device manufacturer/model matches any of
+        `patterns` (see two_step.model_matches) - the live counterpart of
+        the `no_combined_transition` label check in build_groups(), so a
+        known-bad bulb gets two-step transitions with no label required.
+        `model_matches` itself already returns False for an empty pattern
+        list or a device with no manufacturer/model, so there's nothing
+        extra to guard here."""
+        manufacturer, model = self.manufacturer_model(entity_id)
+        return model_matches(manufacturer, model, patterns)
 
     def externally_set(
         self,
@@ -263,7 +281,8 @@ def build_groups(
     lookup: EntityLookup,
     brightness_tolerance: int = 2,
     color_temp_tolerance: int = 10,
-    two_step_label: str = "no_combined_transition",
+    two_step_label: str = TWO_STEP_LABEL_ID,
+    two_step_model_patterns: Iterable[str] = (),
     prefer_rgb_color: bool = False,
     rgb_color: Optional[tuple] = None,
     rgb_color_tolerance: int = 10,
@@ -282,6 +301,15 @@ def build_groups(
     rgb_color instead of sensor_color_temp_kelvin. Toggle off, or no
     rgb_color given, and combined_rgb/two_step_rgb are always empty -
     behaviour is otherwise identical to before this parameter existed.
+
+    two_step_label/two_step_model_patterns: an entity lands in
+    two_step/two_step_rgb if EITHER the label is in lookup.tags(e) OR
+    its device manufacturer/model matches one of the patterns (see
+    EntityLookup.matches_two_step_pattern) - the label is a manual
+    override for anything a pattern doesn't cover, patterns are the
+    automatic path for known-bad hardware. Defaulting
+    two_step_model_patterns to () makes an omitted call behave exactly
+    as it did before this parameter existed.
 
     force: whether to bypass override protection outright, passed
     straight through to every EntityLookup.externally_set() check - see
@@ -323,7 +351,11 @@ def build_groups(
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
             and not _already_set(e, brightness, sensor_color_temp_kelvin, lookup, brightness_tolerance, color_temp_tolerance)
         ]
-        group.two_step = [e for e in needing_update if two_step_label in lookup.tags(e)]
+        group.two_step = [
+            e
+            for e in needing_update
+            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
+        ]
         group.combined = [e for e in needing_update if e not in group.two_step]
 
         needing_update_rgb = [
@@ -333,7 +365,11 @@ def build_groups(
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
             and not _already_set_rgb(e, brightness, rgb_color, lookup, brightness_tolerance, rgb_color_tolerance)
         ]
-        group.two_step_rgb = [e for e in needing_update_rgb if two_step_label in lookup.tags(e)]
+        group.two_step_rgb = [
+            e
+            for e in needing_update_rgb
+            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
+        ]
         group.combined_rgb = [e for e in needing_update_rgb if e not in group.two_step_rgb]
 
         groups.append(group)

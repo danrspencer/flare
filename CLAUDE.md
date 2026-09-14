@@ -1041,9 +1041,6 @@ trigger/condition machinery only looks at entity state, not origin.
   Note also the general Zigbee mitigation is group addressing, not
   spreading unicasts.
 - **`night_floor_kelvin` / `kelvin_rgb`** - see Curve math above.
-- **An opt-out for the two-step repair** - HA's issue registry already
-  provides Ignore, and an ignored issue survives version bumps.
-  Documented in `docs/helpers.md` rather than reimplemented.
 - **Virtual per-phase `light` entities** replacing the eight curve
   `number`s, so a phase is set from a normal light card (and gains RGB).
   Rejected on Liskov: a phase target has no off state, so `turn_off`
@@ -1094,31 +1091,49 @@ Not implemented; recorded so it isn't re-derived. Two designs:
 
 ### Two-step transition detection
 
-`two_step.py` is pure, `two_step_check.py` is the registry adapter,
-`repairs.py` is the fix flow. Case-insensitive globs matched against
-`"<manufacturer> <model>"`. The options field is **seeded with the
-shipped defaults and holds the whole list** - a saved value replaces
-them outright, so deleting a shipped pattern takes effect. An
+Routed two ways, OR'd together - `grouping.py`'s `EntityLookup.
+matches_two_step_pattern()` compares a light's device
+`"<manufacturer> <model>"` against a configurable list of
+case-insensitive globs (`CONF_TWO_STEP_MODELS`, read fresh per call via
+`__init__.py`'s `_two_step_model_patterns()`), **or** the entity/device
+carries the `no_combined_transition` label (`EntityLookup.tags()`,
+unchanged). `two_step.py` holds only the pure matching primitives
+(`model_matches`, `parse_patterns`, `DEFAULT_TWO_STEP_MODEL_PATTERNS`,
+`TWO_STEP_LABEL_ID`) - no HA imports, same split as curve.py/
+grouping.py/scenes.py. The options field is **seeded with the shipped
+defaults and holds the whole list** - a saved value replaces them
+outright, so deleting a shipped pattern takes effect. An
 empty/whitespace field falls back to the defaults, so clearing the box
-can't silently disable detection.
+can't silently disable matching.
 
-**Accepted trade-off:** once a user saves the field they own it, and a
-later release adding a newly-discovered bulb won't reach them. Chosen
-for consistency over reach; PR updates still reach every install that
-hasn't customised it.
+**Why direct pattern matching, not just the label:** this used to be
+label-only, with a repair (`two_step_check.py`'s issue-raising +
+`repairs.py`'s `MissingTwoStepLabelRepairFlow`) comparing manufacturer/
+model against the same pattern list and *suggesting* the label via a
+Fix button. Live IKEA TRADFRI bulbs kept misbehaving because the label
+wasn't reliably applied - a missed repair, a bulb re-paired without it
+- and a repair can only nag, never fix behaviour, until a human acts on
+it. Since the pattern list was already enough to know which bulbs need
+this, comparing it directly at routing time makes correct behaviour the
+default with no manual step; the label stays as a manual escape hatch
+for anything a pattern doesn't (yet) cover. The repair was removed
+entirely rather than kept alongside the live check: once matching is
+automatic, it would only ever nag about bulbs already working fine
+without the label - a permanent false positive, not a temporary one.
 
-The fix applies the label to the **device**, not the entity -
-`grouping.py` accepts either, but device survives entity renames and
-covers every light entity the device exposes. It also *creates* the
-label if absent, which is what guarantees the `label_id` is right, since
-HA derives the id from the name at creation.
+**Accepted trade-off, higher-stakes than it sounds:** once a user saves
+the field they own it, and a later release adding a newly-discovered
+bulb won't reach them - chosen for consistency over reach, same as
+before. But a bad or overly broad custom pattern now has an *immediate*
+live effect (routes real dispatch into two-step transitions), not just
+a repair suggestion someone can ignore - keep patterns narrow.
 
 ### Blueprint version checking
 
 `blueprint_version.py` is pure (the stamp constant + parsing),
 `blueprint_check.py` is the HA adapter, `repairs.py` carries the fix
-flow - the same three-way split `two_step.py`/`two_step_check.py`/
-`repairs.py` already uses.
+flow - the same pure/adapter/fix-flow split used elsewhere in this
+integration (e.g. curve.py/coordinator.py/sensor.py).
 
 **`BLUEPRINT_VERSION` is the version the BLUEPRINT last changed in, not
 the integration's.** Chosen at the user's direction over "any
@@ -1466,9 +1481,6 @@ section headings so it reads as a spec of what the blueprint does.
   collapse into one `state_reported` event, and the second call's
   explicit `context=` is silently discarded. Echo a *slightly*
   different value when a test needs a real state change.
-- A real entity-registry change triggers `two_step_check.py`'s
-  5s-debounced watcher; flush it or the harness fails on a lingering
-  timer.
 - **Waiting out real elapsed time in this harness does not work**, found
   while testing the since-removed jitter delay and kept because it will
   bite anything else that waits. Under the file-wide `frozen_time`, a
