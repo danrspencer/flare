@@ -54,12 +54,26 @@ jobs:
           name: junit-results
           path: junit.xml
 
+      # Bundled with the raw traces rather than uploaded as its own
+      # artifact: trace_viewer.py resolves the blueprint YAML and
+      # trace-dumps/ relative to its own file location
+      # (Path(__file__).resolve().parent.parent), so shipping all three
+      # under one directory structure is what lets `python
+      # scripts/trace_viewer.py` work immediately after unzipping,
+      # with no path surgery. GitHub Actions has no "open this HTML"
+      # button for an artifact - this only gets you as far as a local
+      # `python scripts/trace_viewer.py` after downloading and
+      # unzipping, not a link that renders in the browser.
       - name: Upload blueprint traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blueprint-traces
-          path: trace-dumps/
+          path: |
+            trace-dumps/
+            scripts/trace_viewer.py
+            scripts/trace_viewer.html
+            blueprints/automation/danspencer/flare.yaml
           if-no-files-found: ignore
 
   # The blueprint's version stamp is what tells an installed copy it has
