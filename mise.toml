@@ -1,0 +1,25 @@
+[tools]
+python = "3.14"
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.install]
+description = "Install test dependencies"
+run = "pip install pytest pytest-homeassistant-custom-component"
+
+[tasks.test]
+description = "Run the full pytest suite"
+run = "pytest"
+
+[tasks."test:behaviour"]
+description = "Run the behaviour suite (captures blueprint automation traces into trace-dumps/)"
+run = "pytest tests/behaviour -v"
+
+[tasks.traces]
+description = "Render captured blueprint automation traces from trace-dumps/ (run test:behaviour first)"
+run = "python scripts/trace_summary.py trace-dumps"
+
+[tasks."trace-viewer"]
+description = "Interactive trace viewer: hover a step to jump to its line in the blueprint YAML"
+run = "python scripts/trace_viewer.py"
