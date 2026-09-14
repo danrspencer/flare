@@ -160,6 +160,8 @@ class EntityLookup:
             brightness_tolerance,
             color_temp_tolerance,
             rgb_color_tolerance,
+            self.state_attr(entity_id, "min_color_temp_kelvin"),
+            self.state_attr(entity_id, "max_color_temp_kelvin"),
         )
         return is_blocked(status, force)
 
