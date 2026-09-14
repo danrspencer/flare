@@ -105,6 +105,8 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
         state.attributes.get("brightness"),
         state.attributes.get("color_temp_kelvin"),
         state.attributes.get("rgb_color"),
+        min_color_temp_kelvin=state.attributes.get("min_color_temp_kelvin"),
+        max_color_temp_kelvin=state.attributes.get("max_color_temp_kelvin"),
     )
     # "untracked" (no claim at all, or only one unverified attempt)
     # displays as "controlled": from a viewer's point of view both mean

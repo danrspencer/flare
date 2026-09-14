@@ -832,6 +832,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
+                state.attributes.get("min_color_temp_kelvin") if state is not None else None,
+                state.attributes.get("max_color_temp_kelvin") if state is not None else None,
             )
             results[entity_id] = {
                 "blocked": is_blocked(status),

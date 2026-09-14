@@ -327,3 +327,99 @@ def test_color_temp_matches_rejects_a_genuinely_different_mired_value():
     # all - e.g. brightness 40/color 6000 vs target 3000 from the
     # override tests above. Neither within tolerance nor mired-equal.
     assert not _color_temp_matches(6000, 3000, tolerance_kelvin=10)
+
+
+# Regression tests below, for the bathroom-spots incident (2026-09-14):
+# four light.bathroom_spot_1-4 were released ("found this light showing
+# something else") at 08:28:23, after ~89 minutes unavailable and a
+# device-originated attribute report at 08:28:15. Both pin a cause fixed
+# in classify()/target_matches_values() - see override_protection.py's
+# _color_temp_matches_rgb and _clamp_kelvin.
+
+
+def test_a_colour_reported_in_a_different_mode_is_recognised_as_a_match():
+    """Cause 1: FLARE's claim asked for a colour in Kelvin, but the bulbs
+    were in xy colour mode by the time they echoed back - and Home
+    Assistant's own LightEntity.state_attributes reports
+    color_temp_kelvin as exactly None whenever color_mode isn't
+    COLOR_TEMP (homeassistant/components/light/__init__.py). Before the
+    fix, classify()'s value-rescue only ever read
+    current_color_temp_kelvin for a colour-temp claim, so it never
+    looked at the rgb_color the device actually reported, no matter how
+    close.
+
+    current_rgb_color below isn't a guess at "close enough" - it is
+    exactly curve.kelvin_to_rgb(3000), FLARE's own Kelvin->RGB
+    conversion, so this is provably the identical colour by FLARE's own
+    definition, just reported through a different attribute.
+    """
+    from curve import kelvin_to_rgb
+
+    claim = {"context_id": "ctx-ours", "target": {"brightness": 255, "color_temp_kelvin": 3000}}
+    status, _via = classify(
+        is_on=True,
+        observed=claim,
+        latest=claim,
+        current_context="ctx-device-attribute-report",
+        current_brightness=255,
+        current_color_temp_kelvin=None,  # what HA reports once color_mode is xy, not color_temp
+        current_rgb_color=kelvin_to_rgb(3000),
+    )
+    assert status == "controlled", (
+        "a device reporting the identical colour via rgb_color rather than color_temp_kelvin "
+        "should still match, not read as overridden"
+    )
+
+
+def test_a_bulb_sitting_at_its_own_colour_temp_ceiling_is_recognised_as_a_match():
+    """Cause 2: the curve asked for 6531K (a real Morning-phase value),
+    but these IKEA TRADFRI GU10s advertise max_color_temp_kelvin 4000 -
+    so the bulb settles at its own ceiling and can never echo back
+    6531K, no matter how long it's given.
+
+    grouping.py's _already_set() already handled exactly this for the
+    "does this still need writing" check - clamp_color_temp_kelvin()
+    narrows the target to the entity's own advertised range before
+    comparing (see its own docstring: "a bulb that physically can't reach
+    the target settles at its ceiling and would otherwise never compare
+    equal"). Before the fix, classify()/target_matches_values() had no
+    equivalent: it was a pure function with no entity_id/lookup at all,
+    so it could never learn a bulb's ceiling and always compared against
+    the raw, un-clamped target - a standing false-positive for any light
+    whose curve target exceeds what it can physically produce, not a
+    one-off. max_color_temp_kelvin below is exactly what a real caller
+    (grouping.EntityLookup.externally_set) now reads off the entity and
+    passes through.
+    """
+    claim = {"context_id": "ctx-ours", "target": {"brightness": 255, "color_temp_kelvin": 6531}}
+    status, _via = classify(
+        is_on=True,
+        observed=claim,
+        latest=claim,
+        current_context="ctx-device-attribute-report",
+        current_brightness=255,
+        current_color_temp_kelvin=4000,  # the bulb's own advertised ceiling
+        max_color_temp_kelvin=4000,
+    )
+    assert status == "controlled", (
+        "a bulb sitting at its own advertised colour-temp ceiling should read as controlled, not overridden"
+    )
+
+
+def test_a_colour_temp_claim_beyond_the_bulbs_ceiling_still_overrides_on_a_genuine_mismatch():
+    # The ceiling fallback must not swallow a real override: a bulb
+    # reporting something other than its own ceiling (here, its floor)
+    # is still overridden, not waved through just because a range was
+    # supplied.
+    claim = {"context_id": "ctx-ours", "target": {"brightness": 255, "color_temp_kelvin": 6531}}
+    status, _via = classify(
+        is_on=True,
+        observed=claim,
+        latest=claim,
+        current_context="ctx-someone-else",
+        current_brightness=255,
+        current_color_temp_kelvin=2700,  # nowhere near either the target or its clamped ceiling
+        min_color_temp_kelvin=2700,
+        max_color_temp_kelvin=4000,
+    )
+    assert status == "overridden"

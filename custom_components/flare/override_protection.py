@@ -64,6 +64,7 @@ from typing import Optional, TypedDict
 # pytest-homeassistant-custom-component) regardless of which test file is
 # targeted, so the whole suite already needs HA installed either way.
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
+from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
 
 
 class _ContextClaim(TypedDict):
@@ -141,6 +142,43 @@ def _color_temp_matches(current_kelvin: int, target_kelvin: int, tolerance_kelvi
     return _kelvin_to_mired(current_kelvin) == _kelvin_to_mired(target_kelvin)
 
 
+def _color_temp_matches_rgb(target_kelvin: int, current_rgb, tolerance: int) -> bool:
+    """True if a Kelvin target and a live rgb_color reading are the same
+    colour, going through Home Assistant's own color_temperature_to_rgb -
+    the same conversion curve.kelvin_to_rgb uses to show a Kelvin value
+    as a colour. Exists for a bulb reporting through xy/rgb colour mode
+    rather than COLOR_TEMP: HA's own LightEntity.state_attributes
+    publishes color_temp_kelvin as exactly None whenever color_mode isn't
+    COLOR_TEMP (confirmed against homeassistant/components/light -
+    __init__.py's state_attributes), so a colour-temp claim could never
+    match such a device by value at all, however close its actual colour
+    genuinely is - confirmed live, the bathroom-spots incident of
+    2026-09-14."""
+    if not isinstance(current_rgb, (list, tuple)) or len(current_rgb) != 3:
+        return False
+    target_rgb = _kelvin_to_rgb(target_kelvin)
+    return all(abs(a - b) <= tolerance for a, b in zip(current_rgb, target_rgb))
+
+
+def _clamp_kelvin(target_kelvin: int, min_kelvin, max_kelvin) -> int:
+    """The target colour temperature, narrowed to a bulb's own advertised
+    min/max_color_temp_kelvin - the comparison-only counterpart of
+    grouping.clamp_color_temp_kelvin, duplicated in miniature here
+    (a handful of lines of arithmetic, not the entity_id/lookup access)
+    because target_matches_values() is deliberately pure - see its own
+    docstring. A missing or unparseable bound (0, same sentinel
+    clamp_color_temp_kelvin uses - no real bulb reports 0K) leaves the
+    target untouched, so a claim with no known range behaves exactly as
+    it did before this existed."""
+    lo = _as_int(min_kelvin, 0)
+    hi = _as_int(max_kelvin, 0)
+    if lo > 0:
+        target_kelvin = max(target_kelvin, lo)
+    if hi > 0:
+        target_kelvin = min(target_kelvin, hi)
+    return target_kelvin
+
+
 def target_matches_values(
     target: Optional[dict],
     current_brightness,
@@ -149,6 +187,8 @@ def target_matches_values(
     brightness_tolerance: int = 2,
     color_temp_tolerance: int = 10,
     rgb_color_tolerance: int = 10,
+    min_color_temp_kelvin=None,
+    max_color_temp_kelvin=None,
 ) -> bool:
     """Pure comparison (plain values in, no entity_id/lookup) - shared
     by classify()'s own context-mismatch fallback below and sensor.py's
@@ -157,7 +197,18 @@ def target_matches_values(
     otherwise. `target` is a claim's recorded {"brightness": ...,
     "color_temp_kelvin": ...} or {"brightness": ..., "rgb_color":
     [...]} - falsy (None, or an entity missing from a targets dict)
-    never matches, same as no claim at all."""
+    never matches, same as no claim at all.
+
+    min_color_temp_kelvin/max_color_temp_kelvin are the entity's own
+    advertised range, optional and defaulting to None - a caller that
+    doesn't pass them gets exactly the old behaviour. Only meaningful
+    for a color_temp_kelvin target: a bulb that physically can't reach
+    it settles at its own ceiling/floor instead, which would otherwise
+    never compare equal and read as overridden forever, even though the
+    bulb did everything asked of it. grouping._already_set() already
+    does this for the "does this still need writing" check
+    (clamp_color_temp_kelvin) - this is the same reasoning, applied to
+    the override decision."""
     if not target:
         return False
     target_brightness = target.get("brightness")
@@ -175,7 +226,17 @@ def target_matches_values(
     target_color_temp = target.get("color_temp_kelvin")
     if target_color_temp is None:
         return False
-    return _color_temp_matches(_as_int(current_color_temp_kelvin, -999), target_color_temp, color_temp_tolerance)
+    current_kelvin = _as_int(current_color_temp_kelvin, -999)
+    if _color_temp_matches(current_kelvin, target_color_temp, color_temp_tolerance):
+        return True
+    # A bulb reporting through xy/rgb rather than COLOR_TEMP mode has no
+    # color_temp_kelvin to compare at all (see _color_temp_matches_rgb's
+    # own docstring) - check the colour it actually reported before
+    # falling through to "no match".
+    if _color_temp_matches_rgb(target_color_temp, current_rgb_color, rgb_color_tolerance):
+        return True
+    reachable = _clamp_kelvin(target_color_temp, min_color_temp_kelvin, max_color_temp_kelvin)
+    return reachable != target_color_temp and _color_temp_matches(current_kelvin, reachable, color_temp_tolerance)
 
 
 def _asked_for_off(claim: Optional[dict]) -> bool:
@@ -200,9 +261,16 @@ def classify(
     brightness_tolerance: int = 2,
     color_temp_tolerance: int = 10,
     rgb_color_tolerance: int = 10,
+    min_color_temp_kelvin=None,
+    max_color_temp_kelvin=None,
 ) -> tuple[str, Optional[str]]:
     """The decision table - given everything known about one entity right
     now, returns `(status, matched_via)`.
+
+    min_color_temp_kelvin/max_color_temp_kelvin: the entity's own
+    advertised colour-temp range, passed straight through to
+    target_matches_values() - see its own docstring. Optional, default
+    None (unknown range, old behaviour).
 
     - `"off"` - not on. Override protection is moot; checked first,
       before any claim.
@@ -275,6 +343,8 @@ def classify(
         brightness_tolerance,
         color_temp_tolerance,
         rgb_color_tolerance,
+        min_color_temp_kelvin,
+        max_color_temp_kelvin,
     ):
         return "controlled", "latest-value"
     if target_matches_values(
@@ -285,6 +355,8 @@ def classify(
         brightness_tolerance,
         color_temp_tolerance,
         rgb_color_tolerance,
+        min_color_temp_kelvin,
+        max_color_temp_kelvin,
     ):
         return "controlled", "observed-value"
     return "overridden", None
