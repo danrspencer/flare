@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FLARE trace viewer</title>
+<style>
+  :root {
+    --bg: #1e1f22;
+    --pane-bg: #17181a;
+    --border: #33353a;
+    --text: #d8dadf;
+    --dim: #8a8d94;
+    --accent: #6aa9ff;
+    --hl: #3a3410;
+    --hl-border: #ffcf4d;
+    --pass: #52c77e;
+    --fail: #f05a5a;
+    --neutral: #6b6e76;
+    --row-hover: #26282c;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dim);
+    margin: 0 8px 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  select, button {
+    background: #2a2c30;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12.5px;
+  }
+  select { min-width: 260px; }
+  button { cursor: pointer; }
+  button:hover { background: #34363b; }
+  #run-select { min-width: 220px; }
+  #status { color: var(--dim); font-size: 12px; margin-left: auto; white-space: nowrap; }
+
+  main.panes {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+  .pane {
+    flex: 1 1 50%;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  #trace-pane { border-right: 1px solid var(--border); font-size: 12.5px; }
+  #yaml-pane { background: var(--pane-bg); font: 12.5px/1.5 "SF Mono", Menlo, Consolas, monospace; }
+
+  .run {
+    margin: 0 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .run-header {
+    background: #232427;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+  }
+  .run-header b { color: var(--text); }
+  .run-header .outcome-finished { color: var(--pass); }
+  .run-header .outcome-error { color: var(--fail); }
+
+  .step {
+    padding: 3px 10px 3px 0;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 2px solid transparent;
+  }
+  .step:hover, .step.active { background: var(--row-hover); }
+  .step.active { border-left-color: var(--accent); }
+  .step .marker { display: inline-block; width: 14px; text-align: center; }
+  .marker.pass { color: var(--pass); }
+  .marker.fail { color: var(--fail); }
+  .marker.neutral { color: var(--neutral); }
+  .step .path { color: var(--dim); }
+  .step .preview { color: var(--text); margin-left: 6px; }
+  .var-line {
+    padding: 1px 10px 1px 0;
+    color: #a9b4c4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+  }
+  .var-line .name { color: #7dd3fc; }
+
+  .yline {
+    display: flex;
+    padding: 0 10px;
+  }
+  .yline .lineno {
+    flex: 0 0 42px;
+    text-align: right;
+    padding-right: 10px;
+    color: #555860;
+    user-select: none;
+  }
+  .yline .code {
+    white-space: pre;
+    color: var(--text);
+  }
+  .yline.hl { background: var(--hl); box-shadow: inset 3px 0 0 var(--hl-border); }
+
+  .empty {
+    color: var(--dim);
+    padding: 20px;
+    font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>FLARE trace viewer</h1>
+  <select id="trace-select"><option>loading trace-dumps/…</option></select>
+  <select id="run-select"></select>
+  <button id="reload">↻ reload</button>
+  <span id="status"></span>
+</header>
+<main class="panes">
+  <section id="trace-pane" class="pane"><div class="empty">Pick a trace above.</div></section>
+  <section id="yaml-pane" class="pane"><div id="yaml-lines"></div></section>
+</main>
+
+<script>
+// Variables worth showing next to a step - mirrors scripts/trace_summary.py's
+// INTERESTING tuple, so both tools highlight the same handful of values.
+const INTERESTING = new Set([
+  "allow_turn_on", "occupied", "room_is_idle", "idle_entities",
+  "resolved_entities", "brightness_multipliers", "adaptive_target_entities",
+  "entities_still_on", "occupancy_clear_for_wait", "script_transition",
+]);
+
+const state = { yamlTree: null };
+let activeRow = null;
+
+function brief(value, limit) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (text === undefined) return "undefined";
+  return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
+}
+
+// Walks the annotated YAML tree by a trace path's segments. A numeric
+// segment indexes a seq; a word segment descends into a map key of that
+// name IF one exists. Two cases where it doesn't, both left as a pass
+// through - stay on the same node, so the next (numeric) segment indexes
+// whatever list that word was describing:
+//   - the synthetic "condition" HA's tracer inserts after `if:`, which
+//     is not a real YAML key at all (see trace_viewer.py's docstring).
+//   - shorthand `and:`/`or:`/`not:` (a single-key map whose one key IS
+//     the operator, holding the condition list directly) - "conditions"
+//     never appears as a literal key there, but the trace path still
+//     addresses it that way, since HA normalizes shorthand to the
+//     canonical {condition: or, conditions: [...]} form before tracing.
+//     A single-key map is exactly the shape that shorthand produces, so
+//     descending into that one key stands in for the "conditions" the
+//     literal YAML never spells out.
+function resolveYamlPath(segments) {
+  let node = state.yamlTree;
+  for (const raw of segments) {
+    if (!node) return null;
+    if (/^\d+$/.test(raw)) {
+      if (node.__type__ !== "seq") return node;
+      const next = node.value[parseInt(raw, 10)];
+      node = next === undefined ? null : next;
+    } else if (node.__type__ === "map" && Object.prototype.hasOwnProperty.call(node.value, raw)) {
+      node = node.value[raw];
+    } else if (node.__type__ === "map" && Object.keys(node.value).length === 1) {
+      node = Object.values(node.value)[0];
+    }
+    // else: synthetic label segment, pass through unchanged.
+  }
+  return node;
+}
+
+function previewOf(node) {
+  if (!node) return "";
+  if (node.__type__ === "scalar") return brief(node.value, 70);
+  if (node.__type__ === "map") {
+    const parts = [];
+    for (const [k, v] of Object.entries(node.value)) {
+      if (v.__type__ === "scalar") {
+        parts.push(`${k}: ${brief(v.value, 34)}`);
+        if (parts.length >= 2) break;
+      }
+    }
+    return parts.join("  ·  ");
+  }
+  return "";
+}
+
+function resultOf(entries) {
+  for (const e of entries) {
+    if (e.result && typeof e.result === "object" && "result" in e.result) return e.result.result;
+  }
+  return null;
+}
+
+function variablesAt(entries) {
+  const found = {};
+  for (const e of entries) {
+    for (const [name, value] of Object.entries(e.changed_variables || {})) {
+      if (INTERESTING.has(name)) found[name] = value;
+    }
+  }
+  return found;
+}
+
+function executionOrderKey(path) {
+  const top = path.split("/", 1)[0];
+  const rank = { trigger: 0, condition: 1, action: 2 }[top] ?? 3;
+  const segments = path.split("/").map((s) => (/^\d+$/.test(s) ? parseInt(s, 10) : s));
+  return [rank, ...segments];
+}
+
+function compareKeys(a, b) {
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const av = a[i], bv = b[i];
+    if (av === undefined) return -1;
+    if (bv === undefined) return 1;
+    if (typeof av === typeof av && typeof av === typeof bv) {
+      if (av < bv) return -1;
+      if (av > bv) return 1;
+    } else {
+      const as = String(av), bs = String(bv);
+      if (as < bs) return -1;
+      if (as > bs) return 1;
+    }
+  }
+  return 0;
+}
+
+function clearHighlight() {
+  document.querySelectorAll(".yline.hl").forEach((el) => el.classList.remove("hl"));
+}
+
+function showStep(path, rowEl) {
+  if (activeRow) activeRow.classList.remove("active");
+  activeRow = rowEl;
+  if (rowEl) rowEl.classList.add("active");
+
+  const node = resolveYamlPath(path.split("/"));
+  clearHighlight();
+  const statusEl = document.getElementById("status");
+  if (!node) {
+    statusEl.textContent = `${path} — no matching YAML node`;
+    return;
+  }
+  const start = node.__line__;
+  const end = Math.max(start, node.__end_line__ || start);
+  let first = null;
+  for (let n = start; n <= end; n++) {
+    const el = document.getElementById("line-" + n);
+    if (el) {
+      el.classList.add("hl");
+      if (!first) first = el;
+    }
+  }
+  if (first) first.scrollIntoView({ block: "center", behavior: "smooth" });
+  statusEl.textContent = `${path} — line ${start}${end > start ? "–" + end : ""}`;
+}
+
+function renderYaml(text, path) {
+  const container = document.getElementById("yaml-lines");
+  const frag = document.createDocumentFragment();
+  text.split("\n").forEach((line, i) => {
+    const n = i + 1;
+    const row = document.createElement("div");
+    row.className = "yline";
+    row.id = "line-" + n;
+    const num = document.createElement("span");
+    num.className = "lineno";
+    num.textContent = String(n);
+    const code = document.createElement("span");
+    code.className = "code";
+    code.textContent = line;
+    row.append(num, code);
+    frag.appendChild(row);
+  });
+  container.replaceChildren(frag);
+}
+
+function renderRun(run, container) {
+  const box = document.createElement("div");
+  box.className = "run";
+
+  const header = document.createElement("div");
+  header.className = "run-header";
+  const outcomeClass = run.script_execution === "finished" ? "outcome-finished" : "outcome-error";
+  header.innerHTML =
+    `trigger: <b>${run.trigger ?? "?"}</b> &nbsp;·&nbsp; ` +
+    `finished as: <span class="${outcomeClass}">${run.script_execution ?? "?"}</span> &nbsp;·&nbsp; ` +
+    `last step: <b>${run.last_step ?? "?"}</b>`;
+  box.appendChild(header);
+
+  const steps = run.trace || {};
+  const paths = Object.keys(steps).sort((a, b) => compareKeys(executionOrderKey(a), executionOrderKey(b)));
+
+  for (const path of paths) {
+    const entries = steps[path];
+    const depth = (path.match(/\//g) || []).length;
+    const outcome = resultOf(entries);
+
+    const row = document.createElement("div");
+    row.className = "step";
+    row.style.paddingLeft = 10 + depth * 14 + "px";
+
+    const marker = document.createElement("span");
+    marker.className = "marker " + (outcome === true ? "pass" : outcome === false ? "fail" : "neutral");
+    marker.textContent = outcome === true ? "✓" : outcome === false ? "✗" : "·";
+    row.appendChild(marker);
+
+    const pathSpan = document.createElement("span");
+    pathSpan.className = "path";
+    pathSpan.textContent = path;
+    row.appendChild(pathSpan);
+
+    const node = resolveYamlPath(path.split("/"));
+    const preview = previewOf(node);
+    if (preview) {
+      const previewSpan = document.createElement("span");
+      previewSpan.className = "preview";
+      previewSpan.textContent = preview;
+      row.appendChild(previewSpan);
+    }
+
+    row.addEventListener("mouseenter", () => showStep(path, row));
+    row.addEventListener("click", () => showStep(path, row));
+    box.appendChild(row);
+
+    for (const [name, value] of Object.entries(variablesAt(entries))) {
+      const varRow = document.createElement("div");
+      varRow.className = "var-line";
+      varRow.style.paddingLeft = 24 + depth * 14 + "px";
+      varRow.innerHTML = `<span class="name">${name}</span> = ${brief(JSON.stringify(value), 100)}`;
+      box.appendChild(varRow);
+    }
+  }
+
+  container.appendChild(box);
+}
+
+function renderTrace(data) {
+  const pane = document.getElementById("trace-pane");
+  pane.replaceChildren();
+  const runSelect = document.getElementById("run-select");
+  runSelect.replaceChildren();
+
+  const runs = data.traces || [];
+  runs.forEach((run, i) => {
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = `run ${i + 1}/${runs.length}: ${run.trigger ?? "?"}`;
+    runSelect.appendChild(opt);
+  });
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = `all ${runs.length} runs`;
+  runSelect.insertBefore(allOpt, runSelect.firstChild);
+  runSelect.value = "all";
+
+  const draw = () => {
+    pane.replaceChildren();
+    if (runSelect.value === "all") {
+      runs.forEach((run) => renderRun(run, pane));
+    } else {
+      renderRun(runs[parseInt(runSelect.value, 10)], pane);
+    }
+  };
+  runSelect.onchange = draw;
+  draw();
+}
+
+async function loadYaml() {
+  const res = await fetch("/api/yaml");
+  const data = await res.json();
+  if (data.error) {
+    document.getElementById("status").textContent = "YAML error: " + data.error;
+    return;
+  }
+  state.yamlTree = data.tree;
+  renderYaml(data.text, data.path);
+}
+
+async function loadTrace(name) {
+  const res = await fetch("/api/trace/" + encodeURIComponent(name));
+  const data = await res.json();
+  renderTrace(data);
+}
+
+async function loadTraceList(keepSelection) {
+  const res = await fetch("/api/traces");
+  const list = await res.json();
+  const sel = document.getElementById("trace-select");
+  const previous = keepSelection ? sel.value : null;
+  sel.replaceChildren();
+  for (const item of list) {
+    const opt = document.createElement("option");
+    opt.value = item.name;
+    const icon = item.outcome === "failed" ? "❌" : item.outcome === "parse-error" ? "⚠️" : "✅";
+    opt.textContent = `${icon} ${item.test} (${item.runs} run${item.runs === 1 ? "" : "s"})`;
+    sel.appendChild(opt);
+  }
+  if (!list.length) {
+    document.getElementById("trace-pane").innerHTML =
+      '<div class="empty">No trace-dumps found. Run <code>mise run test:behaviour</code> first.</div>';
+    return;
+  }
+  const target = previous && list.some((i) => i.name === previous) ? previous : list[0].name;
+  sel.value = target;
+  await loadTrace(target);
+}
+
+document.getElementById("trace-select").addEventListener("change", (e) => loadTrace(e.target.value));
+document.getElementById("reload").addEventListener("click", async () => {
+  await loadYaml();
+  await loadTraceList(true);
+});
+
+(async function init() {
+  await loadYaml();
+  await loadTraceList(false);
+})();
+</script>
+</body>
+</html>

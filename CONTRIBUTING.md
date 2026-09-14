@@ -138,6 +138,17 @@ and copies it through verbatim otherwise. `tests/test_docs_site.py` checks that.
 
 ## Testing
 
+Via [mise](https://mise.jdx.dev) (`mise.toml` pins Python 3.14 and manages a `.venv`):
+
+```bash
+mise run install   # pip install pytest pytest-homeassistant-custom-component, into .venv
+mise run test       # pytest
+mise run test:behaviour   # tests/behaviour only, captures blueprint traces into trace-dumps/
+mise run traces      # render captured traces (run test:behaviour first)
+```
+
+Without mise:
+
 ```bash
 pip install pytest pytest-homeassistant-custom-component
 pytest
