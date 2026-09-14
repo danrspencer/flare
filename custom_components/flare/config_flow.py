@@ -198,9 +198,10 @@ class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
 
     Kept on the main entry rather than per sensor because it describes
     hardware, not a schedule - which bulbs in this house can't take a
-    combined brightness+colour command. Nothing here affects the curve
-    or any room's behaviour; it only decides what the missing-label
-    repair looks for (see two_step.py).
+    combined brightness+colour command. Nothing here affects the curve;
+    it decides which bulbs apply_lighting/compute_lighting_groups route
+    into two-step transitions automatically, no label required (see
+    two_step.py, grouping.py's EntityLookup.matches_two_step_pattern).
 
     The field is pre-populated with the shipped defaults rather than
     being an "extras" box layered on top of a hidden list, so what's in

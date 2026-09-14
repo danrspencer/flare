@@ -23,7 +23,6 @@ import voluptuous as vol
 from freezegun import freeze_time
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
-    async_fire_time_changed,
     async_mock_service,
 )
 
@@ -38,6 +37,7 @@ from custom_components.flare.grouping import build_groups
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
     CONF_TARGET,
+    CONF_TWO_STEP_MODELS,
     ENTRY_TYPE_TRACKING,
     SUBENTRY_TYPE_STATE,
 )
@@ -47,7 +47,7 @@ from custom_components.flare.write_tracking import STALE_RECORD_MAX_AGE_DAYS, Cl
 DOMAIN = "flare"
 
 
-async def _setup_entry(hass: HomeAssistant) -> MockConfigEntry:
+async def _setup_entry(hass: HomeAssistant, options: dict | None = None) -> MockConfigEntry:
     """Calls async_setup_entry directly rather than going through
     hass.config_entries.async_setup(), which would also resolve the
     manifest's http/frontend dependencies (needed in production for the
@@ -62,11 +62,17 @@ async def _setup_entry(hass: HomeAssistant) -> MockConfigEntry:
     regardless of how many schedule instances are configured), and that
     call requires the entry to already be LOADED - normally something
     hass.config_entries.async_setup() itself does around calling into
-    the component, which this helper deliberately bypasses."""
+    the component, which this helper deliberately bypasses.
+
+    options defaults to unset (the shipped CONF_TWO_STEP_MODELS
+    defaults apply) - pass e.g. {CONF_TWO_STEP_MODELS: "*weird bulb*"}
+    to prove a custom pattern list is actually read from the entry
+    rather than a hardcoded default."""
     await _track_test_lights(hass)
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
+        options=options or {},
         subentries_data=[
             ConfigSubentryData(
                 subentry_type=SUBENTRY_TYPE_STATE,
@@ -115,13 +121,6 @@ async def _attach_tracking_sensors(hass: HomeAssistant, entry: MockConfigEntry) 
         dr.async_get(hass).async_get_or_create(
             config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name=instance.title
         )
-    # A device registry write also triggers two_step_check.py's own
-    # 5s-debounced watcher (it listens for entity AND device registry
-    # updates) - flush it the same way _track_test_lights already does
-    # for its own entity-registry writes, or the harness fails on a
-    # lingering timer.
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
 
 
 def _registry(hass: HomeAssistant) -> ClaimRegistry:
@@ -169,11 +168,7 @@ def _test_area(hass: HomeAssistant):
 
 
 # Every light these tests use. Registered into the test area once, in
-# _setup_entry, rather than lazily per _set_light: a registry write
-# trips two_step_check.py's 5s-debounced watcher, which has to be
-# flushed or the harness fails on a lingering timer (see
-# _label_two_step), and doing that once in an async place beats making
-# every _set_light call await something.
+# _setup_entry, rather than lazily per _set_light.
 _TEST_LIGHTS = ("light.a", "light.never_tracked", "light.recovering", "light.sibling")
 
 
@@ -185,8 +180,6 @@ async def _track_test_lights(hass: HomeAssistant) -> None:
             "light", "test", entity_id, suggested_object_id=entity_id.split(".", 1)[1]
         )
         registry.async_update_entity(created.entity_id, area_id=area_id)
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
 
 
 def _set_light(hass: HomeAssistant, entity_id: str, state: str, *, context: Context | None = None, **attrs) -> None:
@@ -218,23 +211,10 @@ async def _label_two_step(hass: HomeAssistant, entity_id: str) -> None:
     entity labels plus device labels, and a fake/unregistered device
     just contributes nothing). HA's entity registry `labels` field is a
     plain set of label id strings with no foreign-key enforcement, so
-    this doesn't need a real label-registry entry to exist first - see
-    tests/integration/test_two_step_repair.py for the fuller
-    device+label-registry setup a different feature (detecting bulbs
-    *missing* this label) actually needs.
-
-    Async because a real entity-registry change here also triggers
-    two_step_check.py's own, unrelated registry-change watcher
-    (async_start_watching), which schedules a 5s-debounced check -
-    flushed here immediately so it doesn't linger past the end of
-    whichever test called this and fail the harness's own lingering-
-    timer assertion, the same class of gotcha lesson 10/the two-step
-    repair feature's own tests already document."""
+    this doesn't need a real label-registry entry to exist first."""
     domain, object_id = entity_id.split(".", 1)
     er.async_get(hass).async_get_or_create(domain, "test", object_id, suggested_object_id=object_id)
     er.async_get(hass).async_update_entity(entity_id, labels={"no_combined_transition"})
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
 
 
 @pytest.fixture
@@ -520,11 +500,6 @@ async def test_tracking_device_id_rejects_a_device_that_isnt_a_tracking_scope(se
     other_device = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id, identifiers={("not_flare", "something_else")}
     )
-    # A device registry write also triggers two_step_check.py's own
-    # 5s-debounced watcher (see _attach_tracking_sensors's own note) -
-    # flush it or the harness fails on a lingering timer.
-    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=30))
-    await hass.async_block_till_done()
     with pytest.raises(ServiceValidationError):
         await _check(hass, ["light.a"], tracking_device_id=other_device.id)
 
@@ -996,6 +971,70 @@ async def test_two_step_promotion_recognises_a_match_via_the_secondary_context(s
     # colour step's context at all.
     assert tracker_after.observed_context_id(scope, "light.a") == color_ctx_1
     assert tracker_after.observed_secondary_context_id(scope, "light.a") == brightness_ctx_1
+
+
+async def _add_device_light(hass: HomeAssistant, entity_id: str, *, manufacturer: str, model: str) -> None:
+    """A light entity backed by a real device carrying manufacturer/model -
+    what grouping.py's EntityLookup.matches_two_step_pattern() needs,
+    unlike _track_test_lights' plain device-less entities. No label
+    applied - proving the pattern list alone reaches real routing is the
+    whole point of the tests that use this."""
+    from homeassistant.helpers import device_registry as dr
+
+    domain, object_id = entity_id.split(".", 1)
+    owner = MockConfigEntry(domain="test")
+    owner.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=owner.entry_id,
+        identifiers={("test", object_id)},
+        manufacturer=manufacturer,
+        model=model,
+        name=object_id,
+    )
+    er.async_get(hass).async_get_or_create(
+        domain, "test", object_id, suggested_object_id=object_id, device_id=device.id
+    )
+    er.async_get(hass).async_update_entity(entity_id, area_id=_test_area(hass).id)
+
+
+async def test_a_device_matching_the_default_two_step_pattern_is_routed_automatically(hass: HomeAssistant):
+    """The point of this whole feature: an IKEA TRADFRI bulb gets
+    two-step transitions from apply_lighting with NO label applied at
+    all, purely because its device manufacturer/model matches
+    DEFAULT_TWO_STEP_MODEL_PATTERNS (CONF_TWO_STEP_MODELS left unset).
+    A pure tests/test_grouping.py test proves build_groups() itself is
+    correct; this proves __init__.py actually wires entry.options
+    through to a real service call - nothing else in the codebase does,
+    now that two_step_check.py (the repair) is gone."""
+    await _setup_entry(hass)
+    turn_on_calls = async_mock_service(hass, "light", "turn_on")
+    await _add_device_light(
+        hass, "light.spot_1", manufacturer="IKEA", model="TRADFRI bulb GU10, color/white spectrum, 345 lm"
+    )
+    _set_light(hass, "light.spot_1", "off", supported_color_modes=["color_temp"])
+
+    await _apply(hass, ["light.spot_1"], transition=0.2)
+
+    assert len(turn_on_calls) == 2, "an unlabelled but pattern-matching device should still split into two calls"
+    assert turn_on_calls[0].data == {"entity_id": ["light.spot_1"], "transition": 0.1, "brightness": 200}
+    assert turn_on_calls[1].data["color_temp_kelvin"] == 3000
+
+
+async def test_custom_two_step_model_patterns_are_read_from_the_config_entry(hass: HomeAssistant):
+    """The other half of the proof: a configured CONF_TWO_STEP_MODELS
+    that does NOT match this device means it must NOT be split - which
+    only holds if the custom list is actually being read (not just the
+    shipped default coincidentally working)."""
+    await _setup_entry(hass, options={CONF_TWO_STEP_MODELS: "*weird bulb*"})
+    turn_on_calls = async_mock_service(hass, "light", "turn_on")
+    await _add_device_light(
+        hass, "light.spot_1", manufacturer="IKEA", model="TRADFRI bulb GU10, color/white spectrum, 345 lm"
+    )
+    _set_light(hass, "light.spot_1", "off", supported_color_modes=["color_temp"])
+
+    await _apply(hass, ["light.spot_1"], transition=0.2)
+
+    assert len(turn_on_calls) == 1, "a device not matching the configured (custom) pattern list must not be split"
 
 
 async def test_a_dropped_first_write_self_heals_on_the_next_tick_with_no_interference(

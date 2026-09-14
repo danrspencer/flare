@@ -57,6 +57,86 @@ def test_update_group_splits_by_two_step_label():
     assert group.needing_off == []
 
 
+# The two_step_model_patterns parameter below defaults to () - every
+# test in this file above (and below) that doesn't pass it therefore
+# already proves omitting it behaves identically to before this
+# parameter existed; no need for a dedicated regression test to say so.
+
+
+def test_a_matching_device_pattern_routes_to_two_step_with_no_label():
+    """The live counterpart of the (now-removed) missing-label repair:
+    a bulb whose manufacturer/model matches a configured pattern gets
+    two-step transitions automatically, no label required at all."""
+    lookup = make_lookup(
+        states={"light.spot_1": {"state": "on", "attributes": {"brightness": 180, "color_temp_kelvin": 3050}}},
+        device_of={"light.spot_1": "dev1"},
+        device_identity={"dev1": ("IKEA", "TRADFRI bulb GU10, color/white spectrum, 345 lm")},
+    )
+    groups = build_groups(
+        entities=["light.spot_1"],
+        brightness_multipliers={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=lookup,
+        two_step_model_patterns=["*TRADFRI bulb*"],
+    )
+    assert groups[0].two_step == ["light.spot_1"]
+    assert groups[0].combined == []
+
+
+def test_a_label_still_routes_to_two_step_when_no_pattern_matches():
+    """Backward compatibility: the label alone remains sufficient, even
+    with a pattern list configured that doesn't match this device -
+    proving the label is a genuine independent path, not subsumed by
+    the pattern check."""
+    lookup = make_lookup(
+        states={"light.spot_1": {"state": "on", "attributes": {"brightness": 180, "color_temp_kelvin": 3050}}},
+        device_of={"light.spot_1": "dev1"},
+        device_identity={"dev1": ("Signify", "Hue color spot")},
+        labels_of={"dev1": ["no_combined_transition"]},
+    )
+    groups = build_groups(
+        entities=["light.spot_1"],
+        brightness_multipliers={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=lookup,
+        two_step_model_patterns=["*TRADFRI bulb*"],
+    )
+    assert groups[0].two_step == ["light.spot_1"]
+    assert groups[0].combined == []
+
+
+def test_neither_label_nor_pattern_match_routes_to_combined():
+    lookup = make_lookup(
+        states={"light.spot_1": {"state": "on", "attributes": {"brightness": 180, "color_temp_kelvin": 3050}}},
+        device_of={"light.spot_1": "dev1"},
+        device_identity={"dev1": ("Signify", "Hue color spot")},
+    )
+    groups = build_groups(
+        entities=["light.spot_1"],
+        brightness_multipliers={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=lookup,
+        two_step_model_patterns=["*TRADFRI bulb*"],
+    )
+    assert groups[0].combined == ["light.spot_1"]
+    assert groups[0].two_step == []
+
+
+def test_matches_two_step_pattern_direct_with_empty_patterns():
+    """Pins the "no patterns configured behaves like the feature
+    doesn't exist" contract directly on EntityLookup, not just through
+    build_groups()."""
+    lookup = make_lookup(
+        states={"light.spot_1": {"state": "on", "attributes": {}}},
+        device_of={"light.spot_1": "dev1"},
+        device_identity={"dev1": ("IKEA", "TRADFRI bulb GU10, color/white spectrum, 345 lm")},
+    )
+    assert lookup.matches_two_step_pattern("light.spot_1", []) is False
+
+
 def test_already_within_tolerance_is_skipped():
     lookup = make_lookup(
         states={
@@ -532,6 +612,47 @@ def test_rgb_two_step_label_splits_within_the_rgb_bucket():
     )
     assert groups[0].two_step_rgb == ["light.rgb_two_step"]
     assert groups[0].combined_rgb == ["light.rgb_combined"]
+
+
+def test_a_matching_device_pattern_routes_to_two_step_rgb_with_no_label():
+    lookup = make_lookup(
+        states={"light.rgb_spot": {"state": "off", "attributes": {"supported_color_modes": ["rgb"]}}},
+        device_of={"light.rgb_spot": "dev1"},
+        device_identity={"dev1": ("IKEA", "TRADFRI bulb GU10, color/white spectrum, 345 lm")},
+    )
+    groups = build_groups(
+        entities=["light.rgb_spot"],
+        brightness_multipliers={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=lookup,
+        two_step_model_patterns=["*TRADFRI bulb*"],
+        prefer_rgb_color=True,
+        rgb_color=(255, 180, 107),
+    )
+    assert groups[0].two_step_rgb == ["light.rgb_spot"]
+    assert groups[0].combined_rgb == []
+
+
+def test_a_label_still_routes_to_two_step_rgb_when_no_pattern_matches():
+    lookup = make_lookup(
+        states={"light.rgb_spot": {"state": "off", "attributes": {"supported_color_modes": ["rgb"]}}},
+        device_of={"light.rgb_spot": "dev1"},
+        device_identity={"dev1": ("Signify", "Hue color spot")},
+        labels_of={"dev1": ["no_combined_transition"]},
+    )
+    groups = build_groups(
+        entities=["light.rgb_spot"],
+        brightness_multipliers={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=lookup,
+        two_step_model_patterns=["*TRADFRI bulb*"],
+        prefer_rgb_color=True,
+        rgb_color=(255, 180, 107),
+    )
+    assert groups[0].two_step_rgb == ["light.rgb_spot"]
+    assert groups[0].combined_rgb == []
 
 
 def test_rgb_tolerance_skips_already_close_lights():

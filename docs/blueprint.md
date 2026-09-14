@@ -343,10 +343,10 @@ hand does the same for the whole room.
 ## Other behaviour worth knowing
 
 **Two-step transitions.** Some bulbs can't change brightness and colour
-in one command. Label the light or its device `no_combined_transition`
-and FLARE sends two commands instead. Nothing to set in the blueprint;
-if FLARE recognises a bulb that needs it, a repair appears with a Fix
-button. See
+in one command. FLARE sends two commands instead automatically for any
+bulb matching its configured model patterns - nothing to set in the
+blueprint. For a bulb a pattern doesn't cover, label the light or its
+device `no_combined_transition` by hand. See
 [two-step transition bulbs](../advanced/reference/#two-step-transition-bulbs).
 
 **Self-healing.** If the room has been empty for the full **Wait time**
