@@ -27,6 +27,29 @@ CI — see `.github/workflows/release.yml`.
   room was off, which stopped being a fair question once a room's "off"
   could be dim.
 
+- **Two-step bulbs reporting back in a different colour mode, or sitting
+  at their own colour-temperature ceiling, no longer get released as
+  "overridden."** A bulb that echoed its actual colour via `rgb_color`/
+  `xy` instead of `color_temp_kelvin` (a live incident: IKEA TRADFRI
+  spots, after ~89 minutes unavailable) could never match a
+  colour-temperature claim by value at all, and a bulb correctly
+  settling at its own advertised maximum colour temperature - asked for
+  something above what it can produce - was compared only against the
+  raw, un-clamped target. Both now compare correctly, so a bulb behaving
+  exactly as commanded no longer reads as if someone else had grabbed it.
+
+### Added
+
+- **Two-step transition bulbs are now detected automatically, by device
+  manufacturer/model, with no label required.** Getting the
+  `no_combined_transition` label onto a known-bad bulb (like an IKEA
+  TRADFRI) used to depend on a repair being noticed and its Fix button
+  pressed - and if it wasn't, the bulb kept misbehaving. Any light whose
+  device matches a pattern in the (still-configurable, Settings →
+  Devices & Services → FLARE → Configure) model list is now routed into
+  two-step transitions directly. The label still works as a manual
+  override for anything the pattern list doesn't cover.
+
 ### Removed
 
 - **Update Jitter is gone.** It spread each room's updates over a random
@@ -44,6 +67,11 @@ CI — see `.github/workflows/release.yml`.
 
   You don't need to do anything. An `update_jitter` left in a room's
   configuration is simply ignored.
+
+- **The "bulbs missing the two-step label" repair is gone.** It only
+  ever existed to get you to label a bulb the pattern list could
+  already identify - now that matching happens automatically (see
+  Added, above), there was nothing left for it to usefully suggest.
 
 ### Changed
 
@@ -96,6 +124,13 @@ CI — see `.github/workflows/release.yml`.
   that scale, and now match the Brightness Template exactly. Both are
   absolute brightnesses, so a level means the same thing whether the room
   is in use or idle.
+
+- **The blueprint's internal trigger and variable names dropped their
+  "adaptive_" prefix** (`adaptive` → `phase_change`, `adaptive_tick` →
+  `tick`, `adaptive_target_entities` → `target_entities`), and its
+  comments were trimmed throughout for readability. Purely internal - no
+  input was renamed, and behaviour is unchanged - but re-importing the
+  blueprint (as the version-check repair will offer) picks it up.
 
 ## [0.15.7] - 2026-09-08
 
