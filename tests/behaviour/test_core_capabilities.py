@@ -225,18 +225,37 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     )
 
 
-# STILL NOT covered here: a light switched off by hand staying off.
-#
-# It looks like a basic, and it is a real guarantee - classify() does
-# not short-circuit on `not is_on`, so an off light with an `observed`
-# claim that asked for brightness reads as `overridden` and is excluded.
-#
-# The original reason this was out of reach is gone: conftest.py's
-# tracking_scope/tracked_scope fixtures now build a real FLARE Tracking
-# state device and assign every bulb its area, exactly what was missing
-# below. What's still missing is the test itself - depend on
-# tracked_scope (not tracking_scope; there is no meaningful untracked
-# half of "does an override stick"), turn a bulb off by hand, and assert
-# it stays off through the next tick. Left out of this pass
-# because writing and mutation-verifying it is its own piece of work,
-# not because it can't be done.
+async def test_a_light_switched_off_by_hand_stays_off(
+    hass: HomeAssistant, add_bulbs, setup_room, tracked_scope, frozen_time
+) -> None:
+    """classify() does not short-circuit on `not is_on` - an off light is
+    judged against its claims exactly like an on one, so a turn-off
+    FLARE didn't do reads as overridden and is left alone, the same
+    guarantee a brightness change gets. Needs tracked_scope specifically
+    (not the parametrized tracking_scope): there is no meaningful
+    untracked half of "does an override stick" - untracked, nothing
+    holds a claim to override in the first place.
+
+    The room stays occupied throughout (five of the six bulbs remain
+    on), so this only exercises the override itself, not the separate
+    "scope goes dark, every claim releases" path covered by
+    test_the_room_ends_up_dark_once_it_is_empty above.
+    """
+    bulbs = await lit_room(hass, add_bulbs, setup_room, tracked_scope)
+    target = bulbs[0]
+
+    await hass.services.async_call(
+        "light", "turn_off", {"entity_id": target.entity_id}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get(target.entity_id).state == "off", (
+        "precondition: the hand turn-off must actually land, or this test proves nothing"
+    )
+
+    await let_time_pass(hass, frozen_time, 60)
+
+    expected = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    expected[target.entity_id] = "off"
+    assert room_brightness(hass, bulbs) == expected, (
+        "a light switched off by hand was relit by the next periodic tick"
+    )
