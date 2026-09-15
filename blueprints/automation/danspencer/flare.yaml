@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.8 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.9 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -287,24 +287,25 @@ trigger_variables:
 
 trigger:
   # Fires only on a genuine phase change, not the attribute-only ticks
-  # during a ramp (adaptive_tick below covers those). The `to:` list is
+  # during a ramp (tick below covers those). The `to:` list is
   # what does this - a plain state trigger with no from:/to: also fires
   # on attribute-only changes. `from:` is left open so a restart or
   # first-ever value still fires.
   - platform: state
     entity_id: !input adaptive_sensor
-    id: adaptive
+    id: phase_change
     to:
       - Morning
       - Day
       - Evening
       - Night
   # Periodic floor tick - the only driver of tracking during Morning/
-  # Night, where the curve is flat and adaptive never fires. Also hosts
-  # the self-heal check (see action:). A separate id from `adaptive`
-  # because scene_recheck_due reads trigger.from_state/to_state, which
-  # a time_pattern trigger has no equivalent of.
-  - id: adaptive_tick
+  # Night, where the curve is flat and phase_change never fires. Also
+  # hosts the self-heal check (see action:). A separate id from
+  # `phase_change` because scene_recheck_due reads
+  # trigger.from_state/to_state, which a time_pattern trigger has no
+  # equivalent of.
+  - id: tick
     platform: time_pattern
     minutes: !input update_interval
   # Anything named in Additional Triggers changed - e.g. a TV for a
@@ -334,7 +335,7 @@ trigger:
         unavailable/unknown, rather than waiting for the next unrelated
         tick. No special handling beyond causing an ordinary tick to
         run: off stays off, on gets corrected via the usual
-        adaptive_target_entities/allow_turn_on logic.
+        target_entities/allow_turn_on logic.
 
         Needed because write_tracking.py clears an entity's override-
         protection record the moment it goes unavailable, so nothing
@@ -349,7 +350,8 @@ trigger:
         "none unavailable" - the latter means one permanently-
         unavailable orphan entity blocks recovery for the whole room
         forever. Accepted blind spot: a bulb recovering beside already-
-        reachable siblings doesn't fire this; adaptive_tick mops that up.
+        reachable siblings doesn't fire this; the periodic tick mops
+        that up.
       #}
       {% set ns = namespace(entities=[]) %}
       {% if room_target is not none %}
@@ -376,11 +378,11 @@ trigger:
          | list | length > 0 }}
 
 condition:
-  # condition: never checks occupancy - adaptive/extra/recovered always
-  # proceed (an already-on light should track the curve regardless of
-  # who's in the room); motion_on keeps only an efficiency check (skip
-  # if there's nothing to turn on). allow_turn_on below decides actual
-  # permission.
+  # condition: never checks occupancy - phase_change/extra/recovered
+  # always proceed (an already-on light should track the curve
+  # regardless of who's in the room); motion_on keeps only an
+  # efficiency check (skip if there's nothing to turn on). allow_turn_on
+  # below decides actual permission.
   #
   # `or idle_entities` is what lets motion work in an idle (dimly-lit)
   # room: "is anything off?" alone is a false negative there, since
@@ -419,11 +421,11 @@ variables:
   phase: "{{ states(adaptive_sensor) }}"
   prefer_rgb_color: "{{ phase in rgb_phases }}"
   script_transition: >
-    {# Slow, smooth transition for adaptive/extra/recovered updates -
+    {# Slow, smooth transition for phase_change/extra/recovered updates -
        none of these are a person waiting on a response in real time,
        so there's no reason to snap. Snappier for actual motion or a
        manual run instead. #}
-    {% if trigger is defined and trigger.id is defined and trigger.id in ['adaptive', 'adaptive_tick', 'extra', 'recovered'] %}
+    {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}
       {{ background_transition }}
     {% else %}
       {{ motion_on_transition }}
@@ -794,14 +796,14 @@ variables:
   # override protection, so re-issuing every minute would stomp a
   # manual change to one of the scene's own lights.
   #
-  # Only an `adaptive` tick whose phase didn't actually change is
+  # Only a `phase_change` whose phase didn't actually change is
   # skipped; the periodic floor tick is excluded outright since it has
   # no from_state/to_state to compare (reading them would abort the run).
   scene_recheck_due: >
-    {% if trigger is defined and trigger.id is defined and trigger.id == 'adaptive_tick' %}
+    {% if trigger is defined and trigger.id is defined and trigger.id == 'tick' %}
       false
     {% else %}
-      {{ not (trigger is defined and trigger.id is defined and trigger.id == 'adaptive')
+      {{ not (trigger is defined and trigger.id is defined and trigger.id == 'phase_change')
          or trigger.from_state is none
          or trigger.to_state is none
          or trigger.from_state.state != trigger.to_state.state }}
@@ -814,7 +816,7 @@ variables:
   # is only ever used when switching a light on is already permitted.
   # Don't re-add a per-entity `reject('is_state', 'off')` filter here -
   # it's redundant with that gate, not a second layer of protection.
-  adaptive_target_entities: >
+  target_entities: >
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
   - choose:
@@ -886,7 +888,7 @@ action:
                       {% set ns.t = dict(ns.t, **{e: {'state': 'off'}}) %}
                     {% endfor %}
                     {{ ns.t }}
-      # Self-healing: on an adaptive_tick, if the room is unoccupied but
+      # Self-healing: on the periodic tick, if the room is unoccupied but
       # something is still on (an earlier turn-off didn't land), retry
       # just that. Exclusive of default: rather than doing both -
       # entities_still_on is computed once in variables:, before
@@ -894,16 +896,16 @@ action:
       # just-turned-off light straight back on. The next tick resumes.
       - alias: "Self-heal: retry an earlier turn-off that didn't land"
         conditions:
-          # `adaptive` too, not just the tick: leaving a phase whose
+          # phase_change too, not just the tick: leaving a phase whose
           # idle brightness was set for one whose isn't empties
           # idle_entities, so the room's lights are still ON but no
           # longer read as idle - which would otherwise ramp them to
           # full on the very next default: tick instead of turning off.
           - condition: trigger
-            alias: "Triggered by adaptive_tick or a phase change"
+            alias: "Triggered by the periodic tick or a phase change"
             id:
-              - adaptive_tick
-              - adaptive
+              - tick
+              - phase_change
           # No occupancy sensor means nothing to reconcile against.
           - condition: template
             alias: "Room has an occupancy sensor to reconcile against"
@@ -1018,7 +1020,7 @@ action:
               - alias: "Apply adaptive lighting (FLARE)"
                 action: flare.apply_lighting
                 data:
-                  entities: "{{ adaptive_target_entities }}"
+                  entities: "{{ target_entities }}"
                   brightness_multipliers: "{{ brightness_multipliers }}"
                   brightness: 255
                   color_temp_kelvin: "{{ color_temp_kelvin }}"

@@ -15,9 +15,9 @@ wrong at runtime):
    own arming evaluation - it could never fire, in any room, from the
    moment it shipped.
 2. Once fixed, `apply_lighting` was found to turn on any off light
-   whenever *any* non-motion/non-manual tick ran (adaptive, extra, or
-   the now-working recovered) - never caught before because recovered
-   never ran at all.
+   whenever *any* non-motion/non-manual tick ran (phase_change, extra,
+   or the now-working recovered) - never caught before because
+   recovered never ran at all.
 
 Organised to mirror docs/blueprint.md's own section headings, one test
 class per feature - read top to bottom, this file is meant to double as
@@ -158,7 +158,7 @@ def _sensor(hass: HomeAssistant):
 @pytest.fixture(autouse=True)
 def frozen_time():
     """Every test in this file sets up a real automation carrying a live
-    adaptive_tick (time_pattern, every 1 minute - see
+    tick (time_pattern, every 1 minute - see
     TestAdaptiveScheduleAndTransitions.test_a_flat_curve_still_gets_a_tick_from_the_time_pattern),
     plus reconcile (time_pattern, every 5 minutes by default). Without
     controlling wall-clock time, any test whose setup-plus-assertion
@@ -172,7 +172,7 @@ def frozen_time():
 
     A first attempt just did `with freeze_time(dt_util.utcnow()):` file-
     wide, no `real_asyncio`. That made things *worse*, not better -
-    confirmed live in CI (a real `adaptive_tick`-triggered call showed up
+    confirmed live in CI (a real `tick`-triggered call showed up
     in two unrelated tests' assertions the very first run after shipping
     it) and reproduced in isolation afterward: without
     `real_asyncio=True`, freezegun also mocks the clock asyncio's own
@@ -199,7 +199,7 @@ def frozen_time():
     current minute (rather than at `dt_util.utcnow()` verbatim, which
     could itself land arbitrarily close to a boundary) makes that gap
     deterministic and always large: at least ~58 real seconds until
-    `adaptive_tick` could next fire, comfortably longer than this whole
+    `tick` could next fire, comfortably longer than this whole
     file's total real run time (a few seconds, single-digit at most) -
     not just this one test's.
 
@@ -260,12 +260,12 @@ class TestAdaptiveScheduleAndTransitions:
 
         assert apply_lighting_calls == []
 
-    async def test_periodic_adaptive_tick_updates_an_already_on_light(self, hass, apply_lighting_calls):
+    async def test_periodic_tick_updates_an_already_on_light(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
         await _setup_room_automation(hass, room_target={"entity_id": "light.a"})
 
-        # Same-phase attribute-only write - adaptive_tick, not adaptive
+        # Same-phase attribute-only write - tick, not phase_change
         # (whose own `to:` filter no longer fires here), is what picks
         # this up.
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
@@ -294,8 +294,8 @@ class TestAdaptiveScheduleAndTransitions:
         which a platform: state trigger never sees. Found live: the
         sensor's last_updated sat unmoved for ~56 minutes while
         last_reported kept advancing, and no room logged a single
-        adaptive-triggered run in that window. The time_pattern floor is
-        what guarantees a tick regardless."""
+        phase_change-triggered run in that window. The time_pattern
+        floor is what guarantees a tick regardless."""
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
         await hass.async_block_till_done()
@@ -329,7 +329,7 @@ class TestAdaptiveScheduleAndTransitions:
 
         assert scene_turn_on_calls == []
 
-    async def test_adaptive_tick_uses_the_background_transition_duration(self, hass, apply_lighting_calls):
+    async def test_tick_uses_the_background_transition_duration(self, hass, apply_lighting_calls):
         _light(hass, "light.a", "on")
         await hass.async_block_till_done()
         await _setup_room_automation(
@@ -363,11 +363,11 @@ class TestAdaptiveScheduleAndTransitions:
     async def test_attribute_only_same_phase_update_does_not_call_apply_lighting(
         self, hass, apply_lighting_calls
     ):
-        """The `adaptive` trigger's own `to:` filter absorbs this at the
-        HA core event-listener level - it never even reaches this
+        """The `phase_change` trigger's own `to:` filter absorbs this at
+        the HA core event-listener level - it never even reaches this
         automation's condition:/action:. Ordinary attribute-level
-        tracking during a ramp still happens, just via adaptive_tick on
-        its own schedule (see test_periodic_adaptive_tick_updates_an_already_on_light
+        tracking during a ramp still happens, just via the periodic tick
+        on its own schedule (see test_periodic_tick_updates_an_already_on_light
         above), not via this trigger."""
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
@@ -472,7 +472,7 @@ class TestAdaptiveScheduleAndTransitions:
         )
         apply_lighting_calls.clear()
 
-        # Same-phase attribute tick, only adaptive_tick can pick it up.
+        # Same-phase attribute tick, only tick can pick it up.
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 220, "color_temp": 4000})
         await hass.async_block_till_done()
 
@@ -770,7 +770,7 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
-        # A real tick did fire (adaptive_tick) - this isn't passing
+        # A real tick did fire (tick) - this isn't passing
         # vacuously. It used to prove that by asserting apply_lighting
         # was called (with an empty entity list); it now isn't called at
         # all, because both turn-on paths sit inside default:'s single
@@ -791,7 +791,7 @@ class TestAllowTurnOn:
 
     @pytest.mark.parametrize(
         "trigger_name",
-        ["adaptive", "adaptive_tick", "extra", "recovered"],
+        ["phase_change", "tick", "extra", "recovered"],
     )
     async def test_no_trigger_reaching_default_can_light_a_dark_empty_room(
         self, hass, apply_lighting_calls, scene_turn_on_calls, trigger_name
@@ -825,9 +825,9 @@ class TestAllowTurnOn:
             extra_triggers=["binary_sensor.extra_dep"],
         )
 
-        if trigger_name == "adaptive":
+        if trigger_name == "phase_change":
             hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700})
-        elif trigger_name == "adaptive_tick":
+        elif trigger_name == "tick":
             async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         elif trigger_name == "extra":
             hass.states.async_set("binary_sensor.extra_dep", "on", {})
@@ -1080,7 +1080,7 @@ class TestRecoveredTrigger:
         """The accepted blind spot of the aggregate shape: a single bulb
         dropping and returning while its siblings stay up never moves
         "is anything reachable", so `recovered` doesn't fire. Left to the
-        periodic adaptive_tick to mop up - which is exactly why that
+        periodic tick to mop up - which is exactly why that
         trigger exists. Asserted so the trade-off is visible rather than
         discovered."""
         _light(hass, "light.flaky", "unavailable")
@@ -1101,7 +1101,7 @@ class TestSceneHandoff:
         self, hass, apply_lighting_calls, scene_turn_on_calls
     ):
         """Regression test for a real bug: an earlier version suppressed
-        the *entire* adaptive tick whenever trigger.id == 'adaptive' and
+        the *entire* run whenever trigger.id == 'phase_change' and
         a scene was already active - which also blocked the very tick
         meant to activate a phase-picked scene in the first place,
         whenever the room stayed continuously occupied across the phase
@@ -1619,11 +1619,11 @@ class TestSelfHealing:
         await hass.async_block_till_done()
 
         assert light_turn_off_calls and "light.a" in light_turn_off_calls[-1].data["entity_id"]
-        # Self-heal now shares adaptive_tick's own trigger/interval - a
+        # Self-heal now shares tick's own trigger/interval - a
         # tick where it fires must stay exclusive of apply_lighting in
         # the same run, or the just-turned-off light would immediately
         # get turned back on from the stale (pre-turn-off) entity list
-        # resolved_entities/adaptive_target_entities computed once, in
+        # resolved_entities/target_entities computed once, in
         # variables:, before action: ran.
         assert apply_lighting_calls == []
 
@@ -1642,9 +1642,9 @@ class TestSelfHealing:
 
         assert light_turn_off_calls == []
         # The self-heal branch's own conditions correctly don't match
-        # while occupied, so this adaptive_tick tick falls through to
+        # while occupied, so this tick tick falls through to
         # default: and reapplies lighting as normal, same as any other
-        # adaptive_tick - the merge didn't accidentally suppress that.
+        # tick - the merge didn't accidentally suppress that.
         assert apply_lighting_calls
 
     async def test_reconcile_ignores_a_momentary_occupancy_blip_shorter_than_wait_time(
@@ -1859,7 +1859,7 @@ class TestIdleBrightness:
         other motion test starts from a dark room. condition: carries an
         efficiency check that skips a motion_on run when nothing is off,
         and an idle room has everything on, just dim. That aborted the
-        run, so the room only brightened on the next adaptive_tick: up to
+        run, so the room only brightened on the next tick: up to
         a minute late, and with background_transition rather than
         motion_on_transition, because script_transition keys off the
         trigger id. A brief passage never brightened it at all.

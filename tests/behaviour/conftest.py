@@ -79,7 +79,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 def frozen_time():
     """Wall-clock control for every test here.
 
-    Each test sets up a real automation carrying a live `adaptive_tick`
+    Each test sets up a real automation carrying a live `tick`
     (time_pattern, every minute), so a test whose setup-and-assert
     window straddles a real minute boundary can have one fire for real
     mid-test - indistinguishable from the thing being asserted.
@@ -93,7 +93,7 @@ def frozen_time():
 
     Anchoring a couple of seconds PAST the minute (rather than at
     utcnow() verbatim, which could land arbitrarily close to a boundary)
-    leaves ~58 real seconds before `adaptive_tick` could next fire -
+    leaves ~58 real seconds before `tick` could next fire -
     longer than this whole directory takes to run.
 
     A test needing time to pass takes this fixture by name and calls
@@ -122,7 +122,7 @@ async def let_time_pass(hass: HomeAssistant, frozen, seconds: int) -> None:
 @pytest.fixture(autouse=True)
 def expected_lingering_timers():
     """Every test here sets up a real automation, which arms the
-    blueprint's `adaptive_tick` time_pattern trigger (`update_interval`,
+    blueprint's `tick` time_pattern trigger (`update_interval`,
     every minute by default). That timer is still correctly scheduled
     when the test ends, because nothing tears the automation down first.
 
