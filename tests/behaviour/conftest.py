@@ -31,15 +31,17 @@ from freezegun import freeze_time
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
+    ATTR_RGB_COLOR,
     ColorMode,
     LightEntity,
 )
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
+from homeassistant.util import color as color_util
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -144,31 +146,124 @@ class FakeBulb(LightEntity):
     validation run against it, and hass.states reports what it actually
     holds rather than what someone asked for.
 
-    Colour-temp only, because that is what the curve drives. A bulb
-    needing RGB is a per-test concern, not a default.
+    Colour-temp only by default, because that is what the curve drives.
+    `supports_rgb`/`reports_via_rgb`/`needs_two_step` opt a specific bulb
+    into the device quirks tests/behaviour/test_device_quirks.py needs;
+    most tests want none of them.
     """
 
-    _attr_supported_color_modes = {ColorMode.COLOR_TEMP}
-    _attr_color_mode = ColorMode.COLOR_TEMP
     _attr_should_poll = False
 
-    def __init__(self, name: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        *,
+        supports_rgb: bool = False,
+        reports_via_rgb: bool = False,
+        needs_two_step: bool = False,
+    ) -> None:
         self._attr_name = name
         self._attr_unique_id = name
         self._attr_is_on = False
+        self._attr_available = True
         self._attr_brightness = None
         self._attr_color_temp_kelvin = None
+        self._attr_rgb_color = None
+        modes = {ColorMode.COLOR_TEMP}
+        if supports_rgb or reports_via_rgb:
+            modes.add(ColorMode.RGB)
+        self._attr_supported_color_modes = modes
+        self._attr_color_mode = ColorMode.COLOR_TEMP
+        # Some real bulbs (the IKEA TRADFRI incident this stands in for)
+        # only ever report their actual colour via rgb_color, translating
+        # any color_temp_kelvin command internally rather than echoing it
+        # back the way a plain colour-temp bulb does.
+        self._reports_via_rgb = reports_via_rgb
+        # The actual defect two-step transitions exist for
+        # (docs/advanced/reference.md: "sent together, they snap or drop
+        # one of the two"): brightness genuinely CHANGING VALUE in the
+        # same call as a colour change only ever applies the brightness.
+        # Real two-step dispatch's own second call (__init__.py's
+        # _two_step_turn_on) still carries brightness alongside colour -
+        # it just re-sends the SAME brightness the first call already
+        # landed, which is why "brightness changing" rather than merely
+        # "brightness present" is what has to gate this: a bulb that
+        # dropped colour whenever both keys were merely PRESENT would
+        # also drop it on that legitimate second call, indistinguishable
+        # from a broken combined dispatch.
+        self._needs_two_step = needs_two_step
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._attr_is_on = True
+        self._attr_available = True
+        has_colour = ATTR_COLOR_TEMP_KELVIN in kwargs or ATTR_RGB_COLOR in kwargs
+        brightness_changing = ATTR_BRIGHTNESS in kwargs and kwargs[ATTR_BRIGHTNESS] != self._attr_brightness
+        drop_colour = self._needs_two_step and brightness_changing and has_colour
         if ATTR_BRIGHTNESS in kwargs:
             self._attr_brightness = kwargs[ATTR_BRIGHTNESS]
+        if drop_colour:
+            self.async_write_ha_state()
+            return
         if ATTR_COLOR_TEMP_KELVIN in kwargs:
-            self._attr_color_temp_kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
+            kelvin = kwargs[ATTR_COLOR_TEMP_KELVIN]
+            if self._reports_via_rgb:
+                self._attr_color_mode = ColorMode.RGB
+                self._attr_rgb_color = color_util.color_temperature_to_rgb(kelvin)
+                self._attr_color_temp_kelvin = None
+            else:
+                self._attr_color_mode = ColorMode.COLOR_TEMP
+                self._attr_color_temp_kelvin = kelvin
+                self._attr_rgb_color = None
+        if ATTR_RGB_COLOR in kwargs:
+            self._attr_color_mode = ColorMode.RGB
+            self._attr_rgb_color = kwargs[ATTR_RGB_COLOR]
+            self._attr_color_temp_kelvin = None
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._attr_is_on = False
+        self.async_write_ha_state()
+
+    async def async_go_unavailable(self) -> None:
+        """Stand in for a dropped Zigbee/MQTT connection."""
+        self._attr_available = False
+        self.async_write_ha_state()
+
+    async def async_echo(
+        self,
+        *,
+        is_on: bool = True,
+        brightness: int | None = None,
+        color_temp_kelvin: int | None = None,
+        rgb_color: tuple | None = None,
+    ) -> None:
+        """A state report that did NOT arrive as this call's own
+        response to a service call - standing in for the device's own
+        asynchronous echo (a Zigbee/MQTT integration publishing on its
+        own), which is what leaves an entity reporting under a context
+        unrelated to whichever automation run last wrote it. Real bulbs
+        do this constantly (reconnecting after a dropout, retained MQTT
+        state); async_turn_on can't model it, because HA attaches the
+        calling service's own context automatically.
+
+        async_set_context is the same public hook HA's own entity
+        component calls before invoking a service - using it here is
+        not a hack around the framework, it is the framework's own way
+        of saying "this write did not come from that context".
+        """
+        self.async_set_context(Context())
+        self._attr_available = True
+        self._attr_is_on = is_on
+        if brightness is not None:
+            self._attr_brightness = brightness
+        if color_temp_kelvin is not None:
+            self._attr_color_mode = ColorMode.COLOR_TEMP
+            self._attr_color_temp_kelvin = color_temp_kelvin
+            self._attr_rgb_color = None
+        if rgb_color is not None:
+            self._attr_color_mode = ColorMode.RGB
+            self._attr_rgb_color = rgb_color
+            self._attr_color_temp_kelvin = None
         self.async_write_ha_state()
 
 
@@ -547,10 +642,29 @@ def add_bulbs(hass: HomeAssistant):
     scope. Pass tracking_scope or tracked_scope's return value; leave it
     unset for a room with no area at all, which is what every call here
     did before those fixtures existed.
+
+    `overrides` maps a bulb's name to a dict of per-bulb settings:
+    anything else is passed straight through to FakeBulb's own
+    constructor (`supports_rgb`/`reports_via_rgb`), and a `device` key
+    ({"manufacturer": ..., "model": ...}) registers a real device for
+    that bulb and links its entity to it - what
+    EntityLookup.manufacturer_model() (and so two-step pattern
+    matching) actually reads. Registering it here rather than via
+    FakeBulb's own device_info is deliberate: this platform is set up
+    from YAML (setup_test_component_platform + a plain `platform: test`
+    entry), which has no config_entry, and HA's entity platform only
+    creates a device from device_info when one exists (see
+    homeassistant/helpers/entity_platform.py's _async_add_entity) - so
+    a YAML-registered entity's device_info is silently never acted on.
     """
 
-    async def _add(*names: str, area_id: str | None = None) -> list[FakeBulb]:
-        bulbs = [FakeBulb(name) for name in names]
+    async def _add(
+        *names: str, area_id: str | None = None, **overrides: dict
+    ) -> list[FakeBulb]:
+        bulbs = [
+            FakeBulb(name, **{k: v for k, v in overrides.get(name, {}).items() if k != "device"})
+            for name in names
+        ]
         setup_test_component_platform(hass, "light", bulbs)
         assert await async_setup_component(hass, "light", {"light": {"platform": "test"}})
         await hass.async_block_till_done()
@@ -560,6 +674,22 @@ def add_bulbs(hass: HomeAssistant):
             registry = er.async_get(hass)
             for bulb in bulbs:
                 registry.async_update_entity(bulb.entity_id, area_id=area_id)
+        owner = None
+        for bulb in bulbs:
+            device = overrides.get(bulb.name, {}).get("device")
+            if device is None:
+                continue
+            if owner is None:
+                owner = MockConfigEntry(domain="test")
+                owner.add_to_hass(hass)
+            device_entry = dr.async_get(hass).async_get_or_create(
+                config_entry_id=owner.entry_id,
+                identifiers={("test", bulb.unique_id)},
+                manufacturer=device["manufacturer"],
+                model=device["model"],
+                name=bulb.name,
+            )
+            er.async_get(hass).async_update_entity(bulb.entity_id, device_id=device_entry.id)
         return bulbs
 
     return _add
