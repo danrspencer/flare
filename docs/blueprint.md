@@ -357,3 +357,8 @@ are left out.
 **Lights that come back online.** When a light reappears after a
 dropout, the room updates straight away rather than waiting for the next
 scheduled update.
+
+If you want to understand the insides of the blueprint, check out our
+[test trace reports](../trace-report/) - a real run of its triggers,
+conditions and actions, step by step, each one matched against the
+source line it comes from.
