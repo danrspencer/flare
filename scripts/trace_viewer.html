@@ -98,6 +98,12 @@
   }
   .step:hover, .step.active { background: var(--row-hover); }
   .step.active { border-left-color: var(--accent); }
+  /* Every ancestor of the hovered/active step, so a deeply-nested leaf's
+     path up to the root reads as a trail - never a sibling at any level,
+     which is what makes this useful rather than just noisy. Subtler than
+     .active on both counts (background and border) so the actual
+     hovered row still reads as "the" selected one. */
+  .step.ancestor { background: #222428; border-left-color: rgba(106, 169, 255, 0.35); }
   .step .marker { display: inline-block; width: 14px; text-align: center; }
   .marker.pass { color: var(--pass); }
   .marker.fail { color: var(--fail); }
@@ -276,10 +282,27 @@ function clearHighlight() {
   document.querySelectorAll(".yline.hl").forEach((el) => el.classList.remove("hl"));
 }
 
+function highlightAncestors(path, rowEl) {
+  document.querySelectorAll(".step.ancestor").forEach((el) => el.classList.remove("ancestor"));
+  // Scoped to this row's own run (rowEl.closest(".run")), not the whole
+  // document: "all runs" mode renders more than one .run box at once,
+  // sibling runs can easily share the same path (e.g. every run has an
+  // "action/0"), and highlighting those would mark an unrelated run's
+  // rows as ancestors of this one.
+  const run = rowEl && rowEl.closest(".run");
+  if (!run) return;
+  run.querySelectorAll(".step").forEach((el) => {
+    if (el !== rowEl && el.dataset.path && path.startsWith(el.dataset.path + "/")) {
+      el.classList.add("ancestor");
+    }
+  });
+}
+
 function showStep(path, rowEl) {
   if (activeRow) activeRow.classList.remove("active");
   activeRow = rowEl;
   if (rowEl) rowEl.classList.add("active");
+  highlightAncestors(path, rowEl);
 
   const node = resolveYamlPath(path.split("/"));
   clearHighlight();
@@ -345,6 +368,7 @@ function renderRun(run, container) {
 
     const row = document.createElement("div");
     row.className = "step";
+    row.dataset.path = path;
     row.style.paddingLeft = 10 + depth * 14 + "px";
 
     const marker = document.createElement("span");
