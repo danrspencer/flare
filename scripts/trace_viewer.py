@@ -35,6 +35,18 @@ Then: mise run test:behaviour to (re)capture traces, pick one from the
 dropdown. The YAML is re-read from disk on every /api/yaml request, so
 editing the blueprint and hitting the page's Reload button reflects the
 change with no server restart needed.
+
+--export DIR writes a static snapshot instead of serving one: DIR/
+index.html (a plain copy - trace_viewer.html already fetches "api/yaml"/
+"api/traces"/"api/trace/<name>" as paths relative to wherever it's
+served, not absolute ones, so the exact same file works unmodified
+whether that's this server's own root or a docs-site subdirectory),
+DIR/api/yaml and DIR/api/traces (the same JSON these routes serve, just
+written to disk once rather than computed per-request), and DIR/api/
+trace/<name> for every captured trace-dumps/*.json. Used by
+.github/workflows/docs.yml to publish the current trace-dumps/ into the
+docs site as a page with no nav entry - reachable only by URL, not
+linked from anywhere in the site.
 """
 
 from __future__ import annotations
@@ -178,11 +190,39 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"error": "not found"}, status=404)
 
 
+def _write_export(target: Path) -> None:
+    """The static counterpart of Handler.do_GET - same three routes, each
+    written once to disk instead of computed per-request. `target`
+    becomes a self-contained directory: copy it anywhere static files
+    are served from and it works, since trace_viewer.html fetches these
+    same three paths relative to its own location."""
+    api_dir = target / "api"
+    trace_dir = api_dir / "trace"
+    trace_dir.mkdir(parents=True, exist_ok=True)
+
+    (target / "index.html").write_bytes(HTML_PATH.read_bytes())
+    (api_dir / "yaml").write_text(json.dumps(_yaml_payload()), encoding="utf-8")
+    (api_dir / "traces").write_text(json.dumps(_trace_listing()), encoding="utf-8")
+    for p in TRACE_DIR.glob("*.json"):
+        (trace_dir / p.name).write_bytes(p.read_bytes())
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-open", action="store_true", help="don't launch a browser")
+    parser.add_argument(
+        "--export",
+        metavar="DIR",
+        type=Path,
+        help="write a static snapshot to DIR instead of serving one (see module docstring)",
+    )
     args = parser.parse_args()
+
+    if args.export is not None:
+        _write_export(args.export)
+        print(f"Static trace report written to {args.export}")
+        return
 
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{args.port}/"

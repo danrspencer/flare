@@ -742,6 +742,30 @@ conversion of `kelvin`; there is no separate RGB curve.
 
 ### Blueprint (`blueprints/automation/danspencer/flare.yaml`)
 
+**Every `condition:` (leaf and composite - `and`/`or`/`not`/`trigger`/
+`template`/`occupancy.is_detected`) and every `choose:` branch carries
+an `alias:`.** Purely cosmetic - HA ignores it for evaluation, confirmed
+against `CONDITION_BASE_SCHEMA`/`_SCRIPT_CHOOSE_SCHEMA` in
+`homeassistant/helpers/config_validation.py`, both of which accept it
+as `vol.Optional`. It exists because the trace viewer (see "The
+blueprint trace viewer..." above) otherwise has nothing but a bare
+`condition: trigger`/`condition: and` to show for a step with no
+alias, which is unreadable at a glance - added at the user's request
+once the viewer's own alias-preference made the gap in the blueprint
+obvious. **The one place this couldn't be additive:** the top-level
+`condition:` block used `or:`/`and:`/`not:` *shorthand* (a single-key
+map, e.g. `{or: [...]}`), and the viewer's `resolveYamlPath()` detects
+that shape by checking the map has exactly one key - adding a sibling
+`alias:` key would have broken that detection for every path
+underneath it. Rewritten to the explicit form (`condition: or,
+conditions: [...]`) instead, which HA normalizes shorthand to
+internally anyway (same trace paths either way - confirmed, this is
+why `trace_viewer.py`'s own docstring already knew about the
+normalization), so the alias could be added as an ordinary sibling of
+a real `conditions:` key with no risk to path resolution. No other
+`and`/`or`/`not` in the blueprint uses shorthand, so this was a one-time
+fix, not a pattern to repeat elsewhere.
+
 **`room_target`** is a single entity/device/area/floor/label `target`
 doing double duty: lights within it are controlled, occupancy-class
 `binary_sensor`s within it govern occupancy via HA's native `occupancy`
@@ -1411,6 +1435,23 @@ caught. Don't "simplify" it back to the shared fixture.
   and a `render_preview_svg.py` that rendered a static SVG for the
   README - all three deleted. The SVG renderer was a third copy of the
   chart's drawing logic and had already drifted from the card.
+- **The blueprint trace viewer is also published to the docs site, main
+  builds only, with no link to it anywhere.** `scripts/trace_viewer.py`
+  is normally a local dev tool (a Python server backing `/api/yaml`,
+  `/api/traces`, `/api/trace/<name>` for its own HTML). `--export DIR`
+  writes the same three responses to disk once instead of serving them
+  - this works with zero HTML changes because the page already fetches
+  those three paths *relative to itself*, not as absolute `/api/...`
+  URLs, so the identical file works unmodified whether "itself" is the
+  server's own root or a docs-site subdirectory. `.github/workflows/
+  docs.yml` runs `tests/behaviour` fresh for the commit being built,
+  then exports into `docs/trace-report/`, gated to `push` on `main`
+  (same condition as `deploy`) so a PR's preview build doesn't pay for
+  a full `pytest-homeassistant-custom-component` install for a page
+  that build never serves. Deliberately front-matter-free (`tests/
+  test_docs_site.py`'s `_BUILD_DIRS` excludes it) so Jekyll copies it
+  through as-is rather than theming it into the nav/search - "you have
+  to already know the URL" is the point, at the user's own request.
 
 ## Testing
 

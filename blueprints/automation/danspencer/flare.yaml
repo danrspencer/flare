@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.6 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.7 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -459,16 +459,23 @@ condition:
   # the configured levels alone and says the thing that matters here -
   # this room has lights whose "off" is dim. A room with no idle
   # brightness configured has it empty and is unaffected.
-  - or:
+  - condition: or
+    alias: "Every trigger passes except an unproductive motion_on tick"
+    conditions:
       - condition: not
+        alias: "Not a motion_on run"
         conditions:
           - condition: trigger
+            alias: "Triggered by motion_on"
             id: motion_on
       - condition: and
+        alias: "A motion_on run with something to actually turn on"
         conditions:
           - condition: trigger
+            alias: "Triggered by motion_on"
             id: motion_on
           - condition: template
+            alias: "Something in the room is off, or has an idle level"
             value_template: >-
               {{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0
                  or idle_entities | length > 0 }}
@@ -1006,12 +1013,16 @@ action:
       # sensor is still on these conditions fail and default: reapplies
       # adaptive lighting instead - an idempotent no-op if the light is
       # already correct.
-      - conditions:
+      - alias: "Motion timed out and the room is confirmed empty"
+        conditions:
           - condition: trigger
+            alias: "Triggered by motion_off"
             id: motion_off
           - condition: not
+            alias: "No occupancy sensor still reports the room in use"
             conditions:
               - condition: occupancy.is_detected
+                alias: "Room occupancy currently detected"
                 target: !input room_target
         sequence:
           - alias: "Turn off the light(s)"
@@ -1028,6 +1039,7 @@ action:
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
               - condition: template
+                alias: "Room has idle-brightness lights to dim"
                 value_template: "{{ idle_entities | length > 0 }}"
             then:
               - action: flare.apply_lighting
@@ -1050,6 +1062,7 @@ action:
             # tracking_device_id rather than treating it as optional.
             if:
               - condition: template
+                alias: "There's a scope and lights to record the turn-off against"
                 value_template: >-
                   {{ tracking_scope_device_id is not none
                      and turn_off_entities | length > 0 }}
@@ -1081,7 +1094,8 @@ action:
       # apply_lighting turning the just-turned-off light straight back
       # on. The next tick resumes tracking, a one-tick lag this check
       # already had.
-      - conditions:
+      - alias: "Self-heal: retry an earlier turn-off that didn't land"
+        conditions:
           # adaptive too, not just the tick: leaving a phase whose idle
           # brightness was set for one whose isn't empties idle_entities,
           # so the room stops reading as idle - but its lights are still
@@ -1093,6 +1107,7 @@ action:
           # turns them off instead, and the branch's own occupancy checks
           # below still decide whether that is right.
           - condition: trigger
+            alias: "Triggered by adaptive_tick or a phase change"
             id:
               - adaptive_tick
               - adaptive
@@ -1102,6 +1117,7 @@ action:
           # this never matches, matching Update Interval's own
           # description.
           - condition: template
+            alias: "Room has an occupancy sensor to reconcile against"
             value_template: "{{ room_occupancy_entities | length > 0 }}"
           # Requires occupancy continuously clear for the full Wait
           # time, not just clear at this instant. Unlike motion_off
@@ -1118,8 +1134,10 @@ action:
           # last_changed is a plain property answered from memory,
           # needing no priming and no recorder.
           - condition: template
+            alias: "Occupancy has been clear for the full Wait time"
             value_template: "{{ occupancy_clear_for_wait }}"
           - condition: template
+            alias: "Something in the room is still on"
             value_template: "{{ entities_still_on | length > 0 }}"
         sequence:
           - alias: "Self-heal: retry turning off lights left on with no occupancy"
@@ -1137,6 +1155,7 @@ action:
             # above for why.
             if:
               - condition: template
+                alias: "There's a scope to record the turn-off against"
                 value_template: "{{ tracking_scope_device_id is not none }}"
             then:
               - action: flare.claims_record
@@ -1180,6 +1199,7 @@ action:
       - alias: "Settle an empty room to its idle brightness"
         if:
           - condition: template
+            alias: "Room is idle, and the sensor has a colour target"
             value_template: "{{ room_is_idle and color_temp_kelvin is not none }}"
         then:
           - alias: "Apply idle brightness (FLARE)"
@@ -1196,14 +1216,17 @@ action:
       - alias: "Only motion, a manual run, or a room already in use may switch a light on"
         if:
           - condition: template
+            alias: "Allowed to turn on, and not already handled by the idle nightlight"
             # `not room_is_idle` is what stops the nightlight ramping
             # itself back up: an idle light being on makes the room read
             # as occupied, which would otherwise satisfy allow_turn_on
             # and hand the room straight back to the curve.
             value_template: "{{ allow_turn_on and not room_is_idle }}"
         then:
-          - if:
+          - alias: "Activate a scene, if one applies and is due a recheck"
+            if:
               - condition: template
+                alias: "A scene applies and is due a recheck"
                 value_template: "{{ scene_active and scene_recheck_due }}"
             then:
               - alias: "Activate matching scene"
@@ -1229,6 +1252,7 @@ action:
           - alias: "Apply adaptive lighting, unless the sensor has no target to apply"
             if:
               - condition: template
+                alias: "Sensor has a real brightness and colour target"
                 value_template: "{{ brightness is not none and color_temp_kelvin is not none }}"
             then:
               - alias: "Apply adaptive lighting (FLARE)"
@@ -1271,6 +1295,7 @@ action:
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template
+            alias: "There are lights to release, and a scope to release them from"
             value_template: >-
               {{ handed_off_entities | length > 0 and tracking_scope_device_id is not none }}
         then:

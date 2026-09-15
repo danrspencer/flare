@@ -23,3 +23,7 @@ run = "python scripts/trace_summary.py trace-dumps"
 [tasks."trace-viewer"]
 description = "Interactive trace viewer: hover a step to jump to its line in the blueprint YAML"
 run = "python scripts/trace_viewer.py"
+
+[tasks."trace-export"]
+description = "Export the trace viewer as static files (what docs.yml publishes at docs/trace-report/ on main)"
+run = "python scripts/trace_viewer.py --export docs/trace-report"
