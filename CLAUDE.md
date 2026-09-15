@@ -225,7 +225,7 @@ blueprint in this repo. Keep them that way.
    context.user_id-based, since removed entirely - see the
    architectural-split note above) is not the same as a standing
    invariant later code respects - it only blocked the one automation
-   run where it fired, not a later independent `adaptive` tick. Fixed
+   run where it fired, not a later independent `phase_change` tick. Fixed
    properly in `grouping.py`'s `EntityLookup` (originally
    `manually_set()`, later renamed `externally_set()` when the
    underlying check moved from `context.user_id` to `context.id`
@@ -791,24 +791,24 @@ an occupancy sensor at all. That matters because
 **false** over a target matching zero entities - so a light-only room
 would otherwise permanently fail the condition.
 
-**Triggers:** `adaptive` (state on the sensor, filtered `to:` the four
-phase names so attribute-only ticks don't fire), `adaptive_tick`
+**Triggers:** `phase_change` (state on the sensor, filtered `to:` the
+four phase names so attribute-only ticks don't fire), `tick`
 (`time_pattern`, `!input update_interval`), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
-- `adaptive` needs the `to:` filter because a plain `state` trigger with
-  no `from`/`to` fires on attribute-only changes; with any of those keys
-  set HA rejects events where `old_value == new_value`.
-- `adaptive_tick` exists because the curve is **flat** during Morning
+- `phase_change` needs the `to:` filter because a plain `state` trigger
+  with no `from`/`to` fires on attribute-only changes; with any of
+  those keys set HA rejects events where `old_value == new_value`.
+- `tick` exists because the curve is **flat** during Morning
   and Night, so the coordinator re-writes identical state and HA emits
-  `state_reported`, not `state_changed` - `adaptive` goes silent
+  `state_reported`, not `state_changed` - `phase_change` goes silent
   entirely in those phases.
 - `recovered` arms on "at least one of our lights is reachable", firing
   as the first bulb returns. The inverse ("none unavailable") is wrong:
   one permanently-unavailable orphan holds it false forever and disables
   recovery for the whole room. Accepted blind spot: one flaky bulb
   recovering beside healthy siblings doesn't move the aggregate;
-  `adaptive_tick` mops that up.
+  `tick` mops that up.
 - `recovered`'s `value_template` **cannot reference `trigger.*`** - HA
   renders it with only `trigger_variables` in scope, injecting `trigger`
   afterwards for the fired action only. An earlier version referenced
@@ -857,7 +857,7 @@ every trigger reaching `default:` to enforce it.
 
 This shape was arrived at the hard way. The rule used to be enforced two
 different ways - `apply_lighting` by filtering its own
-`adaptive_target_entities` list, and the scene not at all - so a phase
+`target_entities` list, and the scene not at all - so a phase
 change lit an empty Dining Room's 14 fixtures at 23:00 and self-heal
 undid it 9 seconds later, every night. **Do not re-add the per-entity
 filter** (`reject('is_state', 'off')` when `allow_turn_on` is false): it
@@ -906,7 +906,7 @@ which is *narrower*, so the curve still cannot light an empty room.
   too.** It asks "is anything off?" as a proxy for "is there anything to
   do?", which an idle room breaks: everything is ON, at the idle level,
   and motion is exactly when it should go up to the curve. The run
-  aborted there, so the room brightened only on the next `adaptive_tick`
+  aborted there, so the room brightened only on the next `tick`
   - up to a minute late and with `background_transition` instead of
   `motion_on_transition`, since `script_transition` keys off the trigger
   id; a brief passage never brightened it at all. Fixed with
@@ -936,11 +936,11 @@ test class docstring, and the #172 restructure silently broke six of
 them. `tests/test_docs_site.py::test_every_referenced_blueprint_anchor_exists`
 derives kramdown's slugs and fails on a dead anchor.
 
-**Self-heal** shares `adaptive_tick` rather than its own interval. Its
+**Self-heal** shares `tick` rather than its own interval. Its
 eligibility checks sit in the `choose:` branch's own `conditions:`, so a
 tick that doesn't qualify falls through to `default:` and reapplies
 lighting normally. It stays **exclusive** of `default:` deliberately:
-`entities_still_on`/`adaptive_target_entities` are computed once before
+`entities_still_on`/`target_entities` are computed once before
 `action:` runs, so reapplying in the same run risks `apply_lighting`
 turning a just-turned-off light straight back on. It requires occupancy
 continuously clear for the full Wait time, checked with a hand-written
@@ -1058,8 +1058,8 @@ trigger/condition machinery only looks at entity state, not origin.
   after it; moving it into `apply_lighting` cannot work, because the
   service has no concept of room-level permission and so cannot re-check
   the half that actually matters; and trigger-side jitter (`for:` on the
-  `adaptive` state trigger) covers phase changes only - `time_pattern`
-  has no offset, so it misses `adaptive_tick`, which is where the
+  `phase_change` state trigger) covers phase changes only -
+  `time_pattern` has no offset, so it misses `tick`, which is where the
   exposure is. If congestion is ever actually observed, the right shape
   is a bounded rate limiter at dispatch, not a random pre-decision delay.
   Note also the general Zigbee mitigation is group addressing, not

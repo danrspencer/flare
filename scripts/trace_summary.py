@@ -36,7 +36,7 @@ INTERESTING = (
     "idle_entities",
     "resolved_entities",
     "brightness_multipliers",
-    "adaptive_target_entities",
+    "target_entities",
     "entities_still_on",
     "occupancy_clear_for_wait",
     "script_transition",

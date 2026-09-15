@@ -88,10 +88,10 @@ async def test_the_periodic_tick_keeps_a_lit_room_on_the_curve(
     hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """The curve is flat in Morning and Night, so the sensor re-writes
-    identical state and no state_changed fires. adaptive_tick exists to
-    cover exactly that, and a light knocked off-curve by anything else
-    is pulled back by it - UNLESS "anything else" is exactly what
-    override protection exists to recognise.
+    identical state and no state_changed fires. The periodic tick
+    exists to cover exactly that, and a light knocked off-curve by
+    anything else is pulled back by it - UNLESS "anything else" is
+    exactly what override protection exists to recognise.
 
     Tracked and untracked genuinely diverge here, and both are correct.
     `light.turn_on` from outside flare is indistinguishable from a
@@ -237,6 +237,6 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
 # below. What's still missing is the test itself - depend on
 # tracked_scope (not tracking_scope; there is no meaningful untracked
 # half of "does an override stick"), turn a bulb off by hand, and assert
-# it stays off through the next adaptive_tick. Left out of this pass
+# it stays off through the next tick. Left out of this pass
 # because writing and mutation-verifying it is its own piece of work,
 # not because it can't be done.

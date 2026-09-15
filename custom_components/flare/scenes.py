@@ -6,7 +6,7 @@ ones to the scene and apply your default (adaptive lighting, or
 anything else) only to whatever's left.
 
 Ported from what used to be the blueprint's own desired_scene/
-scene_covered_entities/scene_valid/scene_active/adaptive_target_entities
+scene_covered_entities/scene_valid/scene_active/target_entities
 variables - same behaviour, same defaults, just testable Python
 instead of inline Jinja. Generic: nothing here is specific to adaptive
 lighting, or even to lighting - "apply a scene, then a default for
