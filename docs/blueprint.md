@@ -358,6 +358,8 @@ are left out.
 dropout, the room updates straight away rather than waiting for the next
 scheduled update.
 
+## Test trace reports
+
 If you want to understand the insides of the blueprint, check out our
 [test trace reports](../trace-report/) - a real run of its triggers,
 conditions and actions, step by step, each one matched against the
