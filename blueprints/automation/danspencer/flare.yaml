@@ -8,16 +8,13 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0-beta.7 - the integration raises a repair when a
+    Blueprint version 0.16.0-beta.8 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
   author: Dan Spencer
   homeassistant:
-    # Already required by the occupancy.* triggers/conditions below
-    # (HA core-confirmed, see CLAUDE.md) - declared here for the first
-    # time, prompted by the input sections below needing 2024.6.0, a
-    # strictly lower floor than what this blueprint already assumed.
+    # Required by the occupancy.* triggers/conditions below (see CLAUDE.md).
     min_version: 2026.4.0
   input:
     adaptive_sensor:
@@ -282,26 +279,18 @@ blueprint:
 mode: restart
 max_exceeded: silent
 
-# Available to trigger definitions themselves (trigger: / condition:),
-# unlike the variables: block below which isn't computed until after a
-# trigger has fired - needed here so the `recovered` trigger's own
-# template (which can't call a service, so can't reuse resolved_entities)
-# can resolve room_target into light entities itself.
+# Available to trigger:/condition: themselves, unlike variables: below
+# (not computed until after a trigger fires) - needed so `recovered`'s
+# own template can resolve room_target into light entities itself.
 trigger_variables:
   room_target: !input room_target
 
 trigger:
-  # The live brightness/colour sensor, but only on a genuine phase
-  # transition - not the attribute-only ticks that happen every ~60s
-  # while the curve ramps. Ramp tracking isn't lost; adaptive_tick below
-  # covers it unconditionally.
-  #
-  # The `to:` list is what does this. With no from:/to: filter at all a
-  # `platform: state` trigger also fires on attribute-only changes; with
-  # any of them present HA rejects events where old and new values are
-  # equal, i.e. it requires a real value change. `from:` is left
-  # unrestricted so a transition into a real phase from unknown/
-  # unavailable (a restart, or the first-ever value) still fires.
+  # Fires only on a genuine phase change, not the attribute-only ticks
+  # during a ramp (adaptive_tick below covers those). The `to:` list is
+  # what does this - a plain state trigger with no from:/to: also fires
+  # on attribute-only changes. `from:` is left open so a restart or
+  # first-ever value still fires.
   - platform: state
     entity_id: !input adaptive_sensor
     id: adaptive
@@ -310,18 +299,11 @@ trigger:
       - Day
       - Evening
       - Night
-  # Periodic floor tick, on its own configurable interval - the sole
-  # driver of ordinary brightness/colour tracking now that `adaptive`
-  # only fires on a real phase change, and the only tick at all during
-  # Morning/Night, where the curve is flat and the sensor's attributes
-  # never change. This is what makes "the next tick will fix it" always
-  # true. Also hosts the self-heal check (see the adaptive_tick branch in
-  # action:, which decides whether a given tick is a self-heal one).
-  #
-  # A separate id from `adaptive` deliberately: scene_recheck_due reads
-  # trigger.from_state/to_state, which a time_pattern trigger has no
-  # equivalent of, and attribute access on an undefined name raises and
-  # aborts the whole run.
+  # Periodic floor tick - the only driver of tracking during Morning/
+  # Night, where the curve is flat and adaptive never fires. Also hosts
+  # the self-heal check (see action:). A separate id from `adaptive`
+  # because scene_recheck_due reads trigger.from_state/to_state, which
+  # a time_pattern trigger has no equivalent of.
   - id: adaptive_tick
     platform: time_pattern
     minutes: !input update_interval
@@ -330,14 +312,10 @@ trigger:
   - id: extra
     platform: state
     entity_id: !input extra_triggers
-  # Room's occupancy-class sensors (entity/device/area/floor/label)
-  # just reported occupied - aggregates every matching occupancy sensor
-  # automatically via Home Assistant's built-in Occupancy triggers. Left
-  # unconditionally attached rather than disabled when Room has no
-  # occupancy sensor in it - target is a required field for this trigger
-  # type, but a target matching zero entities is a harmless no-op (see
-  # CLAUDE.md for why this couldn't just be gated the way the old
-  # separate Occupancy Sensor input was).
+  # Room's occupancy-class sensors just reported occupied, via HA's
+  # native Occupancy trigger. Always attached, even with no occupancy
+  # sensor in the room - a target matching zero entities is a harmless
+  # no-op (see CLAUDE.md).
   - id: motion_on
     trigger: occupancy.detected
     target: !input room_target
@@ -352,62 +330,26 @@ trigger:
     platform: template
     value_template: >
       {#
-        Fires when one of our lights recovers from unavailable/unknown -
-        a Zigbee mesh drop, or a physical power switch cutting and then
-        restoring power to the room. Purely a promptness mechanism: it
-        causes an ordinary tick to run right away, the same as any
-        `extra` trigger firing, rather than waiting for the room's next
-        unrelated tick (the periodic adaptive sensor tick, at most a
-        minute or so) to notice. It carries no special handling of its
-        own beyond that - no forced write, no scoped resync, no
-        occupancy bypass. Whatever the recovered light's own current
-        state is (on or off) just flows through the exact same
-        adaptive_target_entities/allow_turn_on logic every other light
-        in the room does: off stays off, on gets corrected.
+        Fires promptly when a light in the room recovers from
+        unavailable/unknown, rather than waiting for the next unrelated
+        tick. No special handling beyond causing an ordinary tick to
+        run: off stays off, on gets corrected via the usual
+        adaptive_target_entities/allow_turn_on logic.
 
-        The reason this needs its own dedicated trigger at all, rather
-        than "just let the next tick handle it": write_tracking.py
-        (FLARE) clears an entity's override-
-        protection record the moment it's observed going unavailable -
-        so by the time it reconnects there's no stale record for its
-        fresh post-reconnect context.id to conflict with - but nothing
-        makes that reconnect happen *promptly* on its own; this trigger
-        is what closes that gap.
+        Needed because write_tracking.py clears an entity's override-
+        protection record the moment it goes unavailable, so nothing
+        else prompts a resync once it reconnects.
 
-        IMPORTANT: this template can't reference `trigger.*` itself -
-        confirmed against HA core's own template trigger source
-        (homeassistant/components/template/trigger.py): the value_template
-        that decides *whether to fire* is rendered with only this
-        automation's trigger_variables in scope; `trigger` is only
-        injected afterwards, into the fired action's own variables, from
-        the real state_changed event that caused the render - a
-        different pass entirely. An earlier version of this template did
-        reference `trigger.entity_id`/`from_state`/`to_state` here, which
-        meant `trigger is defined` was always false and this trigger
-        could never fire at all - caught live when Living Room/Study
-        never resynced after being power-cycled, despite the automation
-        traces showing no `recovered`-triggered run at all. So it has to
-        be an aggregate over the room, with no per-entity information.
+        Can't reference `trigger.*` here - this value_template renders
+        with only trigger_variables in scope; `trigger` is injected
+        afterwards, into the fired action only
+        (homeassistant/components/template/trigger.py).
 
-        The aggregate is "at least one of our lights is reachable",
-        which arms while the whole room is dark and fires as the first
-        bulb comes back. It used to be the inverse - "none of our lights
-        are unavailable" - and that had a fatal flaw in any real house:
-        a single orphaned entity that is *permanently* unavailable (a
-        deleted Zigbee group whose entity was never cleaned up, say)
-        holds the aggregate false forever, so the trigger can never fire
-        again in that room. Found live in the Ensuite, where
-        light.ensuite_spots - a group that no longer exists - had
-        silently disabled recovery for the whole room.
-
-        Known and accepted blind spot of this shape: one flaky bulb
-        dropping and recovering while its siblings stay up doesn't move
-        the aggregate at all, so nothing fires. That case is left to the
-        periodic adaptive tick (see the `adaptive_tick` trigger below,
-        which exists precisely so there is always a tick to fall back
-        on, even when the curve is flat and the sensor stops changing).
-        Trading a rare miss that something else mops up for an entire
-        room going permanently dead is the right way round.
+        The aggregate is "at least one of our lights is reachable", not
+        "none unavailable" - the latter means one permanently-
+        unavailable orphan entity blocks recovery for the whole room
+        forever. Accepted blind spot: a bulb recovering beside already-
+        reachable siblings doesn't fire this; adaptive_tick mops that up.
       #}
       {% set ns = namespace(entities=[]) %}
       {% if room_target is not none %}
@@ -434,43 +376,27 @@ trigger:
          | list | length > 0 }}
 
 condition:
-  # Occupancy has exactly two jobs here, and neither is "should we update
-  # already-on lights": turning a room on via motion, and turning it off
-  # once confirmed empty (motion_off and the self-heal branch in action:).
-  # condition: checks occupancy nowhere - adaptive/extra/recovered always
-  # proceed, since an already-on light should track the curve regardless
-  # of who is in the room. motion_on keeps an efficiency check only (skip
-  # the call if there is nothing to turn on); allow_turn_on below is what
-  # actually decides permission.
+  # condition: never checks occupancy - adaptive/extra/recovered always
+  # proceed (an already-on light should track the curve regardless of
+  # who's in the room); motion_on keeps only an efficiency check (skip
+  # if there's nothing to turn on). allow_turn_on below decides actual
+  # permission.
   #
-  # The `or idle_entities` half is what makes motion work in a room whose
-  # "off" is dim. The first half asks "is anything off?", which was a
-  # sound proxy for "is there anything to do?" until Idle Brightness:
-  # an idle room has every light ON, at the idle level, and motion is
-  # precisely when they should go up to the curve. Without this the
-  # motion_on run aborted here, so the room only brightened on the next
-  # adaptive_tick - up to a minute later, and with background_transition
-  # instead of motion_on_transition, since script_transition keys off the
-  # trigger id. A brief passage never brightened the room at all.
-  #
-  # It must be `idle_entities`, NOT `room_is_idle`: the latter includes
-  # occupancy_clear_for_wait, which is false the instant motion is
-  # detected, so it would still abort. `idle_entities` is derived from
-  # the configured levels alone and says the thing that matters here -
-  # this room has lights whose "off" is dim. A room with no idle
-  # brightness configured has it empty and is unaffected.
-  - condition: or
-    alias: "Every trigger passes except an unproductive motion_on tick"
-    conditions:
-      - condition: not
-        alias: "Not a motion_on run"
-        conditions:
+  # `or idle_entities` is what lets motion work in an idle (dimly-lit)
+  # room: "is anything off?" alone is a false negative there, since
+  # every light is already ON at its idle level. Must be `idle_entities`
+  # specifically, not `room_is_idle` - the latter includes
+  # occupancy_clear_for_wait, which is already false the instant motion
+  # is detected.
+  - alias: "Every trigger passes except an unproductive motion_on tick"
+    or:
+      - alias: "Not a motion_on run"
+        not:
           - condition: trigger
             alias: "Triggered by motion_on"
             id: motion_on
-      - condition: and
-        alias: "A motion_on run with something to actually turn on"
-        conditions:
+      - alias: "A motion_on run with something to actually turn on"
+        and:
           - condition: trigger
             alias: "Triggered by motion_on"
             id: motion_on
@@ -486,11 +412,8 @@ variables:
   scene_template: !input scene_template
   background_transition: !input background_transition
   motion_on_transition: !input motion_on_transition
-  # Exposed as a variable (not just used inline via !input, the way
-  # motion_off_transition still is) specifically so the reconcile
-  # condition below can reference it inside a Jinja template - see that
-  # condition's own comment for why it's a template rather than
-  # occupancy.is_not_detected's native `for:` option.
+  # Exposed as a variable, not just !input inline, so the self-heal
+  # condition below can reference it in a Jinja template.
   no_motion_wait: !input no_motion_wait
   rgb_phases: !input rgb_phases
   phase: "{{ states(adaptive_sensor) }}"
@@ -505,24 +428,18 @@ variables:
     {% else %}
       {{ motion_on_transition }}
     {% endif %}
-  # This run wasn't started by any of the triggers above at all - the
-  # user hit "Run" on the automation itself, or called automation.trigger
-  # directly. Used below to force this whole tick through regardless of
-  # override protection, matching the same "I ran this on purpose, take
-  # it back" intent a direct apply_lighting force call has. `trigger`
-  # itself is still defined for a manual run (confirmed live - an
-  # earlier `trigger is not defined` version of this check silently
-  # never fired), it's `trigger.id` that isn't.
+  # True when nothing above triggered this run - the user hit "Run" on
+  # the automation, or called automation.trigger directly. Forces the
+  # tick through regardless of override protection. `trigger` itself is
+  # still defined for a manual run; `trigger.id` isn't.
   manual_run: "{{ not (trigger is defined and trigger.id is defined) }}"
-  # room_target resolved once here; the three consumers below are filters
-  # over the result. Entity/device/area only - floor/label aren't
-  # resolvable in hand-rolled Jinja the way they are through the native
-  # occupancy.* trigger/condition (pre-existing gap).
+  # room_target resolved once here; the consumers below filter the
+  # result. Entity/device/area only - floor/label aren't resolvable in
+  # hand-rolled Jinja (occupancy.* has native support, this doesn't).
   #
-  # Two halves, not one list: scope_entities needs them apart, because a
-  # directly *named* light also pulls in its device's siblings while the
-  # device/area halves already return those. Merging would widen scene
-  # scope.
+  # Two halves, not one list: a directly *named* light also pulls in its
+  # device's siblings while the device/area halves already return those,
+  # so merging would widen scene scope.
   target_named_entities: >
     {% if room_target is not none and room_target.entity_id is defined %}
       {% set v = room_target.entity_id %}
@@ -553,11 +470,9 @@ variables:
   # also directly name occupancy-class sensor entities, hence the filter.
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
-  # The brightness chain is resolved up here, before
-  # reachable_entities/entities_still_on below, because those two now
-  # need hands_off_entities to build their turn-off lists. HA renders
-  # variables: strictly top to bottom, each key only seeing the ones
-  # declared above it, so this block cannot be moved back down.
+  # Resolved up here, before reachable_entities/entities_still_on below,
+  # which need hands_off_entities for their turn-off lists - variables:
+  # renders strictly top to bottom, so this can't move down.
   template_brightness_levels: !input brightness_template
   morning_exclude_lights: !input morning_exclude_lights
   day_exclude_lights: !input day_exclude_lights
@@ -568,16 +483,12 @@ variables:
                 'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}
     {{ m.get(phase, []) }}
   # The per-phase exclude list only fills in entities the template
-  # doesn't already mention - its own per-entity values always win on
-  # collision, so a room's existing template logic (e.g. dining_room_lighting's
-  # illuminance-based override, unrelated to phase) can't be silently
-  # discarded by also setting a phase exclusion.
+  # doesn't already mention - its per-entity values always win on
+  # collision.
   # A template may return a mapping of entity_id -> level, or a single
-  # number meaning "every light in this room". The scalar form is
-  # expanded here, once, so everything downstream only ever sees a
-  # mapping - which is also why resolved_entities is resolved above.
-  # Anything else (an empty box, a template that rendered to nothing)
-  # means "no opinion", the same as an empty mapping.
+  # number meaning "every light in this room" - the scalar form is
+  # expanded here, once, so everything downstream only sees a mapping.
+  # Anything else (empty, unset) means "no opinion", same as {}.
   template_brightness_map: >
     {% set t = template_brightness_levels %}
     {% if t is mapping %}
@@ -597,21 +508,15 @@ variables:
       {% set ns.m = dict(ns.m, **{e: 0}) %}
     {% endfor %}
     {{ dict(ns.m, **template_brightness_map) }}
-  # Lights the brightness template handed off entirely: a null/false
-  # level means "something else owns this, don't touch it", as
-  # opposed to 0, which means "turn this one off". Those two must not be
-  # conflated - and in Jinja, as in Python, `0 == false` is true, so an
-  # `in [none, false]` membership test would wrongly swallow every 0 as
-  # well. `is sameas false` is an identity check, mirroring exactly what
-  # grouping.py's own `m is None or m is False` bucketing does.
+  # Lights the brightness template handed off entirely: null/false means
+  # "something else owns this", vs. 0 meaning "turn this one off" - must
+  # not be conflated, and `0 == false` in Jinja means an `in [none,
+  # false]` test would wrongly swallow every 0 too. `is sameas false` is
+  # an identity check, mirroring grouping.py's own bucketing.
   #
-  # Used by the two turn-off paths below (motion_off and reconcile).
-  # apply_lighting already skips these on its own, so a hands-off light
-  # was never *dimmed* by this blueprint - but until this existed it was
-  # still being switched off with the rest of the room, which made the
-  # handoff only half-honoured. Caught live: a kitchen strip offloaded to
-  # its own gradient automation was still being turned off on every
-  # motion-clear and reconcile tick.
+  # Used by the two turn-off paths below (motion_off and self-heal), so
+  # a handed-off light is excluded from those too, not just from being
+  # dimmed by apply_lighting.
   hands_off_entities: >
     {% set ns = namespace(items=[]) %}
     {% for entity_id, level in brightness_levels.items() %}
@@ -628,34 +533,23 @@ variables:
   brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
   color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
   # None whenever adaptive_sensor doesn't populate this attribute (a
-  # hand-rolled "bring your own sensor" entity not using prefer_rgb_color
-  # is free to omit it - see docs/blueprint.md) - apply_lighting's own
-  # rgb_color field explicitly tolerates an explicit null, not just an
-  # omitted key, for exactly this reason.
+  # "bring your own sensor" entity may omit it) - apply_lighting's own
+  # rgb_color field explicitly tolerates a literal null for this reason.
   rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
-  # Brightness levels converted to what apply_lighting actually takes.
+  # Brightness levels converted to what apply_lighting takes: one
+  # `brightness` plus per-entity MULTIPLIERS. Sends 255 and a multiplier
+  # of level/255, so grouping.py's round(255 * multiplier) lands back on
+  # the level - a FLAT target brightness, not a scaling of the curve.
+  # idle_multipliers below does the same thing, deliberately, so a level
+  # means the same thing in both places.
   #
-  # The service has one `brightness` plus per-entity MULTIPLIERS, so the
-  # call sends 255 and every multiplier is that entity's level over full
-  # scale: grouping.py computes round(255 * multiplier), landing back on
-  # the level itself. That is what makes a level FLAT - it is the
-  # brightness the bulb ends up at, not a scaling of wherever the curve
-  # happens to be. The idle path below sends its own levels exactly the
-  # same way, deliberately: one rule, and a level means the same thing
-  # in both places, on the same 0-255 scale the phase brightness numbers
-  # already use.
+  # EVERY resolved entity needs an entry - grouping.py defaults a
+  # missing one to multiplier 1, full blast against a brightness of 255.
+  # The curve value is floored at 1 first so a schedule brightness of 0
+  # still lands on 1, matching grouping.py's own 1-255 clamp.
   #
-  # EVERY resolved entity needs an entry, because grouping.py defaults a
-  # missing one to a multiplier of 1, which against a brightness of 255
-  # would mean full blast rather than the curve. The curve's own value is
-  # floored at 1 first so a schedule whose brightness is set to 0 still
-  # lands on 1 - grouping.py clamps a computed brightness into 1-255
-  # anyway, so this only keeps the previous behaviour intact rather than
-  # silently turning such a room off.
-  #
-  # 0 and null/false pass through unchanged: they are the two sentinels
-  # grouping.py matches on identity (0 = turn it off, null/false = don't
-  # touch it at all), and 0/255 is still 0.
+  # 0 and null/false pass through unchanged - the two sentinels
+  # grouping.py matches on identity (0 = off, null/false = hands off).
   brightness_multipliers: >
     {% set curve = ([brightness | float(0), 1] | max) / 255 %}
     {% set ns = namespace(m={}) %}
@@ -670,24 +564,15 @@ variables:
       {% endif %}
     {% endfor %}
     {{ ns.m }}
-  # Which FLARE tracking scope this room's writes belong to - resolved
-  # here, once, rather than left for the integration to search for.
-  # Room Target names an area directly, that area's own state device
-  # wins outright: "pick the area, the scope comes with it". Otherwise
-  # (Room Target names entities/a device with no area) falls back to
-  # the resolved lights' own area, first one that actually has a state
-  # device - the same entity->area fallback the integration used to do
-  # internally, now done here where the caller can see it.
+  # Which FLARE tracking scope this room's writes belong to, resolved
+  # once here rather than left for the integration to search for. Room
+  # Target naming an area directly wins outright; otherwise falls back
+  # to the resolved lights' own area (first one with a state device).
   #
-  # Either way this only ever finds a scope whose target reduces to a
-  # single area, since that's the only shape a state device's own
-  # tracking-sensor device lands in an area at all (see
-  # sensor.py's _assign_scope_area) - a scope spanning several areas,
-  # or targeting devices/entities directly, isn't discoverable this
-  # way. None here means untracked, not "go find out" - a room whose
-  # lights don't resolve to any state device's area simply isn't
-  # tracked, the same as passing no scope to any of these services
-  # directly.
+  # Only finds a scope whose target reduces to a single area (see
+  # sensor.py's _assign_scope_area) - a scope spanning several areas, or
+  # targeting devices/entities directly, isn't discoverable this way.
+  # None means untracked, same as passing no scope to these services.
   tracking_scope_device_id: >
     {% if room_target is not none and room_target.area_id is defined %}
       {% set aids = room_target.area_id %}
@@ -699,14 +584,11 @@ variables:
     {% set tracking_entities = area_entities(aid) | select('search', '^sensor\\..*_flare_tracking$') | list if aid is not none else [] %}
     {{ device_id(tracking_entities | first) if tracking_entities | length > 0 else none }}
   # What the room sits at when nobody is in it. Unset everywhere and
-  # this is empty, which is exactly today's behaviour: empty means dark.
+  # this is empty, i.e. empty means dark.
   #
-  # Declared HERE, after resolved_entities (the per-phase value applies
-  # to every light in the room, so it needs the list) and before
-  # reachable_entities/entities_still_on, which both have to exclude
-  # these - an idle light is meant to stay on, so neither the motion_off
-  # turn-off nor the self-heal retry may touch it. variables: renders
-  # strictly top to bottom, so this block cannot move either way.
+  # Declared here, before reachable_entities/entities_still_on which
+  # must exclude these idle lights - variables: renders top to bottom,
+  # so this can't move either way.
   template_idle_brightness: !input idle_brightness_template
   morning_idle_brightness: !input morning_idle_brightness
   day_idle_brightness: !input day_idle_brightness
@@ -716,11 +598,8 @@ variables:
     {% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,
                 'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}
     {{ m.get(phase, 0) | int }}
-  # Same precedence as brightness_levels, and deliberately the same
-  # construct: the per-phase value fills in every light in the room, and
-  # the template's own per-entity values overwrite it on collision. So a
-  # room can set one dim level for the phase and still name a single
-  # lamp as the only thing that stays lit.
+  # Same precedence as brightness_levels: the per-phase value fills in
+  # every light, the template's per-entity values win on collision.
   # Same scalar-or-mapping handling as template_brightness_map above.
   template_idle_map: >
     {% set t = template_idle_brightness %}
@@ -764,18 +643,10 @@ variables:
   # the lights that are meant to stay dimly lit.
   turn_off_entities: >
     {{ reachable_entities | reject('in', idle_entities) | list }}
-  # The idle levels expressed the way apply_lighting takes them.
-  #
-  # apply_lighting has one `brightness` plus per-entity MULTIPLIERS, and
-  # idle levels are per-entity ABSOLUTE brightnesses - so the call sends
-  # brightness 255 and a multiplier of level/255, which grouping.py turns
-  # back into `level` (it computes round(brightness * multiplier),
-  # clamped 1-255). That is deliberate rather than adding a per-entity
-  # brightness field to the service, which nothing else would use.
-  #
-  # Identical in shape to brightness_multipliers above, which is the
-  # point: both are levels over full scale, so a level means the same
-  # thing whether the room is in use or idle.
+  # Idle levels expressed the way apply_lighting takes them - same
+  # brightness-255-plus-multiplier shape as brightness_multipliers
+  # above, so a level means the same thing whether the room is in use
+  # or idle.
   idle_multipliers: >
     {% set ns = namespace(m={}) %}
     {% for e in idle_entities %}
@@ -790,19 +661,15 @@ variables:
     {{ all_target_entities | select('match', '^binary_sensor\\.')
        | select('is_state_attr', 'device_class', 'occupancy') | list }}
   # "Every occupancy sensor in the room has been off for the full Wait
-  # time." Two branches need this now - self-heal's turn-off retry and
-  # the idle-brightness branch - and a second copy of the rule would be
-  # a second thing to keep in step.
+  # time." Shared by self-heal and the idle-brightness branch.
   #
-  # Hand-written rather than occupancy.is_not_detected's native `for:`
-  # because that needs the recorder to prime a duration already
-  # satisfied before the condition started watching, which is not
-  # reliable right after a restart. last_changed is a plain property
-  # answered from memory, needing no priming and no recorder.
+  # Hand-written rather than occupancy.is_not_detected's native `for:`,
+  # which needs the recorder to prime a duration already satisfied
+  # before it started watching - not reliable right after a restart.
   #
-  # False when the room has no occupancy sensor at all - the caller has
-  # to check room_occupancy_entities itself, because "no sensors" is
-  # vacuously clear and would otherwise read as permanently empty.
+  # False when the room has no occupancy sensor at all - vacuously
+  # clear otherwise, so the caller must also check
+  # room_occupancy_entities itself.
   occupancy_clear_for_wait: >
     {% set ns = namespace(all_clear=true) %}
     {% for e in room_occupancy_entities %}
@@ -814,98 +681,62 @@ variables:
     {{ ns.all_clear }}
   # "This room is empty and has lights that stay dimly lit when it is."
   #
-  # LOAD-BEARING, and the subtle part of the whole feature: an idle
-  # light being on makes `occupied` true, which makes allow_turn_on
-  # true, which would let the curve apply at full brightness on the very
-  # next tick - the nightlight would ramp itself back up to an ordinary
-  # lit room one tick after switching on. So this suppresses the curve
-  # for as long as the room is idle, and the two branches in default:
-  # are mutually exclusive on it.
-  #
-  # Motion ends it immediately: occupancy detected makes
-  # occupancy_clear_for_wait false, so the curve applies again.
+  # LOAD-BEARING: an idle light being on makes `occupied` true, which
+  # makes allow_turn_on true, which would ramp the nightlight straight
+  # back up to full on the very next tick. This suppresses the curve
+  # while idle, so the two branches in default: stay mutually exclusive.
+  # Motion ends it immediately via occupancy_clear_for_wait.
   room_is_idle: >
     {{ idle_entities | length > 0
        and room_occupancy_entities | length > 0
        and occupancy_clear_for_wait }}
   occupied: >
     {#
-      Is the room "in use" right now - originally for the
-      no-occupancy-sensor condition: branch only (see below), now also
-      the "the room's clearly in use" half of allow_turn_on just below.
-      Without a sensor, the only signal available is whether we've
-      already turned something on - the same "a light being on doesn't
-      really mean anyone's still there" imprecision the original bug
-      this guard fixes was about, unavoidable without a real sensor.
+      Is the room "in use" right now - feeds allow_turn_on below. With
+      no occupancy sensor, the only signal is whether something's
+      already on, which is imprecise but unavoidable without a sensor.
     #}
     {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}
   # THE gate for switching a light on. Only three things may: motion
-  # detecting someone, a deliberate manual run, or the room already being
-  # in active use (at least one of its lights already on). condition:
-  # doesn't gate any of this on occupancy (see its own comment); this is
-  # the only place that decides it, and it applies uniformly to every
-  # trigger, recovered included.
+  # detecting someone, a deliberate manual run, or the room already in
+  # active use. Applies uniformly to every trigger, recovered included -
+  # condition: never gates on occupancy (see its own comment); this is
+  # the only place that decides it.
   #
   # Load-bearing: grouping.py treats an off light as "not yet at target"
-  # and so would include it for turning on - correct for motion_on, wrong
-  # for everything else. Without this rule, a light off at bedtime came
-  # back on from a network blip. The `occupied` branch is room-level, not
-  # per-light, so one lamp off in an in-use room still gets topped up.
+  # and would otherwise turn it back on from any tick, not just motion.
   #
-  # STRUCTURAL INVARIANT - keep this true. Three things in this
-  # blueprint can switch a light on, and each is gated:
+  # STRUCTURAL INVARIANT - keep this true. Only two things in this
+  # blueprint may switch a light on, and both are gated:
   #
-  #   scene.turn_on        ) both inside the single `if allow_turn_on`
-  #   flare.apply_lighting  ) block in default: below
-  #   flare.apply_lighting for IDLE BRIGHTNESS - twice, in the
-  #     motion_off branch and in default: - gated instead on
-  #     idle_entities being non-empty AND the room's occupancy sensors
-  #     having been clear for the full Wait time.
+  #   scene.turn_on / flare.apply_lighting - both inside the single
+  #     `if allow_turn_on` block in default: below.
+  #   flare.apply_lighting for IDLE BRIGHTNESS - called from TWO places
+  #     (the motion_off branch and default:), gated instead on
+  #     idle_entities being non-empty AND occupancy_clear_for_wait.
   #
   # Nothing else in action: writes an "on" state. Anything added later
   # that can switch a light on needs one of those two gates.
   #
-  # The idle gate is NARROWER than allow_turn_on, not wider, and that is
-  # the whole reason it is a separate condition rather than a new way
-  # for allow_turn_on to be true: it fires only for lights a room has
-  # explicitly named as staying lit when empty, so a room that
-  # configures no idle brightness cannot reach it at all. Widening
-  # allow_turn_on itself would let the CURVE light an empty room, which
-  # is the bug below.
-  #
-  # It also must not be gated on `occupied`, for a reason that is easy
-  # to miss: `occupied` is "a light is on", so an idle light would make
-  # the room read as occupied, allow_turn_on would become true, and the
-  # curve would take over at full brightness - the nightlight would
-  # silently become an ordinary lit room.
-  #
-  # This used to be enforced two different ways - apply_lighting by
-  # filtering its own entity list here in variables:, the scene not at
-  # all - and the scene path bypassing it is exactly how a phase change
-  # came to light an empty Dining Room at 23:00, which self-heal then
-  # undid 9 seconds later.
+  # The idle gate must stay NARROWER than allow_turn_on, not become a
+  # new way for it to be true - widening allow_turn_on itself would let
+  # the CURVE light an empty room. It also must not be gated on
+  # `occupied`: an idle light being on would make the room read as
+  # occupied, and the curve would ramp the nightlight back up to full.
   allow_turn_on: >
     {{ manual_run
        or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')
        or occupied }}
-  # Used by the reconcile action branch below to retry turning off
-  # anything still on - excluding handed-off lights (see
-  # hands_off_entities above), which also keeps reconcile from firing at
-  # all in a room where the only thing still lit is one we don't own.
-  # idle_entities are excluded for the same reason hands_off_entities
-  # are, and it matters more here: an idle light is deliberately on, so
-  # self-heal seeing it as "still on with no occupancy" would retry
-  # turning it off every single tick, against the branch that just
-  # turned it on.
+  # Used by self-heal below to retry turning off anything still on -
+  # excludes hands_off_entities (not ours to touch) and idle_entities
+  # (deliberately on; self-heal would otherwise retry turning it off
+  # every tick, fighting the branch that just turned it on).
   entities_still_on: >
     {{ resolved_entities | select('is_state', 'on')
        | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}
-  # Same as resolved_entities, but widened to every entity on each light's
-  # device (not just the light itself) - lets scene-compatibility checking
-  # below account for sibling entities, e.g. a light strip's effect selector.
-  # entity_id branch filters to ^light\. before widening, same reason as
-  # resolved_entities above - otherwise a directly-picked occupancy sensor's
-  # own device siblings would incorrectly widen into scope too.
+  # Same as resolved_entities, widened to every entity on each light's
+  # device - lets scene-compatibility checking below account for
+  # siblings, e.g. a light strip's effect selector.
   scope_entities: >
     {% set ns = namespace(entities=target_expanded_entities) %}
     {% for e in (target_named_entities | select('match', '^light\\.') | list) %}
@@ -950,30 +781,22 @@ variables:
   scene_active: "{{ desired_scene | length > 0 and scene_valid }}"
   # Lights this tick has deliberately handed off - to an active scene,
   # or to whatever owns them via a null/false level. apply_lighting
-  # never writes these, so their override-protection claims would freeze
-  # at the last real write and get reported as "overridden", which is
-  # indistinguishable from someone grabbing a light by hand. The action
-  # step below releases them instead.
+  # never writes these, so their claims would freeze and read as
+  # "overridden"; the action step below releases them instead.
   #
-  # scene_active gates the scene half deliberately: a scene that exists
-  # but reaches outside scope has a non-empty scene_covered_entities
-  # while adaptive still manages those lights - releasing them there
-  # would be wrong.
+  # scene_active gates the scene half: a scene reaching outside scope
+  # has entities here while adaptive still manages them, and releasing
+  # those would be wrong.
   handed_off_entities: >
     {{ ((scene_covered_entities if scene_active else []) + hands_off_entities) | unique | list }}
-  # Whether the "Activate matching scene" step below should call
-  # scene.turn_on again this tick. Scenes carry none of apply_lighting's
-  # tolerance/override protections, so re-issuing it every minute would
-  # silently stomp a manual change to any of the scene's own lights.
+  # Whether "Activate matching scene" below should call scene.turn_on
+  # again this tick. Scenes carry none of apply_lighting's tolerance/
+  # override protection, so re-issuing every minute would stomp a
+  # manual change to one of the scene's own lights.
   #
-  # desired_scene depends only on the sensor's phase and on
-  # scene_template's own dependencies (which fire their own 'extra' id,
-  # exempt below) - so the only tick worth skipping is an `adaptive` one
-  # whose phase didn't change. Every other trigger is rare and meaningful
-  # already. The periodic floor tick is excluded outright: it has no
-  # from_state/to_state to compare (reading them would raise and abort
-  # the run), and treating every minute as "recheck due" is exactly what
-  # this variable exists to prevent.
+  # Only an `adaptive` tick whose phase didn't actually change is
+  # skipped; the periodic floor tick is excluded outright since it has
+  # no from_state/to_state to compare (reading them would abort the run).
   scene_recheck_due: >
     {% if trigger is defined and trigger.id is defined and trigger.id == 'adaptive_tick' %}
       false
@@ -986,41 +809,28 @@ variables:
   # Lights the adaptive brightness/colour logic below should manage -
   # everything except what an active scene already covers.
   #
-  # No allow_turn_on filtering here any more: the apply_lighting step is
-  # inside default:'s single `if allow_turn_on` block, so this list is
-  # only ever used when switching a light on is already permitted. The
-  # filter this used to carry (`reject('is_state', 'off')` when
-  # allow_turn_on was false) was redundant rather than load-bearing, and
-  # it is worth recording why so nobody re-adds it: `occupied` - "at
-  # least one light in the room is on" - is itself one of the three ways
-  # allow_turn_on becomes true, so allow_turn_on being false means
-  # nothing in the room is on. Rejecting 'off' from a set containing no
-  # 'on' entities could only ever return unavailable/unknown ones, which
-  # grouping.py drops as unreachable. It answered a room-level
-  # permission question per-entity, which is precisely how the scene
-  # path came to miss the rule entirely.
+  # No allow_turn_on filtering here: the apply_lighting step already
+  # sits inside default:'s single `if allow_turn_on` block, so this list
+  # is only ever used when switching a light on is already permitted.
+  # Don't re-add a per-entity `reject('is_state', 'off')` filter here -
+  # it's redundant with that gate, not a second layer of protection.
   adaptive_target_entities: >
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
   - choose:
-      # Motion timed out: turn everything reachable off - but only if
-      # Room's occupancy is clear in aggregate right now.
-      # occupancy.cleared fires per-entity, not per-target, so with two
-      # occupancy-class sensors in Room it fires the instant EITHER goes
-      # off, even while the other still reports occupied. Without this
-      # re-check a real motion sensor clearing overnight turned lights
-      # off while a nightlight override sensor was still on. If another
-      # sensor is still on these conditions fail and default: reapplies
-      # adaptive lighting instead - an idempotent no-op if the light is
-      # already correct.
+      # Motion timed out: turn everything reachable off, but only if
+      # occupancy is clear in aggregate - occupancy.cleared fires the
+      # instant ANY one sensor goes off, even while another still
+      # reports occupied. If another sensor is still on, these
+      # conditions fail and default: reapplies lighting instead (a
+      # no-op if the light is already correct).
       - alias: "Motion timed out and the room is confirmed empty"
         conditions:
           - condition: trigger
             alias: "Triggered by motion_off"
             id: motion_off
-          - condition: not
-            alias: "No occupancy sensor still reports the room in use"
-            conditions:
+          - alias: "No occupancy sensor still reports the room in use"
+            not:
               - condition: occupancy.is_detected
                 alias: "Room occupancy currently detected"
                 target: !input room_target
@@ -1031,11 +841,10 @@ action:
               entity_id: "{{ turn_off_entities }}"
             data:
               transition: !input motion_off_transition
-          # Lights with an idle brightness are dimmed instead of being
-          # switched off - that is the whole feature. This can switch a
-          # light ON, which is why it is gated on idle_entities being
-          # non-empty: a room that configures no idle brightness reaches
-          # an empty list here and this step does nothing.
+          # Idle-brightness lights are dimmed instead of switched off.
+          # Can switch a light ON, hence gated on idle_entities - a room
+          # with no idle brightness configured reaches an empty list
+          # and this step does nothing.
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
               - condition: template
@@ -1053,13 +862,10 @@ action:
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
                   tracking_device_id: "{{ tracking_scope_device_id }}"
           - alias: "Record the turn-off as ours"
-            # Without this the integration sees a light go off under a
-            # context it has no claim for and reads it as someone else
-            # switching it off - which is exactly what it should read a
-            # *hand* turn-off as. Skipped entirely with no resolvable
-            # scope: recording accomplishes nothing when nothing is
-            # tracking these lights, and claims_record now requires
-            # tracking_device_id rather than treating it as optional.
+            # Without this the integration reads this turn-off as
+            # someone else's, since it has no claim for the context.
+            # Skipped with no resolvable scope - nothing is tracking
+            # these lights, and claims_record requires a scope.
             if:
               - condition: template
                 alias: "There's a scope and lights to record the turn-off against"
@@ -1082,57 +888,32 @@ action:
                     {{ ns.t }}
       # Self-healing: on an adaptive_tick, if the room is unoccupied but
       # something is still on (an earlier turn-off didn't land), retry
-      # just that. These conditions - not trigger.id alone - decide
-      # whether THIS tick is a self-heal one; when they don't all hold
-      # the branch doesn't match and default: reapplies lighting as any
-      # other adaptive_tick would.
-      #
-      # Deliberately exclusive of default: rather than doing both.
-      # entities_still_on and adaptive_target_entities are computed once
-      # in variables:, before action: runs, so they don't reflect this
-      # branch's own turn_off - reapplying in the same run risks
-      # apply_lighting turning the just-turned-off light straight back
-      # on. The next tick resumes tracking, a one-tick lag this check
-      # already had.
+      # just that. Exclusive of default: rather than doing both -
+      # entities_still_on is computed once in variables:, before
+      # action: runs, so reapplying in the same run risks turning the
+      # just-turned-off light straight back on. The next tick resumes.
       - alias: "Self-heal: retry an earlier turn-off that didn't land"
         conditions:
-          # adaptive too, not just the tick: leaving a phase whose idle
-          # brightness was set for one whose isn't empties idle_entities,
-          # so the room stops reading as idle - but its lights are still
-          # ON, which makes `occupied` true, which makes allow_turn_on
-          # true, and default: would hand the room to the curve and turn
-          # a 10% nightlight up to full. Seen live at 06:00: both halls
-          # went up at the phase change and only went off at 06:01, on
-          # the next tick. Reaching self-heal on the phase change itself
-          # turns them off instead, and the branch's own occupancy checks
-          # below still decide whether that is right.
+          # `adaptive` too, not just the tick: leaving a phase whose
+          # idle brightness was set for one whose isn't empties
+          # idle_entities, so the room's lights are still ON but no
+          # longer read as idle - which would otherwise ramp them to
+          # full on the very next default: tick instead of turning off.
           - condition: trigger
             alias: "Triggered by adaptive_tick or a phase change"
             id:
               - adaptive_tick
               - adaptive
-          # No occupancy sensor in Room means no independent "not
-          # occupied" signal at all (see the occupied variable's
-          # docstring) - so there's nothing to reconcile against and
-          # this never matches, matching Update Interval's own
-          # description.
+          # No occupancy sensor means nothing to reconcile against.
           - condition: template
             alias: "Room has an occupancy sensor to reconcile against"
             value_template: "{{ room_occupancy_entities | length > 0 }}"
-          # Requires occupancy continuously clear for the full Wait
-          # time, not just clear at this instant. Unlike motion_off
-          # above (whose trigger-level for: provides this), the
-          # self-heal check has no relationship to occupancy timing on
-          # its own, so nothing else debounces it - a bare
-          # "not occupancy.is_detected" let a momentary sensor blip turn
-          # lights off, bypassing Wait time entirely.
-          #
-          # A plain template, not occupancy.is_not_detected's native
-          # `for:`, which does exist: `for:` needs the recorder to prime
-          # a duration already satisfied before the condition started
-          # watching - exactly the situation after a restart.
-          # last_changed is a plain property answered from memory,
-          # needing no priming and no recorder.
+          # Continuously clear for the full Wait time, not just clear
+          # right now - a bare "not occupancy.is_detected" would let a
+          # momentary sensor blip turn lights off. Hand-written rather
+          # than occupancy.is_not_detected's native `for:`, which needs
+          # the recorder to prime a duration already satisfied before
+          # it started watching - not reliable right after a restart.
           - condition: template
             alias: "Occupancy has been clear for the full Wait time"
             value_template: "{{ occupancy_clear_for_wait }}"
@@ -1147,12 +928,8 @@ action:
             data:
               transition: !input motion_off_transition
           - alias: "Record the turn-off as ours"
-            # Without this the integration sees a light go off under a
-            # context it has no claim for and reads it as someone else
-            # switching it off - which is exactly what it should read a
-            # *hand* turn-off as. Skipped entirely with no resolvable
-            # scope - see the motion_off branch's own copy of this step
-            # above for why.
+            # Same reasoning as the motion_off branch's copy of this
+            # step above.
             if:
               - condition: template
                 alias: "There's a scope to record the turn-off against"
@@ -1170,32 +947,20 @@ action:
                     {{ ns.t }}
     default:
       # Everything that can switch a light ON lives under this one gate -
-      # see allow_turn_on's own comment in variables: for the invariant
-      # and for the live incident that produced this shape. Exactly two
-      # things can, and both are here: the scene, and apply_lighting.
+      # see allow_turn_on's own comment in variables: for the invariant.
+      # scene.turn_on is all-or-nothing over its own entities and can't
+      # be filtered per-light, so the gate has to decide whether the
+      # step runs at all, same as apply_lighting.
       #
-      # The two are gated the same way but for different reasons.
-      # apply_lighting takes an entity list, so it *could* self-filter -
-      # but scene.turn_on is all-or-nothing over the scene's own entity
-      # set and cannot be filtered per-light at all, so for scenes the
-      # gate has to decide whether the step runs. Putting both under the
-      # same gate is what stops the rule being expressed two different
-      # ways, which is how the scene path came to miss it.
-      # An empty room settles to its idle brightness rather than staying
-      # dark. Deliberately OUTSIDE the allow_turn_on gate above, and the
-      # only thing in this blueprint that is: see the STRUCTURAL
-      # INVARIANT comment in variables: for why this gate is narrower
-      # than that one rather than a widening of it.
-      #
-      # Reached when the room is genuinely empty - occupancy sensors all
-      # clear for the full Wait time - so it does not fight motion: a
-      # motion_on tick has allow_turn_on true and occupancy detected, so
-      # this is false and the curve applies at full brightness.
+      # An empty room settles to its idle brightness instead of staying
+      # dark - deliberately OUTSIDE the allow_turn_on gate (see the
+      # STRUCTURAL INVARIANT comment in variables:). Doesn't fight
+      # motion: a motion_on tick has occupancy detected, so this is
+      # false and the curve applies at full brightness instead.
       #
       # room_occupancy_entities is checked because occupancy.is_detected
-      # is vacuously FALSE over a target with no occupancy sensors, so a
-      # sensor-less room would otherwise read as permanently empty and
-      # sit at the idle level forever, never reaching the curve.
+      # is vacuously FALSE with no occupancy sensors, which would
+      # otherwise leave a sensor-less room at the idle level forever.
       - alias: "Settle an empty room to its idle brightness"
         if:
           - condition: template
@@ -1237,18 +1002,13 @@ action:
                   transition: "{{ script_transition }}"
           # Reachability, multiplier bucketing, tolerance checks, override
           # protection, two-step/combined routing and RGB-vs-colour-temp
-          # dispatch all live in the FLARE integration
-          # (standalone HACS add-on, not specific to this blueprint).
+          # dispatch all live in the FLARE integration, not here.
           #
-          # Guarded because brightness/color_temp_kelvin are plain state_attr()
-          # reads: an unavailable sensor, or one pointed at a renamed/deleted
-          # entity, renders them null, and apply_lighting requires both - so
-          # the action would fail validation on every tick, indefinitely.
-          # Guards this one step rather than condition:, which would gate the
-          # whole tick - motion_off and self-heal turn lights *off* and need
-          # nothing from the sensor. Skipping is right: with no target there
-          # is nothing to apply, and a default would drive lights to a made-up
-          # value.
+          # Guarded because brightness/color_temp_kelvin are plain
+          # state_attr() reads - an unavailable or renamed sensor entity
+          # renders them null, and apply_lighting requires both. Guards
+          # this one step rather than condition:, since motion_off and
+          # self-heal turn lights *off* and need nothing from the sensor.
           - alias: "Apply adaptive lighting, unless the sensor has no target to apply"
             if:
               - condition: template
@@ -1271,27 +1031,15 @@ action:
                   # through regardless of override protection.
                   force: "{{ manual_run }}"
       # Bookkeeping only - changes no light, so it stays outside the gate
-      # above and runs on every tick reaching default:. In a dark room
-      # "nothing is managing these lights" is still the truthful thing to
-      # record.
+      # above and runs on every tick reaching default:, dark room
+      # included: "nothing is managing these lights" is still true.
       #
-      # Ordered after the gate rather than between its two steps, which is
-      # behaviourally neutral: handed_off_entities (scene-covered plus
-      # hands-off) and adaptive_target_entities (which already excludes
-      # scene-covered whenever a scene is active) overlap only in the
-      # hands-off lights, and apply_lighting never records a claim for
-      # those - grouping.py drops them on their null/false multiplier
-      # before anything is written.
-      #
-      # Releasing says the truthful thing: nothing is managing these
-      # lights right now. Nothing is given up by it - they aren't being
-      # written, so there is no protection to lose, and the next tick
-      # that does manage them re-establishes a claim through the
-      # ordinary first-write path. claims_clear is a no-op for an
-      # entity with no record, so this costs nothing on the ticks where
-      # it changes nothing - but it also now requires a scope, so the
-      # condition guards on one resolving at all, not just on there
-      # being entities to name.
+      # Nothing is given up by releasing - these lights aren't being
+      # written, so there's no protection to lose, and the next tick
+      # that does manage them re-establishes a claim normally.
+      # claims_clear is a no-op with no record, so this costs nothing
+      # when nothing changes - but it now requires a scope, so the
+      # condition also guards on one resolving at all.
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template

@@ -17,6 +17,15 @@
     --fail: #f05a5a;
     --neutral: #6b6e76;
     --row-hover: #26282c;
+    /* YAML/Jinja syntax highlighting (renderYaml/highlightYamlLine) -
+       picked to read distinctly from --text/--dim and from each other
+       against --pane-bg, roughly VS Code's dark-theme conventions since
+       that's the palette most readers of this will already know. */
+    --syn-comment: var(--dim);
+    --syn-key: #9cdcfe;
+    --syn-string: #ce9178;
+    --syn-tag: #c586c0;
+    --syn-jinja: #4ec9b0;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -137,6 +146,11 @@
     color: var(--text);
   }
   .yline.hl { background: var(--hl); box-shadow: inset 3px 0 0 var(--hl-border); }
+  .tok-comment { color: var(--syn-comment); }
+  .tok-key { color: var(--syn-key); }
+  .tok-string { color: var(--syn-string); }
+  .tok-tag { color: var(--syn-tag); }
+  .tok-jinja { color: var(--syn-jinja); }
 
   .empty {
     color: var(--dim);
@@ -176,6 +190,17 @@ function brief(value, limit) {
   return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
 }
 
+// and/or/not shorthand (`- or: [...]`) holds its condition list directly
+// under the operator's own key, rather than under a literal "conditions"
+// key the way the canonical {condition: or, conditions: [...]} form does
+// - but the trace path still addresses it as "conditions", since HA
+// normalizes shorthand to that canonical form before tracing. Detected by
+// name, not by "the map has exactly one key": a shorthand condition can
+// carry its own alias/enabled (CONDITION_BASE_SCHEMA allows both as
+// siblings of the operator key), which a single-key check would wrongly
+// stop recognising as shorthand the moment either was added.
+const SHORTHAND_OPERATORS = ["and", "or", "not"];
+
 // Walks the annotated YAML tree by a trace path's segments. A numeric
 // segment indexes a seq; a word segment descends into a map key of that
 // name IF one exists. Two cases where it doesn't, both left as a pass
@@ -183,14 +208,7 @@ function brief(value, limit) {
 // whatever list that word was describing:
 //   - the synthetic "condition" HA's tracer inserts after `if:`, which
 //     is not a real YAML key at all (see trace_viewer.py's docstring).
-//   - shorthand `and:`/`or:`/`not:` (a single-key map whose one key IS
-//     the operator, holding the condition list directly) - "conditions"
-//     never appears as a literal key there, but the trace path still
-//     addresses it that way, since HA normalizes shorthand to the
-//     canonical {condition: or, conditions: [...]} form before tracing.
-//     A single-key map is exactly the shape that shorthand produces, so
-//     descending into that one key stands in for the "conditions" the
-//     literal YAML never spells out.
+//   - and/or/not shorthand (see SHORTHAND_OPERATORS above).
 function resolveYamlPath(segments) {
   let node = state.yamlTree;
   for (const raw of segments) {
@@ -201,8 +219,9 @@ function resolveYamlPath(segments) {
       node = next === undefined ? null : next;
     } else if (node.__type__ === "map" && Object.prototype.hasOwnProperty.call(node.value, raw)) {
       node = node.value[raw];
-    } else if (node.__type__ === "map" && Object.keys(node.value).length === 1) {
-      node = Object.values(node.value)[0];
+    } else if (node.__type__ === "map") {
+      const op = SHORTHAND_OPERATORS.find((op) => Object.prototype.hasOwnProperty.call(node.value, op));
+      if (op) node = node.value[op];
     }
     // else: synthetic label segment, pass through unchanged.
   }
@@ -325,9 +344,105 @@ function showStep(path, rowEl) {
   statusEl.textContent = `${path} — line ${start}${end > start ? "–" + end : ""}`;
 }
 
+// A line-based tokenizer, not a real YAML/Jinja parser - good enough to
+// make the pane scannable, not a validator. Deliberately narrow: this
+// file's own shapes (comments, quoted strings, a "key:" at the start of
+// a mapping entry, !input, and Jinja's three delimiter pairs) rather
+// than full YAML (anchors/aliases/flow collections never appear here).
+//
+// Stateful across lines for exactly one reason: `{# ... #}` (a Jinja
+// comment) can span many lines - most of the trimmed comments in
+// flare.yaml do - and nothing else here needs that, since quoted
+// strings and "key:" are never written to span a line break in this
+// file. `state.inJinjaComment` carries that one flag from call to call.
+const KEY_RE = /^(\s*(?:-\s+)*)([A-Za-z_][\w.]*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|'')*')(:)(?=\s|$)/;
+
+function tokenizeYamlLine(line, state) {
+  const tokens = [];
+  let i = 0;
+
+  if (state.inJinjaComment) {
+    const end = line.indexOf("#}");
+    if (end === -1) {
+      tokens.push({ text: line, cls: "tok-comment" });
+      return tokens;
+    }
+    tokens.push({ text: line.slice(0, end + 2), cls: "tok-comment" });
+    i = end + 2;
+    state.inJinjaComment = false;
+  } else {
+    const keyMatch = KEY_RE.exec(line);
+    if (keyMatch) {
+      tokens.push({ text: keyMatch[1], cls: null });
+      tokens.push({ text: keyMatch[2] + keyMatch[3], cls: "tok-key" });
+      i = keyMatch[0].length;
+    }
+  }
+
+  let plain = "";
+  const flushPlain = () => {
+    if (plain) {
+      tokens.push({ text: plain, cls: null });
+      plain = "";
+    }
+  };
+
+  while (i < line.length) {
+    const two = line.slice(i, i + 2);
+    if (two === "{#") {
+      flushPlain();
+      const end = line.indexOf("#}", i + 2);
+      if (end === -1) {
+        tokens.push({ text: line.slice(i), cls: "tok-comment" });
+        state.inJinjaComment = true;
+        i = line.length;
+      } else {
+        tokens.push({ text: line.slice(i, end + 2), cls: "tok-comment" });
+        i = end + 2;
+      }
+      continue;
+    }
+    if (line[i] === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+      flushPlain();
+      tokens.push({ text: line.slice(i), cls: "tok-comment" });
+      i = line.length;
+      continue;
+    }
+    if (two === "{{" || two === "}}" || two === "{%" || two === "%}") {
+      flushPlain();
+      tokens.push({ text: two, cls: "tok-jinja" });
+      i += 2;
+      continue;
+    }
+    if (line[i] === '"' || line[i] === "'") {
+      const quote = line[i];
+      const re = quote === '"' ? /"(?:[^"\\]|\\.)*"/y : /'(?:[^'\\]|'')*'/y;
+      re.lastIndex = i;
+      const m = re.exec(line);
+      if (m) {
+        flushPlain();
+        tokens.push({ text: m[0], cls: "tok-string" });
+        i += m[0].length;
+        continue;
+      }
+    }
+    if (line.slice(i, i + 6) === "!input") {
+      flushPlain();
+      tokens.push({ text: "!input", cls: "tok-tag" });
+      i += 6;
+      continue;
+    }
+    plain += line[i];
+    i++;
+  }
+  flushPlain();
+  return tokens;
+}
+
 function renderYaml(text, path) {
   const container = document.getElementById("yaml-lines");
   const frag = document.createDocumentFragment();
+  const state = { inJinjaComment: false };
   text.split("\n").forEach((line, i) => {
     const n = i + 1;
     const row = document.createElement("div");
@@ -338,7 +453,16 @@ function renderYaml(text, path) {
     num.textContent = String(n);
     const code = document.createElement("span");
     code.className = "code";
-    code.textContent = line;
+    for (const tok of tokenizeYamlLine(line, state)) {
+      if (tok.cls) {
+        const span = document.createElement("span");
+        span.className = tok.cls;
+        span.textContent = tok.text;
+        code.appendChild(span);
+      } else {
+        code.appendChild(document.createTextNode(tok.text));
+      }
+    }
     row.append(num, code);
     frag.appendChild(row);
   });
