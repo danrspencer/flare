@@ -30,7 +30,18 @@ DOCS = Path(__file__).resolve().parent.parent / "docs"
 # Recursive: pages live in subdirectories too (docs/advanced/), and a
 # top-level-only glob quietly stopped guarding them the moment the site
 # grew a section. Jekyll's own build directories aren't source pages.
-_BUILD_DIRS = {"_site", "_preview", "_build", "vendor", "_includes"}
+_BUILD_DIRS = {
+    "_site",
+    "_preview",
+    "_build",
+    "vendor",
+    "_includes",
+    # Exported by scripts/trace_viewer.py --export at docs build time
+    # (main only, see .github/workflows/docs.yml) - deliberately front-
+    # matter-free so Jekyll copies it through as a static page rather
+    # than theming it (same reasoning as the other build dirs here).
+    "trace-report",
+}
 PAGES = sorted(
     p
     for p in list(DOCS.rglob("*.md")) + list(DOCS.rglob("*.html"))

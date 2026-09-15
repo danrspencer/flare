@@ -34,6 +34,26 @@ jobs:
           cp custom_components/flare/www/flare-curve-card.js \
              docs/assets/js/flare-curve-card.js
 
+      # Publishes the current blueprint automation trace as a page with
+      # no nav entry, no link from anywhere else in the site - reachable
+      # only to someone who already has the URL (docs/trace-report/).
+      # Main-only and gated the same as `deploy` below: a PR's docs
+      # preview build doesn't pay for a full pytest-homeassistant-
+      # custom-component install just to produce a page nobody but a
+      # published main build actually serves.
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: pip install pytest pytest-homeassistant-custom-component
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Capture a fresh blueprint trace for this commit
+        run: pytest tests/behaviour -q
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Export the trace report into the site
+        run: python scripts/trace_viewer.py --export docs/trace-report
+
       - uses: ruby/setup-ruby@v1
         with:
           # Jekyll 4, not the github-pages gem's Jekyll 3 - docs/_config.yml

@@ -133,8 +133,19 @@ Two things about it are less obvious than they look:
   behind the sliders is `docs/assets/js/curve.js`, a port of `curve.py`; `tests/test_curve_js_parity.py` runs
   both it and the card itself under node against a grid of inputs and fails if either drifts from `curve.py`.
 
+- **A hidden trace report is published at `/trace-report/`, main builds only.** `.github/workflows/docs.yml`
+  runs `tests/behaviour` fresh for the commit being built, then `scripts/trace_viewer.py --export
+  docs/trace-report` (also runnable locally as `mise run trace-export`) writes a static snapshot of the
+  interactive trace viewer — no Python server needed, since the exported `index.html` fetches its data as
+  plain files (`api/yaml`, `api/traces`, `api/trace/*.json`) relative to its own location rather than from
+  a live server. It carries no nav entry, isn't in the search index, and nothing else on the site links to
+  it — reachable only to someone who already has the URL. Gated to `push` on `main` (the same condition
+  `deploy` uses below) so a PR's docs preview build doesn't pay for a full
+  `pytest-homeassistant-custom-component` install just to produce a page that build never serves anyway.
+
 Every page needs front matter — Jekyll only renders a file as a *page* if it has a literal front matter block,
-and copies it through verbatim otherwise. `tests/test_docs_site.py` checks that.
+and copies it through verbatim otherwise. `tests/test_docs_site.py` checks that (`docs/trace-report/` is
+excluded from that check the same way `_site`/`_preview`/etc. are — it's deliberately front-matter-free).
 
 ## Testing
 

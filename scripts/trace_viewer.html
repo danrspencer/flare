@@ -207,6 +207,17 @@ function previewOf(node) {
   if (!node) return "";
   if (node.__type__ === "scalar") return brief(node.value, 70);
   if (node.__type__ === "map") {
+    // The blueprint author's own name for this step, when there is one -
+    // "Only motion, a manual run, or a room already in use may switch a
+    // light on" reads a lot better than "condition: and". Preferred over
+    // the first-two-keys fallback below regardless of where `alias:`
+    // falls in the mapping, and shown close to whole rather than the
+    // fallback's tight 34-char-per-field limit, since a human-written
+    // sentence is exactly the thing worth NOT truncating - the row's own
+    // CSS ellipsis still clips it if the pane is too narrow.
+    const alias = node.value.alias;
+    if (alias && alias.__type__ === "scalar") return brief(alias.value, 120);
+
     const parts = [];
     for (const [k, v] of Object.entries(node.value)) {
       if (v.__type__ === "scalar") {
@@ -403,7 +414,7 @@ function renderTrace(data) {
 }
 
 async function loadYaml() {
-  const res = await fetch("/api/yaml");
+  const res = await fetch("api/yaml");
   const data = await res.json();
   if (data.error) {
     document.getElementById("status").textContent = "YAML error: " + data.error;
@@ -414,13 +425,13 @@ async function loadYaml() {
 }
 
 async function loadTrace(name) {
-  const res = await fetch("/api/trace/" + encodeURIComponent(name));
+  const res = await fetch("api/trace/" + encodeURIComponent(name));
   const data = await res.json();
   renderTrace(data);
 }
 
 async function loadTraceList(keepSelection) {
-  const res = await fetch("/api/traces");
+  const res = await fetch("api/traces");
   const list = await res.json();
   const sel = document.getElementById("trace-select");
   const previous = keepSelection ? sel.value : null;
