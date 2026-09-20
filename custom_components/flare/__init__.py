@@ -182,6 +182,17 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
     }
 )
 
+TURN_OFF_SCHEMA = vol.Schema(
+    {
+        vol.Required("entities"): [cv.entity_id],
+        vol.Optional("transition", default=0): vol.Coerce(float),
+        # Optional, same as apply_lighting's: None (or omitted) turns the
+        # lights off without tracking anything, and the blueprint renders
+        # an explicit Jinja None when it can't resolve a scope.
+        vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
+    }
+)
+
 # These three (claims_check/claims_record/claims_clear - prefixed so
 # they sort and group together in Developer Tools -> Actions) exist for
 # no reason other than to read or write tracking claims - unlike
@@ -326,30 +337,34 @@ async def _two_step_turn_on(
     entity_ids: list,
     brightness: int,
     half_transition: float,
-    context: Context,
     *,
+    brightness_context: Context,
+    color_context: Context,
     color_temp_kelvin: int | None = None,
     rgb_color: list | None = None,
-) -> tuple[str, str]:
+) -> None:
     """Brightness-only call, wait, then brightness + colour - for bulbs
     that can't transition both together (no_combined_transition label).
     Works the same for either colour representation; only the second
     call's colour field differs.
 
-    Each step now gets its own real Context() (parented to the
-    triggering apply_lighting call's own context, for logbook
-    traceability via that context chain) rather than sharing one - a
+    Each step gets its own real Context() rather than sharing one - a
     two-step transition genuinely is two separate light.turn_on calls,
     and forcing them to share a single context.id meant a device
     reporting the brightness-only step on its own (a real, expected
     intermediate state for these bulbs, not an anomaly) did so under a
     context that matched neither the final target nor anything else
     write_tracking.py recognised - indistinguishable from a genuine
-    external touch. Returns (brightness_context_id, color_context_id)
-    so the caller can record *both* against this entity's write-tracking
-    claim - see write_tracking.py's async_record docstring for how
-    either one landing is recognised as ours."""
-    brightness_context = Context(parent_id=context.id)
+    external touch. See write_tracking.py's async_record docstring for
+    how either one landing is recognised as ours.
+
+    The caller creates both contexts (parented to the apply_lighting
+    call's own, for logbook traceability) and passes them in, rather than
+    this function making them and returning their ids. apply_lighting
+    records its claims BEFORE dispatching anything, so both ids have to
+    exist before either step is sent - this coroutine can be cancelled
+    at the sleep below, and an id only known once it returns would be
+    lost with it."""
     await hass.services.async_call(
         "light",
         "turn_on",
@@ -358,14 +373,12 @@ async def _two_step_turn_on(
         context=brightness_context,
     )
     await asyncio.sleep(half_transition)
-    color_context = Context(parent_id=context.id)
     data = {"entity_id": entity_ids, "transition": half_transition, "brightness": brightness}
     if color_temp_kelvin is not None:
         data["color_temp_kelvin"] = color_temp_kelvin
     else:
         data["rgb_color"] = rgb_color
     await hass.services.async_call("light", "turn_on", data, blocking=True, context=color_context)
-    return brightness_context.id, color_context.id
 
 
 CARD_URL_BASE = "/flare_static"
@@ -654,9 +667,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # did" once the write's context expires.
         write_targets: dict = {}
         # Two-step entities get their own pair of contexts (see
-        # _two_step_turn_on), not call.context - populated below once
-        # asyncio.gather resolves, since the contexts don't exist until
-        # the calls actually run. context_id_overrides is the colour
+        # _two_step_turn_on), not call.context. They are created here,
+        # while planning, rather than by the calls that use them: the
+        # claims are recorded before anything is dispatched (below), so
+        # every id has to exist first. context_id_overrides is the colour
         # step's context (the final, complete state); secondary_context_ids
         # is the brightness step's (see write_tracking.py's async_record).
         # Both stay empty for every non-two-step entity, which keeps
@@ -664,12 +678,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         context_id_overrides: dict = {}
         secondary_context_ids: dict = {}
         tasks = []
-        # (index into tasks, entities) for each two-step dispatch, so the
-        # matching (brightness_context_id, color_context_id) can be
-        # pulled back out of asyncio.gather's own same-order results -
-        # tasks itself is a flat mix of turn_off/turn_on/two-step
-        # coroutines, only the latter return anything meaningful.
-        two_step_dispatches: list[tuple[int, list]] = []
         for g in groups:
             if g.needing_off:
                 written_entities.extend(g.needing_off)
@@ -722,48 +730,70 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
             if g.two_step:
                 written_entities.extend(g.two_step)
+                brightness_context = Context(parent_id=call.context.id)
+                color_context = Context(parent_id=call.context.id)
                 for e in g.two_step:
                     write_targets[e] = {"brightness": g.brightness, "color_temp_kelvin": color_temp_kelvin}
-                two_step_dispatches.append((len(tasks), g.two_step))
+                    context_id_overrides[e] = color_context.id
+                    secondary_context_ids[e] = brightness_context.id
                 tasks.append(
                     _two_step_turn_on(
                         hass,
                         g.two_step,
                         g.brightness,
                         half_transition,
-                        call.context,
+                        brightness_context=brightness_context,
+                        color_context=color_context,
                         color_temp_kelvin=color_temp_kelvin,
                     )
                 )
             if g.two_step_rgb:
                 written_entities.extend(g.two_step_rgb)
+                brightness_context = Context(parent_id=call.context.id)
+                color_context = Context(parent_id=call.context.id)
                 for e in g.two_step_rgb:
                     write_targets[e] = {"brightness": g.brightness, "rgb_color": rgb_color_list}
-                two_step_dispatches.append((len(tasks), g.two_step_rgb))
+                    context_id_overrides[e] = color_context.id
+                    secondary_context_ids[e] = brightness_context.id
                 tasks.append(
                     _two_step_turn_on(
-                        hass, g.two_step_rgb, g.brightness, half_transition, call.context, rgb_color=rgb_color_list
+                        hass,
+                        g.two_step_rgb,
+                        g.brightness,
+                        half_transition,
+                        brightness_context=brightness_context,
+                        color_context=color_context,
+                        rgb_color=rgb_color_list,
                     )
                 )
 
-        # Snapshotted *before* any of the writes above are dispatched -
-        # nothing async has run yet since build_groups() returned (the
-        # gather below is the first await point), so this is a true
-        # walking-in value. write_tracker needs it to tell whether the
-        # *previous* latest write actually landed, which can only be
-        # judged against state as it was before this call's own writes -
-        # reading it after would risk comparing a light's context against
-        # the very write about to be recorded, if it happened to land
-        # synchronously. See write_tracking.py's async_record docstring.
+        # Snapshotted before anything is dispatched, as write_tracker needs
+        # it to tell whether the *previous* latest write actually landed,
+        # which can only be judged against state as it was before this
+        # call's own writes - reading it after would risk comparing a
+        # light's context against the very write about to be recorded, if
+        # it happened to land synchronously. See write_tracking.py's
+        # async_record docstring.
         live_context_before_write = {e: lookup.context_id(e) for e in written_entities}
 
-        if tasks:
-            results = await asyncio.gather(*tasks)
-            for index, entities in two_step_dispatches:
-                brightness_context_id, color_context_id = results[index]
-                for e in entities:
-                    context_id_overrides[e] = color_context_id
-                    secondary_context_ids[e] = brightness_context_id
+        # RECORD BEFORE DISPATCH, not after. This used to run once the
+        # writes had been awaited, so a run that never got that far - one
+        # group's call raising inside the gather, or the blueprint's
+        # `mode: restart` cancelling this call while a two-step bulb was
+        # asleep between its steps - left lights that HAD changed with no
+        # claim to explain it. The next tick then saw a context and values
+        # it had never written and called the light overridden, which
+        # excludes it until the room goes dark. Nothing errors when that
+        # happens; the light just stops following the curve.
+        #
+        # Recording first is safe because the two-claim model already
+        # tolerates an intent that never lands: `latest` is only what we
+        # were about to send, and `observed` is replaced solely by a state
+        # a bulb was actually seen in (async_record). If nothing arrives,
+        # the light still matches its previous, confirmed claim; if only
+        # part of it arrives, it matches `latest` via one of the contexts
+        # recorded here. It is also free of awaits, so the decision in
+        # build_groups() and its record are now one uninterrupted step.
         if written_entities:
             await write_tracker.async_record(
                 scope,
@@ -775,7 +805,63 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 context_id_overrides=context_id_overrides,
             )
 
+        if tasks:
+            await asyncio.gather(*tasks)
+
         return _groups_response(groups)
+
+    async def turn_off(call: ServiceCall) -> None:
+        """flare.turn_off
+
+        Turns `entities` off, and records that as ours so a later
+        override check reads it as such rather than as somebody else
+        switching the light off. Everything apply_lighting does for a
+        turn-off, without needing a brightness or colour target - which is
+        why the blueprint's turn-off paths call this rather than
+        apply_lighting.
+
+        It exists as ONE operation so a caller can't get the two halves
+        wrong. They used to be separate - a bare light.turn_off followed by
+        claims_record, with the caller hand-building the `{"state": "off"}`
+        target that is this integration's own private encoding of an off
+        claim - and both the order and the encoding were the caller's to
+        get right. Recording BEFORE dispatching, as apply_lighting does,
+        is what keeps a cancelled or failed run from leaving a light that
+        did switch off with no claim explaining it (see apply_lighting).
+
+        Unlike apply_lighting this does no override protection: it turns
+        off exactly what it is given. Deciding that a room should go dark
+        is the caller's call, and it is meant to take lights someone set by
+        hand along with everything else. Nothing is filtered for
+        reachability either - light.turn_off already ignores what it
+        cannot reach, and the claim for such a light is harmless.
+
+        tracking_device_id (optional): which FLARE tracking scope to
+        record the turn-off into. Omit it to turn the lights off without
+        recording anything.
+        """
+        entities = call.data["entities"]
+        if not entities:
+            return
+        transition = call.data["transition"]
+        scope = write_tracker.resolve_scope_device(call.data.get("tracking_device_id"))
+        live_context_before_write = {
+            e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
+        }
+        await write_tracker.async_record(
+            scope,
+            entities,
+            live_context_before_write,
+            call.context.id,
+            targets={e: {"state": "off"} for e in entities},
+        )
+        await hass.services.async_call(
+            "light",
+            "turn_off",
+            {"entity_id": entities, "transition": transition},
+            blocking=True,
+            context=call.context,
+        )
 
     async def claims_check(call: ServiceCall) -> ServiceResponse:
         """flare.claims_check
@@ -867,10 +953,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         standalone so a caller using claims_check on its own can
         participate in the same bookkeeping apply_lighting uses, without
         going through apply_lighting's brightness/curve logic. Call this
-        *after* actually issuing whatever write you decided on, the same
-        way apply_lighting does - recording a write that didn't happen
-        would make a later claims_check see a claim with nothing behind
-        it.
+        *before* issuing whatever write you decided on, the same way
+        apply_lighting does: a claim for a write that never lands is
+        harmless (the light still matches its previous, confirmed claim),
+        whereas a write with no claim - because the run was cancelled or
+        failed between the two - reads as somebody else's change.
 
         Returns: {"recorded": [...]} - the entity_ids that were actually
         recorded, which is **not** necessarily everything passed in: the
@@ -967,6 +1054,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             apply_lighting,
             schema=APPLY_LIGHTING_SCHEMA,
             supports_response=SupportsResponse.OPTIONAL,
+        )
+        hass.services.async_register(
+            DOMAIN,
+            "turn_off",
+            turn_off,
+            schema=TURN_OFF_SCHEMA,
         )
         hass.services.async_register(
             DOMAIN,
@@ -1069,6 +1162,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "compute_curve",
             "compute_scene_coverage",
             "apply_lighting",
+            "turn_off",
             "claims_check",
             "claims_record",
             "claims_clear",

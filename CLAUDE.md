@@ -420,7 +420,7 @@ decisions and constraints that aren't recoverable from the code.
 
 ### Services (`custom_components/flare/__init__.py`)
 
-Seven, all unit tested and confirmed working live. Full field contracts
+Eight, all unit tested and confirmed working live. Full field contracts
 in `docs/helpers.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
@@ -434,6 +434,17 @@ in `docs/helpers.md` and `services.yaml` - not repeated here.
   of which layer reads the attributes, and voluptuous's own required-
   field validation gives the same hard failure the internal read was
   added for.
+- `turn_off` - the turn-off counterpart of `apply_lighting`:
+  records `{"state": "off"}`, THEN calls `light.turn_off`, as one
+  operation. Takes no brightness/colour and does **no** override
+  protection - it turns off exactly what it is given, since a room
+  emptying is meant to take hand-set lights along too. It exists because
+  the blueprint used to do this as a bare `light.turn_off` plus a
+  `claims_record` step, hand-building `{"state": "off"}` - this
+  integration's own private encoding of an off claim - in Jinja. Both the
+  order and that encoding were the caller's to get right, and the order
+  was wrong (see "Claims are recorded before the write"). **Don't split
+  it back into two steps in a caller.**
 - `claims_check` / `claims_record` / `claims_clear` - override
   protection exposed standalone, for callers that want it without any
   curve/brightness logic. `claims_clear` is the manual escape hatch
@@ -522,17 +533,39 @@ rather than assumed:
   context expires - without it a room turned off at bedtime classifies
   as `overridden` and can never be turned on again. That trap is the
   whole reason the recording exists, so don't drop it as redundant.
-- **The blueprint's own turn-offs are bare `light.turn_off` calls**,
-  not `apply_lighting`, so they record nothing on their own - each is
-  followed by an explicit `flare.claims_record` step with the same
-  `{"state": "off"}` target, guarded by
-  `tracking_scope_device_id is not none` since `claims_record` now
-  requires a scope - the same guard covers the `claims_clear` scene-
-  handoff step. Without the record step every light in the room reads
-  as externally switched off every time the room empties, which also
-  fires `flare_light_overridden` for each of them; without the guard, a
-  room with no resolvable scope would fail the tick outright instead of
-  turning off untracked.
+- **The blueprint's own turn-offs are `flare.turn_off` calls**,
+  which record the `{"state": "off"}` claim themselves. A bare
+  `light.turn_off` records nothing, so every light in the room would
+  read as externally switched off each time the room empties, firing
+  `flare_light_overridden` for each of them. `tracking_device_id` may be
+  `None` (no resolvable scope) and the lights are then turned off
+  untracked; only the `claims_clear` scene-handoff step still needs the
+  `tracking_scope_device_id is not none` guard, since that service
+  requires a scope.
+- **Claims are recorded before the write, never after.** `apply_lighting`
+  and `turn_off` call `async_record` before dispatching anything.
+  It used to run once the writes had been awaited, so a run that never
+  got that far - one group's call raising inside the `asyncio.gather`,
+  or the blueprint's `mode: restart` cancelling the service call while a
+  two-step bulb slept between its steps - left lights that HAD changed
+  with no claim explaining it, and the next tick classified them
+  `overridden`. Silent: the light just stops following the curve.
+  Reproduced against a real `Script` in `mode: restart`, which does
+  cancel a running blocking service call (`helpers/script.py`'s
+  `_async_run_long_action`; `async_call` has no `shield`). Safe because
+  the two-claim model already tolerates an intent that never lands:
+  `observed` is replaced only by a state a bulb was actually seen in, so
+  a write that never arrives leaves the light matching its previous,
+  confirmed claim. Consequences: the two-step contexts are created by
+  `apply_lighting` and passed into `_two_step_turn_on` (ids must exist
+  before either step is sent), and `async_record` has no awaits inside,
+  so the planning decision and its record are one uninterrupted step.
+  **"Seen" means a context match only** - promotion never compares
+  values, so a bulb that echoes under a fresh context after HA's 5s
+  expiry is never promoted. Pinned by
+  `tests/integration/test_interrupted_writes.py`.
+- **`flare.claims_record` is documented as call-BEFORE-your-write** for
+  the same reason, for anyone composing their own automation.
 - **A scope releases every claim once none of its lights report `on`**
   (`ClaimRegistry._release_if_dark`). Anything not `on` counts as dark,
   unavailable included - requiring an explicit `off` would let one
@@ -849,8 +882,8 @@ blueprint input needed.
 Exactly two things in the blueprint can switch a light on -
 `scene.turn_on` and `flare.apply_lighting` - and both sit inside one
 `if allow_turn_on` block in `default:`. Nothing else in `action:` ever
-writes an "on" state (the rest is two `light.turn_off` and three
-`claims_*` bookkeeping steps). Anything added later that can switch a
+writes an "on" state (the rest is two `flare.turn_off` calls and
+one `claims_clear` bookkeeping step). Anything added later that can switch a
 light on belongs in that same block; `tests/integration/test_blueprint.py`'s
 `test_no_trigger_reaching_default_can_light_a_dark_empty_room` sweeps
 every trigger reaching `default:` to enforce it.

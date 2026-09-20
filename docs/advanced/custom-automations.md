@@ -72,7 +72,7 @@ response_variable: control
 ```
 
 ```yaml
-# After actually issuing your own light.turn_on, so a later claims_check call recognises it as yours:
+# Just before issuing your own light.turn_on, so a later claims_check call recognises it as yours:
 action: flare.claims_record
 data:
   entities: [light.kitchen_1]
@@ -106,13 +106,16 @@ FLARE doesn't handle, or a device outside the light domain — use the planner i
 the sending step:
 
 1. `flare.claims_check` to ask which entities you should leave alone.
-2. Your own writes for the rest.
-3. `flare.claims_record` immediately afterwards, so FLARE recognises your write next time
-   instead of reading it as an external change.
+2. `flare.claims_record` for the rest, just before you write them, so FLARE recognises your write
+   next time instead of reading it as an external change.
+3. Your own writes.
 
 {: .tip }
 > Pass `targets` to `claims_record`. Without it a context mismatch is always treated as
 > external, so a bulb that confirms slowly gets misread as overridden.
+
+To turn lights off, use `flare.turn_off` rather than `light.turn_off` and `claims_record` yourself: it
+records the turn-off and sends it in one step.
 
 `flare.compute_lighting_groups` is the same planner `apply_lighting` uses internally,
 exposed without sending anything — it returns the groups it *would* have written, so you can
