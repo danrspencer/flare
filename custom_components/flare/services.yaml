@@ -293,6 +293,51 @@ apply_lighting:
             - integration: flare
               model: Tracking Scope
 
+turn_off:
+  name: Turn off lights
+  description: >-
+    Turns lights off and records that as your own doing, so a later
+    override check recognises it instead of reading it as somebody else
+    switching the light off. The turn-off counterpart of apply_lighting,
+    for when there is no brightness or colour to apply.
+
+    Unlike apply_lighting this does no override protection - it turns off
+    exactly what it is given, including lights someone set by hand. Use it
+    when you have already decided the room should go dark.
+
+    The claim is recorded before the lights are switched off, so a run that
+    is cancelled or fails part-way doesn't leave a light that did go off
+    looking as if someone else switched it.
+  fields:
+    entities:
+      name: Entities
+      description: Lights to turn off.
+      required: true
+      selector:
+        entity:
+          domain: light
+          multiple: true
+    transition:
+      name: Transition
+      description: Transition duration in seconds.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: s
+    tracking_device_id:
+      name: Tracking scope
+      description: >-
+        The FLARE state device (Settings -> Devices & Services -> FLARE
+        Tracking) this turn-off belongs to. Leave unset to turn the
+        light(s) off without tracking them at all - no claim is recorded.
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Tracking Scope
+
 compute_curve:
   name: Compute adaptive curve point
   description: >-
@@ -561,8 +606,8 @@ claims_check:
     override-protection mechanism apply_lighting/compute_lighting_groups
     use internally, exposed standalone so any automation can ask "should
     I write this" without any of this integration's brightness/curve
-    logic at all. Read-only - call claims_record afterwards if you do
-    write the entity, so a later check recognises that write.
+    logic at all. Read-only - call claims_record before you write the
+    entity, so a later check recognises that write.
 
     Checks against tracking_device_id's own claims. This service exists
     only to answer questions about tracking, so unlike apply_lighting
@@ -625,11 +670,14 @@ claims_check:
 claims_record:
   name: Record claims
   description: >-
-    Records that this call's own context just wrote entities - call it
-    immediately after actually issuing whatever write claims_check said
-    was allowed, so a later check recognises that write rather than
-    reading it as an external change. A thin wrapper around the same
-    bookkeeping apply_lighting uses internally.
+    Records that this call's own context is about to write entities - call
+    it immediately BEFORE issuing whatever write claims_check said was
+    allowed, so a later check recognises that write rather than reading it
+    as an external change. Recording first is safe: a claim for a write
+    that never lands is harmless, whereas a write whose claim was never
+    recorded (the run was cancelled or failed in between) reads as
+    somebody else's. A thin wrapper around the same bookkeeping
+    apply_lighting uses internally.
 
     This service exists only to write tracking claims, so unlike
     apply_lighting there's nothing useful to do without a scope - it's
@@ -637,7 +685,7 @@ claims_record:
   fields:
     entities:
       name: Entities
-      description: Entities that were actually written.
+      description: Entities you are about to write.
       required: true
       selector:
         entity:

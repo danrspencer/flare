@@ -8,7 +8,7 @@ blueprint:
     [the blueprint reference](https://danrspencer.github.io/flare/blueprint/).
 
 
-    Blueprint version 0.16.0 - the integration raises a repair when a
+    Blueprint version 0.17.0-beta.1 - the integration raises a repair when a
     newer one is available.
   domain: automation
   source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danspencer/flare.yaml
@@ -837,12 +837,16 @@ action:
                 alias: "Room occupancy currently detected"
                 target: !input room_target
         sequence:
+          # Records the turn-off as ours before sending it, in the same
+          # call - a bare light.turn_off would leave the integration
+          # reading it as somebody else switching the light off. With no
+          # resolvable scope it simply turns the lights off untracked.
           - alias: "Turn off the light(s)"
-            action: light.turn_off
-            target:
-              entity_id: "{{ turn_off_entities }}"
+            action: flare.turn_off
             data:
+              entities: "{{ turn_off_entities }}"
               transition: !input motion_off_transition
+              tracking_device_id: "{{ tracking_scope_device_id }}"
           # Idle-brightness lights are dimmed instead of switched off.
           # Can switch a light ON, hence gated on idle_entities - a room
           # with no idle brightness configured reaches an empty list
@@ -863,31 +867,6 @@ action:
                   transition: !input motion_off_transition
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
                   tracking_device_id: "{{ tracking_scope_device_id }}"
-          - alias: "Record the turn-off as ours"
-            # Without this the integration reads this turn-off as
-            # someone else's, since it has no claim for the context.
-            # Skipped with no resolvable scope - nothing is tracking
-            # these lights, and claims_record requires a scope.
-            if:
-              - condition: template
-                alias: "There's a scope and lights to record the turn-off against"
-                value_template: >-
-                  {{ tracking_scope_device_id is not none
-                     and turn_off_entities | length > 0 }}
-            then:
-              - action: flare.claims_record
-                data:
-                  entities: "{{ turn_off_entities }}"
-                  tracking_device_id: "{{ tracking_scope_device_id }}"
-                  # dict(a, **b) rather than dict.fromkeys: the same
-                  # construct used for the brightness levels below,
-                  # and known to work in HA's Jinja.
-                  targets: >-
-                    {% set ns = namespace(t={}) %}
-                    {% for e in turn_off_entities %}
-                      {% set ns.t = dict(ns.t, **{e: {'state': 'off'}}) %}
-                    {% endfor %}
-                    {{ ns.t }}
       # Self-healing: on the periodic tick, if the room is unoccupied but
       # something is still on (an earlier turn-off didn't land), retry
       # just that. Exclusive of default: rather than doing both -
@@ -924,29 +903,11 @@ action:
             value_template: "{{ entities_still_on | length > 0 }}"
         sequence:
           - alias: "Self-heal: retry turning off lights left on with no occupancy"
-            action: light.turn_off
-            target:
-              entity_id: "{{ entities_still_on }}"
+            action: flare.turn_off
             data:
+              entities: "{{ entities_still_on }}"
               transition: !input motion_off_transition
-          - alias: "Record the turn-off as ours"
-            # Same reasoning as the motion_off branch's copy of this
-            # step above.
-            if:
-              - condition: template
-                alias: "There's a scope to record the turn-off against"
-                value_template: "{{ tracking_scope_device_id is not none }}"
-            then:
-              - action: flare.claims_record
-                data:
-                  entities: "{{ entities_still_on }}"
-                  tracking_device_id: "{{ tracking_scope_device_id }}"
-                  targets: >-
-                    {% set ns = namespace(t={}) %}
-                    {% for e in entities_still_on %}
-                      {% set ns.t = dict(ns.t, **{e: {'state': 'off'}}) %}
-                    {% endfor %}
-                    {{ ns.t }}
+              tracking_device_id: "{{ tracking_scope_device_id }}"
     default:
       # Everything that can switch a light ON lives under this one gate -
       # see allow_turn_on's own comment in variables: for the invariant.

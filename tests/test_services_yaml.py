@@ -70,6 +70,7 @@ def test_every_documented_service_is_one_this_integration_registers():
     expected = {
         "compute_lighting_groups",
         "apply_lighting",
+        "turn_off",
         "compute_curve",
         "compute_scene_coverage",
         "claims_check",

@@ -132,7 +132,7 @@ Never paraphrase these. They are what the user types or clicks.
   Motion On / Motion Off / Background Transition.
   Several carry a literal "(Optional)" in the label — keep it when
   quoting the label, drop it in running prose.
-- **Services** — `flare.apply_lighting`, `flare.compute_lighting_groups`,
+- **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
 - **Config entries** — FLARE Schedules, FLARE Tracking.
