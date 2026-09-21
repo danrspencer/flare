@@ -7,6 +7,44 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [0.17.0] - Unreleased
+
+### Breaking
+
+- **Update the blueprint together with the integration.** The blueprint now turns
+  lights off with `flare.turn_off`, which earlier versions of the integration do not
+  have, so a new blueprint against an old integration fails with "service not found".
+  The blueprint-update repair fetches the version that matches the integration, so
+  updating through it keeps the two in step.
+
+### Added
+
+- **`flare.turn_off`.** Turns lights off and records that as FLARE's own doing, so a
+  turn-off is not later mistaken for somebody else switching the light off. It takes
+  `entities`, an optional `transition` and an optional `tracking_device_id`, and does
+  no override protection: it turns off exactly what it is given, including lights
+  someone set by hand. The blueprint uses it for its own turn-offs.
+
+### Fixed
+
+- **A light no longer stops following the schedule after an update is cut short.**
+  If a room's automation was restarted part-way through changing its lights - a new
+  motion event arriving while a two-step bulb was between its two steps, or one
+  light's command failing while its neighbours' succeeded - the lights that had
+  already changed were treated as if somebody else had set them, and were left alone
+  until the room next went dark. Nothing was logged; the light simply stopped
+  following the curve. FLARE now records what it is about to send before it sends it,
+  so an interrupted update leaves the lights recognisably its own.
+
+### Changed
+
+- **The blueprint turns lights off with one call.** It used to call `light.turn_off`
+  and then `flare.claims_record` as two steps, in an order that had the same problem
+  as above. Behaviour is otherwise unchanged.
+- **`flare.claims_record` is now documented as something to call *before* you write
+  your lights, not after.** If you built your own automation on `claims_check` and
+  `claims_record`, move the record ahead of your write.
+
 ## [0.16.0] - 2026-09-20
 
 ### Fixed
