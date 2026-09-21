@@ -1,8 +1,9 @@
-"""The manifest version is what HACS shows as installed, so it must not
-drift from the changelog that explains it.
-
-Checked here as well as in the release workflow because the workflow only
-runs when a tag is pushed - by which point a mismatch means re-tagging.
+"""The version HACS shows as installed comes out of the release's own
+manifest.json, and that is written when the release is built, not typed
+into the source. So these tests are about the seams: the source carries
+the placeholder, the changelog names the version being worked toward, and
+release.yml - which still checks any tag pushed by hand - agrees with the
+manifest's location.
 
 A version may carry a prerelease suffix (0.16.0-beta.1). That is how the
 two release channels are spelled: the workflow turns a hyphenated tag
@@ -12,9 +13,17 @@ on "Show beta versions" for this repository. See CONTRIBUTING.md.
 
 import json
 import re
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
+import release  # noqa: E402
+
+# What the manifest's version is in source until a release is built.
+DEV_VERSION = "0.0.0-dev"
+
 MANIFEST = REPO_ROOT / "custom_components" / "flare" / "manifest.json"
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
@@ -37,17 +46,23 @@ def test_manifest_version_is_orderable():
     assert VERSION.fullmatch(_version()), _version()
 
 
-def test_the_changelog_describes_the_current_version():
-    """A release whose version isn't in the changelog is one nobody can
-    find out anything about - including which of it is breaking, which
-    for this integration has mattered more than once.
+def test_the_source_carries_the_placeholder_version():
+    """A release is built on the side by scripts/release.py, which writes
+    the real version into a copy of the tree. A number typed into the
+    source would be overwritten, so it can only mislead - failing here
+    catches a hand-bump made out of the old habit."""
+    assert _version() == DEV_VERSION
 
-    Matched on the BASE version, so 0.16.0-beta.3 is described by the
-    0.16.0 section. A section per beta would turn the changelog into a
-    build log and put a commit in the way of every test build."""
-    base = VERSION.fullmatch(_version()).group("base")
 
-    assert f"## [{base}]" in CHANGELOG.read_text()
+def test_the_changelog_names_the_version_being_worked_toward():
+    """The release script reads the target version from the top section's
+    heading, so that heading is what a person is really deciding when they
+    write it. Without a parseable one nothing can be cut.
+
+    A release's changelog section is still required, and checked at tag
+    time by release.yml - by construction it exists for anything the
+    script builds, because that is where the version came from."""
+    assert release.changelog_base(CHANGELOG.read_text()) is not None
 
 
 def test_the_release_workflow_checks_the_same_manifest_this_test_does():

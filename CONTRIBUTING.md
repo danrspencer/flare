@@ -210,28 +210,87 @@ true now rather than what changed, reference tables come before prose,
 headings are the reader's question, and inputs are named exactly as the
 UI labels them.
 
-## Cutting a release
+## Releases
 
-HACS reads the version out of `manifest.json`, not out of the tag, so the two must
-agree or the version people see installed isn't the one they downloaded. That's
-checked twice: `tests/test_version.py` runs on every PR, and
-`.github/workflows/release.yml` re-checks at tag time and refuses to publish a
-mismatch.
+Three tiers, each following a branch or a tag rather than a person deciding:
 
-### Beta by default
+| Tier | Who it is for | Where it comes from | HACS |
+|---|---|---|---|
+| **dev** | you, churning | the `dev` branch | not offered - see [Following dev in HACS](#following-dev-in-hacs) |
+| **beta** | testers who don't mind instability | `vX.Y.Z-beta.N` pre-releases | turn on FLARE's **Pre-release** switch |
+| **release** | everyone else | `vX.Y.Z` releases | the default |
 
-**A release is tagged as a beta unless it has been explicitly promoted.**
-`vX.Y.Z-beta.N` is the normal thing to push; `vX.Y.Z` is a deliberate
-decision someone makes about a build that has had some use.
+Pull requests target `dev`. Nothing about a release is typed by hand: not the
+version, not the tag, not the blueprint stamp.
 
-That is the whole point of the channels: FLARE has beta testers now, so
-a stable tag reaches other people's houses. Betas let this iterate at
-the pace it actually iterates at without that.
+### Cutting a beta
 
-Promoting means moving the three versions below to the bare `X.Y.Z` and
-tagging it. The release workflow refuses a prerelease stamp on a stable
-tag, so a half-done promotion fails the build rather than shipping a
-beta blueprint to everyone.
+Push `dev` to `main`:
+
+```bash
+git push origin dev:main
+```
+
+That has to be a fast-forward. `main`'s ruleset requires linear history, so a squash or rebase
+merge from a pull request would give it new commits that `dev` never sees.
+
+`.github/workflows/cut-beta.yml` then runs the test suite on that commit and, if it
+passes, cuts `vX.Y.Z-beta.N` as a GitHub pre-release. **`X.Y.Z` is whatever the top
+`## [x.y.z]` heading of `CHANGELOG.md` says** - that heading is the one place anyone
+says what version is being worked toward, and it is already required, so write it
+before the first change that should ship. Breaking changes bump the **minor** while
+below 1.0, and say so in the section, because this ships in two halves (integration
+and blueprint) that deploy separately.
+
+A push cuts nothing, and stays green, when the top heading is a version that has already
+been released, or when nothing under `custom_components/` or `blueprints/` changed since
+the last beta. So docs, test and CI changes can go to `main` freely; a change that should
+ship but forgot its heading is the thing to watch for. A heading *below* an existing
+beta fails the run - that would reach testers as a downgrade.
+
+### Promoting a beta
+
+Nothing to do. `.github/workflows/promote.yml` runs daily and releases the newest beta
+of a version once it is **seven days old**. It is judged per version: a fresh
+`0.17.1-beta.1` does not hold back a week-old `0.17.0-beta.4`, but a newer beta of the
+*same* version restarts that version's clock, since what ships is that beta's contents. It
+will never promote a version at or below the highest existing release, so tags made out of
+order cannot ship a downgrade.
+
+**To hold a release back**, open an issue labelled `release-blocker`. While any is
+open the promotion is refused; close it and the next daily run carries on. The issue is
+also where "why isn't this shipping" gets answered.
+
+**To promote early**, run the workflow with `force` ticked:
+
+```bash
+gh workflow run promote.yml -f force=true
+```
+
+That skips the seven days but not the `release-blocker` check.
+
+### How a release is built
+
+The manifest's version in source is a placeholder (`0.0.0-dev`). HACS reads the version out of the `manifest.json` inside
+the tag it downloads, so `scripts/release.py` builds each release **on the side**: a commit
+on top of the source commit with the real version written into those three places,
+tagged, and reachable from no branch. Nothing is committed to `dev` or `main`, so they
+never drift apart over version bumps. A release is the same source commit as the beta it
+came from, with different numbers written in - which is what "promote" means.
+
+The blueprint stamp is worked out, not bumped: if the blueprint is unchanged since the
+previous release it keeps that release's stamp, so a release touching only Python doesn't
+tell everyone to re-import an identical file.
+
+GitHub shows a "does not belong to any branch" banner on these commits. That is expected.
+The release commit's message records its `Source:` commit.
+
+Shipped code has no special handling for a development build, on purpose. Two things follow:
+after a dev install the browser can serve cached card code until you hard-refresh, because
+the front-end URL carries the placeholder version and is cached hard; and the blueprint repair
+stays quiet only if you import the blueprint from the same commit as the integration, so
+that their stamps agree. Update the blueprint with a direct import rather than the repair's
+Fix button.
 
 ### Two channels
 
@@ -242,56 +301,39 @@ The tag decides, and nothing else does:
 | `v0.16.0` | a normal release | everyone |
 | `v0.16.0-beta.1` | a GitHub **pre-release** | only people who opted in |
 
-HACS filters on GitHub's own pre-release flag rather than on the tag text — see
+HACS filters on GitHub's own pre-release flag rather than on the tag text - see
 `custom_components/hacs/repositories/base.py`, which skips a release when
-`release.prerelease and not prerelease` — and that filter is driven by the
+`release.prerelease and not prerelease` - and that filter is driven by the
 per-repository **Pre-release** switch HACS creates for each downloaded repository.
 So a beta is invisible by default and arrives as an ordinary update to anyone who
-turned that switch on. No second branch, no second repository.
+turned that switch on. Enable the entity first: it ships registry-disabled.
 
-`hacs.json` sets `hide_default_branch: true` so nobody can sidestep the channels by
-downloading `main` directly.
+### Following dev in HACS
 
-To follow the betas on your own instance, turn on the **Pre-release** switch for
-FLARE under the HACS integration's entities. It ships registry-disabled, so you'll
-need to enable the entity before you can turn it on.
+HACS has no dev channel. Its download dialog (2.x) lists only a repository's GitHub
+releases, and shows pre-releases only while the **Pre-release** switch is on. The docs
+still describe offering the default branch as well, but that was removed in 2.0
+([hacs/integration#4009](https://github.com/hacs/integration/issues/4009), closed as not
+planned), and a repository's default branch is only tracked by commit when it publishes no
+releases at all. So changing the default branch or `hide_default_branch` does nothing here.
 
-### Steps
+What exists: HACS's `hacs/repository/download` websocket call takes any string as its
+`version`, and the download code falls back from `refs/tags/<name>.zip` to
+`refs/heads/<name>.zip`, so naming `dev` should install that branch. It is not offered in the
+UI and no update is ever reported for it, so it is a manual step each time. That has not been
+tried against this integration; until it has, treat it as unverified and follow the beta
+channel for anything you want to see through HACS.
 
-1. Bump `version` in `custom_components/flare/manifest.json`.
-   Breaking changes bump the **minor** while below 1.0. A beta carries the version it
-   is working toward plus a suffix — `0.16.0-beta.1` — and that is the default; see
-   **Beta by default** above.
-2. Add a `## [x.y.z] - YYYY-MM-DD` section to `CHANGELOG.md`, calling out anything
-   breaking explicitly — this integration ships in two halves (integration and
-   blueprint) that deploy separately, so "you must deploy both" is a real
-   instruction, not boilerplate.
+### Tagging by hand
 
-   Betas are matched on their **base** version, so `0.16.0-beta.3` is described by the
-   `## [0.16.0]` section. Write that section once, before the first beta, and keep
-   adding to it. A section per beta would make the changelog a build log.
-3. **If the blueprint changed**, bump `BLUEPRINT_VERSION` in
-   `custom_components/flare/blueprint_version.py` and the matching line in the
-   blueprint's own `description` to the version you're about to release. A pull
-   request touching `blueprints/` without moving the stamp fails CI, and a stable
-   release whose stamp still carries a beta suffix - or names a tag that was never
-   cut - fails the release workflow. Both matter because the stamp is the URL the
-   out-of-date repair's Fix button downloads from.
-4. Merge, then tag the merge commit and push it:
+Still possible, for a hotfix or when a workflow is unavailable. Set the three versions
+yourself in a checkout, tag it, and push the tag: `.github/workflows/release.yml` checks
+the tag against the manifest, that the blueprint stamp suits the channel and names a tag
+that exists, and that the changelog has a section for it, then publishes. (A tag pushed by
+the workflows above does not trigger it - GitHub does not let a workflow's own events start
+another - and needs no such check, since `scripts/release.py` wrote the version and the tag
+together.)
 
-   ```bash
-   git tag v0.16.0-beta.1 && git push origin v0.16.0-beta.1
-   ```
-
-   Promote when it's had some use, by tagging the same content without the suffix:
-
-   ```bash
-   git tag v0.16.0 && git push origin v0.16.0
-   ```
-
-The workflow validates and creates the GitHub release, marking it a pre-release when
-the tag carries a suffix.
-
-**Merge, then verify, then tag — as three separate steps.** Chaining them means a
-failed merge still tags, which has happened: a `wip` commit went out as a release
-because the tag was chained onto a merge that hadn't landed.
+**Merge, then verify, then tag - as separate steps.** Chaining them means a failed merge
+still tags, which has happened: a `wip` commit went out as a release because the tag was
+chained onto a merge that hadn't landed.

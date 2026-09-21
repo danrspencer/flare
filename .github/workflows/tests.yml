@@ -1,8 +1,14 @@
 name: tests
 
+# Deliberately not on `push`: for a branch with a pull request that ran
+# the suite twice per push. Pull requests are tested here; a push to main
+# is tested by cut-beta.yml, which calls this workflow on the commit it
+# is about to release. A push to a branch with no pull request (a direct
+# commit to dev, say) is not tested until it reaches main, where a failing
+# suite stops the beta being cut.
 on:
-  push:
   pull_request:
+  workflow_call:
 
 jobs:
   pytest:
@@ -75,33 +81,3 @@ jobs:
             scripts/trace_viewer.html
             blueprints/automation/danspencer/flare.yaml
           if-no-files-found: ignore
-
-  # The blueprint's version stamp is what tells an installed copy it has
-  # fallen behind, and it is bumped by hand. Forgetting fails SILENTLY -
-  # no error, no repair, users simply never hear about the update - so
-  # it needs catching at review time rather than in a release.
-  #
-  # Only meaningful on a pull request, where there is a base branch to
-  # diff against; a plain push has nothing to compare with.
-  blueprint-stamp:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          # The default shallow clone has no base branch to diff.
-          fetch-depth: 0
-      - name: A blueprint change must move its version stamp
-        env:
-          BASE: origin/${{ github.base_ref }}
-        run: |
-          if git diff --quiet "$BASE" -- blueprints/; then
-            echo "blueprints/ unchanged - nothing to check"
-            exit 0
-          fi
-          if git diff "$BASE" -- blueprints/ | grep -q '^+.*Blueprint version'; then
-            echo "blueprints/ changed and the stamp moved with it"
-            exit 0
-          fi
-          echo "::error::blueprints/ changed but the version stamp did not. Bump it in the blueprint's description AND in custom_components/flare/blueprint_version.py, or nobody running an older copy will be told to update."
-          exit 1
