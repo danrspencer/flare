@@ -104,7 +104,7 @@ def test_context_matches_observed():
 
 def test_context_matches_latests_secondary_context():
     # A two-step transition's brightness-only step lands under its own
-    # context (see __init__.py's _two_step_turn_on) - matching that
+    # context (see services.py's _two_step_turn_on) - matching that
     # secondary context is just as much "ours" as matching the primary
     # (colour step's) one.
     status, matched_via = classify(

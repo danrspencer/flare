@@ -418,7 +418,7 @@ Everything below describes how the system works *now*. Per-change
 history lives in git; this file only carries what stays true, plus the
 decisions and constraints that aren't recoverable from the code.
 
-### Services (`custom_components/flare/__init__.py`)
+### Services (`custom_components/flare/services.py`)
 
 Eight, all unit tested and confirmed working live. Full field contracts
 in `docs/helpers.md` and `services.yaml` - not repeated here.
@@ -1152,7 +1152,7 @@ Routed two ways, OR'd together - `grouping.py`'s `EntityLookup.
 matches_two_step_pattern()` compares a light's device
 `"<manufacturer> <model>"` against a configurable list of
 case-insensitive globs (`CONF_TWO_STEP_MODELS`, read fresh per call via
-`__init__.py`'s `_two_step_model_patterns()`), **or** the entity/device
+`services.py`'s `_two_step_model_patterns()`), **or** the entity/device
 carries the `no_combined_transition` label (`EntityLookup.tags()`,
 unchanged). `two_step.py` holds only the pure matching primitives
 (`model_matches`, `parse_patterns`, `DEFAULT_TWO_STEP_MODEL_PATTERNS`,

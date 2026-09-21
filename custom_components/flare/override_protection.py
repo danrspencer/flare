@@ -72,7 +72,7 @@ class _ContextClaim(TypedDict):
     # A two-step transition (no_combined_transition label) genuinely
     # issues two separate light.turn_on calls - brightness first, then
     # colour - each now given its own distinct context.id (see
-    # __init__.py's _two_step_turn_on) rather than sharing one. Either
+    # services.py's _two_step_turn_on) rather than sharing one. Either
     # one landing counts as this claim having been observed - a device
     # whose real confirmation for the *first* step arrives (its own
     # context, matched here) before the second step's has necessarily

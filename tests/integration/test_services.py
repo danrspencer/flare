@@ -1,9 +1,9 @@
 """
 Integration tests for the flare services
-(__init__.py), through a real Home Assistant instance - this is the
+(services.py), through a real Home Assistant instance - this is the
 HA-glue layer that tests/test_grouping.py and tests/test_curve.py
 can't reach at all (they exercise grouping.py/curve.py directly via
-fakes, never __init__.py's service registration, sensor reading,
+fakes, never services.py's service registration, sensor reading,
 context propagation, or write_tracking.py's real Store persistence).
 
 Deliberately doesn't re-prove grouping.py's own tolerance/two-step/RGB
@@ -32,7 +32,8 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-from custom_components.flare import _build_lookup, async_setup_entry
+from custom_components.flare import async_setup_entry
+from custom_components.flare.services import _build_lookup
 from custom_components.flare.grouping import build_groups
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
@@ -703,7 +704,7 @@ async def test_compute_scene_coverage_reports_covered_and_uncovered_entities(set
 async def test_override_protection_survives_a_real_write_tracking_round_trip(setup_integration: HomeAssistant):
     """End-to-end version of what tests/test_grouping.py already proves
     at the pure-function level - this time through the real
-    write_tracking.py Store and __init__.py's context propagation, not
+    write_tracking.py Store and services.py's context propagation, not
     a fake. A light manually changed (a different context.id) after our
     own write must be left alone on the next non-forced call with the
     the same state device.
@@ -864,7 +865,7 @@ async def test_two_step_transition_generates_two_distinct_contexts(setup_integra
     """A two-step transition (no_combined_transition label) really is
     two separate light.turn_on calls - brightness first, then colour -
     and each now gets its own real Context() rather than sharing
-    call.context (see __init__.py's _two_step_turn_on). Both land in
+    call.context (see services.py's _two_step_turn_on). Both land in
     write_tracking: the colour step's (the final, complete state) as
     the claim's primary context_id, the brightness step's as its
     secondary_context_id."""
@@ -1003,7 +1004,7 @@ async def test_a_device_matching_the_default_two_step_pattern_is_routed_automati
     all, purely because its device manufacturer/model matches
     DEFAULT_TWO_STEP_MODEL_PATTERNS (CONF_TWO_STEP_MODELS left unset).
     A pure tests/test_grouping.py test proves build_groups() itself is
-    correct; this proves __init__.py actually wires entry.options
+    correct; this proves services.py actually wires entry.options
     through to a real service call - nothing else in the codebase does,
     now that two_step_check.py (the repair) is gone."""
     await _setup_entry(hass)
@@ -1511,3 +1512,33 @@ async def test_turn_off_with_no_entities_does_nothing(setup_integration: HomeAss
     await _turn_off(hass, [])
 
     assert off_calls == []
+
+
+# --- service registration --------------------------------------------------
+
+
+async def test_the_services_registered_are_exactly_the_ones_services_yaml_documents(setup_integration: HomeAssistant):
+    """test_services_yaml.py checks the yaml against a list written out by
+    hand; this checks it against what the integration really registers, so
+    a service added in one place and not the other is caught."""
+    from pathlib import Path
+
+    import yaml
+
+    documented = set(
+        yaml.safe_load((Path(__file__).resolve().parents[2] / "custom_components/flare/services.yaml").read_text())
+    )
+    assert set(setup_integration.services.async_services_for_domain(DOMAIN)) == documented
+
+
+async def test_unloading_the_services_removes_every_one_that_was_registered(setup_integration: HomeAssistant):
+    """The register and unload lists are written separately, so nothing
+    but this stops one being left behind after a reload."""
+    from custom_components.flare.services import async_unload_services
+
+    hass = setup_integration
+    assert hass.services.async_services_for_domain(DOMAIN), "precondition: services were registered"
+
+    async_unload_services(hass)
+
+    assert hass.services.async_services_for_domain(DOMAIN) == {}
