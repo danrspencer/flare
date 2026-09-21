@@ -1,11 +1,12 @@
 name: tests
 
-# Pushes to main are tested by cut-beta.yml, which calls this workflow on
-# the commit it is about to release - so main is left out here rather than
-# tested twice.
+# Deliberately not on `push`: for a branch with a pull request that ran
+# the suite twice per push. Pull requests are tested here; a push to main
+# is tested by cut-beta.yml, which calls this workflow on the commit it
+# is about to release. A push to a branch with no pull request (a direct
+# commit to dev, say) is not tested until it reaches main, where a failing
+# suite stops the beta being cut.
 on:
-  push:
-    branches-ignore: [main]
   pull_request:
   workflow_call:
 
