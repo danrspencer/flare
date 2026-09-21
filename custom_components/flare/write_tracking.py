@@ -103,6 +103,15 @@ claim that isn't a real write), and classify() falls back to comparing
 the entity's current values against either claim's target before
 concluding "external".
 
+None of this depends on recording after the write. A context id here is
+a tag WE attach to our own write, never something read back from the
+device: it is the service call's own Context (or, for a two-step write,
+one Context created per step), and all of them exist before anything is
+dispatched - which is what lets the claim be recorded first. If the write
+lands, the light's state carries exactly that id. The 5 second expiry
+above is about how long the LIGHT remembers it, not about when we can
+know it.
+
 Device recovery and restarts
 -----------------------------
 async_start_listening() clears an entity's record when it is observed
