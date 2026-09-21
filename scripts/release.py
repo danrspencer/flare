@@ -13,8 +13,10 @@ built on the side: a commit on top of the source commit with the real
 version written into the three places it lives, tagged, and left
 unreachable from any branch. Nothing moves. The other two (the constant
 in blueprint_version.py and the blueprint's description stamp) hold
-whatever they last held in source and are overwritten the same way. A beta and the release it becomes are the same
-source commit with different numbers written in.
+whatever they last held in source and are overwritten the same way, with
+the same number: the blueprint is versioned with FLARE, not separately.
+A beta and the release it becomes are the same source commit with
+different numbers written in.
 
 The commit message records that source (`Source: <sha>`), which is how a
 promotion finds what to rebuild.
@@ -210,32 +212,6 @@ def pick_promotion(
 _STAMP = re.compile(r"(Blueprint version\s+)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)")
 
 
-def _normalised(blueprint: str) -> str:
-    """The blueprint with its own stamp masked, so two copies can be
-    compared for whether they DIFFER, not for what number they wear."""
-    return _STAMP.sub(r"\1-", blueprint)
-
-
-def stamp_from(blueprint: str) -> str | None:
-    m = _STAMP.search(blueprint)
-    return m.group(2) if m else None
-
-
-def blueprint_stamp(source: str, previous: str | None, version: str) -> str:
-    """The version the blueprint should say it last changed in.
-
-    Worked out rather than hand-bumped: if the blueprint is the same as
-    it was in the previous release it keeps that release's stamp, so a
-    release touching only Python does not tell everyone to re-import an
-    identical file; if it changed, it says this release.
-    """
-    if previous is None:
-        return version
-    if _normalised(source) == _normalised(previous):
-        return stamp_from(previous) or version
-    return version
-
-
 def _replace_once(path: Path, pattern: str, replacement: str, flags: int = 0) -> None:
     text = path.read_text()
     new, count = re.subn(pattern, replacement, text, flags=flags)
@@ -244,18 +220,19 @@ def _replace_once(path: Path, pattern: str, replacement: str, flags: int = 0) ->
     path.write_text(new)
 
 
-def stamp_tree(root: Path, version: str, blueprint: str) -> None:
-    """Write `version` and the blueprint stamp into the three places a
-    release carries them. Each must match exactly once, so a file that
-    was reshaped fails here rather than shipping unstamped."""
+def stamp_tree(root: Path, version: str) -> None:
+    """Write `version` into the three places a release carries it: the
+    manifest, and the constant and the blueprint's own stamp, which are
+    always the release's version. Each must match exactly once, so a file
+    that was reshaped fails here rather than shipping unstamped."""
     _replace_once(root / MANIFEST, r'("version"\s*:\s*")[^"]*(")', rf"\g<1>{version}\g<2>")
     _replace_once(
         root / BLUEPRINT_VERSION_PY,
         r'^(BLUEPRINT_VERSION = ")[^"]*(")',
-        rf"\g<1>{blueprint}\g<2>",
+        rf"\g<1>{version}\g<2>",
         re.MULTILINE,
     )
-    _replace_once(root / BLUEPRINT, _STAMP.pattern, rf"\g<1>{blueprint}")
+    _replace_once(root / BLUEPRINT, _STAMP.pattern, rf"\g<1>{version}")
 
 
 # --- git ---------------------------------------------------------------
@@ -310,7 +287,7 @@ class Repo:
     def shipped_changed(self, old: str, new: str) -> bool:
         return self.git("diff", "--quiet", old, new, "--", *SHIPPED, check=False).returncode != 0
 
-    def build(self, tag: Tag, source: str, previous: Tag | None) -> str:
+    def build(self, tag: Tag, source: str) -> str:
         """Commit `source` with `tag`'s version written in, and tag it.
 
         Done in a throwaway worktree so the caller's checkout is never
@@ -321,9 +298,7 @@ class Repo:
             tree = Path(tmp) / "release"
             self.git("worktree", "add", "--detach", str(tree), source)
             try:
-                previous_bp = self.show(previous.name, BLUEPRINT) if previous else None
-                stamp = blueprint_stamp((tree / BLUEPRINT).read_text(), previous_bp, tag.version)
-                stamp_tree(tree, tag.version, stamp)
+                stamp_tree(tree, tag.version)
 
                 self.git("add", "-A", cwd=tree)
                 self.git(
@@ -368,8 +343,7 @@ def cut_beta(repo: Repo, source: str) -> Tag:
         except Refuse:
             pass  # a hand-made beta: no recorded source, so cut a fresh one
 
-    everything = max(tags, default=None)
-    repo.build(beta, source, everything)
+    repo.build(beta, source)
     return beta
 
 
@@ -378,8 +352,7 @@ def promote(repo: Repo, now: datetime, *, force: bool = False) -> Tag:
     beta = pick_promotion(tags, made_at, now, force=force)
 
     stable = Tag(beta.base, True, 0)
-    previous = max((t for t in tags if t.stable), default=None)
-    repo.build(stable, repo.source_of(beta), previous)
+    repo.build(stable, repo.source_of(beta))
     return stable
 
 

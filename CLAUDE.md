@@ -1233,25 +1233,32 @@ a repair suggestion someone can ignore - keep patterns narrow.
 flow - the same pure/adapter/fix-flow split used elsewhere in this
 integration (e.g. curve.py/coordinator.py/sensor.py).
 
-**`BLUEPRINT_VERSION` is the version the BLUEPRINT last changed in, not
-the integration's.** Chosen at the user's direction over "any
-difference", so a release touching only Python doesn't tell every user
-to re-import an identical file. That is the whole reason it is a
-separate constant rather than read from `manifest.json`.
+**`BLUEPRINT_VERSION` is the integration's version - the blueprint is
+versioned WITH FLARE.** It used to be the version the blueprint last
+changed in, chosen so a release touching only Python would not tell
+every user to re-import an identical file. Reversed at the user's
+direction on 2026-09-21 as confusing: two version numbers with different
+meanings, and a release script that had to work out which one moved. The
+cost is accepted and worth knowing - every release, betas included,
+raises the out-of-date repair for anyone using the blueprint, even when
+it did not change. Don't reintroduce the decoupling without new
+information; the pieces that supported it (comparing against the
+previous release's blueprint, the three "does the stamp name a real
+tag" guards) were deleted.
 
-**Nobody bumps it any more.** `scripts/release.py` writes the real
-values into a release's own copy of the constant and of the
-description's stamp (only the manifest's version is a placeholder in
-source, `0.0.0-dev`), working out whether the blueprint
-changed since the last release (see "Releases are automated" below). So
-what source holds for those two is just the last value anyone set by
-hand: it goes stale, and nothing minds, provided the two agree. The
-hand-bump was the one step whose omission failed silently - no repair,
-no error, nobody hears about the update - and the `blueprint-stamp` CI
-job that policed it was deleted along with it. `blueprint_version.py`
-itself still carries its old comments telling you to bump by hand; they
-are out of date and were left alone at the user's direction, who wants
-nothing about the release process in that file.
+**Nobody bumps it.** `scripts/release.py` writes the release's version
+into that release's own copy of the constant and of the description's
+stamp, along with the manifest's (only the manifest is a placeholder in
+source, `0.0.0-dev`). So what source holds for those two is just the
+last value anyone set by hand: it goes stale, and nothing minds,
+provided the two agree. The hand-bump was the one step whose omission
+failed silently - no repair, no error, nobody hears about the update -
+and the `blueprint-stamp` CI job that policed it was deleted along with
+it. **`blueprint_version.py` itself is stale on this:** its docstring
+still says the constant is NOT the integration's version and must be
+bumped by hand. Both are now wrong; the file was left alone because the
+user asked for no release-process changes in it, and fixing that
+is his call.
 
 **The repair code deliberately knows nothing about dev builds.** It was
 briefly taught to stand down on a placeholder version, and that was
@@ -1320,15 +1327,12 @@ raising, so a house moving between the two states leaves nothing behind.
 - A blueprint that fails to load comes back from
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
   hence the `isinstance` check, not a `None` check.
-- **What a stamp must satisfy** is now true by construction for anything
-  `scripts/release.py` builds: a stable release never carries a beta
-  stamp (promotion compares against the previous *stable* tag, so a
-  blueprint that changed during the betas is stamped with the bare
-  version), and the stamp always names a tag that exists (it is either
-  the release being built or the stamp of an earlier tag it was
-  compared with). `release.yml` still enforces both for a tag pushed by
-  hand, because the failure - Fix downloading from a URL that does not
-  exist - is otherwise silent until a user presses it.
+- **The stamp is the release's own version**, so the Fix button
+  downloads from this very tag. `scripts/release.py` writes it, so it is
+  right by construction; `release.yml` checks it for a tag pushed by
+  hand (constant and description must both equal the tag), because a
+  stamp left at an earlier value would make Fix fetch the wrong
+  blueprint, or a URL that does not exist, silently.
 
 **`tests/integration/test_blueprint_version_repair.py` overrides
 `hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The
