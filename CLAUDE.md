@@ -1180,11 +1180,7 @@ last value anyone set by hand: it goes stale, and nothing minds,
 provided the two agree. The hand-bump was the one step whose omission
 failed silently - no repair, no error, nobody hears about the update -
 and the `blueprint-stamp` CI job that policed it was deleted along with
-it. **`blueprint_version.py` itself is stale on this:** its docstring
-still says the constant is NOT the integration's version and must be
-bumped by hand. Both are now wrong; the file was left alone because the
-user asked for no release-process changes in it, and fixing that
-is his call.
+it.
 
 **The repair code deliberately knows nothing about dev builds.** It was
 briefly taught to stand down on a placeholder version, and that was

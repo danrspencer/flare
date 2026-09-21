@@ -8,14 +8,13 @@ house can quite easily end up running a blueprint from three releases
 ago against today's services. Nothing announces that. It just behaves
 oddly.
 
-BLUEPRINT_VERSION IS NOT THE INTEGRATION'S VERSION. It is the version in
-which the blueprint itself last changed, so a release that only touches
-Python doesn't tell every user to go and re-import an identical file.
-That is the whole reason it is a separate constant rather than being
-read from the manifest, and it means it has to be bumped by hand when
-the blueprint changes - `tests/test_blueprint_version.py` is what makes
-that mistake loud, since a stale stamp otherwise fails silently and
-users simply never hear about the update.
+BLUEPRINT_VERSION is the version of FLARE the blueprint shipped with, so
+the blueprint carries the same number as the release it came in. This
+module is pure (no Home Assistant imports), so it is held here as a
+constant rather than read from the manifest. `tests/test_blueprint_version.py`
+checks it agrees with the stamp in the blueprint's description, since a
+mismatch otherwise fails silently and users simply never hear about the
+update.
 
 The version travels in the blueprint's own `description`, which is not
 where you would put it given a free choice. Home Assistant's blueprint
@@ -38,11 +37,9 @@ from __future__ import annotations
 
 import re
 
-# Bump this WHENEVER blueprints/automation/danspencer/flare.yaml changes,
-# and set the same version in that file's description. The test suite
-# checks the two agree; nothing checks that you remembered to move them,
-# except the CI step that fails a pull request touching the blueprint
-# without touching the stamp.
+# Set to the release's version when a release is built, together with the
+# same version in the blueprint's description. What is here in between is
+# just whatever it last held. The test suite checks the two agree.
 BLUEPRINT_VERSION = "0.16.0"
 
 # Matches the line the blueprint's description carries. Deliberately
