@@ -46,14 +46,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_TWO_STEP_MODELS, DOMAIN
-from .coordinator import CURVE_KEYS
-from .curve import phase_at, targets_for_phase
+from ..const import CONF_TWO_STEP_MODELS, DOMAIN
+from ..schedule.coordinator import CURVE_KEYS
+from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
-from .override_protection import classify, is_blocked
+from ..tracking.override_protection import classify, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
-from .write_tracking import ClaimRegistry
+from ..tracking.write_tracking import ClaimRegistry
 
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {

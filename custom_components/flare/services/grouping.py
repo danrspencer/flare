@@ -4,7 +4,7 @@ the minimal set of light.turn_on/turn_off calls actually needed.
 
 Pure logic - HA access (current state, attributes, device/label
 lookups) is injected via an EntityLookup so this is testable with
-plain pytest and fakes, and so services.py
+plain pytest and fakes, and so services/handlers.py
 stays a thin
 adapter registering this as a standalone HA service. Transitively
 imports homeassistant.util.color (via override_protection.py's own
@@ -22,7 +22,7 @@ namespace-loop Jinja.
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
 
-from .override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
+from ..tracking.override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
     _color_temp_matches,
     classify,
     is_blocked,
@@ -129,7 +129,7 @@ class EntityLookup:
 
         Which claims this entity's accessors read is decided one layer
         up, by whichever scope the caller resolved and bound into this
-        EntityLookup (see services.py's _build_lookup) - this method has
+        EntityLookup (see services/handlers.py's _build_lookup) - this method has
         no notion of scope itself, just entity_id in, blocked or not out.
 
         force bypasses the check outright."""
@@ -174,7 +174,7 @@ class EntityLookup:
         """True if the entity's supported_color_modes includes any mode
         HA's light.turn_on rgb_color param works with. A derived method
         (built from the existing state_attr primitive) rather than a new
-        injected closure - no change needed to services.py's
+        injected closure - no change needed to services/handlers.py's
         _build_lookup() or tests/fakes.py's make_lookup()."""
         modes = self.state_attr(entity_id, "supported_color_modes") or []
         return bool(set(modes) & _RGB_COLOR_MODES)

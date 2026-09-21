@@ -6,7 +6,9 @@ their platforms, and the dashboard front-end files.
 
 - The eight services - apply_lighting, turn_off, the compute_* planners
   and the claims_* override-protection calls - are registered by
-  services.py, for the Tracking entry. They are plain Home Assistant
+  services/handlers.py, for the Tracking entry.
+- The code is grouped by concept - schedule/, tracking/, services/ - see
+  CONTRIBUTING.md for why and for the dependency rule. They are plain Home Assistant
   services, usable from any automation.
 - Day-phase/curve sensors, the phase-override select and the schedule/curve
   config entities (sensor.py, select.py, time.py, number.py, switch.py) are
@@ -22,7 +24,7 @@ more useful to you. See README.md and services.yaml (visible in Developer
 Tools -> Actions) for each service's contract on its own terms.
 
 The decision logic - curve.py, grouping.py, scenes.py, two_step.py,
-override_protection.py - is never handed a `hass`; services.py and the
+override_protection.py - is never handed a `hass`; services/handlers.py and the
 platform modules are the places that read real Home Assistant state and
 hand it over. (curve.py and override_protection.py each import one colour
 helper from homeassistant.util.color, so "takes no `hass` object" is the
@@ -57,9 +59,9 @@ from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
 from .config_flow import _areas_with_lights
-from .coordinator import ScheduleCoordinator, schedule_instances
-from .services import async_setup_services, async_unload_services
-from .write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
+from .schedule.coordinator import ScheduleCoordinator, schedule_instances
+from .services.handlers import async_setup_services, async_unload_services
+from .tracking.write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # One list per entry type - see const.py's CONF_ENTRY_TYPE for why this
 # integration installs as two entries rather than one. Both use the

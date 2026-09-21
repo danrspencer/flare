@@ -1,6 +1,6 @@
 import pytest
 
-from custom_components.flare.curve import (
+from custom_components.flare.schedule.curve import (
     brightness_for_phase,
     kelvin_for_phase,
     kelvin_to_rgb,

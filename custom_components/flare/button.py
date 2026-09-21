@@ -27,8 +27,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import StateInstance, state_instances
-from .write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
+from .tracking.scope import StateInstance, state_instances
+from .tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:

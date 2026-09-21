@@ -23,8 +23,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .coordinator import CURVE_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .curve import DEFAULT_CURVE_VALUES
+from .schedule.coordinator import CURVE_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .schedule.curve import DEFAULT_CURVE_VALUES
 
 _LABELS = {
     "morning_brightness": "Morning Brightness",

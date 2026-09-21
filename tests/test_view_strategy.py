@@ -151,7 +151,7 @@ def _integration_keys(name):
     it - it imports `.const` relatively and would pull in homeassistant,
     which these fast tests avoid. Parsing the literal keeps one source of
     truth with no import."""
-    source = (WWW.parent / "coordinator.py").read_text()
+    source = (WWW.parent / "schedule" / "coordinator.py").read_text()
     for node in ast.walk(ast.parse(source)):
         if isinstance(node, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == name for t in node.targets

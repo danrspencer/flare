@@ -183,7 +183,7 @@ class FakeBulb(LightEntity):
         # (docs/advanced/reference.md: "sent together, they snap or drop
         # one of the two"): brightness genuinely CHANGING VALUE in the
         # same call as a colour change only ever applies the brightness.
-        # Real two-step dispatch's own second call (services.py's
+        # Real two-step dispatch's own second call (services/handlers.py's
         # _two_step_turn_on) still carries brightness alongside colour -
         # it just re-sends the SAME brightness the first call already
         # landed, which is why "brightness changing" rather than merely
@@ -442,9 +442,9 @@ async def _attach_tracking_sensor(hass: HomeAssistant, entry: MockConfigEntry, a
     about tracking itself.
     """
     from custom_components.flare.const import DOMAIN
-    from custom_components.flare.coordinator import state_instances
+    from custom_components.flare.tracking.scope import state_instances
     from custom_components.flare.sensor import async_setup_entry as sensor_setup
-    from custom_components.flare.write_tracking import ClaimRegistry
+    from custom_components.flare.tracking.write_tracking import ClaimRegistry
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))

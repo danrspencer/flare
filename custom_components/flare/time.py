@@ -25,8 +25,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.util.dt as dt_util
 
 from .const import DOMAIN
-from .coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .curve import DEFAULT_SCHEDULE_HOURS
+from .schedule.coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .schedule.curve import DEFAULT_SCHEDULE_HOURS
 
 _LABELS = {
     "morning_time": "Morning Start",

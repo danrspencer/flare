@@ -28,9 +28,9 @@ from custom_components.flare.const import (
     ENTRY_TYPE_TRACKING,
     SUBENTRY_TYPE_STATE,
 )
-from custom_components.flare.coordinator import state_instances
+from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.write_tracking import ClaimRegistry
+from custom_components.flare.tracking.write_tracking import ClaimRegistry
 
 
 def _scope(title: str, target: dict) -> ConfigSubentryData:
@@ -630,7 +630,7 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     refreshed: list = []
     from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-    from custom_components.flare.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED
+    from custom_components.flare.tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED
 
     async_dispatcher_connect(hass, SIGNAL_WRITE_TRACKING_UPDATED, lambda: refreshed.append(True))
 
@@ -653,7 +653,7 @@ async def test_each_entry_type_owns_only_its_own_sensors(hass: HomeAssistant):
         ENTRY_TYPE_SCHEDULES,
         SUBENTRY_TYPE_SENSOR,
     )
-    from custom_components.flare.coordinator import ScheduleCoordinator, schedule_instances
+    from custom_components.flare.schedule.coordinator import ScheduleCoordinator, schedule_instances
 
     entry = MockConfigEntry(
         domain=DOMAIN,

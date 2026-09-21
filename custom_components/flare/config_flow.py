@@ -64,7 +64,7 @@ from .const import (
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_STATE,
 )
-from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
+from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
 

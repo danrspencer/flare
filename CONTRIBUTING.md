@@ -7,48 +7,60 @@ code itself.
 
 ```
 custom_components/flare/
-    __init__.py    integration setup: the two config entries, their platforms,
-                   the dashboard front-end files
-    services.py    the eight services, registered against real HA state
-    coordinator.py shared schedule computation behind the sensors/select
-                   below - one instance per sensor added via the
-                   integration's "Add Sensor" flow
-    sensor.py      day-phase/curve sensors (see the integration reference)
-    select.py      phase-override select (same reference)
-    number.py      brightness/colour-temperature curve config, as
-                   entities (same reference)
-    time.py        schedule boundary times, as entities (same reference)
-    switch.py      sticky-phase-override toggle, as an entity (same reference)
-    curve.py       brightness/colour-temperature schedule + Kelvin -> RGB
-    grouping.py    reachability, multiplier bucketing, tolerance checks,
-                   externally-set protection, two-step/combined and
-                   RGB-vs-colour-temp routing
-    scenes.py      scene-coverage gap filling (apply a scene, then a
-                   default for whatever it doesn't cover)
-    write_tracking.py
-                   which state device tracks each light, and what
-                   context.id this integration last wrote it with - the
-                   record grouping.py's externally_set() compares
-                   against. Deliberately not persisted: the claims live
-                   on each state device's tracking entity and die with a
-                   restart, which leaves every light manageable
-    manifest.json, config_flow.py, services.yaml, strings.json,
-    translations/  standard HA integration/HACS scaffolding
+    __init__.py, config_flow.py, repairs.py, logbook.py, const.py
+                   the integration itself: setting up the two config
+                   entries, migration, the blueprint-update repair, the
+                   logbook description, the dashboard front-end files
+    sensor.py, select.py, number.py, time.py, switch.py, button.py
+                   the entities. Home Assistant requires platform
+                   modules at this level, so they can't live in a folder
+                   (see the integration reference for what each is)
+
+    schedule/      what the lights should look like
+        curve.py         brightness/colour-temperature schedule, Kelvin -> RGB
+        coordinator.py   the schedule computation behind the schedule
+                         entities - one per sensor added via "Add Sensor"
+    tracking/      who owns a light (override protection)
+        override_protection.py
+                         classify(): off / untracked / controlled / overridden
+        write_tracking.py
+                         the claims: what context.id and target this
+                         integration last wrote each light with. They live
+                         on each tracking scope's entity and are restored
+                         across a restart
+        scope.py         tracking scopes (one per room, usually)
+    services/      the services, and the planning behind them
+        handlers.py      the eight services, registered against real HA state
+        grouping.py      reachability, multiplier bucketing, tolerance checks,
+                         override protection, two-step/combined and
+                         RGB-vs-colour-temp routing
+        scenes.py        scene-coverage gap filling (apply a scene, then a
+                         default for whatever it doesn't cover)
+        two_step.py      which bulb models need two-step transitions
+
+    manifest.json, services.yaml, strings.json, translations/
+                   standard HA integration/HACS scaffolding (services.yaml
+                   has to sit at this level)
     brand/icon.png, brand/icon@2x.png
                    the integration's icon (256/512, alpha) - HA reads
                    this directly from the integration's own folder
                    (since HA 2026.3.0), no external submission needed
-    www/flare-curve-card.js
-                   the day-phase/curve dashboard card
-    Served and auto-loaded by the integration itself (see
-    __init__.py's async_setup) - it ships and updates with the
-    integration, no manual Lovelace resource registration needed
-    curve.py, grouping.py, scenes.py, two_step.py and override_protection.py
-    are never handed a `hass` - testable with plain values or fakes, and
-    usable from anywhere that wants the logic without the HA wrapper around
-    it (curve.py and override_protection.py each import one colour helper
-    from homeassistant.util.color). Everything else is the Home Assistant
-    side: it takes `hass` or an entry, and reads or writes real state.
+    www/           the dashboard: the curve card, the slider card features,
+                   and the two view strategies. Served and auto-loaded by
+                   the integration itself (see __init__.py's async_setup),
+                   so it ships and updates with the integration with no
+                   manual Lovelace resource registration
+
+The three folders are grouped by concept rather than by how something is exposed, because the
+schedule and the claims are each exposed through both entities and services - so neither could
+live with either. Imports run one way: `schedule/` and `tracking/` import nothing but `const.py`,
+`services/` may use both, and everything at the package root may use all three.
+`tests/test_layering.py` enforces it.
+
+`schedule/`, `tracking/` and most of `services/` are never handed a `hass` - testable with plain
+values or fakes. (`curve.py` and `override_protection.py` each import one colour helper from
+`homeassistant.util.color`.) `services/handlers.py`, the entity platforms and the rest of the
+package root are the Home Assistant side: they take `hass` or an entry, and read or write real state.
 
 hacs.json
     HACS repository metadata for the integration.
@@ -173,7 +185,7 @@ Two layers, both under `tests/`:
   `tests/fakes.py` provides a fake state/registry lookup. They import through the package, like every other test.
 - `tests/integration/` - real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `test_services.py` exercises the actual registered services (`services.py`, `write_tracking.py`) end to end;
+  `test_services.py` exercises the actual registered services (`services/handlers.py`, `write_tracking.py`) end to end;
   `test_state_devices.py` covers scope resolution and the per-scope entities that hold the claims;
   `test_blueprint.py` loads the real blueprint file into a test automation and fires real triggers - the only
   place bugs living in the blueprint's own trigger/condition/action wiring can be caught at all, as opposed to

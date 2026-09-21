@@ -43,7 +43,7 @@ from pathlib import Path
 
 import pytest
 
-from custom_components.flare.curve import (
+from custom_components.flare.schedule.curve import (
     DEFAULT_CURVE_VALUES,
     brightness_for_phase,
     kelvin_for_phase,

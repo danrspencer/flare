@@ -1,5 +1,5 @@
 from fakes import make_scene_lookup
-from custom_components.flare.scenes import compute_scene_coverage
+from custom_components.flare.services.scenes import compute_scene_coverage
 
 
 def test_nonexistent_scene_covers_nothing():
