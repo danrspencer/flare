@@ -1168,7 +1168,7 @@ separate constant rather than read from `manifest.json`.
 **Nobody bumps it any more.** `scripts/release.py` writes the real
 values into a release's own copy of the constant and of the
 description's stamp (only the manifest's version is a placeholder in
-source, `DEV_VERSION` in `const.py`), working out whether the blueprint
+source, `0.0.0-dev`), working out whether the blueprint
 changed since the last release (see "Releases are automated" below). So
 what source holds for those two is just the last value anyone set by
 hand: it goes stale, and nothing minds, provided the two agree. The
@@ -1288,10 +1288,13 @@ caught. Don't "simplify" it back to the shared fixture.
   history). A promotion rebuilds the beta's own source commit, recorded
   as `Source:` in the release commit's message; a hand-made tag has none
   and cannot be promoted. Consequences worth knowing: a dev build's
-  front-end URL is a content hash rather than the version (the version
-  never changes there, and the URL is cached hard); GitHub shows a "not
-  on any branch" banner on release commits; and `main`'s changelog
-  section is never re-dated, so headings carry whatever a person wrote.
+  front-end URL carries the placeholder version, so after a dev install
+  the browser can keep serving cached card code until a hard refresh -
+  accepted, at the user's direction, over putting dev-only code in
+  shipped files (the URL is cached hard, see the static-path notes
+  below); GitHub shows a "not on any branch" banner on release commits;
+  and `main`'s changelog section is never re-dated, so headings carry
+  whatever a person wrote.
 - **A tag pushed by a workflow does not trigger another workflow**
   (GITHUB_TOKEN events don't), so `release.yml` never runs for the
   automated releases. That is fine and deliberate: its checks police a

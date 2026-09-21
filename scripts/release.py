@@ -8,7 +8,7 @@ means either a person bumps it by hand (which is how the blueprint stamp
 got forgotten) or a bot pushes it and the branch it came from never
 contains it, so dev and main drift apart on every release.
 
-So the manifest carries a placeholder (DEV_VERSION) and a release is
+So the manifest carries a placeholder (0.0.0-dev) and a release is
 built on the side: a commit on top of the source commit with the real
 version written into the three places it lives, tagged, and left
 unreachable from any branch. Nothing moves. The other two (the constant

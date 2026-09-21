@@ -18,10 +18,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-sys.path.insert(0, str(REPO_ROOT / "custom_components" / "flare"))
 
 import release  # noqa: E402
-from const import DEV_VERSION  # noqa: E402
+
+# What the manifest's version is in source until a release is built.
+DEV_VERSION = "0.0.0-dev"
 
 MANIFEST = REPO_ROOT / "custom_components" / "flare" / "manifest.json"
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
