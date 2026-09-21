@@ -1591,14 +1591,18 @@ Two layers:
 
 - **Pure** (`test_curve.py`, `test_grouping.py`, `test_scenes.py`,
   `test_override_protection.py`, `test_two_step.py`,
-  `test_services_yaml.py`). `tests/conftest.py` puts the component
-  directory on `sys.path` so these import `curve`/`grouping` as bare
-  modules rather than through the package (which would pull in
-  `homeassistant` via `__init__.py`); `tests/fakes.py` provides a fake
-  `EntityLookup` so `grouping.py` runs on plain dicts. Note these still
-  need `homeassistant` importable - `override_protection.py` and
-  `curve.py` both import `homeassistant.util.color`, and pytest's own `testpaths` collects
-  `tests/integration/conftest.py` regardless of which file you target.
+  `test_services_yaml.py`). They import through the package
+  (`from custom_components.flare.curve import ...`) like everything else.
+  They used to import `curve`/`grouping` as bare top-level modules via a
+  `sys.path` insertion in `tests/conftest.py`, to avoid running
+  `__init__.py` and so importing `homeassistant`; that bought nothing
+  once the suite needed HA anyway (`override_protection.py` and
+  `curve.py` both import `homeassistant.util.color`, and pytest's own
+  `testpaths` collects `tests/integration/conftest.py` regardless of
+  which file you target), and it cost a try/except import fallback in
+  `grouping.py` plus two copies of the same module (bare and packaged)
+  in one test run. `tests/fakes.py` provides a fake `EntityLookup` so
+  `grouping.py` runs on plain dicts.
 - **Integration** (`tests/integration/`), real HA via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
   `test_services.py` exercises the registered services end-to-end,

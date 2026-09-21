@@ -12,7 +12,7 @@ homeassistant.util.color directly - see its own module docstring for why
 that's a deliberate exception to "no HA dependency", not an oversight).
 """
 
-from override_protection import _color_temp_matches, _context_matches, classify, is_blocked, target_matches_values
+from custom_components.flare.override_protection import _color_temp_matches, _context_matches, classify, is_blocked, target_matches_values
 
 
 ON_TARGET = {"brightness": 200, "color_temp_kelvin": 3000}
@@ -353,7 +353,7 @@ def test_a_colour_reported_in_a_different_mode_is_recognised_as_a_match():
     conversion, so this is provably the identical colour by FLARE's own
     definition, just reported through a different attribute.
     """
-    from curve import kelvin_to_rgb
+    from custom_components.flare.curve import kelvin_to_rgb
 
     claim = {"context_id": "ctx-ours", "target": {"brightness": 255, "color_temp_kelvin": 3000}}
     status, _via = classify(

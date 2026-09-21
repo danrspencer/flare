@@ -20,10 +20,9 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
-sys.path.insert(0, str(REPO_ROOT / "custom_components" / "flare"))
 
 import release  # noqa: E402
-from blueprint_version import version_from_description  # noqa: E402
+from custom_components.flare.blueprint_version import version_from_description  # noqa: E402
 from release import Refuse, Repo, Skip, Tag  # noqa: E402
 
 NOW = datetime(2026, 9, 21, 12, 0, tzinfo=timezone.utc)

@@ -4,8 +4,8 @@ running HA instance."""
 
 from typing import Optional
 
-from grouping import EntityLookup
-from scenes import SceneLookup
+from custom_components.flare.grouping import EntityLookup
+from custom_components.flare.scenes import SceneLookup
 
 
 def make_lookup(

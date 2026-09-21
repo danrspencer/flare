@@ -22,26 +22,13 @@ namespace-loop Jinja.
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
 
-try:
-    # Real package context (production HA, tests/integration/) - grouping.py
-    # is imported as custom_components.flare.grouping.
-    from .override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
-        _color_temp_matches,
-        classify,
-        is_blocked,
-        target_matches_values,
-    )
-    from .two_step import TWO_STEP_LABEL_ID, model_matches
-except ImportError:
-    # Bare top-level module context (tests/test_grouping.py, via
-    # tests/conftest.py putting this directory straight on sys.path -
-    # see its own comment for why). override_protection.py/two_step.py
-    # sit alongside this file, so a plain top-level import resolves the
-    # same way curve.py/scenes.py already do for their own bare-module
-    # test usage. Note this module now needs homeassistant importable
-    # either way - see override_protection.py's own docstring.
-    from override_protection import _color_temp_matches, classify, is_blocked, target_matches_values  # noqa: F401
-    from two_step import TWO_STEP_LABEL_ID, model_matches
+from .override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
+    _color_temp_matches,
+    classify,
+    is_blocked,
+    target_matches_values,
+)
+from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
