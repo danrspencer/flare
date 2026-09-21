@@ -9,7 +9,7 @@ what the pure-logic tests structurally cannot - bugs in how HA's own
 trigger/condition/template engine behaves (e.g. `trigger` not being in
 scope inside a template trigger's own value_template - the recovered
 trigger's dead-on-arrival bug), and bugs in the HA-glue layer
-(__init__.py's service registration, write_tracking.py's Store
+(services.py's service registration, write_tracking.py's Store
 persistence, context propagation).
 
 Requires pytest-homeassistant-custom-component, which pins a specific

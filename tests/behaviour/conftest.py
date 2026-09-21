@@ -183,7 +183,7 @@ class FakeBulb(LightEntity):
         # (docs/advanced/reference.md: "sent together, they snap or drop
         # one of the two"): brightness genuinely CHANGING VALUE in the
         # same call as a colour change only ever applies the brightness.
-        # Real two-step dispatch's own second call (__init__.py's
+        # Real two-step dispatch's own second call (services.py's
         # _two_step_turn_on) still carries brightness alongside colour -
         # it just re-sends the SAME brightness the first call already
         # landed, which is why "brightness changing" rather than merely

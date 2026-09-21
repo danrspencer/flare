@@ -7,7 +7,9 @@ code itself.
 
 ```
 custom_components/flare/
-    __init__.py    registers the four services against real HA state
+    __init__.py    integration setup: the two config entries, their platforms,
+                   the dashboard front-end files
+    services.py    the eight services, registered against real HA state
     coordinator.py shared schedule computation behind the sensors/select
                    below - one instance per sensor added via the
                    integration's "Add Sensor" flow
@@ -41,12 +43,12 @@ custom_components/flare/
     Served and auto-loaded by the integration itself (see
     __init__.py's async_setup) - it ships and updates with the
     integration, no manual Lovelace resource registration needed
-    curve.py, grouping.py, and scenes.py are pure Python, no Home
-    Assistant dependency - testable directly, and usable from anywhere
-    that wants the math without the HA service/sensor wrapper around
-    it. __init__.py, coordinator.py, sensor.py, select.py, number.py,
-    time.py, switch.py, button.py, and write_tracking.py are the only
-    files that touch `hass`.
+    curve.py, grouping.py, scenes.py, two_step.py and override_protection.py
+    are never handed a `hass` - testable with plain values or fakes, and
+    usable from anywhere that wants the logic without the HA wrapper around
+    it (curve.py and override_protection.py each import one colour helper
+    from homeassistant.util.color). Everything else is the Home Assistant
+    side: it takes `hass` or an entry, and reads or writes real state.
 
 hacs.json
     HACS repository metadata for the integration.
@@ -167,13 +169,11 @@ pytest
 
 Two layers, both under `tests/`:
 
-- `test_curve.py`/`test_grouping.py`/`test_scenes.py` - pure logic, no Home Assistant dependency at all.
-  `tests/fakes.py` provides a fake state/registry lookup, and `tests/conftest.py` imports `curve.py`/`grouping.py`
-  directly (bypassing the integration's `__init__.py`, which does need `homeassistant` — see its own comment for
-  why).
+- `test_curve.py`/`test_grouping.py`/`test_scenes.py` - the pure logic, with no HA event loop or fixtures.
+  `tests/fakes.py` provides a fake state/registry lookup. They import through the package, like every other test.
 - `tests/integration/` - real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `test_services.py` exercises the actual registered services (`__init__.py`, `write_tracking.py`) end to end;
+  `test_services.py` exercises the actual registered services (`services.py`, `write_tracking.py`) end to end;
   `test_state_devices.py` covers scope resolution and the per-scope entities that hold the claims;
   `test_blueprint.py` loads the real blueprint file into a test automation and fires real triggers - the only
   place bugs living in the blueprint's own trigger/condition/action wiring can be caught at all, as opposed to

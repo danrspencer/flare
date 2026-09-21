@@ -38,8 +38,8 @@ previously an accidental inconsistency in the live Jinja version
 deliberate.
 
 Schedule instances: the config entry itself never carries a schedule -
-it only registers the services (see __init__.py), and no sensor is
-auto-created. Every schedule is a "sensor" subentry, added via the
+it registers no services of its own (they belong to the Tracking
+entry, see services.py), and no sensor is auto-created. Every schedule is a "sensor" subentry, added via the
 "Add Sensor" flow (config_flow.py's SensorSubentryFlow) - so there's
 exactly one mechanism for adding a schedule, and exactly one way to
 name it: what you type there. Every instance gets both a prefixed
@@ -159,7 +159,7 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
     """Every schedule instance this entry should set up sensors/select/
     config entities for - one per "sensor" subentry (see config_flow.py's
     SensorSubentryFlow). The entry itself never carries a schedule -
-    it only registers the services (see __init__.py)."""
+    the services belong to the Tracking entry (see services.py)."""
     instances = []
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_TYPE_SENSOR:
