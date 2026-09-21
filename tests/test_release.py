@@ -175,37 +175,11 @@ def test_force_ignores_the_soak_period():
     assert got.name == "v0.16.0-beta.1"
 
 
-# --- The blueprint stamp -----------------------------------------------
-
 BLUEPRINT_A = "description: >\n  Blueprint version {stamp} - and text\ninput:\n  a: 1\n"
-BLUEPRINT_B = "description: >\n  Blueprint version {stamp} - and text\ninput:\n  a: 2\n"
 
 
 def bp(template: str, stamp: str) -> str:
     return template.format(stamp=stamp)
-
-
-def test_a_first_release_stamps_itself():
-    assert release.blueprint_stamp(bp(BLUEPRINT_A, "0.0.0-dev"), None, "0.17.0") == "0.17.0"
-
-
-def test_an_unchanged_blueprint_keeps_the_previous_releases_stamp():
-    """A release that only touched Python must not tell everyone to
-    re-import an identical file. The previous copy wears its own stamp,
-    so the comparison has to ignore it."""
-    got = release.blueprint_stamp(
-        bp(BLUEPRINT_A, "0.0.0-dev"), bp(BLUEPRINT_A, "0.16.0"), "0.17.0"
-    )
-
-    assert got == "0.16.0"
-
-
-def test_a_changed_blueprint_stamps_the_new_version():
-    got = release.blueprint_stamp(
-        bp(BLUEPRINT_B, "0.0.0-dev"), bp(BLUEPRINT_A, "0.16.0"), "0.17.0-beta.1"
-    )
-
-    assert got == "0.17.0-beta.1"
 
 
 # --- Writing a version into a tree -------------------------------------
@@ -226,20 +200,20 @@ def write_tree(root: Path, *, blueprint: str = BLUEPRINT_A, changelog: str = "")
 def test_all_three_places_are_written(tmp_path):
     write_tree(tmp_path)
 
-    release.stamp_tree(tmp_path, "0.17.0-beta.1", "0.16.0")
+    release.stamp_tree(tmp_path, "0.17.0-beta.1")
 
     assert json.loads((tmp_path / release.MANIFEST).read_text())["version"] == "0.17.0-beta.1"
-    assert 'BLUEPRINT_VERSION = "0.16.0"' in (tmp_path / release.BLUEPRINT_VERSION_PY).read_text()
+    assert 'BLUEPRINT_VERSION = "0.17.0-beta.1"' in (tmp_path / release.BLUEPRINT_VERSION_PY).read_text()
     written = (tmp_path / release.BLUEPRINT).read_text()
     # Read back through the integration's own parser, not this script's:
     # that is what an installed copy is judged by.
-    assert version_from_description(written) == "0.16.0"
+    assert version_from_description(written) == "0.17.0-beta.1"
 
 
 def test_only_the_constant_is_rewritten_not_lookalikes(tmp_path):
     write_tree(tmp_path)
 
-    release.stamp_tree(tmp_path, "0.17.0", "0.17.0")
+    release.stamp_tree(tmp_path, "0.17.0")
 
     assert 'OTHER = "0.0.0-dev"' in (tmp_path / release.BLUEPRINT_VERSION_PY).read_text()
 
@@ -249,7 +223,7 @@ def test_a_file_that_lost_its_stamp_fails_loudly_rather_than_shipping_unstamped(
     (tmp_path / release.BLUEPRINT).write_text("description: nothing here\n")
 
     with pytest.raises(Refuse):
-        release.stamp_tree(tmp_path, "0.17.0", "0.17.0")
+        release.stamp_tree(tmp_path, "0.17.0")
 
 
 # --- Against real git --------------------------------------------------
@@ -350,19 +324,23 @@ def test_a_push_that_changes_nothing_shipped_cuts_no_beta(project):
         release.cut_beta(project.repo, first)  # and re-running is a no-op
 
 
-def test_a_shipped_change_cuts_the_next_beta_with_the_blueprint_stamp_carried(project):
+def test_every_beta_stamps_the_blueprint_with_its_own_version(project):
+    """The blueprint is versioned with FLARE, not on its own clock. The
+    second beta changes only Python, and its blueprint still says beta.2 -
+    which is what tells anyone on beta.1 to update it alongside."""
     project.target("0.17.0")
     first = project.commit("target 0.17.0")
-    release.cut_beta(project.repo, first)
+    beta_1 = release.cut_beta(project.repo, first)
 
     second = project.edit("custom_components/flare/x.py", "print(1)", "python change")
-    beta = release.cut_beta(project.repo, second)
+    beta_2 = release.cut_beta(project.repo, second)
 
-    assert beta.name == "v0.17.0-beta.2"
-    # The blueprint did not change between the two, so it still says the
-    # first beta - nobody is told to re-import an identical file.
-    stamp = version_from_description(project.at(beta.name, release.BLUEPRINT))
-    assert stamp == "0.17.0-beta.1"
+    assert beta_2.name == "v0.17.0-beta.2"
+    for beta in (beta_1, beta_2):
+        assert version_from_description(project.at(beta.name, release.BLUEPRINT)) == beta.version
+        assert f'BLUEPRINT_VERSION = "{beta.version}"' in project.at(
+            beta.name, release.BLUEPRINT_VERSION_PY
+        )
 
 
 def test_promotion_rebuilds_the_betas_own_source_as_the_bare_version(project):
@@ -391,20 +369,20 @@ def test_promotion_waits_for_the_soak_period(project):
         release.promote(project.repo, datetime.now(timezone.utc) + timedelta(days=6))
 
 
-def test_a_release_that_left_the_blueprint_alone_keeps_the_previous_stable_stamp(project):
-    """The stamp names the tag the repair's Fix button downloads from, so
-    it has to be one that exists: v0.16.0 does, and 0.17.0-beta.1's blueprint
-    is identical to it."""
+def test_a_release_stamps_the_blueprint_even_if_it_never_changed(project):
+    """The decision this replaced was to keep the previous release's stamp
+    when the blueprint was identical, so a Python-only release didn't ask
+    everyone to re-import it. Reversed as confusing: what the blueprint
+    says is simply the version of FLARE it shipped with."""
     project.target("0.16.0")
-    stable_source = project.commit("0.16.0")
-    project.repo.build(Tag.parse("v0.16.0"), stable_source, None)
+    project.repo.build(Tag.parse("v0.16.0"), project.commit("0.16.0"))
 
     project.target("0.17.0")
     source = project.edit("custom_components/flare/x.py", "y = 2", "python only")
     release.cut_beta(project.repo, source)
     stable = release.promote(project.repo, datetime.now(timezone.utc) + timedelta(days=8))
 
-    assert version_from_description(project.at(stable.name, release.BLUEPRINT)) == "0.16.0"
+    assert version_from_description(project.at(stable.name, release.BLUEPRINT)) == "0.17.0"
 
 
 def test_a_hand_made_beta_cannot_be_promoted(project):

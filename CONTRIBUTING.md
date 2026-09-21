@@ -278,9 +278,10 @@ tagged, and reachable from no branch. Nothing is committed to `dev` or `main`, s
 never drift apart over version bumps. A release is the same source commit as the beta it
 came from, with different numbers written in - which is what "promote" means.
 
-The blueprint stamp is worked out, not bumped: if the blueprint is unchanged since the
-previous release it keeps that release's stamp, so a release touching only Python doesn't
-tell everyone to re-import an identical file.
+The blueprint is versioned with FLARE: its stamp (and `BLUEPRINT_VERSION`) is always the
+release's own version, written by the same script. So every release, betas included, raises
+the out-of-date-blueprint repair for anyone using it, even if the blueprint itself did not
+change.
 
 GitHub shows a "does not belong to any branch" banner on these commits. That is expected.
 The release commit's message records its `Source:` commit.
@@ -328,8 +329,8 @@ channel for anything you want to see through HACS.
 
 Still possible, for a hotfix or when a workflow is unavailable. Set the three versions
 yourself in a checkout, tag it, and push the tag: `.github/workflows/release.yml` checks
-the tag against the manifest, that the blueprint stamp suits the channel and names a tag
-that exists, and that the changelog has a section for it, then publishes. (A tag pushed by
+the tag against the manifest, that both blueprint stamps equal the tag, and that the
+changelog has a section for it, then publishes. (A tag pushed by
 the workflows above does not trigger it - GitHub does not let a workflow's own events start
 another - and needs no such check, since `scripts/release.py` wrote the version and the tag
 together.)

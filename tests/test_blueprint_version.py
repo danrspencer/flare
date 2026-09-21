@@ -114,26 +114,15 @@ def test_only_the_current_version_is_up_to_date():
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 
 
-def test_a_stable_release_cannot_ship_a_beta_stamped_blueprint():
-    """If the blueprint changes during a beta, the stamp holds that
-    beta's version - and promoting without moving it would point every
-    STABLE user's Fix button at a beta blueprint, quietly undoing the
-    two channels. Silent until somebody presses Fix, so it is checked
-    where the channel is already known: at tag time."""
+def test_the_stamp_must_be_the_releases_own_version():
+    """The blueprint is versioned with FLARE, so the stamp names the tag
+    the Fix button downloads from - this very release's. A stamp left at
+    an earlier value would have Fix fetch the wrong blueprint, silently.
+    Checked at tag time for a tag pushed by hand; the release script
+    writes it correctly by construction."""
     workflow = RELEASE_WORKFLOW.read_text()
 
-    assert "stamp_is_beta" in workflow, "nothing classifies the stamp"
-    assert 'PRERELEASE" = "false" ] && [ "$stamp_is_beta" = "true"' in workflow
-
-
-def test_the_stamp_must_name_a_tag_that_exists():
-    """The stamp names the tag the Fix button downloads from. A stamp
-    naming a tag that was never cut - a typo, or a bump that got ahead
-    of its release - makes Fix fail with a download error the user can
-    do nothing about."""
-    workflow = RELEASE_WORKFLOW.read_text()
-
-    assert "git ls-remote --exit-code --tags origin" in workflow
+    assert '[ "$constant" != "$tag" ] || [ "$description" != "$tag" ]' in workflow
 
 
 def test_the_release_workflow_reads_the_stamp_from_its_one_source():
