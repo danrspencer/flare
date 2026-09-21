@@ -122,8 +122,8 @@ def scene_turn_on_calls(hass: HomeAssistant):
 
 
 @pytest.fixture
-def light_turn_off_calls(hass: HomeAssistant):
-    return async_mock_service(hass, "light", "turn_off")
+def turn_off_calls(hass: HomeAssistant):
+    return async_mock_service(hass, "flare", "turn_off")
 
 
 @pytest.fixture(autouse=True)
@@ -132,15 +132,6 @@ def claims_clear_calls(hass: HomeAssistant):
     tick that has any, in rooms these tests aren't otherwise asserting
     about - an unmocked service call would fail those runs outright."""
     return async_mock_service(hass, "flare", "claims_clear")
-
-
-@pytest.fixture(autouse=True)
-def claims_record_calls(hass: HomeAssistant):
-    """Autouse for the same reason, and for a sharper one: it follows
-    every light.turn_off the blueprint issues, so leaving it unmocked
-    aborts the run *after* the turn-off has already happened - which
-    every assertion about turn-offs would still pass straight through."""
-    return async_mock_service(hass, "flare", "claims_record")
 
 
 @pytest.fixture(autouse=True)
@@ -621,14 +612,15 @@ class TestOccupancyDrivenOnOff:
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
 
-    async def test_the_turn_off_is_recorded_as_ours(self, hass, light_turn_off_calls, claims_record_calls):
-        """The blueprint turns lights off with a bare light.turn_off, so
-        nothing records it. Without this the integration sees the light
-        go off under a context it holds no claim for and classifies it
-        as somebody else switching it off - every light in the room,
-        every time the room empties."""
+    async def test_the_turn_off_names_the_rooms_tracking_scope(self, hass, turn_off_calls):
+        """The turn-off has to be told which scope it belongs to, or the
+        integration can't record it as ours and reads the light going off
+        as somebody else switching it off - every light in the room, every
+        time the room empties. Recording itself is flare.turn_off's job
+        (tests/integration/test_services.py); this pins that the blueprint
+        hands it the scope, and no longer hand-builds the claim itself."""
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        _register_tracking_scope(hass, kitchen.id, "kitchen")
+        scope = _register_tracking_scope(hass, kitchen.id, "kitchen")
         er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
         er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
         _occupancy(hass, "binary_sensor.occ", "on")
@@ -643,18 +635,13 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls, "precondition: the room should have been turned off"
-        assert claims_record_calls, "the turn-off must be recorded, or it reads as external"
-        data = claims_record_calls[-1].data
-        assert data["entities"] == light_turn_off_calls[-1].data["entity_id"]
-        assert all(t == {"state": "off"} for t in data["targets"].values()), data["targets"]
-        assert set(data["targets"]) == set(data["entities"])
+        assert turn_off_calls, "precondition: the room should have been turned off"
+        assert turn_off_calls[-1].data["tracking_device_id"] == scope
 
-    async def test_an_untracked_turn_off_is_not_recorded(self, hass, light_turn_off_calls, claims_record_calls):
-        """No FLARE Tracking state device resolves for this room at all -
-        claims_record now requires a scope, so the blueprint skips the call
-        entirely rather than sending one it knows will fail. The turn-off
-        itself still happens; only the recording is skipped."""
+    async def test_an_untracked_turn_off_still_happens(self, hass, turn_off_calls):
+        """No FLARE Tracking state device resolves for this room at all, so
+        there is no scope to name. The turn-off itself still happens; it is
+        just sent untracked."""
         _occupancy(hass, "binary_sensor.occ", "on")
         _light(hass, "light.a", "on")
         await hass.async_block_till_done()
@@ -667,10 +654,10 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls, "the turn-off itself must still happen"
-        assert not claims_record_calls, "no scope resolves, so nothing should be recorded"
+        assert turn_off_calls, "the turn-off itself must still happen"
+        assert turn_off_calls[-1].data["tracking_device_id"] is None
 
-    async def test_occupancy_cleared_turns_lights_off_after_the_wait(self, hass, light_turn_off_calls):
+    async def test_occupancy_cleared_turns_lights_off_after_the_wait(self, hass, turn_off_calls):
         _occupancy(hass, "binary_sensor.occ", "on")
         _light(hass, "light.a", "on")
         await hass.async_block_till_done()
@@ -686,10 +673,10 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.a"]
 
     async def test_occupancy_cleared_does_not_turn_off_lights_while_a_second_sensor_is_still_on(
-        self, hass, light_turn_off_calls
+        self, hass, turn_off_calls
     ):
         """Regression test for the nightlight-override incident (see
         CLAUDE.md's dated note on automation.bedroom_hall_lights):
@@ -714,7 +701,7 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls == []
+        assert turn_off_calls == []
 
     async def test_no_occupancy_sensor_still_updates_an_already_on_light(self, hass, apply_lighting_calls):
         """Occupancy is entirely optional - a room with no occupancy-class
@@ -1435,7 +1422,7 @@ class TestBrightnessScaling:
         assert _effective(call, "light.b") == 40
 
     async def test_a_null_multiplier_light_is_not_turned_off_when_occupancy_clears(
-        self, hass, light_turn_off_calls
+        self, hass, turn_off_calls
     ):
         """A null multiplier means "something else owns this light" - so
         unlike a 0 (which means "turn this one off"), the room emptying
@@ -1457,8 +1444,8 @@ class TestBrightnessScaling:
         _occupancy(hass, "binary_sensor.occ", "off")
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls, "motion_off should still turn off the lights it does own"
-        turned_off = light_turn_off_calls[-1].data["entity_id"]
+        assert turn_off_calls, "motion_off should still turn off the lights it does own"
+        turned_off = turn_off_calls[-1].data["entities"]
         assert "light.a" in turned_off
         assert "light.handed_off" not in turned_off
 
@@ -1489,7 +1476,7 @@ class TestBrightnessScaling:
         assert claims_clear_calls[-1].data["entities"] == ["light.handed_off"]
 
     async def test_a_zero_multiplier_light_is_still_turned_off_when_occupancy_clears(
-        self, hass, light_turn_off_calls
+        self, hass, turn_off_calls
     ):
         """The other half of the distinction - 0 is not null. In Jinja, as
         in Python, `0 == false`, so a naive membership test would wrongly
@@ -1509,13 +1496,13 @@ class TestBrightnessScaling:
         _occupancy(hass, "binary_sensor.occ", "off")
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls
-        turned_off = light_turn_off_calls[-1].data["entity_id"]
+        assert turn_off_calls
+        turned_off = turn_off_calls[-1].data["entities"]
         assert "light.a" in turned_off
         assert "light.dimmed_out" in turned_off
 
     async def test_reconcile_does_not_retry_turning_off_a_null_multiplier_light(
-        self, hass, light_turn_off_calls
+        self, hass, turn_off_calls
     ):
         """The second turn-off path. With the handed-off light the only
         thing still lit, reconcile should find nothing to do at all rather
@@ -1534,7 +1521,7 @@ class TestBrightnessScaling:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=6))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls == []
+        assert turn_off_calls == []
 
 
 class TestRgbColour:
@@ -1589,7 +1576,7 @@ class TestSelfHealing:
     """docs/blueprint.md#other-behaviour-worth-knowing"""
 
     async def test_reconcile_retries_turning_off_a_light_left_on_with_no_occupancy(
-        self, hass, light_turn_off_calls, apply_lighting_calls, frozen_time
+        self, hass, turn_off_calls, apply_lighting_calls, frozen_time
     ):
         """reconcile's own condition is a hand-written template
         comparing `now() - states[e].last_changed` against Wait time
@@ -1618,7 +1605,7 @@ class TestSelfHealing:
         async_fire_time_changed(hass, dt_util.utcnow())
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and "light.a" in light_turn_off_calls[-1].data["entity_id"]
+        assert turn_off_calls and "light.a" in turn_off_calls[-1].data["entities"]
         # Self-heal now shares tick's own trigger/interval - a
         # tick where it fires must stay exclusive of apply_lighting in
         # the same run, or the just-turned-off light would immediately
@@ -1627,7 +1614,7 @@ class TestSelfHealing:
         # variables:, before action: ran.
         assert apply_lighting_calls == []
 
-    async def test_reconcile_does_nothing_while_occupied(self, hass, light_turn_off_calls, apply_lighting_calls):
+    async def test_reconcile_does_nothing_while_occupied(self, hass, turn_off_calls, apply_lighting_calls):
         _occupancy(hass, "binary_sensor.occ", "on")
         _light(hass, "light.a", "on")
         await hass.async_block_till_done()
@@ -1640,7 +1627,7 @@ class TestSelfHealing:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=6))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls == []
+        assert turn_off_calls == []
         # The self-heal branch's own conditions correctly don't match
         # while occupied, so this tick tick falls through to
         # default: and reapplies lighting as normal, same as any other
@@ -1648,7 +1635,7 @@ class TestSelfHealing:
         assert apply_lighting_calls
 
     async def test_reconcile_ignores_a_momentary_occupancy_blip_shorter_than_wait_time(
-        self, hass, light_turn_off_calls, frozen_time
+        self, hass, turn_off_calls, frozen_time
     ):
         """Live incident, 2026-08-21: a noisy-but-genuinely-occupied
         room's occupancy sensor flapped off for a few seconds at a time,
@@ -1685,7 +1672,7 @@ class TestSelfHealing:
         async_fire_time_changed(hass, dt_util.utcnow())
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls == []
+        assert turn_off_calls == []
 
 
 def _effective(call, entity_id):
@@ -1701,7 +1688,7 @@ class TestIdleBrightness:
     """docs/blueprint.md#leaving-a-room-dimly-lit"""
 
     async def test_an_empty_room_dims_instead_of_going_off(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         _occupancy(hass, "binary_sensor.occ", "on")
         _light(hass, "light.a", "on")
@@ -1721,11 +1708,11 @@ class TestIdleBrightness:
 
         assert apply_lighting_calls, "the room went dark instead of dimming"
         assert _effective(apply_lighting_calls[-1], "light.a") == 20
-        for call in light_turn_off_calls:
-            assert "light.a" not in call.data["entity_id"], "an idle light was switched off"
+        for call in turn_off_calls:
+            assert "light.a" not in call.data["entities"], "an idle light was switched off"
 
     async def test_lights_without_an_idle_level_still_go_off(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """The per-entity template names one lamp as the nightlight; the
         rest of the room still goes dark in the same run."""
@@ -1746,7 +1733,7 @@ class TestIdleBrightness:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.b"]
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.b"]
         assert _effective(apply_lighting_calls[-1], "light.a") == 20
 
     async def test_a_dark_empty_room_is_lit_to_the_idle_level(
@@ -1887,7 +1874,7 @@ class TestIdleBrightness:
         assert call.data["transition"] == 1, "used the background transition, so this came from a tick"
 
     async def test_a_template_level_alone_makes_that_lamp_the_only_nightlight(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """With no per-phase value set, the template IS the whole idle
         set rather than an override on top of one - so the light it names
@@ -1919,12 +1906,12 @@ class TestIdleBrightness:
 
         assert apply_lighting_calls
         assert _effective(apply_lighting_calls[-1], "light.a") == 20
-        assert any("light.b" in c.data["entity_id"] for c in light_turn_off_calls), (
+        assert any("light.b" in c.data["entities"] for c in turn_off_calls), (
             "light.b has no idle level of its own, so it should go dark"
         )
 
     async def test_a_bare_number_from_the_idle_template_applies_to_every_light(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """A template returning one number means "every light in the
         room", so a whole-room nightlight needs no entity names at all."""
@@ -1951,7 +1938,7 @@ class TestIdleBrightness:
         assert _effective(call, "light.b") == 20
 
     async def test_leaving_a_phase_with_an_idle_level_turns_the_lights_off_not_up(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """Live at 06:00: Night has an idle level, Morning does not, so at
         the boundary idle_entities empties and the room stops reading as
@@ -1970,19 +1957,19 @@ class TestIdleBrightness:
             day_idle_brightness=20,
         )
         apply_lighting_calls.clear()
-        light_turn_off_calls.clear()
+        turn_off_calls.clear()
 
         # Day -> Evening, and Evening has no idle level of its own.
         hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
         await hass.async_block_till_done()
 
-        assert any("light.a" in c.data["entity_id"] for c in light_turn_off_calls), (
+        assert any("light.a" in c.data["entities"] for c in turn_off_calls), (
             "the phase change left the light on rather than turning it off"
         )
         assert apply_lighting_calls == [], "the curve was applied, turning the nightlight up"
 
     async def test_the_per_phase_value_only_applies_in_its_phase(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """Night configured, Day not - so during Day, empty still means
         dark. This is how a hall is a nightlight at night and an
@@ -2002,10 +1989,10 @@ class TestIdleBrightness:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.a"]
 
     async def test_the_template_wins_over_the_phase_value_per_entity(
-        self, hass, apply_lighting_calls, light_turn_off_calls
+        self, hass, apply_lighting_calls, turn_off_calls
     ):
         """Same precedence as the brightness multipliers: the phase value
         fills in every light in the room, the template overrides the
@@ -2033,7 +2020,7 @@ class TestIdleBrightness:
         assert _effective(call, "light.b") == 60, "the template should win for light.b"
 
     async def test_self_heal_does_not_retry_turning_off_an_idle_light(
-        self, hass, light_turn_off_calls, frozen_time
+        self, hass, turn_off_calls, frozen_time
     ):
         """An idle light is deliberately on. Without excluding it from
         entities_still_on, self-heal would see "still on with no
@@ -2049,13 +2036,13 @@ class TestIdleBrightness:
         )
         _occupancy(hass, "binary_sensor.occ", "off")
         await hass.async_block_till_done()
-        light_turn_off_calls.clear()
+        turn_off_calls.clear()
 
         frozen_time.tick(timedelta(minutes=6))
         async_fire_time_changed(hass, dt_util.utcnow())
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls == []
+        assert turn_off_calls == []
 
     async def test_a_handed_off_light_is_not_given_an_idle_level(
         self, hass, apply_lighting_calls
@@ -2126,7 +2113,7 @@ class TestIdleBrightness:
         )
 
     async def test_zero_means_the_room_still_goes_dark(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """0 is the default and means "no idle brightness" - the room
         goes dark exactly as it did before this feature existed. It is 0
@@ -2148,10 +2135,10 @@ class TestIdleBrightness:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.a"]
 
     async def test_a_zero_in_the_template_is_not_an_idle_light(
-        self, hass, light_turn_off_calls, apply_lighting_calls
+        self, hass, turn_off_calls, apply_lighting_calls
     ):
         """Same rule wherever the 0 comes from. Without filtering it out
         of idle_entities, a 0 would make the light "idle", exclude it
@@ -2173,4 +2160,4 @@ class TestIdleBrightness:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
         await hass.async_block_till_done()
 
-        assert light_turn_off_calls and light_turn_off_calls[-1].data["entity_id"] == ["light.a"]
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.a"]

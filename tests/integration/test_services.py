@@ -1391,3 +1391,123 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
     assert "light.a" not in result["groups"][0]["combined"]
 
 
+
+
+# --- turn_off ---------------------------------------------------------
+
+
+async def _turn_off(hass: HomeAssistant, entities: list[str], *, context: Context | None = None, **overrides) -> None:
+    data = {"entities": entities, "tracking_device_id": _tracking_device_id(hass), **overrides}
+    await hass.services.async_call(DOMAIN, "turn_off", data, blocking=True, context=context)
+
+
+async def test_turn_off_turns_the_lights_off(setup_integration: HomeAssistant):
+    hass = setup_integration
+    off_calls = async_mock_service(hass, "light", "turn_off")
+    _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=200, color_temp_kelvin=3000)
+
+    await _turn_off(hass, ["light.a"], transition=15)
+
+    assert len(off_calls) == 1
+    assert off_calls[0].data["entity_id"] == ["light.a"]
+    assert off_calls[0].data["transition"] == 15
+
+
+async def test_a_flare_turn_off_is_recognised_as_ours_even_once_its_context_has_expired(
+    setup_integration: HomeAssistant,
+):
+    """The reason an off is recorded at all: a light off is judged against
+    its claims like any other, so without one a light turned off while the
+    rest of its room stays lit reads as overridden and can never be turned
+    on again. The off lands here under an UNRELATED context, as it does
+    once HA's 5 second Entity._context has expired, so only the recorded
+    `{"state": "off"}` target can say it was ours.
+
+    A second light stays on throughout: a scope releases every claim the
+    moment none of its lights is on (write_tracking._release_if_dark), and
+    turning off a scope's only light would release the very claim under
+    test."""
+    hass = setup_integration
+    async_mock_service(hass, "light", "turn_on")
+    async_mock_service(hass, "light", "turn_off")
+    for entity in ("light.a", "light.sibling"):
+        _set_light(hass, entity, "off", supported_color_modes=["color_temp"])
+    our_context = Context()
+    await _apply(hass, ["light.a", "light.sibling"], brightness=200, color_temp_kelvin=3000, context=our_context)
+    for entity in ("light.a", "light.sibling"):
+        _set_light(
+            hass, entity, "on", supported_color_modes=["color_temp"], brightness=200, color_temp_kelvin=3000, context=our_context
+        )
+
+    await _turn_off(hass, ["light.a"])
+    _set_light(hass, "light.a", "off", supported_color_modes=["color_temp"])  # a fresh, unrelated context
+
+    result = await hass.services.async_call(
+        DOMAIN,
+        "claims_check",
+        {"entities": ["light.a"], "tracking_device_id": _tracking_device_id(hass)},
+        blocking=True,
+        return_response=True,
+    )
+    assert result["results"]["light.a"]["status"] == "controlled"
+    assert result["results"]["light.a"]["matched_via"] == "latest-value"
+
+
+async def test_turn_off_does_no_override_protection(setup_integration: HomeAssistant):
+    """A room that empties goes dark, including lights someone set by hand -
+    that is the caller's decision, not something to second-guess here."""
+    hass = setup_integration
+    off_calls = async_mock_service(hass, "light", "turn_off")
+    _set_light(hass, "light.a", "off", supported_color_modes=["color_temp"])
+    our_context = Context()
+    async_mock_service(hass, "light", "turn_on")
+    await _apply(hass, ["light.a"], brightness=180, color_temp_kelvin=3200, context=our_context)
+    _set_light(
+        hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=180, color_temp_kelvin=3200, context=our_context
+    )
+    # Someone sets it by hand: overridden.
+    _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=40, color_temp_kelvin=2200)
+
+    await _turn_off(hass, ["light.a"])
+
+    assert [c.data["entity_id"] for c in off_calls] == [["light.a"]]
+
+
+async def test_turn_off_without_a_scope_turns_off_and_records_nothing(setup_integration: HomeAssistant):
+    hass = setup_integration
+    off_calls = async_mock_service(hass, "light", "turn_off")
+    _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=200, color_temp_kelvin=3000)
+
+    await hass.services.async_call(
+        DOMAIN, "turn_off", {"entities": ["light.a"], "tracking_device_id": None}, blocking=True
+    )
+
+    assert len(off_calls) == 1
+    assert _registry(hass).all_records() == {}
+
+
+async def test_turn_off_rejects_a_device_that_is_not_a_tracking_scope(setup_integration: HomeAssistant):
+    """Loud, and before anything is switched off - a stale device_id must
+    not half-work."""
+    hass = setup_integration
+    off_calls = async_mock_service(hass, "light", "turn_off")
+    _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=200, color_temp_kelvin=3000)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            "turn_off",
+            {"entities": ["light.a"], "tracking_device_id": "not-a-real-device"},
+            blocking=True,
+        )
+
+    assert off_calls == []
+
+
+async def test_turn_off_with_no_entities_does_nothing(setup_integration: HomeAssistant):
+    hass = setup_integration
+    off_calls = async_mock_service(hass, "light", "turn_off")
+
+    await _turn_off(hass, [])
+
+    assert off_calls == []

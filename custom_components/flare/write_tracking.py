@@ -66,8 +66,11 @@ bulb adopt, and the pre-write baseline for a first-ever write. What they
 share is confidence, not authorship - in both cases nothing unexplained
 has happened to the light, so writing over it is safe.
 
-apply_lighting records the context it *issued*; nothing waits to confirm
-the bulb adopted it. With a single record, one dropped write locks a
+apply_lighting records the context it is *about to issue*, before it sends
+anything, and nothing waits to confirm the bulb adopted it. Recording first
+is what lets a run that is cancelled or fails part-way through still leave
+an accurate record: the write may or may not have landed, and the two
+claims below are exactly what tells those apart. With a single record, one dropped write locks a
 light out permanently - the next tick compares the light's real,
 unchanged context against a value the device never adopted, and nothing
 that happens afterward can ever make those equal. (Seen live: a light
@@ -99,6 +102,15 @@ its `target` (brightness plus colour temperature or RGB, or None for a
 claim that isn't a real write), and classify() falls back to comparing
 the entity's current values against either claim's target before
 concluding "external".
+
+None of this depends on recording after the write. A context id here is
+a tag WE attach to our own write, never something read back from the
+device: it is the service call's own Context (or, for a two-step write,
+one Context created per step), and all of them exist before anything is
+dispatched - which is what lets the claim be recorded first. If the write
+lands, the light's state carries exactly that id. The 5 second expiry
+above is about how long the LIGHT remembers it, not about when we can
+know it.
 
 Device recovery and restarts
 -----------------------------
@@ -353,9 +365,11 @@ class ClaimRegistry:
         context_id_overrides: dict[str, str] | None = None,
     ) -> None:
         """Called once per apply_lighting invocation, with every entity it
-        actually issued a light.turn_on/turn_off for - not ones it merely
-        considered. See the module docstring for the two-claim model this
-        maintains; this documents the arguments.
+        is about to issue a light.turn_on/turn_off for - not ones it merely
+        considered - and BEFORE any of those calls is sent, so that a run
+        cancelled or failing part-way still leaves a record behind. See the
+        module docstring for the two-claim model this maintains; this
+        documents the arguments.
 
         subentry_id is the caller's scope, resolved once for the whole
         call - not re-derived per entity. A None scope means "write the
@@ -370,11 +384,10 @@ class ClaimRegistry:
         or a Clear press removes it sooner.
 
         live_context_before_write: each entity's context.id as read
-        *before* any of this call's writes were dispatched. It cannot be
-        read fresh in here - by the time this runs the writes have been
-        awaited, so a light's live context may already reflect the very
-        write about to be recorded as `latest`, making every write look
-        like it promoted itself instantly.
+        *before* any of this call's writes were dispatched. Callers snapshot
+        it themselves rather than having it read in here, so it can never
+        reflect the very write about to be recorded as `latest`, which
+        would make every write look like it promoted itself instantly.
 
         This is the one and only place promotion happens: if the previous
         `latest` claim matches what was live just before this write went

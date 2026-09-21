@@ -22,7 +22,7 @@ schedule sensors.
 {:toc}
 </details>
 
-Seven services, callable from your own automations or scripts with no blueprint involved.
+Eight services, callable from your own automations or scripts with no blueprint involved.
 Each field is documented in full in Developer Tools → Actions.
 
 ## `flare.apply_lighting`
@@ -56,7 +56,7 @@ automation — and picks it up again when released.
 **You say which scope a call belongs to.** A tracking scope is a named record of which lights FLARE is
 driving, usually one per room, configured at Settings → Devices & Services → **FLARE Tracking** →
 Add tracking scope. Each one is a real HA device. Pass its `tracking_device_id` on any of
-`apply_lighting`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
+`apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
 ```yaml
 action: flare.apply_lighting
@@ -68,8 +68,8 @@ data:
   tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
 ```
 
-**`tracking_device_id` is optional on `apply_lighting` and `compute_lighting_groups`** — both do
-something useful (set or plan lights) with no scope at all. **Omitting it writes the light but
+**`tracking_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
+three do something useful (set, turn off or plan lights) with no scope at all. **Omitting it writes the light but
 tracks nothing** — no claim is recorded, and nothing is excluded as already externally-set. Tracking
 is opt-in per call, not something the integration goes looking for on your behalf.
 
@@ -116,7 +116,7 @@ Switching a light off is a decision worth respecting, the same as dimming it, so
 relighting it on the next tick.
 
 A turn-off records a target of its own (`{"state": "off"}`), which is what separates *FLARE turned this off*
-from *somebody else did*. Without it there would be nothing to compare once the write's context expires after
+from *somebody else did*. `apply_lighting` and [`turn_off`](#flareturn_off) both record it for you. Without it there would be nothing to compare once the write's context expires after
 five seconds, and a room turned off at bedtime could never be turned on again.
 
 **A scope releases every claim it holds once none of its lights are on.** Nobody is using the room, so handing
@@ -233,6 +233,29 @@ Each claim carries `recorded_at` (ISO 8601, or `null` for the first-write baseli
 Records are pruned after a full day with no write or observation. This matters mainly for an entity deleted
 from Home Assistant outright — a Zigbee2MQTT group removed at source — which nothing else can detect, since
 there is no state left to observe. Runs at startup and hourly; nothing to configure.
+
+## `flare.turn_off`
+
+Turns lights off and records that as FLARE's own doing, so it isn't mistaken for somebody else switching the
+light off. It is `apply_lighting`'s counterpart for when there is no brightness or colour to apply.
+
+```yaml
+action: flare.turn_off
+data:
+  entities: [light.kitchen_1, light.kitchen_2]
+  transition: 15
+  tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
+```
+
+| Field | |
+|---|---|
+| `entities` | The lights to turn off. |
+| `transition` | Seconds. Defaults to 0. |
+| `tracking_device_id` | The [tracking scope](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
+
+**It does no override protection.** It turns off exactly what it is given, including lights someone set by hand —
+use it once you have decided the room should go dark. To turn lights off only if FLARE is still driving them, ask
+`claims_check` first.
 
 ## `flare.compute_lighting_groups`
 
