@@ -1,0 +1,60 @@
+name: cut-beta
+
+# Pushing to main cuts a beta. That is the whole interface: the branch is
+# the beta line, so getting a change into a tester's hands is
+#
+#     git push origin dev:main
+#
+# which must be a fast-forward - main requires linear history, and a
+# squash or rebase merge from a pull request would give main new SHAs
+# that dev never sees.
+#
+# Nothing is committed anywhere. scripts/release.py builds the release on
+# the side (a commit carrying the real version numbers, reachable from no
+# branch), and this workflow only pushes the tag it made. See that
+# script's docstring for why the source carries a placeholder instead.
+#
+# Tests run first, on the exact commit being released. tests.yml
+# deliberately does not run on pushes to main itself, so this call is the
+# only run for it rather than a duplicate.
+on:
+  push:
+    branches: [main]
+
+# Two pushes in quick succession must not race for the same beta number.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  beta:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The script reads every tag and diffs against earlier releases.
+          fetch-depth: 0
+
+      - name: Build the beta
+        id: cut
+        run: python scripts/release.py cut-beta --source "$GITHUB_SHA"
+
+      # A tag pushed with GITHUB_TOKEN does not trigger release.yml (GitHub
+      # does not let a workflow's own events start other workflows), which
+      # is what we want: its checks exist to police a tag typed by hand,
+      # and a tag the script built agrees with its own manifest by
+      # construction.
+      - name: Publish it
+        if: steps.cut.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.cut.outputs.tag }}
+        run: |
+          git push origin "refs/tags/$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes --prerelease

@@ -1,9 +1,16 @@
 name: release
 
-# Cutting a release is pushing a tag. The workflow's job is to make sure
-# the tag and the manifest can't disagree: HACS reads the version out of
-# manifest.json, not out of the tag, so a mismatch means the version
-# people see installed isn't the version they downloaded.
+# THIS IS FOR A TAG PUSHED BY HAND. Betas and releases are normally built
+# by cut-beta.yml and promote.yml, which push their own tags - and a tag
+# pushed by a workflow does not trigger this one, so nothing here runs
+# for them. Their tags agree with their manifests by construction
+# (scripts/release.py wrote both), which is the thing these checks exist
+# to establish for a person typing `git tag`.
+#
+# Cutting a release by hand is pushing a tag. The workflow's job is to
+# make sure the tag and the manifest can't disagree: HACS reads the
+# version out of manifest.json, not out of the tag, so a mismatch means
+# the version people see installed isn't the version they downloaded.
 #
 # TWO CHANNELS, decided by the tag alone:
 #

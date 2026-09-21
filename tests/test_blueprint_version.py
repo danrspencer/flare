@@ -18,8 +18,10 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "custom_components" / "flare"))
 
+import blueprint_version  # noqa: E402
 from blueprint_version import (  # noqa: E402
     BLUEPRINT_VERSION,
+    DEV_VERSION,
     is_outdated,
     version_from_description,
 )
@@ -70,10 +72,12 @@ def test_the_stamp_is_visible_to_a_user_reading_the_description(blueprint):
 # --- Parsing -----------------------------------------------------------
 
 
-def test_an_unstamped_description_reads_as_no_version():
+def test_an_unstamped_description_reads_as_no_version(monkeypatch):
     """Every copy released before this existed. It has to parse as
     "update me" rather than raising, because that is the population the
     check is for on the day it ships."""
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", "0.16.0")
+
     assert version_from_description("Some blueprint, no stamp here") is None
     assert is_outdated(None)
 
@@ -100,13 +104,35 @@ def test_a_prerelease_stamp_parses_whole():
     assert version_from_description("Blueprint version 0.16.0-beta.2") == "0.16.0-beta.2"
 
 
-def test_only_the_current_version_is_up_to_date():
+def test_only_the_current_version_is_up_to_date(monkeypatch):
     """Deliberately an inequality rather than "older than". Someone left
     on an abandoned beta is running a blueprint that no release ships,
     and should be moved back onto the released one."""
-    assert not is_outdated(BLUEPRINT_VERSION)
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", "0.16.0")
+
+    assert not is_outdated("0.16.0")
     assert is_outdated("0.0.1")
     assert is_outdated("99.0.0")
+
+
+# --- Development builds ------------------------------------------------
+
+
+def test_the_source_carries_the_placeholder_not_a_hand_bumped_version():
+    """Releases write the real value in (scripts/release.py), so a number
+    typed here would be overwritten and only mislead. Failing on it also
+    catches a stamp bumped out of habit, which used to be required."""
+    assert BLUEPRINT_VERSION == DEV_VERSION
+
+
+def test_a_development_build_is_never_outdated(monkeypatch):
+    """It has no release to be behind. Without this, every real stamp
+    reads as stale against the placeholder and the Fix button goes
+    looking for a tag named after it."""
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", DEV_VERSION)
+
+    for installed in (None, "0.16.0", "0.17.0-beta.1", DEV_VERSION):
+        assert not is_outdated(installed), installed
 
 
 # --- The release-time guards -------------------------------------------

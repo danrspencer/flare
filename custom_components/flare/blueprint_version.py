@@ -12,10 +12,14 @@ BLUEPRINT_VERSION IS NOT THE INTEGRATION'S VERSION. It is the version in
 which the blueprint itself last changed, so a release that only touches
 Python doesn't tell every user to go and re-import an identical file.
 That is the whole reason it is a separate constant rather than being
-read from the manifest, and it means it has to be bumped by hand when
-the blueprint changes - `tests/test_blueprint_version.py` is what makes
-that mistake loud, since a stale stamp otherwise fails silently and
-users simply never hear about the update.
+read from the manifest.
+
+Nobody bumps it. In the source it is DEV_VERSION, and `scripts/release.py`
+writes the real value into a release's copy of this file and of the
+blueprint's description when it builds the release, working out whether
+the blueprint changed since the last one. The old hand-bump was the one
+step whose omission failed silently - no error, no repair, users simply
+never heard about the update.
 
 The version travels in the blueprint's own `description`, which is not
 where you would put it given a free choice. Home Assistant's blueprint
@@ -38,12 +42,15 @@ from __future__ import annotations
 
 import re
 
-# Bump this WHENEVER blueprints/automation/danspencer/flare.yaml changes,
-# and set the same version in that file's description. The test suite
-# checks the two agree; nothing checks that you remembered to move them,
-# except the CI step that fails a pull request touching the blueprint
-# without touching the stamp.
-BLUEPRINT_VERSION = "0.16.0"
+# What every version number in the source is until a release is built.
+# Also the manifest's version and the blueprint description's stamp: the
+# three are rewritten together by scripts/release.py, and a test checks
+# the source's copies agree.
+DEV_VERSION = "0.0.0-dev"
+
+# Rewritten at release time - do not edit. The blueprint's description
+# carries the same value; see the module docstring.
+BLUEPRINT_VERSION = "0.0.0-dev"
 
 # Matches the line the blueprint's description carries. Deliberately
 # loose about what follows the number so the sentence around it can be
@@ -74,5 +81,12 @@ def is_outdated(installed: str | None) -> bool:
     blueprint from a beta that was later abandoned should be told to get
     back onto the released one, and an unstamped blueprint (None) is
     every copy released before this check existed.
+
+    Never outdated on a development build, which has no release to be
+    behind: BLUEPRINT_VERSION is the placeholder there, so every real
+    stamp would read as stale, and the Fix button would go looking for a
+    tag named after it.
     """
+    if BLUEPRINT_VERSION == DEV_VERSION:
+        return False
     return installed != BLUEPRINT_VERSION

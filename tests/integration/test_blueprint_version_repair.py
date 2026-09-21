@@ -24,6 +24,7 @@ from homeassistant.setup import async_setup_component
 
 from homeassistant.helpers import issue_registry as ir
 
+from custom_components.flare import blueprint_check, blueprint_version
 from custom_components.flare.blueprint_check import (
     ISSUE_ID,
     MISSING_ISSUE_ID,
@@ -31,6 +32,7 @@ from custom_components.flare.blueprint_check import (
     blueprint_is_installed,
     outdated_blueprints,
 )
+from custom_components.flare.blueprint_version import DEV_VERSION
 from custom_components.flare.const import DOMAIN
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -46,10 +48,35 @@ def hass_config_dir(tmp_path) -> str:
     the test's fixtures in the actual repository. That is not
     hypothetical: it happened while this module was being written, and
     four junk blueprints were staged for commit before anyone noticed.
-    Everything else about the fixture is unchanged."""
+    Everything else about the fixture is unchanged, except that the copy
+    is stamped as a release would be - see `_as_a_release`."""
     (tmp_path / "custom_components").symlink_to(REPO_ROOT / "custom_components")
     shutil.copytree(REPO_ROOT / "blueprints", tmp_path / "blueprints")
+    shipped = tmp_path / "blueprints" / "automation" / "danspencer" / "flare.yaml"
+    shipped.write_text(_released(shipped.read_text()))
     return str(tmp_path)
+
+
+RELEASED = "0.16.0"
+
+
+def _released(blueprint: str) -> str:
+    """The blueprint as a release carries it. The source holds a
+    placeholder stamp that scripts/release.py replaces at build time, so
+    a test wanting "the shipped blueprint" has to do the same."""
+    assert f"Blueprint version {DEV_VERSION}" in blueprint, "the source stamp is not the placeholder"
+    return blueprint.replace(f"Blueprint version {DEV_VERSION}", f"Blueprint version {RELEASED}")
+
+
+@pytest.fixture(autouse=True)
+def _as_a_release(monkeypatch):
+    """Everything here is about what a RELEASE does when it finds an old
+    copy, and a release has a real BLUEPRINT_VERSION - the source has the
+    placeholder, under which the check deliberately does nothing (see the
+    tests at the bottom). Patched in both modules because the check
+    imports the name and the comparison reads it from its own."""
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", RELEASED)
+    monkeypatch.setattr(blueprint_check, "BLUEPRINT_VERSION", RELEASED)
 
 BLUEPRINT_PATH = "danspencer/flare.yaml"
 
@@ -236,7 +263,44 @@ async def test_installing_clears_the_missing_repair(hass: HomeAssistant):
     assert _issues(hass) == {MISSING_ISSUE_ID}
 
     # The blueprint arrives, by whatever route.
-    _write(hass, BLUEPRINT_PATH, (REPO_ROOT / "blueprints" / "automation" / BLUEPRINT_PATH).read_text())
+    _write(hass, BLUEPRINT_PATH, _released((REPO_ROOT / "blueprints" / "automation" / BLUEPRINT_PATH).read_text()))
+    await async_check(hass)
+
+    assert _issues(hass) == set()
+
+
+# --- Development builds ---------------------------------------------------
+
+
+async def test_a_development_build_raises_neither_repair(hass: HomeAssistant, monkeypatch):
+    """Installed from the dev branch, the constant is a placeholder with
+    no release behind it. Missing would offer a Fix that downloads a tag
+    named after it, and outdated would call every real stamp stale - both
+    nag a developer about a state that is simply how dev works."""
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", DEV_VERSION)
+    monkeypatch.setattr(blueprint_check, "BLUEPRINT_VERSION", DEV_VERSION)
+
+    _remove_ours(hass)
+    await async_check(hass)
+    assert _issues(hass) == set(), "reported a missing blueprint"
+
+    _write(hass, "stale/flare.yaml", STALE)
+    await _automation_using(hass, "stale/flare.yaml", "room")
+    await async_check(hass)
+    assert _issues(hass) == set(), "reported a stale blueprint"
+
+
+async def test_moving_onto_a_development_build_withdraws_a_raised_repair(hass: HomeAssistant, monkeypatch):
+    """A house switching from a release to dev must not keep a repair
+    whose Fix no longer makes sense."""
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+    await async_check(hass)
+    assert _issues(hass) == {MISSING_ISSUE_ID}
+
+    monkeypatch.setattr(blueprint_version, "BLUEPRINT_VERSION", DEV_VERSION)
+    monkeypatch.setattr(blueprint_check, "BLUEPRINT_VERSION", DEV_VERSION)
     await async_check(hass)
 
     assert _issues(hass) == set()

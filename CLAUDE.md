@@ -1163,13 +1163,20 @@ integration (e.g. curve.py/coordinator.py/sensor.py).
 the integration's.** Chosen at the user's direction over "any
 difference", so a release touching only Python doesn't tell every user
 to re-import an identical file. That is the whole reason it is a
-separate constant rather than read from `manifest.json`, and it is why
-it must be bumped BY HAND whenever the blueprint changes - forgetting
-fails silently (no repair, no error, nobody hears about the update).
-Two things guard it: `tests/test_blueprint_version.py` pins the constant
-against the stamp in the blueprint's own description, and a
-`blueprint-stamp` job in `tests.yml` fails any PR that touches
-`blueprints/` without moving the stamp.
+separate constant rather than read from `manifest.json`.
+
+**Nobody bumps it any more.** In the source it is `DEV_VERSION`
+(`0.0.0-dev`), as are the manifest's version and the description's
+stamp; `scripts/release.py` writes the real values into a release's own
+copy, working out whether the blueprint changed since the previous
+release (see "Releases are automated" below). The hand-bump was the one
+step whose omission failed silently - no repair, no error, nobody hears
+about the update - and the `blueprint-stamp` CI job that policed it was
+deleted along with it. A dev build (`BLUEPRINT_VERSION == DEV_VERSION`)
+raises neither repair: there is no release to be behind, and both Fix
+buttons download from a tag named after the constant.
+`tests/test_blueprint_version.py` still pins the constant against the
+description, and pins that the source holds the placeholder.
 
 **The stamp lives in the blueprint's `description`** because there is
 nowhere else. `blueprint/schemas.py` validates the `blueprint:` block
@@ -1228,14 +1235,15 @@ raising, so a house moving between the two states leaves nothing behind.
 - A blueprint that fails to load comes back from
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
   hence the `isinstance` check, not a `None` check.
-- **Promoting a beta:** if the blueprint changed during a beta the stamp
-  holds that beta's version, and it must be set to the stable version
-  when promoting. `release.yml` enforces this rather than trusting
-  anyone to remember - a stable tag whose stamp carries a prerelease
-  suffix fails the release outright. It also refuses a stamp naming a
-  tag that doesn't exist, since that is the URL the Fix button
-  downloads from, and both failures are otherwise silent until a user
-  presses Fix.
+- **What a stamp must satisfy** is now true by construction for anything
+  `scripts/release.py` builds: a stable release never carries a beta
+  stamp (promotion compares against the previous *stable* tag, so a
+  blueprint that changed during the betas is stamped with the bare
+  version), and the stamp always names a tag that exists (it is either
+  the release being built or the stamp of an earlier tag it was
+  compared with). `release.yml` still enforces both for a tag pushed by
+  hand, because the failure - Fix downloading from a URL that does not
+  exist - is otherwise silent until a user presses it.
 
 **`tests/integration/test_blueprint_version_repair.py` overrides
 `hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The
@@ -1246,24 +1254,92 @@ caught. Don't "simplify" it back to the shared fixture.
 
 ### Deployment / operational notes
 
-- **Releases are BETAS by default.** `vX.Y.Z-beta.N` is the normal tag;
-  a bare `vX.Y.Z` is a promotion the user asks for explicitly, not a
-  call to make because a change looks safe. Set at his direction on
-  2026-09-08 - *"for most changes now we auto tag them as beta and only
-  on my say so promote to a real release"* - because FLARE has external
-  testers now and a stable tag reaches their houses. Promoting moves
-  `manifest.json`, `BLUEPRINT_VERSION` and the blueprint's description
-  stamp to the bare version together; `release.yml` refuses a
-  prerelease stamp on a stable tag, so a half-done promotion fails the
-  build.
-- **Versioning**: `manifest.json`'s `version` is what HACS reports, and
-  it must match the release tag - enforced by `tests/test_version.py`
-  and again by `.github/workflows/release.yml`, which refuses to publish
-  a mismatch. `CHANGELOG.md` must carry a section for the version.
-  Releasing is bump + changelog + tag; see CONTRIBUTING.md.
-- **Integration**: HACS. `update_information` then `download`, confirm
-  the deployed file matches the merge with `ha_read_file` before
-  restarting (see lesson 12), then restart.
+- **Releases are automated, in three tiers** (set up 2026-09-21 at the
+  user's request - it replaces the earlier rule, from 2026-09-08, that a
+  stable tag happened only on his say-so; the hold below is what keeps
+  his veto):
+  `dev` (the churn branch) -> a push of `dev` to `main` cuts
+  `vX.Y.Z-beta.N` (`cut-beta.yml`) -> a daily job promotes a version's
+  newest beta to `vX.Y.Z` once it is 7 days old (`promote.yml`).
+  `X.Y.Z` is read from the top `## [x.y.z]` heading of `CHANGELOG.md`.
+  An open issue labelled `release-blocker` stops a promotion; nothing
+  else does. Soak is per version (a fresh `0.0.2-beta.1` does not hold
+  back a week-old `0.0.1-beta.4`, but a later beta of the same version
+  restarts its clock), and a version at or below the highest stable is
+  never promoted.
+- **Nothing is committed to a branch for a release.** The source
+  carries the placeholder `0.0.0-dev` and `scripts/release.py` builds
+  each release as a commit on top of its source commit - real version
+  written into `manifest.json`, `BLUEPRINT_VERSION` and the blueprint
+  stamp - tagged and reachable from no branch. Chosen over a bot
+  committing bumps to `main` because that leaves `dev` without the
+  bump, so every release needs a back-merge (and `main` requires linear
+  history). A promotion rebuilds the beta's own source commit, recorded
+  as `Source:` in the release commit's message; a hand-made tag has none
+  and cannot be promoted. Consequences worth knowing: a dev build's
+  front-end URL is a content hash rather than the version (the version
+  never changes there, and the URL is cached hard); GitHub shows a "not
+  on any branch" banner on release commits; and `main`'s changelog
+  section is never re-dated, so headings carry whatever a person wrote.
+- **A tag pushed by a workflow does not trigger another workflow**
+  (GITHUB_TOKEN events don't), so `release.yml` never runs for the
+  automated releases. That is fine and deliberate: its checks police a
+  tag typed by hand, and the script's tags agree with their manifests
+  by construction. Don't "fix" it with a PAT to make it run.
+- **`git push origin dev:main` must be a fast-forward.** `main`'s
+  ruleset requires linear history, so a pull request's squash or rebase
+  would give `main` commits `dev` never sees.
+- **Versioning**: `manifest.json`'s `version` is what HACS reports, read
+  out of the release's own tag. `tests/test_version.py` pins that the
+  source holds the placeholder and the changelog's top heading is
+  parseable; `release.yml` re-checks tag/manifest agreement for tags
+  made by hand. Full flow in CONTRIBUTING.md.
+- **HACS has no dev channel, and the default branch is NOT one.** An
+  earlier version of this section (and of what was proposed to the user)
+  claimed HACS offers a repo's default branch in its version dropdown,
+  tracked by commit, unless `hacs.json` sets `hide_default_branch`. That
+  is the pre-2.0 behaviour, and it is what hacs.xyz still documents. HACS
+  2.x removed it (hacs/integration#4009, closed as not planned): the
+  frontend's "different version" list comes only from
+  `hacs/repository/releases` (GitHub releases), and never reads
+  `hide_default_branch`. Commit-tracking of the default branch applies
+  only to repositories that publish NO releases. So flipping the default
+  branch or dropping `hide_default_branch` achieves nothing - don't
+  propose it again. Found by the user asking to see the docs; the claim
+  had come from reading the backend's `pending_update`, which still has
+  the case, without checking that the UI can reach it.
+  What does exist, and is how work-in-progress gets onto the live
+  instance: `hacs/repository/download` accepts any `version` string.
+  The download URL is `archive/<sha>.zip` for a 40-character commit SHA
+  and otherwise falls back from `refs/tags/X.zip` to `refs/heads/X.zip`.
+  Nothing is reported as an update afterwards.
+- **While developing, install the working commit from HACS directly -
+  do not publish a version to test it.** Setting this out as the
+  standing way to work, at the user's direction on 2026-09-21: no tag, no
+  beta, no release, and never cut one just to get code onto the
+  instance (a beta is what testers are offered, so it is not a scratch
+  build). The steps:
+  1. Push the branch. HACS downloads from GitHub, not from a local
+     checkout, so unpushed work cannot be installed.
+  2. `ha_manage_hacs(action="download", repository_id="danrspencer/flare",
+     version="<full commit SHA>")`. Prefer the SHA to a branch name: it
+     is immutable (lesson 12's reasoning) and skips branch resolution.
+  3. Confirm with `ha_read_file` that the deployed files match that
+     commit before restarting, then restart.
+  4. The blueprint is separate: `ha_import_blueprint` pinned to the same
+     SHA, with `overwrite=true` (lesson 13 - it installs under
+     `danrspencer/`).
+  A dev build carries the placeholder version, so it raises neither
+  blueprint repair and serves its front-end files from a content-hash
+  URL - neither of which needs handling. **To get back onto a release**,
+  download `version` = the release tag. **Not yet exercised against
+  this integration:** it is read from HACS's source, not seen working.
+  The first time it is used, check the result and HACS's log; if HACS
+  refuses the ref, stop and say so rather than falling back to tagging.
+- **Integration (a merged change, or getting back onto a release)**:
+  HACS. `update_information` then `download`, confirm the deployed file
+  matches the merge with `ha_read_file` before restarting (see lesson
+  12), then restart.
 - **Blueprint**: `ha_import_blueprint` with `overwrite=true`, pinned to
   a commit SHA rather than a branch (lesson 12). Note lesson 13 - it
   installs under `danrspencer/`, not `danspencer/`.

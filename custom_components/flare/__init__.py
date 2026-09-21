@@ -49,6 +49,7 @@ import asyncio
 # every later time.time() call in this module then raises AttributeError
 # against the wrong module. Caught live via a test that unconditionally
 # forwards SCHEDULE_PLATFORMS for the first time on a zero-instance entry.
+import hashlib
 import time as time_module
 from pathlib import Path
 from types import MappingProxyType
@@ -80,6 +81,7 @@ from .const import (
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
+from .blueprint_version import DEV_VERSION
 from .config_flow import _areas_with_lights
 from .coordinator import CURVE_KEYS, ScheduleCoordinator, schedule_instances
 from .curve import phase_at, targets_for_phase
@@ -391,6 +393,23 @@ BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 # every page would be pure cost.
 
 
+def _content_version(www: Path) -> str:
+    """A version for the front-end URL that changes when the files do.
+
+    Only used on a development build, where the manifest's version is the
+    same placeholder for every commit. The URL has to change whenever a
+    served file does (it is cached hard, see async_setup), and this is the
+    one thing that can promise that when the version cannot. A release
+    never needs it - its version already differs from the last one's.
+    """
+    digest = hashlib.sha1(usedforsecurity=False)
+    for file in sorted(www.rglob("*")):
+        if file.is_file():
+            digest.update(str(file.relative_to(www)).encode())
+            digest.update(file.read_bytes())
+    return f"dev-{digest.hexdigest()[:10]}"
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve www/flare-curve-card.js and auto-load it on
     every frontend page - runs once for the whole domain, regardless of
@@ -423,11 +442,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     a query is not, so the card would load twice under two URLs and the
     second customElements.define would throw."""
     integration = await async_get_integration(hass, DOMAIN)
+    www = Path(__file__).parent / "www"
     # Falls back only if the manifest has no version, which a HACS
     # install always does - still better than failing setup outright.
-    base = f"{CARD_URL_BASE}/{integration.version or 'dev'}"
+    version = str(integration.version or "dev")
+    if version == DEV_VERSION:
+        version = await hass.async_add_executor_job(_content_version, www)
+    base = f"{CARD_URL_BASE}/{version}"
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
+        [StaticPathConfig(base, str(www), cache_headers=True)]
     )
     for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")

@@ -1,0 +1,85 @@
+name: promote
+
+# Turns a beta into a stable release once it has sat for a week.
+#
+# Runs daily. For each version, what counts is its NEWEST beta: a beta
+# that is a week old is promoted even if a newer version's beta is only a
+# few days old, but a later beta of the same version restarts that
+# version's clock, because what would be released is that beta's contents.
+# scripts/release.py holds the rule and never promotes anything at or
+# below the highest stable release, so tags made out of order cannot ship
+# a downgrade.
+#
+# HOLDING A RELEASE BACK. An open issue labelled `release-blocker` stops
+# the promotion, and nothing else needs to happen: close the issue and
+# the next daily run carries on. The issue is also where "why is this
+# not shipping" gets answered.
+#
+# PROMOTING EARLY. Run this workflow by hand with `force` ticked (gh
+# workflow run promote.yml -f force=true). That skips the soak period but
+# not the blocker check.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Promote the newest beta now, whatever its age"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Is anything holding the release back
+        id: blockers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh issue list --label release-blocker --state open --json number,title \
+            --jq '.[] | "#\(.number) \(.title)"')
+          if [ -n "$open" ]; then
+            echo "::notice::Not promoting - held by release-blocker issue(s):"
+            echo "$open"
+            echo "held=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "held=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the release
+        id: cut
+        if: steps.blockers.outputs.held == 'false'
+        env:
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            python scripts/release.py promote --force
+          else
+            python scripts/release.py promote
+          fi
+
+      # See cut-beta.yml for why the tag push does not need release.yml.
+      - name: Publish it
+        if: steps.cut.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.cut.outputs.tag }}
+        run: |
+          git push origin "refs/tags/$TAG"
+          # Notes span the previous STABLE release, not the last tag: by
+          # default GitHub would diff against the newest beta, which is
+          # nearly the same code, and the notes would come out empty.
+          previous=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v -e -beta | grep -vx "$TAG" | head -1)
+          gh release create "$TAG" --title "$TAG" --generate-notes ${previous:+--notes-start-tag "$previous"}
