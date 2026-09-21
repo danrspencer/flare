@@ -81,12 +81,5 @@ def is_outdated(installed: str | None) -> bool:
     blueprint from a beta that was later abandoned should be told to get
     back onto the released one, and an unstamped blueprint (None) is
     every copy released before this check existed.
-
-    Never outdated on a development build, which has no release to be
-    behind: BLUEPRINT_VERSION is the placeholder there, so every real
-    stamp would read as stale, and the Fix button would go looking for a
-    tag named after it.
     """
-    if BLUEPRINT_VERSION == DEV_VERSION:
-        return False
     return installed != BLUEPRINT_VERSION

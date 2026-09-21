@@ -1172,9 +1172,14 @@ copy, working out whether the blueprint changed since the previous
 release (see "Releases are automated" below). The hand-bump was the one
 step whose omission failed silently - no repair, no error, nobody hears
 about the update - and the `blueprint-stamp` CI job that policed it was
-deleted along with it. A dev build (`BLUEPRINT_VERSION == DEV_VERSION`)
-raises neither repair: there is no release to be behind, and both Fix
-buttons download from a tag named after the constant.
+deleted along with it. **The repair code deliberately knows nothing about
+dev builds** - it was briefly taught to stand down when
+`BLUEPRINT_VERSION` is the placeholder, and that was removed at the
+user's direction: shipped code should not special-case a development
+workflow. A dev install is kept consistent by importing the blueprint
+from the same commit (both then carry the placeholder), and a blueprint
+is updated there with a direct `ha_import_blueprint`, never the repair's
+Fix button (which would fetch a tag named after the placeholder).
 `tests/test_blueprint_version.py` still pins the constant against the
 description, and pins that the source holds the placeholder.
 
@@ -1329,9 +1334,10 @@ caught. Don't "simplify" it back to the shared fixture.
   4. The blueprint is separate: `ha_import_blueprint` pinned to the same
      SHA, with `overwrite=true` (lesson 13 - it installs under
      `danrspencer/`).
-  A dev build carries the placeholder version, so it raises neither
-  blueprint repair and serves its front-end files from a content-hash
-  URL - neither of which needs handling. **To get back onto a release**,
+  A dev build carries the placeholder version, and the blueprint from
+  step 4 carries the same one, so the blueprint repair stays quiet as
+  long as the two come from the same commit. Never press the repair's Fix
+  button on a dev build. **To get back onto a release**,
   download `version` = the release tag. **Not yet exercised against
   this integration:** it is read from HACS's source, not seen working.
   The first time it is used, check the result and HACS's log; if HACS

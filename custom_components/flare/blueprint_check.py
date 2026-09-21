@@ -38,12 +38,7 @@ from homeassistant.components.blueprint.models import Blueprint
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 
-from .blueprint_version import (
-    BLUEPRINT_VERSION,
-    DEV_VERSION,
-    is_outdated,
-    version_from_description,
-)
+from .blueprint_version import BLUEPRINT_VERSION, is_outdated, version_from_description
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -157,17 +152,7 @@ async def async_check(hass: HomeAssistant) -> None:
     blueprint has nothing that can be out of date, and a house with one
     is not missing it. Both are cleared on the path that doesn't raise
     them, so switching between the two states leaves nothing stale.
-
-    A development build (installed from the dev branch rather than a
-    release) raises neither: it has no release to be behind, and both
-    Fix buttons download from a tag named after BLUEPRINT_VERSION, which
-    is only a placeholder there.
     """
-    if BLUEPRINT_VERSION == DEV_VERSION:
-        ir.async_delete_issue(hass, DOMAIN, ISSUE_ID)
-        ir.async_delete_issue(hass, DOMAIN, MISSING_ISSUE_ID)
-        return
-
     if not await blueprint_is_installed(hass):
         ir.async_delete_issue(hass, DOMAIN, ISSUE_ID)
         ir.async_create_issue(

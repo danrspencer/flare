@@ -286,9 +286,11 @@ tell everyone to re-import an identical file.
 GitHub shows a "does not belong to any branch" banner on these commits. That is expected.
 The release commit's message records its `Source:` commit.
 
-A development build (the placeholder version) raises neither blueprint repair, and serves
-the front-end files from a URL derived from their content rather than from the version,
-since the version never changes there.
+A development build carries the placeholder version and serves the front-end files from a
+URL derived from their content rather than from the version, since the version never
+changes there. The blueprint repair has no special handling for it: import the blueprint from
+the same commit as the integration and both carry the placeholder, so they agree. Update it
+with a direct import rather than the repair's Fix button.
 
 ### Two channels
 
