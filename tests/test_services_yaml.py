@@ -86,7 +86,7 @@ def test_compute_curve_documents_the_defaults_it_actually_uses():
     something else from. It's the third copy of these values after
     curve.py and curve.js - the JS one is pinned in
     test_curve_js_parity.py."""
-    from curve import DEFAULT_CURVE_VALUES
+    from custom_components.flare.curve import DEFAULT_CURVE_VALUES
 
     fields = SERVICES["compute_curve"]["fields"]
     documented = {k: v.get("default") for k, v in fields.items() if k in DEFAULT_CURVE_VALUES}

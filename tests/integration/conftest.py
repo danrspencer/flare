@@ -2,7 +2,7 @@
 Integration tests exercise the real Home Assistant event loop, template
 engine, and automation/blueprint machinery via pytest-homeassistant-
 custom-component - unlike tests/test_curve.py and tests/test_grouping.py
-(bare-module imports, no HA dependency at all, see tests/conftest.py).
+(plain unit tests of the pure logic, with no HA event loop or fixtures).
 
 This is a separate, heavier suite for exactly that reason: it catches
 what the pure-logic tests structurally cannot - bugs in how HA's own

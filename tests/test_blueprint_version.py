@@ -10,15 +10,12 @@ stamp raises no repair and no error, it simply never tells anyone.
 """
 
 import re
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "custom_components" / "flare"))
-
-from blueprint_version import (  # noqa: E402
+from custom_components.flare.blueprint_version import (
     BLUEPRINT_VERSION,
     is_outdated,
     version_from_description,
