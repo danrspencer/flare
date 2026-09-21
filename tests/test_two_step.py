@@ -10,7 +10,7 @@ tests/integration/test_services.py, since none of that can be exercised
 without a real registry and a real Tracking config entry.
 """
 
-from two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, model_matches, parse_patterns
+from custom_components.flare.services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, model_matches, parse_patterns
 
 
 class TestModelMatching:

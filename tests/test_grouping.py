@@ -7,7 +7,7 @@ here.
 
 import pytest
 
-from grouping import MAX_BRIGHTNESS, build_groups
+from custom_components.flare.services.grouping import MAX_BRIGHTNESS, build_groups
 from fakes import make_lookup
 
 

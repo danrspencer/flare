@@ -45,7 +45,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, PHASE_OPTIONS
-from .coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:

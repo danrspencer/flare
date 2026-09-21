@@ -2,14 +2,14 @@
 Integration tests exercise the real Home Assistant event loop, template
 engine, and automation/blueprint machinery via pytest-homeassistant-
 custom-component - unlike tests/test_curve.py and tests/test_grouping.py
-(bare-module imports, no HA dependency at all, see tests/conftest.py).
+(plain unit tests of the pure logic, with no HA event loop or fixtures).
 
 This is a separate, heavier suite for exactly that reason: it catches
 what the pure-logic tests structurally cannot - bugs in how HA's own
 trigger/condition/template engine behaves (e.g. `trigger` not being in
 scope inside a template trigger's own value_template - the recovered
 trigger's dead-on-arrival bug), and bugs in the HA-glue layer
-(__init__.py's service registration, write_tracking.py's Store
+(services/handlers.py's service registration, write_tracking.py's Store
 persistence, context propagation).
 
 Requires pytest-homeassistant-custom-component, which pins a specific

@@ -4,8 +4,8 @@ the minimal set of light.turn_on/turn_off calls actually needed.
 
 Pure logic - HA access (current state, attributes, device/label
 lookups) is injected via an EntityLookup so this is testable with
-plain pytest and fakes, and so the integration's __init__.py
-(custom_components/flare/__init__.py) stays a thin
+plain pytest and fakes, and so services/handlers.py
+stays a thin
 adapter registering this as a standalone HA service. Transitively
 imports homeassistant.util.color (via override_protection.py's own
 _color_temp_matches, used below in _already_set) - see that module's
@@ -22,26 +22,13 @@ namespace-loop Jinja.
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
 
-try:
-    # Real package context (production HA, tests/integration/) - grouping.py
-    # is imported as custom_components.flare.grouping.
-    from .override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
-        _color_temp_matches,
-        classify,
-        is_blocked,
-        target_matches_values,
-    )
-    from .two_step import TWO_STEP_LABEL_ID, model_matches
-except ImportError:
-    # Bare top-level module context (tests/test_grouping.py, via
-    # tests/conftest.py putting this directory straight on sys.path -
-    # see its own comment for why). override_protection.py/two_step.py
-    # sit alongside this file, so a plain top-level import resolves the
-    # same way curve.py/scenes.py already do for their own bare-module
-    # test usage. Note this module now needs homeassistant importable
-    # either way - see override_protection.py's own docstring.
-    from override_protection import _color_temp_matches, classify, is_blocked, target_matches_values  # noqa: F401
-    from two_step import TWO_STEP_LABEL_ID, model_matches
+from ..tracking.override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
+    _color_temp_matches,
+    classify,
+    is_blocked,
+    target_matches_values,
+)
+from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
@@ -142,7 +129,7 @@ class EntityLookup:
 
         Which claims this entity's accessors read is decided one layer
         up, by whichever scope the caller resolved and bound into this
-        EntityLookup (see __init__.py's _build_lookup) - this method has
+        EntityLookup (see services/handlers.py's _build_lookup) - this method has
         no notion of scope itself, just entity_id in, blocked or not out.
 
         force bypasses the check outright."""
@@ -187,7 +174,7 @@ class EntityLookup:
         """True if the entity's supported_color_modes includes any mode
         HA's light.turn_on rgb_color param works with. A derived method
         (built from the existing state_attr primitive) rather than a new
-        injected closure - no change needed to __init__.py's
+        injected closure - no change needed to services/handlers.py's
         _build_lookup() or tests/fakes.py's make_lookup()."""
         modes = self.state_attr(entity_id, "supported_color_modes") or []
         return bool(set(modes) & _RGB_COLOR_MODES)

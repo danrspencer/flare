@@ -51,8 +51,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "custom_components" / "flare"))
-from curve import (  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from custom_components.flare.schedule.curve import (  # noqa: E402
     DEFAULT_SCHEDULE_HOURS,
     brightness_for_phase,
     kelvin_for_phase,

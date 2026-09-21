@@ -418,7 +418,48 @@ Everything below describes how the system works *now*. Per-change
 history lives in git; this file only carries what stays true, plus the
 decisions and constraints that aren't recoverable from the code.
 
-### Services (`custom_components/flare/__init__.py`)
+### Code layout (`custom_components/flare/`)
+
+Grouped by **concept**, not by how something is exposed, and that
+distinction is the whole reason for the shape. The obvious grouping
+(integration / services / entities / dashboard) tangles: the schedule
+and the claims are each exposed through BOTH entities and services, so
+`entities` and `services` imported each other in both directions
+(`services` used `coordinator.CURVE_KEYS` and `curve`; `sensor`/`button`
+used `write_tracking` and `override_protection`). Those are two concepts,
+and they match the two config entries, Schedules and Tracking.
+
+- `schedule/` - what lights should look like: `curve.py`,
+  `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`).
+- `tracking/` - who owns a light: `override_protection.py`,
+  `write_tracking.py`, `scope.py` (`StateInstance`, the tracking scope;
+  it lived in `coordinator.py` next to `ScheduleInstance` until the
+  split, one file holding two concepts).
+- `services/` - `handlers.py` (the eight services) and the planning
+  behind them: `grouping.py`, `scenes.py`, `two_step.py`.
+- package root - what Home Assistant dictates: `__init__`, `config_flow`,
+  `repairs`, `logbook`, `const`, and the six entity platform modules.
+  Platform modules **cannot** move into a folder (HA imports
+  `custom_components.flare.<platform>`), which is why "entities" is not a
+  folder here. `services.yaml` must stay at the root too. `www/` is the
+  dashboard and needed no change.
+
+**Dependencies run one way**: `schedule/` and `tracking/` import only
+`const.py`; `services/` may use both; the root may use all three.
+`tests/test_layering.py` enforces it from the source, so it cannot drift
+silently. `services/__init__.py` holds no imports; the root imports
+`.services.handlers` directly.
+
+Logger names follow the module path, so e.g.
+`custom_components.flare.coordinator` is now
+`custom_components.flare.schedule.coordinator`. Configuring
+`custom_components.flare` (the usual way) is unaffected.
+
+The `sys.path` insertion that used to let tests and `brand/generate_icon.py`
+import these as bare modules is gone; everything imports through the
+package.
+
+### Services (`custom_components/flare/services/handlers.py`)
 
 Eight, all unit tested and confirmed working live. Full field contracts
 in `docs/helpers.md` and `services.yaml` - not repeated here.
@@ -1152,7 +1193,7 @@ Routed two ways, OR'd together - `grouping.py`'s `EntityLookup.
 matches_two_step_pattern()` compares a light's device
 `"<manufacturer> <model>"` against a configurable list of
 case-insensitive globs (`CONF_TWO_STEP_MODELS`, read fresh per call via
-`__init__.py`'s `_two_step_model_patterns()`), **or** the entity/device
+`services/handlers.py`'s `_two_step_model_patterns()`), **or** the entity/device
 carries the `no_combined_transition` label (`EntityLookup.tags()`,
 unchanged). `two_step.py` holds only the pure matching primitives
 (`model_matches`, `parse_patterns`, `DEFAULT_TWO_STEP_MODEL_PATTERNS`,
@@ -1591,14 +1632,18 @@ Two layers:
 
 - **Pure** (`test_curve.py`, `test_grouping.py`, `test_scenes.py`,
   `test_override_protection.py`, `test_two_step.py`,
-  `test_services_yaml.py`). `tests/conftest.py` puts the component
-  directory on `sys.path` so these import `curve`/`grouping` as bare
-  modules rather than through the package (which would pull in
-  `homeassistant` via `__init__.py`); `tests/fakes.py` provides a fake
-  `EntityLookup` so `grouping.py` runs on plain dicts. Note these still
-  need `homeassistant` importable - `override_protection.py` and
-  `curve.py` both import `homeassistant.util.color`, and pytest's own `testpaths` collects
-  `tests/integration/conftest.py` regardless of which file you target.
+  `test_services_yaml.py`). They import through the package
+  (`from custom_components.flare.curve import ...`) like everything else.
+  They used to import `curve`/`grouping` as bare top-level modules via a
+  `sys.path` insertion in `tests/conftest.py`, to avoid running
+  `__init__.py` and so importing `homeassistant`; that bought nothing
+  once the suite needed HA anyway (`override_protection.py` and
+  `curve.py` both import `homeassistant.util.color`, and pytest's own
+  `testpaths` collects `tests/integration/conftest.py` regardless of
+  which file you target), and it cost a try/except import fallback in
+  `grouping.py` plus two copies of the same module (bare and packaged)
+  in one test run. `tests/fakes.py` provides a fake `EntityLookup` so
+  `grouping.py` runs on plain dicts.
 - **Integration** (`tests/integration/`), real HA via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
   `test_services.py` exercises the registered services end-to-end,

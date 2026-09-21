@@ -7,7 +7,7 @@ into two sequential half-length calls instead (see build_groups' two_step
 - a light's device "<manufacturer> <model>" checked against the pattern
 list here - OR'd with the `no_combined_transition` label as a manual
 escape hatch for anything a pattern doesn't (yet) cover. Pure logic, no
-Home Assistant imports - the registry access lives in __init__.py and is
+Home Assistant imports - the registry access lives in services/handlers.py and is
 injected, same split as curve.py/grouping.py/scenes.py.
 
 DEFAULT_TWO_STEP_MODEL_PATTERNS is the shipped list, and it is also

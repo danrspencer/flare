@@ -1,5 +1,5 @@
 /**
- * Browser port of custom_components/flare/curve.py.
+ * Browser port of custom_components/flare/schedule/curve.py.
  *
  * This exists so the docs site's interactive playground can recompute the
  * schedule live as you drag a slider. The real Lovelace card never does this

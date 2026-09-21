@@ -58,9 +58,10 @@ from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraDa
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, EVENT_LIGHT_OVERRIDDEN
-from .coordinator import ScheduleCoordinator, ScheduleInstance, StateInstance, schedule_instances, state_instances
-from .override_protection import classify
-from .write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
+from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .tracking.override_protection import classify
+from .tracking.scope import StateInstance, state_instances
+from .tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:

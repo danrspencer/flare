@@ -27,10 +27,10 @@ from pytest_homeassistant_custom_component.common import (
 )
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, CONF_TARGET, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
-from custom_components.flare.coordinator import state_instances
+from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.write_tracking import ClaimRegistry
+from custom_components.flare.tracking.write_tracking import ClaimRegistry
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 

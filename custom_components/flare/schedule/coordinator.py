@@ -38,8 +38,8 @@ previously an accidental inconsistency in the live Jinja version
 deliberate.
 
 Schedule instances: the config entry itself never carries a schedule -
-it only registers the services (see __init__.py), and no sensor is
-auto-created. Every schedule is a "sensor" subentry, added via the
+it registers no services of its own (they belong to the Tracking
+entry, see services/handlers.py), and no sensor is auto-created. Every schedule is a "sensor" subentry, added via the
 "Add Sensor" flow (config_flow.py's SensorSubentryFlow) - so there's
 exactly one mechanism for adding a schedule, and exactly one way to
 name it: what you type there. Every instance gets both a prefixed
@@ -67,7 +67,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
-from .const import CONF_TARGET, DOMAIN, SUBENTRY_TYPE_SENSOR, SUBENTRY_TYPE_STATE
+from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR
 from .curve import DEFAULT_SCHEDULE_HOURS, phase_at, targets_for_phase
 
 _LOGGER = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
     """Every schedule instance this entry should set up sensors/select/
     config entities for - one per "sensor" subentry (see config_flow.py's
     SensorSubentryFlow). The entry itself never carries a schedule -
-    it only registers the services (see __init__.py)."""
+    the services belong to the Tracking entry (see services/handlers.py)."""
     instances = []
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_TYPE_SENSOR:
@@ -176,60 +176,6 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
             )
         )
     return instances
-
-
-@dataclass
-class StateInstance:
-    """One state device - a named tracking scope, derived from a "state"
-    subentry, owning the override-protection claims for whatever lights
-    its target covers.
-
-    Deliberately separate from ScheduleInstance: a schedule says *what
-    values* lights should take, a state device says *whose* claims a
-    light belongs to. A house can want one schedule per floor and one
-    tracking scope per room, and forcing those to be the same object
-    would make either choice constrain the other."""
-
-    subentry_id: str
-    prefix: str  # "<slug>_" - entity_id prefix, derived from the (required) name
-    title: str
-    target: dict  # area_id/device_id/entity_id lists, as a target selector returns
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.subentry_id)},
-            name=self.title or "Adaptive Lighting State",
-            entry_type=DeviceEntryType.SERVICE,
-            # Lets services.yaml's tracking_device_id device selector filter
-            # to tracking-scope devices specifically - ScheduleInstance's
-            # own device_info shares this integration's DOMAIN, so a bare
-            # `integration: flare` filter alone can't tell the two apart.
-            model="Tracking Scope",
-        )
-
-
-def state_instances(entry: ConfigEntry) -> list[StateInstance]:
-    """Every state device on this entry, sorted by title.
-
-    The sort is load-bearing, not cosmetic: it is the tie-break when two
-    scopes claim the same area, so which one wins is stable across
-    restarts rather than depending on dict ordering (see
-    write_tracking.py's resolution)."""
-    instances = []
-    for subentry_id, subentry in entry.subentries.items():
-        if subentry.subentry_type != SUBENTRY_TYPE_STATE:
-            continue
-        slug = slugify(subentry.title)
-        instances.append(
-            StateInstance(
-                subentry_id=subentry_id,
-                prefix=f"{slug}_" if slug else "",
-                title=subentry.title,
-                target=dict(subentry.data.get(CONF_TARGET) or {}),
-            )
-        )
-    return sorted(instances, key=lambda i: i.title)
 
 
 def _curve_kwargs(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, int]:

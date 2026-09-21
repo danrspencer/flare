@@ -151,7 +151,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, SUBENTRY_TYPE_STATE
+from ..const import DOMAIN, SUBENTRY_TYPE_STATE
 from .override_protection import _context_matches, _ContextClaim, _WriteRecord
 
 # How long a tracked record is kept after it was last written or
