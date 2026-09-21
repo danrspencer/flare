@@ -73,6 +73,7 @@ from .const import (
     CONF_ENTRY_TYPE,
     CONF_TARGET,
     CONF_TWO_STEP_MODELS,
+    DEV_VERSION,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -81,7 +82,6 @@ from .const import (
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
-from .blueprint_version import DEV_VERSION
 from .config_flow import _areas_with_lights
 from .coordinator import CURVE_KEYS, ScheduleCoordinator, schedule_instances
 from .curve import phase_at, targets_for_phase

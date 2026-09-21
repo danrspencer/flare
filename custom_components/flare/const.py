@@ -1,5 +1,10 @@
 DOMAIN = "flare"
 
+# The manifest's version in the source, until a release is built and
+# writes the real one in (scripts/release.py). Also how a development
+# install recognises itself - see async_setup's static path.
+DEV_VERSION = "0.0.0-dev"
+
 # The optional day-phase/curve sensors and the phase-override select share
 # these - see coordinator.py, sensor.py, select.py.
 PHASE_OPTIONS = ["Auto", "Morning", "Day", "Evening", "Night"]

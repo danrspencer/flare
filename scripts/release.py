@@ -8,10 +8,12 @@ means either a person bumps it by hand (which is how the blueprint stamp
 got forgotten) or a bot pushes it and the branch it came from never
 contains it, so dev and main drift apart on every release.
 
-So the source carries a placeholder (DEV_VERSION) and a release is built
-on the side: a commit on top of the source commit with the real version
-written into the three places it lives, tagged, and left unreachable from
-any branch. Nothing moves. A beta and the release it becomes are the same
+So the manifest carries a placeholder (DEV_VERSION) and a release is
+built on the side: a commit on top of the source commit with the real
+version written into the three places it lives, tagged, and left
+unreachable from any branch. Nothing moves. The other two (the constant
+in blueprint_version.py and the blueprint's description stamp) hold
+whatever they last held in source and are overwritten the same way. A beta and the release it becomes are the same
 source commit with different numbers written in.
 
 The commit message records that source (`Source: <sha>`), which is how a

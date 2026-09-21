@@ -20,7 +20,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "custom_componen
 
 from blueprint_version import (  # noqa: E402
     BLUEPRINT_VERSION,
-    DEV_VERSION,
     is_outdated,
     version_from_description,
 )
@@ -108,16 +107,6 @@ def test_only_the_current_version_is_up_to_date():
     assert not is_outdated(BLUEPRINT_VERSION)
     assert is_outdated("0.0.1")
     assert is_outdated("99.0.0")
-
-
-# --- The placeholder ---------------------------------------------------
-
-
-def test_the_source_carries_the_placeholder_not_a_hand_bumped_version():
-    """Releases write the real value in (scripts/release.py), so a number
-    typed here would be overwritten and only mislead. Failing on it also
-    catches a stamp bumped out of habit, which used to be required."""
-    assert BLUEPRINT_VERSION == DEV_VERSION
 
 
 # --- The release-time guards -------------------------------------------

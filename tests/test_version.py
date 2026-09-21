@@ -21,7 +21,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "custom_components" / "flare"))
 
 import release  # noqa: E402
-from blueprint_version import DEV_VERSION  # noqa: E402
+from const import DEV_VERSION  # noqa: E402
 
 MANIFEST = REPO_ROOT / "custom_components" / "flare" / "manifest.json"
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"

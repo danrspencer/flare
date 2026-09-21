@@ -1165,23 +1165,29 @@ difference", so a release touching only Python doesn't tell every user
 to re-import an identical file. That is the whole reason it is a
 separate constant rather than read from `manifest.json`.
 
-**Nobody bumps it any more.** In the source it is `DEV_VERSION`
-(`0.0.0-dev`), as are the manifest's version and the description's
-stamp; `scripts/release.py` writes the real values into a release's own
-copy, working out whether the blueprint changed since the previous
-release (see "Releases are automated" below). The hand-bump was the one
-step whose omission failed silently - no repair, no error, nobody hears
-about the update - and the `blueprint-stamp` CI job that policed it was
-deleted along with it. **The repair code deliberately knows nothing about
-dev builds** - it was briefly taught to stand down when
-`BLUEPRINT_VERSION` is the placeholder, and that was removed at the
-user's direction: shipped code should not special-case a development
-workflow. A dev install is kept consistent by importing the blueprint
-from the same commit (both then carry the placeholder), and a blueprint
-is updated there with a direct `ha_import_blueprint`, never the repair's
-Fix button (which would fetch a tag named after the placeholder).
-`tests/test_blueprint_version.py` still pins the constant against the
-description, and pins that the source holds the placeholder.
+**Nobody bumps it any more.** `scripts/release.py` writes the real
+values into a release's own copy of the constant and of the
+description's stamp (only the manifest's version is a placeholder in
+source, `DEV_VERSION` in `const.py`), working out whether the blueprint
+changed since the last release (see "Releases are automated" below). So
+what source holds for those two is just the last value anyone set by
+hand: it goes stale, and nothing minds, provided the two agree. The
+hand-bump was the one step whose omission failed silently - no repair,
+no error, nobody hears about the update - and the `blueprint-stamp` CI
+job that policed it was deleted along with it. `blueprint_version.py`
+itself still carries its old comments telling you to bump by hand; they
+are out of date and were left alone at the user's direction, who wants
+nothing about the release process in that file.
+
+**The repair code deliberately knows nothing about dev builds.** It was
+briefly taught to stand down on a placeholder version, and that was
+removed at the user's direction: shipped code should not special-case a
+development workflow. A dev install stays quiet because the blueprint is
+imported from the same commit as the integration, so the constant and
+the stamp agree. A blueprint is updated there with a direct
+`ha_import_blueprint`, never the repair's Fix button - on a dev install
+that would fetch whatever tag the stale constant names and quietly
+replace the blueprint under test with a released one.
 
 **The stamp lives in the blueprint's `description`** because there is
 nowhere else. `blueprint/schemas.py` validates the `blueprint:` block
@@ -1272,8 +1278,8 @@ caught. Don't "simplify" it back to the shared fixture.
   back a week-old `0.0.1-beta.4`, but a later beta of the same version
   restarts its clock), and a version at or below the highest stable is
   never promoted.
-- **Nothing is committed to a branch for a release.** The source
-  carries the placeholder `0.0.0-dev` and `scripts/release.py` builds
+- **Nothing is committed to a branch for a release.** The manifest's
+  version in source is the placeholder `0.0.0-dev`, and `scripts/release.py` builds
   each release as a commit on top of its source commit - real version
   written into `manifest.json`, `BLUEPRINT_VERSION` and the blueprint
   stamp - tagged and reachable from no branch. Chosen over a bot
@@ -1334,10 +1340,9 @@ caught. Don't "simplify" it back to the shared fixture.
   4. The blueprint is separate: `ha_import_blueprint` pinned to the same
      SHA, with `overwrite=true` (lesson 13 - it installs under
      `danrspencer/`).
-  A dev build carries the placeholder version, and the blueprint from
-  step 4 carries the same one, so the blueprint repair stays quiet as
-  long as the two come from the same commit. Never press the repair's Fix
-  button on a dev build. **To get back onto a release**,
+  Import the blueprint from the same commit as the integration and the
+  blueprint repair stays quiet, since both then carry the same stamp.
+  Never press the repair's Fix button on a dev build. **To get back onto a release**,
   download `version` = the release tag. **Not yet exercised against
   this integration:** it is read from HACS's source, not seen working.
   The first time it is used, check the result and HACS's log; if HACS

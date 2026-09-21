@@ -271,8 +271,7 @@ That skips the seven days but not the `release-blocker` check.
 
 ### How a release is built
 
-The source carries a placeholder (`0.0.0-dev`) as the manifest's version, the blueprint
-stamp and `BLUEPRINT_VERSION`. HACS reads the version out of the `manifest.json` inside
+The manifest's version in source is a placeholder (`0.0.0-dev`). HACS reads the version out of the `manifest.json` inside
 the tag it downloads, so `scripts/release.py` builds each release **on the side**: a commit
 on top of the source commit with the real version written into those three places,
 tagged, and reachable from no branch. Nothing is committed to `dev` or `main`, so they
@@ -289,8 +288,8 @@ The release commit's message records its `Source:` commit.
 A development build carries the placeholder version and serves the front-end files from a
 URL derived from their content rather than from the version, since the version never
 changes there. The blueprint repair has no special handling for it: import the blueprint from
-the same commit as the integration and both carry the placeholder, so they agree. Update it
-with a direct import rather than the repair's Fix button.
+the same commit as the integration and their stamps agree. Update it with a direct import
+rather than the repair's Fix button.
 
 ### Two channels
 
