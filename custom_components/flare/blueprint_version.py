@@ -40,7 +40,7 @@ import re
 # Set to the release's version when a release is built, together with the
 # same version in the blueprint's description. What is here in between is
 # just whatever it last held. The test suite checks the two agree.
-BLUEPRINT_VERSION = "0.16.0"
+BLUEPRINT_VERSION = "0.17.0"
 
 # Matches the line the blueprint's description carries. Deliberately
 # loose about what follows the number so the sentence around it can be
