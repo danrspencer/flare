@@ -140,8 +140,7 @@ def test_a_corner_is_eased_with_its_own_vertex_as_the_control_point(result):
     control points, so putting the control point ON the corner means the
     curve can only ever cut inside it. An interpolating spline through
     the sample points would instead overshoot around the flat tops and
-    draw brightness the schedule never asks for - which is why the
-    version before this refused to smooth at all."""
+    draw brightness the schedule never asks for."""
     path = result["rounded"]
     control = re.search(r"Q([\d.]+),([\d.]+)", path)
 
@@ -152,10 +151,9 @@ def test_a_corner_is_eased_with_its_own_vertex_as_the_control_point(result):
 def _coords(path):
     r"""Every (x, y) pair in a path string.
 
-    The minus sign is part of the number on purpose: an earlier version
-    of this matched [\d.]+ and silently read an out-of-bounds "-2.00" as
-    "2.00", which made the short-segment test below pass against a
-    genuinely broken fillet. Caught by mutation testing."""
+    The minus sign is part of the number on purpose: without it an
+    out-of-bounds "-2.00" reads as "2.00", and the short-segment test
+    below would pass against a genuinely broken fillet."""
     return [(float(x), float(y)) for x, y in re.findall(r"(-?[\d.]+),(-?[\d.]+)", path)]
 
 

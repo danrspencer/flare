@@ -2,17 +2,15 @@
 A write that goes out but is never followed by its bookkeeping must not
 lock the light out.
 
-`apply_lighting` used to send its light.turn_on/turn_off calls and only
-THEN record the claims for them. A run that never reached that second
-step - one group's call raising inside the gather, or the blueprint's
-`mode: restart` cancelling the run while a two-step bulb was asleep
-between its two steps - left lights that HAD changed with no claim
-explaining why. The next tick saw a context and values it had never
-written and classified the light `overridden`, which excludes it until
-the room goes dark or Clear is pressed. Nothing errors; the light just
-stops following the curve.
+If `apply_lighting` recorded its claims only after sending its
+light.turn_on/turn_off calls, a run that never reached that second step
+- one group's call raising inside the gather, or the blueprint's
+`mode: restart` cancelling the run while a two-step bulb sleeps between
+its two steps - would leave lights that HAD changed with no claim
+explaining why. The next tick would classify them `overridden`, which
+excludes them until the room goes dark or Clear is pressed, silently.
 
-The claims are now recorded BEFORE anything is dispatched. That is safe
+So the claims are recorded BEFORE anything is dispatched. That is safe
 because the two-claim model already tolerates an intent that never
 landed (see write_tracking.py): `observed` is only ever replaced by a
 state a bulb was actually seen in, so a write that never arrives leaves

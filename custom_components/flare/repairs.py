@@ -1,6 +1,6 @@
 """
-Fix flows for the repairs this integration raises - currently just the
-"blueprint is out of date" one from blueprint_check.py.
+Fix flows for the repairs this integration raises - the blueprint being
+out of date or not installed, both from blueprint_check.py.
 
 Home Assistant looks for this module by name (`repairs.py`) on the
 integration and calls async_create_fix_flow() when the user presses Fix
@@ -28,9 +28,8 @@ class OutdatedBlueprintRepairFlow(RepairsFlow):
     """Re-imports the blueprint this release ships with, over the top of
     whatever is installed.
 
-    A confirmation step rather than a silent auto-apply, for the same
-    reason the label flow has one: this writes a file into the user's own
-    blueprints folder and reloads every automation using it. Overwriting
+    A confirmation step rather than a silent auto-apply: this writes a
+    file into the user's own blueprints folder and reloads every automation using it. Overwriting
     something a user may have edited is not a thing to do without asking
     - and if they HAVE edited it, declining and ignoring the repair is
     the right answer, which the description says.

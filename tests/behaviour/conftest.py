@@ -8,9 +8,8 @@ Contrast tests/integration/test_blueprint.py, which mocks
 flare.apply_lighting / scene.turn_on / light.turn_off and so asserts on
 recorded service calls. That layer can prove the blueprint *decided* to
 do something; it structurally cannot prove a light ended up at a
-brightness, because nothing downstream of the decision runs. Every live
-bug found this session lived in exactly that seam - blueprint and
-services were each correct alone and wrong together.
+brightness, because nothing downstream of the decision runs - and
+blueprint and services can each be correct alone and wrong together.
 
 Deliberately the same hass_config_dir/enable_custom_integrations setup
 as tests/integration/conftest.py - see that file for why each is
@@ -174,8 +173,7 @@ class FakeBulb(LightEntity):
             modes.add(ColorMode.RGB)
         self._attr_supported_color_modes = modes
         self._attr_color_mode = ColorMode.COLOR_TEMP
-        # Some real bulbs (the IKEA TRADFRI incident this stands in for)
-        # only ever report their actual colour via rgb_color, translating
+        # Some real bulbs (IKEA TRADFRI spots, for one) only ever report their actual colour via rgb_color, translating
         # any color_temp_kelvin command internally rather than echoing it
         # back the way a plain colour-temp bulb does.
         self._reports_via_rgb = reports_via_rgb

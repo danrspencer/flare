@@ -1,7 +1,7 @@
 """
 Tracking scopes: the named records of which lights FLARE is driving, one
-per "state" subentry of the Tracking config entry. (Code and older notes
-call them state devices; the UI and docs call them tracking scopes.)
+per "state" subentry of the Tracking config entry. (The code calls them
+state devices; the UI and docs call them tracking scopes.)
 
 A scope is what override-protection claims belong to (see
 write_tracking.py), and it is a real Home Assistant device so that a
@@ -28,14 +28,7 @@ from ..const import CONF_TARGET, DOMAIN, SUBENTRY_TYPE_STATE
 @dataclass
 class StateInstance:
     """One state device - a named tracking scope, derived from a "state"
-    subentry, owning the override-protection claims for whatever lights
-    its target covers.
-
-    Deliberately separate from ScheduleInstance: a schedule says *what
-    values* lights should take, a state device says *whose* claims a
-    light belongs to. A house can want one schedule per floor and one
-    tracking scope per room, and forcing those to be the same object
-    would make either choice constrain the other."""
+    subentry."""
 
     subentry_id: str
     prefix: str  # "<slug>_" - entity_id prefix, derived from the (required) name
@@ -57,12 +50,7 @@ class StateInstance:
 
 
 def state_instances(entry: ConfigEntry) -> list[StateInstance]:
-    """Every state device on this entry, sorted by title.
-
-    The sort is load-bearing, not cosmetic: it is the tie-break when two
-    scopes claim the same area, so which one wins is stable across
-    restarts rather than depending on dict ordering (see
-    write_tracking.py's resolution)."""
+    """Every state device on this entry, sorted by title."""
     instances = []
     for subentry_id, subentry in entry.subentries.items():
         if subentry.subentry_type != SUBENTRY_TYPE_STATE:

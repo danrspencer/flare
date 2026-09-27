@@ -3,10 +3,6 @@
  * lights are scheduled to do, and `custom:flare-tracking` (further down)
  * for what FLARE is currently driving.
  *
- * Neither is called plain `custom:flare`. It was, while there was only
- * one, and the rename came with the second: "flare" gives no hint which
- * of the two you get, and the pair reads as a set.
- *
  * Every schedule, one view:
  *
  *   views:
@@ -32,17 +28,11 @@
  * `target` in Home Assistant means a service target (entity, device or
  * area), which this is not. A full entity_id works too.
  *
- * This exists because the alternative - a generator emitting the same
- * section as YAML to paste - puts every future layout change on the
- * user, who would have to re-generate and re-paste a section per
- * schedule each time. A strategy is regenerated on every dashboard load
- * from flare-section.js, which ships inside the integration, so a HACS
- * update is the whole migration.
- *
- * The generator is deliberately gone rather than kept alongside: two
- * definitions of the layout and the one people see is whichever was
- * edited last. Home Assistant's own "Take control" is the route for
- * anyone who wants to own the YAML, and it is one-way.
+ * A strategy is regenerated on every dashboard load from
+ * flare-section.js, which ships inside the integration, so a layout
+ * change reaches existing dashboards with a HACS update. Home
+ * Assistant's own "Take control" is the route for anyone who wants to
+ * own the YAML, and it is one-way.
  *
  * Registered as `ll-strategy-view-flare-schedule`, which is the name Home
  * Assistant resolves `custom:flare-schedule` to for a view strategy.

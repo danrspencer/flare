@@ -4,65 +4,41 @@ or blocked because something else has touched the entity since - the
 "override protection" mechanism. Which state device an entity's claims
 belong to (its "scope") is decided by the caller, one layer up in
 write_tracking.py; this module only classifies the claims it's handed,
-with no notion of scope or caller identity of its own. Pure logic - no
-`hass` instance needed, same
-pattern as curve.py/scenes.py/grouping.py: HA access (live state,
-Store-backed persistence, the unavailable/recovery listener) stays in
-write_tracking.py, which is the thing that actually calls this module.
-Does import `homeassistant.util.color` directly (for the Kelvin/mired
-rounding `_color_temp_matches` needs) - a deliberate exception to
-"zero `homeassistant.*` imports", not an oversight: that import is
-cheap (no core/event-loop machinery), it's the actual function HA
-itself uses (no risk of drifting from real device behaviour), and the
-"these tests run without HA installed" property this was nominally
-protecting doesn't hold in practice anyway - pytest's own `testpaths`
-config already pulls in `tests/integration/conftest.py`, which
-requires `pytest-homeassistant-custom-component`, regardless of which
-test file is targeted.
+with no notion of scope or caller identity of its own.
 
-Genuinely generic, not specific to adaptive lighting or even to
-lights - the only light-flavoured piece is `target_matches_values`'s
-{brightness, color_temp_kelvin, rgb_color} shape, deliberately kept
-concrete rather than generalised to arbitrary entity attributes.
+Pure logic - no `hass` instance needed, same pattern as
+curve.py/scenes.py/grouping.py; live state, persistence and the state
+listener stay in write_tracking.py. It does import
+`homeassistant.util.color`, for the Kelvin/mired rounding
+`_color_temp_matches` needs: the conversion has to be the one HA itself
+uses, or it could drift from real device behaviour.
+
+Generic rather than specific to lights - the only light-flavoured piece
+is `target_matches_values`'s {brightness, color_temp_kelvin, rgb_color}
+shape, deliberately kept concrete.
 
 Three consumers share this one decision table: grouping.py's
 `EntityLookup.externally_set()`, sensor.py's diagnostic status, and the
 standalone `claims_check` service. Keeping them on one implementation
-is the point - they previously drifted, and an off light was classified
-"overridden" in one and "not excluded" in the other.
+is the point - separate copies drift, and would classify the same light
+differently.
 
 Each tracked entity carries two claims - `observed` and `latest`.
-
-`observed` is a state we have seen and know is safe to write over. It
-gets there several ways, only one of which is a write of our own: a
-write an earlier call saw the bulb adopt, the pre-write baseline for an
-entity's first-ever write, the snapshot taken at startup, or the one
-taken when a device comes back from unavailable. What unites them is
-not authorship but confidence - nothing unexplained has happened to the
-light since.
-
-`latest` is the most recent write we sent, not yet independently
-re-observed. See
-write_tracking.py's own module docstring for the full reasoning behind
-the two-claim design, the first-write baseline, and the 5-second
-Entity._context-expiry rescue `target_matches_values` exists for -
-that reasoning lives there rather than being duplicated here, since
-write_tracking.py is what actually persists these claims; this module
-only classifies them.
+`observed` is a state we have seen and know is safe to write over: a
+write an earlier call saw the bulb adopt, or the pre-write baseline for
+an entity's first-ever write. `latest` is the most recent write we sent,
+not yet independently re-observed. write_tracking.py's module docstring
+has the full reasoning behind the two-claim design, the first-write
+baseline, and the 5-second Entity._context-expiry rescue
+`target_matches_values` exists for.
 """
 
 from __future__ import annotations
 
 from typing import Optional, TypedDict
 
-# The real function Home Assistant itself uses (homeassistant/util/color.py) -
-# imported directly rather than reimplemented. Cheap to import on its own
-# (no core/config_entries/event-loop machinery pulled in - confirmed before
-# relying on it), and this module's "no HA dependency" property was already
-# not buying a HA-free test run in practice: pytest's own testpaths config
-# collects tests/integration/conftest.py (which requires
-# pytest-homeassistant-custom-component) regardless of which test file is
-# targeted, so the whole suite already needs HA installed either way.
+# The real functions Home Assistant itself uses (homeassistant/util/color.py),
+# imported rather than reimplemented. Cheap: no core/event-loop machinery.
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
 
@@ -93,8 +69,7 @@ class _ContextClaim(TypedDict):
 class _WriteRecord(TypedDict):
     observed: Optional[_ContextClaim]
     latest: Optional[_ContextClaim]
-    # ISO 8601 - the last time this record was written or observed (a
-    # real write, or a startup/recovery resync). Pure write_tracking.py
+    # ISO 8601 - the last time this record was written. Pure write_tracking.py
     # bookkeeping for its own staleness pruning (async_prune_stale) -
     # classify() never reads this, it has no bearing on what a record
     # currently means, only on how long it's allowed to keep existing.
@@ -122,8 +97,7 @@ def _context_matches(claim: Optional[dict], current_context: Optional[str]) -> b
 
 
 def _color_temp_matches(current_kelvin: int, target_kelvin: int, tolerance_kelvin: int) -> bool:
-    """True if within the ordinary Kelvin tolerance (unchanged, user-
-    tunable), OR if both values would floor to the identical mired
+    """True if within the ordinary Kelvin tolerance, OR if both values would floor to the identical mired
     integer - not a heuristic in that second case, a hard equivalence:
     a Zigbee bulb communicates colour temperature in mireds
     (1,000,000/kelvin, always a whole number), so two Kelvin values
@@ -132,11 +106,10 @@ def _color_temp_matches(current_kelvin: int, target_kelvin: int, tolerance_kelvi
     exactly what it was told. A flat Kelvin tolerance alone doesn't
     reliably cover this: a single mired step is worth ~5K near 2700K
     but ~20K+ near 4500K, so the same tolerance number is far too loose
-    at one end of the range and far too tight at the other. Confirmed
-    against a live incident: asked for 4373K, HA's own
-    color_temperature_kelvin_to_mired floors that to mired 228, and
-    flooring 228 back gives 4385K - exactly what the bulb reported,
-    with zero drift and nothing external having touched it."""
+    at one end of the range and far too tight at the other. E.g. asked
+    for 4373K, HA floors that to mired 228, and flooring 228 back gives
+    4385K - exactly what the bulb reports, with nothing having touched
+    it."""
     if abs(current_kelvin - target_kelvin) <= tolerance_kelvin:
         return True
     return _kelvin_to_mired(current_kelvin) == _kelvin_to_mired(target_kelvin)
@@ -149,11 +122,10 @@ def _color_temp_matches_rgb(target_kelvin: int, current_rgb, tolerance: int) -> 
     as a colour. Exists for a bulb reporting through xy/rgb colour mode
     rather than COLOR_TEMP: HA's own LightEntity.state_attributes
     publishes color_temp_kelvin as exactly None whenever color_mode isn't
-    COLOR_TEMP (confirmed against homeassistant/components/light -
-    __init__.py's state_attributes), so a colour-temp claim could never
+    COLOR_TEMP (homeassistant/components/light/__init__.py's
+    state_attributes), so a colour-temp claim could otherwise never
     match such a device by value at all, however close its actual colour
-    genuinely is - confirmed live, the bathroom-spots incident of
-    2026-09-14."""
+    is."""
     if not isinstance(current_rgb, (list, tuple)) or len(current_rgb) != 3:
         return False
     target_rgb = _kelvin_to_rgb(target_kelvin)
@@ -168,8 +140,7 @@ def _clamp_kelvin(target_kelvin: int, min_kelvin, max_kelvin) -> int:
     because target_matches_values() is deliberately pure - see its own
     docstring. A missing or unparseable bound (0, same sentinel
     clamp_color_temp_kelvin uses - no real bulb reports 0K) leaves the
-    target untouched, so a claim with no known range behaves exactly as
-    it did before this existed."""
+    target untouched."""
     lo = _as_int(min_kelvin, 0)
     hi = _as_int(max_kelvin, 0)
     if lo > 0:
@@ -200,8 +171,8 @@ def target_matches_values(
     never matches, same as no claim at all.
 
     min_color_temp_kelvin/max_color_temp_kelvin are the entity's own
-    advertised range, optional and defaulting to None - a caller that
-    doesn't pass them gets exactly the old behaviour. Only meaningful
+    advertised range, optional - without them no clamping is tried. Only
+    meaningful
     for a color_temp_kelvin target: a bulb that physically can't reach
     it settles at its own ceiling/floor instead, which would otherwise
     never compare equal and read as overridden forever, even though the
@@ -269,11 +240,11 @@ def classify(
 
     min_color_temp_kelvin/max_color_temp_kelvin: the entity's own
     advertised colour-temp range, passed straight through to
-    target_matches_values() - see its own docstring. Optional, default
-    None (unknown range, old behaviour).
+    target_matches_values() - see its own docstring. Optional; None
+    means the range is unknown.
 
-    - `"off"` - not on. Override protection is moot; checked first,
-      before any claim.
+    - `"off"` - not on, and no claim at all. An off light WITH a claim
+      is judged against it like any other state (see below).
     - `"untracked"` - no claim at all, or only a single unverified
       `latest` attempt that doesn't match live state. Not enough
       evidence to call it external, so free to manage. Also what a
@@ -288,7 +259,7 @@ def classify(
       still matches what a claim asked for (`latest` checked first,
       then `observed`). Deliberately one status rather than two: from
       any caller's point of view these are the same situation, and
-      `is_blocked()` has always treated them identically. Which claim
+      `is_blocked()` treats them identically. Which claim
       matched, and how, is reported separately in `matched_via` - that
       is diagnostic detail, not a different outcome.
 
@@ -311,10 +282,9 @@ def classify(
     `"latest-context"`, `"latest-value"`, `"observed-context"` or
     `"observed-value"` - and is `None` for every other status. Purely
     diagnostic (the write-tracking sensor and card), never used for
-    decisions here or in `is_blocked()`. This is where the detail that
-    used to be split across two statuses now lives: `latest-*` means the
-    most recent write is what the bulb is showing, `observed-*` means it
-    isn't, and an older write is."""
+    decisions here or in `is_blocked()`. `latest-*` means the most recent
+    write is what the bulb is showing; `observed-*` means it isn't, and
+    an older write is."""
     if observed is None and latest is None:
         return ("untracked" if is_on else "off"), None
     if _context_matches(latest, current_context):
@@ -376,7 +346,7 @@ def is_blocked(status: str, force: bool = False) -> bool:
     claims and therefore co-operate, instead of each reading the other
     as an intruder.
 
-    `force` still bypasses outright."""
+    `force` bypasses outright."""
     if force:
         return False
     return status == "overridden"

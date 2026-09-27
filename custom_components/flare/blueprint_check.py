@@ -1,21 +1,18 @@
 """
-Raises a repair when the installed blueprint is older than the one this
-release ships with, and updates it in place when the user presses Fix.
+Raises a repair when the blueprint is missing or older than the one this
+release ships with, and installs or updates it when the user presses Fix.
 
 FLARE is two halves that deploy separately: HACS updates the
-integration, and until now the blueprint had to be re-imported by hand
-from a URL nobody remembers. There was nothing telling you the two had
-drifted, so the failure mode was a house quietly running a blueprint
-from three releases ago against today's services.
+integration, but not the blueprint, so without this nothing would say
+the two had drifted.
 
 Two decisions worth knowing, both deliberate:
 
 **Only blueprints an automation actually uses are reported.** Home
-Assistant never removes a blueprint you stop referencing, and this repo
-has already produced an orphan on a real instance - importing from
-GitHub installs under the repo OWNER's name (`danrspencer/`), which is
-not the folder name in this repo (`danspencer/`), so an older copy can
-sit at the other path forever. Nagging about a file nothing reads is
+Assistant never removes a blueprint you stop referencing, and importing
+from GitHub installs under the repo OWNER's name (`danrspencer/`), which
+is not the folder name in this repo (`danspencer/`), so an older copy
+can sit at the other path forever. Nagging about a file nothing reads is
 noise, and worse, it is noise the user cannot make go away.
 
 **The fix fetches a COMMIT-PINNED tag, not `main`.** A branch URL on
@@ -49,8 +46,8 @@ MISSING_ISSUE_ID = "blueprint_not_installed"
 # Where an install from the repair lands. Home Assistant derives this
 # path from the GitHub URL's OWNER, not from the folder name in this
 # repo - `danrspencer` with an r, where the repo says `danspencer`
-# without. Matching it is deliberate: someone who later uses the
-# import badge in the docs overwrites this same file instead of
+# without. Matching it is deliberate: someone who imports the
+# blueprint by URL by hand overwrites this same file instead of
 # ending up with two copies at two paths.
 INSTALL_PATH = "danrspencer/flare.yaml"
 

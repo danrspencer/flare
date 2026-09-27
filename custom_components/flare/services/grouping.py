@@ -4,19 +4,10 @@ the minimal set of light.turn_on/turn_off calls actually needed.
 
 Pure logic - HA access (current state, attributes, device/label
 lookups) is injected via an EntityLookup so this is testable with
-plain pytest and fakes, and so services/handlers.py
-stays a thin
-adapter registering this as a standalone HA service. Transitively
-imports homeassistant.util.color (via override_protection.py's own
-_color_temp_matches, used below in _already_set) - see that module's
-own docstring for why that's a deliberate exception rather than an
-oversight.
-
-This is a direct port of what used to be the blueprint's repeat-loop
-`variables:` block (powerable_entities / multiplier_groups /
-group_needing_off / group_needing_update / group_two_step /
-group_combined) - same behaviour, same defaults, just Python instead of
-namespace-loop Jinja.
+plain pytest and fakes, and services/handlers.py stays a thin adapter.
+Transitively imports homeassistant.util.color (via
+override_protection.py's _color_temp_matches) - see that module's
+docstring for why.
 """
 
 from dataclasses import dataclass, field
@@ -208,18 +199,16 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
     light.turn_on clamps brightness itself (vol.Clamp), it does *not*
     clamp colour temperature for a light that natively supports
     COLOR_TEMP: the value is passed straight through to the integration
-    and the physical device clamps it. Confirmed against HA core's
-    light/__init__.py, which only rewrites color_temp_kelvin when the
-    light *lacks* COLOR_TEMP support (emulating it via RGBWW/HS).
+    and the physical device clamps it (HA core's light/__init__.py only
+    rewrites color_temp_kelvin when the light *lacks* COLOR_TEMP
+    support).
 
     So the write is harmless - the bulb goes to its ceiling - but
     _already_set would then compare that ceiling against the un-clamped
     target, never find it within tolerance, and re-command the light on
-    every single tick forever. Confirmed live: light.dining_room_1 and
-    light.kitchen_1 report max_color_temp_kelvin 6535 against a 6667K
-    Morning target (132K apart, and not mired-equivalent either -
-    floor(1e6/6535)=153 vs floor(1e6/6667)=149), and the six
-    light.extension_* bulbs cap at 4000K while Day ramps 6667->4000.
+    every single tick forever. E.g. a bulb with max_color_temp_kelvin
+    6535 against the 6667K Morning default is 132K off, and not
+    mired-equivalent either (153 vs 149).
 
     Deliberately clamps only what we *compare* against, not what gets
     sent: entities are dispatched in shared per-multiplier groups, and
@@ -227,14 +216,12 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
     outgoing value would mean splitting a group per distinct ceiling for
     no benefit - the device already does this clamping itself. A missing
     or unparseable bound (0 below - no real bulb reports 0K) leaves the
-    target untouched, so a light that doesn't publish its range behaves
-    exactly as it did before.
+    target untouched.
 
     The advertised range is NOT always authoritative, which is why
     _already_set treats this as an *additional* way to match rather than
-    a replacement: confirmed live, light.utility_spot_1 advertises
-    max_color_temp_kelvin 4000 while happily reporting 5813 and tracking
-    the curve correctly. Comparing such a bulb only against its clamped
+    a replacement: some bulbs advertise e.g. max_color_temp_kelvin 4000
+    while happily reporting 5813 and tracking the curve correctly. Comparing such a bulb only against its clamped
     target would re-command it on every tick - the exact bug this
     function exists to prevent, just inverted."""
     lo = _as_int(lookup.state_attr(entity_id, "min_color_temp_kelvin"), 0)

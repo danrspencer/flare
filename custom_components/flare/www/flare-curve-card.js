@@ -15,16 +15,12 @@
  */
 
 const DEFAULT_ENTITIES = {
-  // The entity_ids the auto-seeded "Default" sensor creates (every
-  // sensor's entities are prefixed with its slugified name - see
-  // coordinator.py's schedule_instances()). Point a card at any other
-  // sensor by overriding these via the card config's `entities` map.
+  // Last-resort entity_ids for a card configured with neither `sensor`
+  // nor `entities` (getStubConfig normally supplies `sensor`).
   // phase/brightness_now/kelvin_now all read from the same combined
-  // entity by default (state = phase, attributes = brightness/color_temp/
-  // morning_start/day_start/evening_start/night_start/evening_earliest/
-  // evening_latest/points - see sensor.py's _AdaptiveLightingSensor) -
-  // see the fallback in `set hass()` below for custom configs still
-  // pointing at separate sensors.
+  // entity (state = phase, attributes = brightness/color_temp/
+  // boundaries/points - see sensor.py's _AdaptiveLightingSensor); an
+  // `entities` map can point them at separate sensors instead.
   phase: 'sensor.default_flare',
   brightness_now: 'sensor.default_flare',
   kelvin_now: 'sensor.default_flare',
@@ -232,7 +228,7 @@ function cardHeader(config, stateObj) {
 // brightness_now/kelvin_now default to the same combined entity as
 // phase (state = phase, attributes = brightness/color_temp) - read the
 // named attribute if present, falling back to .state for a custom
-// config still pointing at a separate plain-value sensor.
+// config pointing at a separate plain-value sensor.
 function numFromAttrOrState(stateObj, attrName) {
   if (!stateObj) return undefined;
   const attrVal = stateObj.attributes && stateObj.attributes[attrName];
@@ -375,9 +371,8 @@ export function simplifyPolyline(points, epsilon = COLLINEAR_EPSILON) {
  * only ever cut inside the corner - it cannot overshoot. A smoothing
  * spline through the sample points (Catmull-Rom, cardinal, anything
  * interpolating) would overshoot around the flat tops and draw
- * brightness the schedule never asks for, which is why the previous
- * version refused to smooth at all. Cutting corners is a different
- * operation and does not have that failure mode.
+ * brightness the schedule never asks for. Cutting corners is a
+ * different operation and does not have that failure mode.
  *
  * r is capped at half of each adjacent segment so neighbouring fillets
  * can never overlap or reverse, which is what would happen on a short
@@ -412,11 +407,8 @@ export function roundedTopEdge(points, radius = CORNER_RADIUS) {
  * samples, filled with a single left-to-right gradient carrying a stop
  * per sample.
  *
- * It used to be one <rect> per sample - a flat-topped column at that
- * sample's brightness, in that sample's colour. That made every ramp a
- * visible staircase: samples are five minutes apart, so an hour-long
- * brightness fade rendered as a dozen steps, and the colour changed in
- * hard vertical bands rather than blending.
+ * A shape per sample would draw every ramp as a staircase (samples are
+ * five minutes apart) and the colour in hard vertical bands.
  *
  * Straight lines between samples are EXACT: curve.py interpolates
  * brightness and Kelvin linearly between boundaries, so the real curve
@@ -450,12 +442,8 @@ export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
 
 class FlareCurveCard extends HTMLElement {
   // Given hass, point a brand-new card at a schedule sensor that
-  // actually exists. Without this the card fell back to
-  // DEFAULT_ENTITIES' sensor.default_flare - the auto-seeded "Default"
-  // sensor that config_flow.py deliberately stopped creating - so a card
-  // added from the picker's "By card" tab rendered the error card
-  // instead of a chart. That is also what makes `preview: true` on the
-  // customCards entry show the real thing rather than that error.
+  // actually exists, so a card added from the picker (and its
+  // `preview: true` rendering) shows a chart rather than an error.
   static getStubConfig(hass) {
     const entityId = Object.keys((hass && hass.states) || {}).find((id) =>
       scheduleSensorSlug(hass, id)
@@ -531,9 +519,7 @@ class FlareCurveCard extends HTMLElement {
     const kelvinNow = get(e.kelvin_now);
 
     // Today's four phase-boundary timestamps live as attributes on the
-    // phase entity itself (see sensor.py's _AdaptiveLightingSensor) -
-    // there's no separate sensor.morning_start/day_start/evening_start/
-    // night_start any more.
+    // phase entity itself (see sensor.py's _AdaptiveLightingSensor).
     const boundaries = {
       morning: Number(phase.attributes.morning_start),
       day: Number(phase.attributes.day_start),
@@ -556,16 +542,11 @@ class FlareCurveCard extends HTMLElement {
     // "now" belongs in this key. It is a real input to the render - it
     // places the marker line and writes the "Now HH:MM" label - but it
     // isn't part of the state Home Assistant hands us, because the card
-    // reads the clock itself. Leaving it out meant a schedule sitting on
-    // a flat stretch of curve (all of Night, all of Morning, Evening's
-    // hold) produced an identical key minute after minute, so every
-    // update was suppressed and the marker stopped moving until the
-    // brightness or colour temperature finally changed.
-    //
-    // On a dashboard the 30s timer hid that, re-rendering regardless.
-    // The docs playground has no timer driving it - it only assigns
-    // `hass` - so there the marker visibly froze through Night and
-    // Morning and only came unstuck once Day's ramp started.
+    // reads the clock itself. Without it a schedule sitting on a flat
+    // stretch of curve (all of Night, all of Morning, Evening's hold)
+    // would produce an identical key minute after minute and the marker
+    // would stop moving - visibly so in the docs playground, which has
+    // no timer and only assigns `hass`.
     //
     // Bucketed rather than raw, or the key would differ on every single
     // call and the cache would never hit at all. One bucket per render
@@ -825,11 +806,9 @@ class FlareCurveCard extends HTMLElement {
     const nowInWindow = now >= dayStart && now <= dayEnd;
     const haveNow = nowInWindow && Number.isFinite(this._brightnessNow) && Number.isFinite(this._kelvinNow);
     const nowX = xOf(now).toFixed(1);
-    // Used to be a filled circle on the chart itself, at whatever height
-    // the current brightness put it - dropped because a pale, cold
-    // colour rendered as a near-invisible dot against the chart's own
-    // background. The swatch on the label below replaces it; the
-    // vertical line stays as the chart's own "you are here" marker.
+    // Just a line: the current colour is shown by the swatch on the
+    // label below, since a pale, cold colour drawn as a dot on the chart
+    // would be near-invisible against its background.
     const nowMarker = nowInWindow
       ? `<line x1="${nowX}" y1="${PAD_TOP - 4}" x2="${nowX}" y2="${BASELINE_Y}" class="now-line" />`
       : '';
@@ -1007,8 +986,7 @@ window.customCards.push({
   name: 'FLARE Curve',
   description: 'Live brightness and rendered-colour curve for a FLARE schedule.',
   // Renders a real preview in the picker rather than a placeholder -
-  // only safe because getStubConfig now finds a schedule sensor that
-  // exists; previously this would have previewed the error card.
+  // safe because getStubConfig finds a schedule sensor that exists.
   preview: true,
   documentationURL: 'https://danrspencer.github.io/flare/',
   // Suggest this card when someone picks a schedule sensor in HA's

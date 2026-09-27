@@ -30,7 +30,7 @@ def make_lookup(
                via device_of, so an entity with no device (or a device
                id absent from this dict) reports (None, None).
     observed_context_ids: {entity_id: value} - what
-               write_tracking.LastWriteTracker would report as the
+               write_tracking.ClaimRegistry would report as the
                "observed" claim for that entity - a write some earlier
                call actually observed landing. Absent means no confirmed
                write yet for that entity.

@@ -16,13 +16,14 @@ SUBENTRY_TYPE_SENSOR = "sensor"
 CONF_TWO_STEP_MODELS = "two_step_models"
 
 # Subentry type for a state device - a named tracking scope that owns
-# the override-protection claims for whatever lights its target covers.
-# See write_tracking.py for the model and coordinator.py's
+# override-protection claims for whichever lights callers name it for.
+# See write_tracking.py for the model and tracking/scope.py's
 # state_instances() for how they're enumerated.
 SUBENTRY_TYPE_STATE = "state"
 
-# The state subentry's target: an area/device/entity selector, resolved
-# per light to decide which scope tracks it.
+# The state subentry's target: an area/device/entity selector. It only
+# places the scope's device in an area (sensor.py's _assign_scope_area);
+# it does not decide which lights the scope tracks.
 CONF_TARGET = "target"
 
 # Fired once each time a tracked light passes into "overridden" - edge

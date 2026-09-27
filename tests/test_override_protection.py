@@ -275,7 +275,7 @@ def test_target_matches_values_no_target_never_matches():
 
 
 def test_target_matches_values_recognises_a_mired_equivalent_color_temp():
-    # The live incident this fix closes: 4373K asked for, 4385K reported
+    # 4373K asked for, 4385K reported
     # back - both floor to mired 228 via HA's own
     # color_temperature_kelvin_to_mired, so they're the same colour as
     # far as the device is concerned, even though the Kelvin gap (12)
@@ -316,9 +316,9 @@ def test_color_temp_matches_within_flat_kelvin_tolerance():
     assert not _color_temp_matches(3050, 3000, tolerance_kelvin=10)
 
 
-def test_color_temp_matches_the_real_live_incident_exactly():
-    # 4373K -> floor(1000000/4373) = mired 228 -> floor(1000000/228) = 4385K.
-    # Confirmed live: HA's own conversion, not a guess.
+def test_color_temp_matches_a_mired_round_trip_exactly():
+    # 4373K -> floor(1000000/4373) = mired 228 -> floor(1000000/228) = 4385K,
+    # via HA's own conversion.
     assert _color_temp_matches(4385, 4373, tolerance_kelvin=10)
 
 
@@ -329,24 +329,18 @@ def test_color_temp_matches_rejects_a_genuinely_different_mired_value():
     assert not _color_temp_matches(6000, 3000, tolerance_kelvin=10)
 
 
-# Regression tests below, for the bathroom-spots incident (2026-09-14):
-# four light.bathroom_spot_1-4 were released ("found this light showing
-# something else") at 08:28:23, after ~89 minutes unavailable and a
-# device-originated attribute report at 08:28:15. Both pin a cause fixed
-# in classify()/target_matches_values() - see override_protection.py's
+# Two ways a bulb echoing back our own write under a fresh context (e.g.
+# after reconnecting) can still match by value - see override_protection.py's
 # _color_temp_matches_rgb and _clamp_kelvin.
 
 
 def test_a_colour_reported_in_a_different_mode_is_recognised_as_a_match():
-    """Cause 1: FLARE's claim asked for a colour in Kelvin, but the bulbs
-    were in xy colour mode by the time they echoed back - and Home
-    Assistant's own LightEntity.state_attributes reports
-    color_temp_kelvin as exactly None whenever color_mode isn't
-    COLOR_TEMP (homeassistant/components/light/__init__.py). Before the
-    fix, classify()'s value-rescue only ever read
-    current_color_temp_kelvin for a colour-temp claim, so it never
-    looked at the rgb_color the device actually reported, no matter how
-    close.
+    """FLARE's claim asked for a colour in Kelvin, but the bulb is in xy
+    colour mode when it echoes back - and Home Assistant's own
+    LightEntity.state_attributes reports color_temp_kelvin as exactly
+    None whenever color_mode isn't COLOR_TEMP
+    (homeassistant/components/light/__init__.py). The value-rescue has to
+    look at the rgb_color the device actually reported.
 
     current_rgb_color below isn't a guess at "close enough" - it is
     exactly curve.kelvin_to_rgb(3000), FLARE's own Kelvin->RGB
@@ -372,24 +366,15 @@ def test_a_colour_reported_in_a_different_mode_is_recognised_as_a_match():
 
 
 def test_a_bulb_sitting_at_its_own_colour_temp_ceiling_is_recognised_as_a_match():
-    """Cause 2: the curve asked for 6531K (a real Morning-phase value),
-    but these IKEA TRADFRI GU10s advertise max_color_temp_kelvin 4000 -
-    so the bulb settles at its own ceiling and can never echo back
-    6531K, no matter how long it's given.
+    """The curve asks for 6531K, but an IKEA TRADFRI GU10 advertises
+    max_color_temp_kelvin 4000 - so the bulb settles at its own ceiling
+    and can never echo back 6531K, no matter how long it's given.
 
-    grouping.py's _already_set() already handled exactly this for the
-    "does this still need writing" check - clamp_color_temp_kelvin()
-    narrows the target to the entity's own advertised range before
-    comparing (see its own docstring: "a bulb that physically can't reach
-    the target settles at its ceiling and would otherwise never compare
-    equal"). Before the fix, classify()/target_matches_values() had no
-    equivalent: it was a pure function with no entity_id/lookup at all,
-    so it could never learn a bulb's ceiling and always compared against
-    the raw, un-clamped target - a standing false-positive for any light
-    whose curve target exceeds what it can physically produce, not a
-    one-off. max_color_temp_kelvin below is exactly what a real caller
-    (grouping.EntityLookup.externally_set) now reads off the entity and
-    passes through.
+    The same clamping grouping.py's _already_set() does for the "does
+    this still need writing" check (clamp_color_temp_kelvin()), applied
+    to the override decision. max_color_temp_kelvin below is what a real
+    caller (grouping.EntityLookup.externally_set) reads off the entity
+    and passes through.
     """
     claim = {"context_id": "ctx-ours", "target": {"brightness": 255, "color_temp_kelvin": 6531}}
     status, _via = classify(

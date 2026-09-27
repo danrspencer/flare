@@ -186,7 +186,7 @@ def test_tolerance_is_not_exact_match():
 
 
 def test_a_mired_equivalent_color_temp_is_treated_as_already_set():
-    # Real live incident: asked for 4373K, the bulb reports 4385K back -
+    # Asked for 4373K, the bulb reports 4385K back -
     # a 12K gap, past the default 10K color_temp_tolerance, but both
     # values floor to the identical mired 228 via HA's own
     # color_temperature_kelvin_to_mired (the bulb's real native unit).
@@ -303,30 +303,20 @@ def test_a_light_already_at_max_is_not_recommanded_when_the_multiplier_overshoot
     assert groups[0].two_step == []
 
 
-# Overrides: a light currently on whose live context.id doesn't match
-# either of the two claims this integration itself last wrote it with
-# under the *same owner_id* (per write_tracking.LastWriteTracker) is
-# left exactly alone, even if it doesn't match the current adaptive
-# target - regardless of *what* changed it (a person, another
-# automation with no context.user_id of its own, a device regaining
-# power, or a different owner_id entirely) - checked fresh against live
-# state on every call, so nothing needs to be remembered here or
-# explicitly expired. build_groups' own owner_id defaults to None,
-# which skips this check altogether (every light is free to manage) -
-# the explicit force path, tested separately below.
+# Overrides: a light currently on whose live context.id matches neither
+# of the two claims this integration last wrote it with in the caller's
+# scope (see write_tracking.ClaimRegistry) is left exactly alone, even if
+# it doesn't match the current adaptive target - regardless of *what*
+# changed it (a person, another automation, a device regaining power).
+# Checked fresh against live state on every call, so nothing needs to be
+# remembered here or explicitly expired. `force` skips the check.
 #
-# The tests below through test_turning_the_light_off_ends_the_protection
-# all use only `confirmed_*` - the steady-state case where there's no
-# outstanding, unverified write in flight, which is the vast majority of
-# ticks. The *promotion* behaviour itself - how a `pending` claim earns
-# its way into `confirmed`, and how `confirmed` survives any number of
-# consecutive dropped writes along the way - is a property of
-# write_tracking.LastWriteTracker.async_record, not of this pure check,
-# so it's exercised end-to-end against a real Store in
-# tests/integration/test_services.py instead. What belongs here is
-# narrower: given a specific {confirmed, pending} snapshot, does the
-# check land on the right answer - see the "Confirmed vs pending" tests
-# right after this section for that.
+# How a `latest` claim is promoted to `observed`, and how `observed`
+# survives consecutive dropped writes, is a property of
+# write_tracking.ClaimRegistry.async_record rather than this pure check,
+# so it's exercised end-to-end in tests/integration/test_services.py.
+# What belongs here is narrower: given a specific {observed, latest}
+# snapshot, does the check land on the right answer.
 
 
 # --- EntityLookup.externally_set(): the adapter, not the decision table ---
@@ -734,16 +724,15 @@ def test_rgb_external_override_and_reachability_still_apply():
 
 # Colour-temperature targets are compared against the raw target OR the
 # target narrowed to the bulb's own advertised range - never only the
-# narrowed one. Both halves matter and each has a live incident behind it:
+# narrowed one. Both halves matter:
 #
-#  - Un-narrowed only: light.dining_room_1/kitchen_1 advertise max 6535 K
-#    against a flat 6667 K Morning target. 132 K apart and not
-#    mired-equivalent (floor(1e6/6535)=153 vs floor(1e6/6667)=149), so the
-#    bulb sat at its ceiling and was re-commanded every tick, all phase.
-#    HA does not clamp color_temp_kelvin for a natively COLOR_TEMP light -
-#    the device does (confirmed against light/__init__.py).
-#  - Narrowed only: light.utility_spot_1 advertises max 4000 K while
-#    happily reporting 5813 K. Its advertised range simply isn't honest,
+#  - Un-narrowed only: a bulb advertising max 6535 K against a flat 6667 K
+#    Morning target is 132 K off and not mired-equivalent
+#    (floor(1e6/6535)=153 vs floor(1e6/6667)=149), so it would sit at its
+#    ceiling and be re-commanded every tick. HA does not clamp
+#    color_temp_kelvin for a natively COLOR_TEMP light - the device does.
+#  - Narrowed only: some bulbs advertise max 4000 K while happily
+#    reporting 5813 K. Its advertised range simply isn't honest,
 #    and comparing against 4000 would re-command it every tick instead.
 _COLOUR_RANGE_CASES = [
     ("at its ceiling, target above it", 255, 6535, 2000, 6535, 255, 6667, []),

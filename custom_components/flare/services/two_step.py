@@ -21,9 +21,8 @@ The trade-off that buys: once a user saves the field, they own it, and
 a later release adding a newly discovered bulb to the shipped defaults
 will not reach them - their saved copy wins. That is the cost of "what
 you see is what runs"; contributing a pattern upstream still helps every
-install that hasn't customised the field. Higher-stakes than it sounds:
-a pattern list now drives live dispatch directly, not just a repair
-suggestion, so an overly broad or wrong pattern has an immediate effect.
+install that hasn't customised the field. A pattern drives live dispatch
+directly, so an overly broad or wrong one has an immediate effect.
 """
 
 from __future__ import annotations
@@ -39,13 +38,12 @@ TWO_STEP_LABEL_ID = "no_combined_transition"
 # actually observed misbehaving, not a guess. A pattern that's too broad
 # is worse than a missing one - it routes those bulbs into two-step
 # transitions live, which makes them transition *worse* (two calls when
-# one would have been fine) with no repair or confirmation step in the way.
+# one would have been fine).
 #
 # Adding to this list is the intended way to contribute a newly found
 # bulb: one line here, and every install picks it up on its next update.
 DEFAULT_TWO_STEP_MODEL_PATTERNS: tuple[str, ...] = (
-    # IKEA TRADFRI - the original case this whole code path exists for.
-    # Covers the GU10/E27/E14 spectrum bulbs, which all share the prefix.
+    # IKEA TRADFRI. Covers the GU10/E27/E14 spectrum bulbs, which all share the prefix.
     "*TRADFRI bulb*",
 )
 

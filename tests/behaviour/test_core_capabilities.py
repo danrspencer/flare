@@ -51,9 +51,8 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
     """Outcome, not mechanism, and deliberately so.
 
     Two branches can satisfy this - the motion_off turn-off, and
-    self-heal retrying it on the next tick. Mutation testing showed as
-    much: breaking `turn_off_entities` so motion_off switches nothing
-    off still leaves the room dark, because self-heal gets there. That
+    self-heal retrying it on the next tick - breaking `turn_off_entities`
+    so motion_off switches nothing off still leaves the room dark. That
     is the right answer for a behaviour test (an empty room going dark
     is the promise; which branch delivered it is not), but the name has
     to say so, because it does NOT pin motion_off specifically.
@@ -99,9 +98,7 @@ async def test_the_periodic_tick_keeps_a_lit_room_on_the_curve(
     protect it, so the tick pulls it straight back; tracked, the room's
     real Tracking scope classifies it as overridden (see CLAUDE.md's
     Override protection) and the tick leaves that one fitting alone
-    while still correcting every other. Caught by tracking_scope
-    actually wiring a real scope: this assertion originally expected a
-    full restore in both cases, and only the untracked half is that.
+    while still correcting every other.
     """
     bulbs = await lit_room(hass, add_bulbs, setup_room, tracking_scope)
 
@@ -193,7 +190,7 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     The room is lit WITHOUT the exclusion first, so the spot is
     genuinely on before the excluding phase arrives. Otherwise this only
     proves an excluded fitting is never switched ON, and no turn-off
-    ever runs - which is what the first version of this test did.
+    ever runs.
 
     Known limit, and not fixable from this layer: it pins the OUTCOME,
     not which mechanism delivers it. Disabling grouping.py's

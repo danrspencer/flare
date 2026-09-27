@@ -6,11 +6,8 @@
  * in the bulb's current colour, with the fill's WIDTH carrying the
  * value. Brightness has no colour of its own, so it borrows one.
  *
- * The dashboard section used to leave brightness on the built-in
- * `numeric-input` slider, which takes its colour from the tile - so it
- * showed which PHASE the control belonged to and said nothing about the
- * setting, while the colour-temperature slider beside it was already
- * painted in the value it sets.
+ * The built-in `numeric-input` slider takes its colour from the tile,
+ * which in the FLARE section encodes the PHASE, not the setting.
  *
  * Point `tint_from` at a colour-temperature entity and the fill takes
  * that colour, so the two sliders in a row together preview the light -
@@ -36,11 +33,8 @@
  * default - so an untinted one is exactly the stock slider rather than
  * something odd.
  *
- * AN EARLIER VERSION ALSO FADED THE FILL by the value, floored at 0.1
- * opacity. It is recorded here because it looked reasonable and was
- * still wrong: the fill's width already says how bright, so the fade
- * said it a second time, and the only thing it added was making a dim
- * setting harder to see.
+ * The fill is solid, not faded by the value: its width already says how
+ * bright, and fading would only make a dim setting harder to see.
  */
 
 import { kelvinToRgb } from './flare-curve-card.js';

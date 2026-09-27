@@ -5,8 +5,8 @@ override on every coordinator update (see its _sticky property) rather
 than a cached value, so flipping this takes effect on the very next
 check, not just for overrides set after the flip.
 
-Off by default, matching the old system's self-clearing behaviour (see
-select.py's module docstring). entity_category=CONFIG groups this
+Off by default, so an override clears itself at the next phase boundary
+(see select.py's module docstring). entity_category=CONFIG groups this
 under the device's "Configuration" section - same reasoning as
 number.py/time.py.
 """

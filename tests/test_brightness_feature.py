@@ -114,10 +114,10 @@ def test_the_fill_is_the_colour_of_the_tinting_entity(result):
 
 
 def test_the_fill_is_solid(result):
-    """No alpha. An earlier version faded it by the value as well, which
-    said the same thing the fill's width already says and only made a dim
-    setting harder to see. Home Assistant's own light-brightness feature
-    is a solid slider in the bulb's colour."""
+    """No alpha. Fading by the value would say what the fill's width
+    already says and only make a dim setting harder to see. Home
+    Assistant's own light-brightness feature is a solid slider in the
+    bulb's colour."""
     for key in ("warm", "cool"):
         assert result[key].startswith("rgb("), result[key]
         assert "rgba" not in result[key]

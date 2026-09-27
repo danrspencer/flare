@@ -1,12 +1,9 @@
 """
 The Lovelace view strategy, and the section layout it builds.
 
-`views: - strategy: {type: custom:flare-schedule}` replaces what used to be a
-generator on the docs site emitting YAML to paste. That matters for what
-these tests are for: the layout is no longer something a user pastes once
-and owns, it is regenerated on every dashboard load, so a mistake here
-reaches every install on the next update rather than sitting in one
-person's config until they re-paste.
+`views: - strategy: {type: custom:flare-schedule}` is regenerated on every
+dashboard load, so a mistake here reaches every install on the next
+update.
 
 The section it produces is checked against the entity IDs the integration
 actually creates - coordinator.py's TIME_KEYS and CURVE_KEYS - rather

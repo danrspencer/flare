@@ -4,25 +4,15 @@ itself - through a real Home Assistant automation/blueprint/template-
 trigger engine, not just YAML parsing or isolated template snippets.
 
 This is the only place that can catch bugs living in the blueprint's own
-trigger/condition/action wiring - both real incidents this suite exists
-to guard against were exactly that kind of bug, invisible to
-tests/test_grouping.py and tests/test_curve.py (pure logic, no HA at
-all) or to a plain YAML/template sanity check (syntactically fine,
-wrong at runtime):
-
-1. The `recovered` trigger's value_template referenced `trigger.*`
-   inside itself, which is never in scope during a template trigger's
-   own arming evaluation - it could never fire, in any room, from the
-   moment it shipped.
-2. Once fixed, `apply_lighting` was found to turn on any off light
-   whenever *any* non-motion/non-manual tick ran (phase_change, extra,
-   or the now-working recovered) - never caught before because
-   recovered never ran at all.
+trigger/condition/action wiring - syntactically fine, wrong at runtime,
+and invisible to tests/test_grouping.py and tests/test_curve.py (pure
+logic, no HA at all) or to a plain YAML/template sanity check. E.g. a
+template trigger referencing `trigger.*` in its own value_template,
+which is never in scope during arming, so it can never fire.
 
 Organised to mirror docs/blueprint.md's own section headings, one test
 class per feature - read top to bottom, this file is meant to double as
-a spec of what the blueprint actually does, not just a regression net
-for the two incidents above.
+a spec of what the blueprint actually does.
 
 Doesn't re-prove grouping.py's own tolerance/two-step/RGB logic (see
 tests/test_grouping.py) or curve.py's brightness/Kelvin math (see
@@ -154,45 +144,21 @@ def frozen_time():
     plus reconcile (time_pattern, every 5 minutes by default). Without
     controlling wall-clock time, any test whose setup-plus-assertion
     window happens to straddle a real minute boundary can have one of
-    these fire for real mid-test - reproduced locally at roughly 5%
-    failure rate for
-    TestRecoveredTrigger.test_a_plain_off_to_on_transition_does_not_fire_it,
-    which asserts apply_lighting_calls == [] and has no way to
-    distinguish "nothing fired" from "the periodic tick happened to
-    fire too".
+    these fire for real mid-test, which a test asserting
+    apply_lighting_calls == [] can't tell apart from "nothing fired".
 
-    A first attempt just did `with freeze_time(dt_util.utcnow()):` file-
-    wide, no `real_asyncio`. That made things *worse*, not better -
-    confirmed live in CI (a real `tick`-triggered call showed up
-    in two unrelated tests' assertions the very first run after shipping
-    it) and reproduced in isolation afterward: without
-    `real_asyncio=True`, freezegun also mocks the clock asyncio's own
-    event loop uses for scheduling (`time.monotonic`), and a real running
-    loop with real pending `TimerHandle`s (every `time_pattern` trigger
-    registers one) doesn't tolerate that - `asyncio.sleep()` under a bare
-    freeze in this harness hangs forever (loop time never advances to
-    reach the target), and a `pytest-homeassistant-custom-component` test
-    run this way logged asyncio's own "Executing <Task ...> took
-    1785461732.472 seconds" slow-callback warning - noise on the order of
-    56 *years*, from the loop's before/after clock reading falling out of
-    sync across the freeze boundary. `real_asyncio=True` is freezegun's
-    documented fix for exactly this: it freezes `datetime.now()`/
-    `time.time()` (which is all the blueprint's own templates and
-    `dt_util.utcnow()` calls need) while leaving the event loop's own
-    timer bookkeeping on the real clock, restored to ordinary,
-    predictable behaviour.
+    `real_asyncio=True` is required: without it freezegun also mocks
+    `time.monotonic`, the clock asyncio's event loop schedules timers
+    on, and a live loop with pending `TimerHandle`s (every `time_pattern`
+    trigger registers one) hangs or fires timers out of order. With it,
+    `datetime.now()`/`time.time()` are frozen - all the blueprint's
+    templates and `dt_util.utcnow()` need - while the loop stays on the
+    real clock.
 
-    With the event loop back on real time, a `time_pattern` trigger's
-    real firing is back to depending on genuine elapsed wall-clock
-    seconds between registration and whatever matching boundary comes
-    next - which is exactly the original risk this fixture exists to
-    close off. Freezing at a fixed anchor a couple of seconds *past* the
-    current minute (rather than at `dt_util.utcnow()` verbatim, which
-    could itself land arbitrarily close to a boundary) makes that gap
-    deterministic and always large: at least ~58 real seconds until
-    `tick` could next fire, comfortably longer than this whole
-    file's total real run time (a few seconds, single-digit at most) -
-    not just this one test's.
+    Freezing a couple of seconds *past* the current minute, rather than
+    at `dt_util.utcnow()` verbatim, leaves at least ~58 real seconds
+    before `tick` could next fire - far longer than this whole file
+    takes to run.
 
     A test that needs elapsed time to actually pass takes this same
     fixture by name and calls `.tick()`/`.move_to()` on it directly,
@@ -222,11 +188,10 @@ class TestAdaptiveScheduleAndTransitions:
     async def test_an_unavailable_sensor_skips_the_tick_instead_of_erroring(self, hass, apply_lighting_calls):
         """brightness/color_temp_kelvin are plain state_attr() reads, and
         apply_lighting requires both - so an unavailable sensor (mid-startup,
-        a failed refresh) or one pointed at a renamed/deleted entity used to
-        fail schema validation on every single tick, once a minute,
-        indefinitely. Same shape as the live incident where one room logged
-        1,900+ identical template errors over 36 hours unnoticed. Skipping is
-        correct: with no target there is nothing to apply."""
+        a failed refresh) or one pointed at a renamed/deleted entity would
+        fail schema validation on every single tick, indefinitely and
+        unnoticed. Skipping is correct: with no target there is nothing to
+        apply."""
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "unavailable", {})
         await hass.async_block_till_done()
@@ -257,8 +222,7 @@ class TestAdaptiveScheduleAndTransitions:
         await _setup_room_automation(hass, room_target={"entity_id": "light.a"})
 
         # Same-phase attribute-only write - tick, not phase_change
-        # (whose own `to:` filter no longer fires here), is what picks
-        # this up.
+        # (whose `to:` filter doesn't fire here), is what picks this up.
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
@@ -282,10 +246,7 @@ class TestAdaptiveScheduleAndTransitions:
         """Morning and Night are flat stretches of the curve, so the
         sensor re-reports identical state *and* attributes and Home
         Assistant raises state_reported rather than state_changed -
-        which a platform: state trigger never sees. Found live: the
-        sensor's last_updated sat unmoved for ~56 minutes while
-        last_reported kept advancing, and no room logged a single
-        phase_change-triggered run in that window. The time_pattern
+        which a platform: state trigger never sees. The time_pattern
         floor is what guarantees a tick regardless."""
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
@@ -388,12 +349,9 @@ class TestAdaptiveScheduleAndTransitions:
         """The blueprint must not defer its own decision.
 
         `variables:` render once, at trigger time. Any `delay:` reached
-        before the action decides therefore acts on a snapshot: it was a
-        0-15s jitter step, and a light switched off by hand inside that
-        window was relit by a run that had already concluded the room was
-        in use. Confirmed live on a real trace, not reasoned about - the
-        gate said yes at 17:08:00 and apply_lighting fired at 17:08:08,
-        seven seconds after the switch turned the light off.
+        before the action decides therefore acts on a snapshot: a light
+        switched off by hand inside that window would be relit by a run
+        that had already concluded the room was in use.
 
         Override protection cannot be the backstop for this. Turning off
         the last light in a scope releases every claim it holds
@@ -449,13 +407,10 @@ class TestAdaptiveScheduleAndTransitions:
         (`.move_to()`), rather than opening its own nested freeze_time -
         the same next_boundary computation TestSelfHealing's reconcile
         tests use, adapted for a /2 interval. See frozen_time's own
-        docstring for why nesting a second freeze here would be a real
-        bug, not just unnecessary: without matching `real_asyncio=True`,
-        a nested freeze can desync the event loop's own timer clock from
-        the frozen wall-clock, hanging any real `asyncio.sleep()` (or,
-        as originally written here, silently corrupting the outer
-        fixture's own timer bookkeeping for every `time_pattern` trigger
-        already registered)."""
+        docstring for why a nested freeze would be a real bug: it can
+        desync the event loop's timer clock from the frozen wall-clock,
+        hanging any real `asyncio.sleep()` or corrupting the timer
+        bookkeeping of every `time_pattern` trigger already registered."""
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
         await _setup_room_automation(
@@ -493,10 +448,9 @@ class TestRoomTargetResolution:
     resolving via an area."""
 
     async def test_device_id_room_target_resolves_both_lights_and_occupancy_sensors(self, hass, apply_lighting_calls):
-        """The device_id branch of room_target resolution - previously the
-        only one of the three target shapes with no coverage at all, and
-        now shared by resolved_entities/room_occupancy_entities/
-        scope_entities via target_expanded_entities."""
+        """The device_id branch of room_target resolution, shared by
+        resolved_entities/room_occupancy_entities/scope_entities via
+        target_expanded_entities."""
         dev_reg = dr.async_get(hass)
         ent_reg = er.async_get(hass)
         config_entry = MockConfigEntry(domain="test")
@@ -618,7 +572,7 @@ class TestOccupancyDrivenOnOff:
         as somebody else switching it off - every light in the room, every
         time the room empties. Recording itself is flare.turn_off's job
         (tests/integration/test_services.py); this pins that the blueprint
-        hands it the scope, and no longer hand-builds the claim itself."""
+        hands it the scope."""
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
         scope = _register_tracking_scope(hass, kitchen.id, "kitchen")
         er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
@@ -678,9 +632,7 @@ class TestOccupancyDrivenOnOff:
     async def test_occupancy_cleared_does_not_turn_off_lights_while_a_second_sensor_is_still_on(
         self, hass, turn_off_calls
     ):
-        """Regression test for the nightlight-override incident (see
-        CLAUDE.md's dated note on automation.bedroom_hall_lights):
-        occupancy.cleared fires per-entity, not per-target - with two
+        """occupancy.cleared fires per-entity, not per-target - with two
         occupancy-class sensors in room_target, this trigger fires the
         instant EITHER goes from on to off, even while the other still
         reports occupied. Must not turn the lights off in that case."""
@@ -726,13 +678,7 @@ class TestOccupancyDrivenOnOff:
         """The core simplification: occupancy only gates turning lights
         *on* and *off* (see TestAllowTurnOn and the motion_off/reconcile
         tests below) - it has no say over whether an already-on light
-        keeps tracking the curve. Before this, a room *with* a real
-        occupancy sensor stopped updating on-lights the instant it read
-        "unoccupied", while a room with no sensor never had that
-        restriction at all (its own occupied fallback is just "is
-        anything already on"). This test is the case that used to behave
-        differently depending on whether a sensor happened to be
-        present at all - now both are consistent."""
+        keeps tracking the curve, whether or not the room has a sensor."""
         _occupancy(hass, "binary_sensor.occ", "off")
         _light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
@@ -757,15 +703,11 @@ class TestOccupancyDrivenOnOff:
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
-        # A real tick did fire (tick) - this isn't passing
-        # vacuously. It used to prove that by asserting apply_lighting
-        # was called (with an empty entity list); it now isn't called at
-        # all, because both turn-on paths sit inside default:'s single
-        # `if allow_turn_on` block and a fully dark, unoccupied room
-        # fails that gate outright. That is strictly better - one fewer
-        # no-op service call per dark room per tick - but it means the
-        # run has to be evidenced by the automation itself rather than
-        # by a side effect it no longer produces.
+        # A real tick did fire - this isn't passing vacuously.
+        # apply_lighting isn't called at all (both turn-on paths sit inside
+        # default:'s single `if allow_turn_on` block, which a dark,
+        # unoccupied room fails), so the run is evidenced by the
+        # automation itself.
         assert hass.states.get("automation.room").attributes.get("last_triggered") is not None
         assert apply_lighting_calls == []
 
@@ -786,14 +728,10 @@ class TestAllowTurnOn:
         """The structural invariant, swept across every trigger that
         reaches default: - not any single one of them in particular.
 
-        This exists because the real bug was structural rather than a
-        one-line omission: two separate things in default: can switch a
-        light on (scene.turn_on and apply_lighting), they enforced
-        allow_turn_on two different ways, and the scene path simply
-        didn't. Testing the scene path alone would not have caught that
-        class of mistake, and would not catch a *third* path being added
-        later without the gate - which is the failure mode worth
-        defending against now that both live under one `if`.
+        Two things in default: can switch a light on (scene.turn_on and
+        apply_lighting), and both must sit behind allow_turn_on. Testing
+        either path alone would not catch one of them - or a *third* path
+        added later - missing the gate.
 
         A scene is configured for the phase throughout, so any trigger
         that wrongly bypasses the gate has something to light up."""
@@ -955,29 +893,25 @@ class TestOverrideDetection:
 
 class TestRecoveredTrigger:
     """docs/blueprint.md's "A device regaining power after an outage"
-    section - see also the dated CLAUDE.md incident this whole feature,
-    and its follow-up bugs and eventual redesign, came from.
+    section.
 
-    As of the redesign, `recovered` carries no special handling of its
-    own at all - no force, no scoped call, no occupancy bypass. Its only
+    `recovered` carries no special handling of its own at all - no force,
+    no scoped call, no occupancy bypass. Its only
     job is promptness: causing an ordinary tick to run right away
     instead of waiting for the room's next unrelated trigger. The actual
-    "a recovered light is free to manage again" guarantee now lives in
-    write_tracking.py (LastWriteTracker.async_start_listening, which
+    "a recovered light is free to manage again" guarantee lives in
+    write_tracking.py (ClaimRegistry.async_start_listening, which
     clears an entity's record the moment it's seen going unavailable) -
     tested directly against the real service in
     tests/integration/test_services.py, not here, since apply_lighting
     is mocked in this file and so never actually runs that logic."""
 
     async def test_fires_and_resyncs_a_light_that_reconnects_on(self, hass, apply_lighting_calls):
-        """Regression test for the trigger's original dead-on-arrival bug:
-        before the fix, this scenario produced zero automation runs at
-        all (confirmed live against Jacob's real pendant) - the
-        value_template could never become true because it referenced
-        `trigger` inside its own arming evaluation, which is never in
-        scope there. No `force` involved any more (see class docstring)
-        - it's included because it's on, in a room that's (trivially)
-        occupied by virtue of being the only light and now being on."""
+        """The trigger must fire at all: its value_template can't reference
+        `trigger`, which is never in scope during its own arming
+        evaluation. No `force` involved (see class docstring) - it's
+        included because it's on, in a room that's (trivially) occupied
+        by virtue of being the only light and now being on."""
         _light(hass, "light.a", "unavailable")
         await hass.async_block_till_done()
         await _setup_room_automation(hass, room_target={"entity_id": "light.a"})
@@ -1043,13 +977,11 @@ class TestRecoveredTrigger:
     async def test_an_orphaned_permanently_unavailable_entity_does_not_veto_recovery(
         self, hass, apply_lighting_calls
     ):
-        """Found live in the Ensuite. light.ensuite_spots was a Zigbee
-        group that no longer existed, so its entity sat unavailable
-        forever - and under the old "none of our lights are
-        unavailable" aggregate that held the trigger false permanently,
-        silently disabling recovery for the entire room. The aggregate
-        now asks whether *anything* is reachable, so a dead entity is
-        just one more member of the dark set rather than a veto."""
+        """An entity that is unavailable forever (e.g. a deleted Zigbee
+        group) must not hold the trigger false. A "none of our lights are
+        unavailable" aggregate would, silently disabling recovery for the
+        whole room; asking whether *anything* is reachable makes a dead
+        entity just one more member of the dark set rather than a veto."""
         _light(hass, "light.orphan", "unavailable")  # never comes back
         _light(hass, "light.real", "unavailable")
         await hass.async_block_till_done()
@@ -1087,13 +1019,11 @@ class TestSceneHandoff:
     async def test_valid_scene_activates_via_a_phase_change_and_flare_only_covers_uncovered_entities(
         self, hass, apply_lighting_calls, scene_turn_on_calls
     ):
-        """Regression test for a real bug: an earlier version suppressed
-        the *entire* run whenever trigger.id == 'phase_change' and
-        a scene was already active - which also blocked the very tick
-        meant to activate a phase-picked scene in the first place,
-        whenever the room stayed continuously occupied across the phase
-        boundary (no fresh motion to fall back on). Triggered here via a
-        genuine phase change on the adaptive sensor - the actual
+        """A phase change must be able to activate a phase-picked scene
+        even while a scene is already active - suppressing the run there
+        would leave a room that stays continuously occupied across the
+        boundary (no fresh motion to fall back on) on the old scene.
+        Triggered here via a genuine phase change on the adaptive sensor - the actual
         real-world trigger for this feature - not a manual run."""
         _light(hass, "light.covered", "on")
         _light(hass, "light.uncovered", "on")
@@ -1223,21 +1153,15 @@ class TestSceneHandoff:
     async def test_a_malformed_scene_template_does_not_crash_the_whole_automation(
         self, hass, apply_lighting_calls, scene_turn_on_calls
     ):
-        """Live incident, 2026-08-21: automation.bathroom_spots' scene_template
-        was accidentally set to "{{ {} }}" (brightness_template's
-        own default, pasted into the wrong field) - rendered, that's the
-        text "{}", which desired_scene passed straight to states[...], and
-        HA rejects "{}" as a malformed entity_id with a hard TemplateError.
-        Since that happens in variables:, before condition:/action: ever
-        run, the automation failed this way on EVERY trigger - including
-        manual runs - for 36+ hours before being caught (a template error
-        here doesn't raise into the caller, it just leaves the run
-        errored/stopped with no action ever dispatched - apply_lighting_calls
-        staying empty is exactly that symptom). The existing comment above
-        desired_scene already promises "a typo... is treated the same as
-        returning nothing" - this is the case that promise didn't actually
-        cover, since a value that isn't even entity_id-shaped crashes
-        states[...] outright rather than just failing to resolve."""
+        """A scene_template set to "{{ {} }}" (brightness_template's own
+        default, easily pasted into the wrong field) renders the text
+        "{}", which states[...] rejects as a malformed entity_id with a
+        hard TemplateError. That happens in variables:, before
+        condition:/action: run, so unguarded it fails EVERY trigger,
+        manual runs included - with no error raised into the caller, just
+        no action dispatched (apply_lighting_calls staying empty is that
+        symptom). A value that isn't even entity_id-shaped has to be
+        treated like any other typo: as returning nothing."""
         _light(hass, "light.a", "on")
         await _setup_room_automation(
             hass, room_target={"entity_id": "light.a"}, scene_template="{{ {} }}"
@@ -1271,11 +1195,10 @@ class TestSceneHandoff:
     async def test_a_phase_change_does_not_light_an_empty_room(
         self, hass, apply_lighting_calls, scene_turn_on_calls
     ):
-        """The live incident this gate exists for. Scene activation used
-        to check only `scene_active and scene_recheck_due` - never
-        allow_turn_on - so a phase change lit an empty Dining Room's 14
-        fixtures at 23:00:54, and the next tick's self-heal turned them
-        all off again 9 seconds later, every single night.
+        """Scene activation must check allow_turn_on, not just
+        `scene_active and scene_recheck_due` - otherwise a phase change
+        lights an empty room, and the next tick's self-heal turns it all
+        off again seconds later.
 
         A scene is all-or-nothing over its own entity set (unlike
         apply_lighting, whose entity list can be filtered), so nothing
@@ -1426,9 +1349,8 @@ class TestBrightnessScaling:
     ):
         """A null multiplier means "something else owns this light" - so
         unlike a 0 (which means "turn this one off"), the room emptying
-        must leave it alone. Caught live: a kitchen strip offloaded to its
-        own gradient automation was still being switched off on every
-        motion-clear."""
+        must leave it alone - e.g. a strip driven by its own gradient
+        automation."""
         _occupancy(hass, "binary_sensor.occ", "on")
         _light(hass, "light.a", "on")
         _light(hass, "light.handed_off", "on")
@@ -1637,15 +1559,13 @@ class TestSelfHealing:
     async def test_reconcile_ignores_a_momentary_occupancy_blip_shorter_than_wait_time(
         self, hass, turn_off_calls, frozen_time
     ):
-        """Live incident, 2026-08-21: a noisy-but-genuinely-occupied
-        room's occupancy sensor flapped off for a few seconds at a time,
-        continuously, and reconcile's own bare "not occupancy.is_detected"
-        check - unlike motion_off's trigger, which has its own `for:`
-        clause - had no debounce of its own, so a reconcile tick landing
-        on one of those brief gaps turned the light off immediately,
-        bypassing Wait time (no_motion_wait) entirely. Reproduced here by
-        clearing occupancy only 30s before a reconcile boundary, with
-        Wait time set well above that."""
+        """A PIR sensor in an occupied room flaps off for a few seconds at a
+        time. Reconcile has no trigger-level `for:` the way motion_off
+        does, so a bare "not occupancy.is_detected" would let a tick
+        landing in one of those gaps turn the light off, bypassing Wait
+        time (no_motion_wait) entirely. Reproduced by clearing occupancy
+        only 30s before a reconcile boundary, with Wait time set well
+        above that."""
         _light(hass, "light.a", "on")
         await hass.async_block_till_done()
         await _setup_room_automation(
@@ -1884,9 +1804,7 @@ class TestIdleBrightness:
         wrote the template meaning "adjust this one lamp's level",
         because with the phase value at 0 there is no level to adjust.
         It also makes room_is_idle true for the WHOLE room on the
-        strength of one lamp, which suppresses the curve for the rest.
-        Caught live on a real landing, where one pendant sat lit all
-        evening while the other cycled off on every motion clear."""
+        strength of one lamp, which suppresses the curve for the rest."""
         _light(hass, "light.a", "on")
         _light(hass, "light.b", "on")
         _occupancy(hass, "binary_sensor.occ", "on")
@@ -2079,9 +1997,7 @@ class TestIdleBrightness:
         allow_turn_on true - so without suppressing the curve while the
         room is idle, the tick after the nightlight switches on would
         apply full brightness and the room would quietly stop being a
-        nightlight. Found by mutation testing: the first version of this
-        feature had exactly that bug, and every other test passed,
-        because they only ever looked at a single tick."""
+        nightlight. Only a test spanning more than one tick can see it."""
         _light(hass, "light.a", "off")
         _occupancy(hass, "binary_sensor.occ", "off")
         await hass.async_block_till_done()

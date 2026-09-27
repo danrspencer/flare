@@ -125,9 +125,7 @@ async def _attach_tracking_sensors(hass: HomeAssistant, entry: MockConfigEntry) 
 
 
 def _registry(hass: HomeAssistant) -> ClaimRegistry:
-    """The one live registry, from hass.data. Tests used to build a
-    second tracker against the same Store to read state back; there is
-    no Store any more, and no second copy to read."""
+    """The one live registry, from hass.data."""
     return next(v for v in hass.data[DOMAIN].values() if isinstance(v, ClaimRegistry))
 
 
@@ -309,11 +307,10 @@ async def test_apply_lighting_accepts_an_explicit_null_rgb_color(setup_integrati
     """A hand-rolled 'bring your own sensor' entity is free to omit
     rgb_color entirely (see docs/blueprint.md), and the blueprint's own
     state_attr(adaptive_sensor, 'rgb_color') then renders a literal
-    None, not an omitted key - vol.Length applied to None used to fail
-    schema validation outright (vol.Length expects a sized value), which
-    would have broken apply_lighting for every such room the moment the
-    blueprint started passing this field unconditionally. The fix is
-    vol.Any(None, ...) on the schema; this must NOT raise."""
+    None, not an omitted key - vol.Length applied to None fails schema
+    validation outright (it expects a sized value), which would break
+    apply_lighting for every such room. The schema wraps it in
+    vol.Any(None, ...); this must NOT raise."""
     hass = setup_integration
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
     _set_light(hass, "light.a", "off", supported_color_modes=["color_temp"])
@@ -324,10 +321,7 @@ async def test_apply_lighting_accepts_an_explicit_null_rgb_color(setup_integrati
 
 
 async def test_compute_lighting_groups_accepts_an_explicit_null_rgb_color(setup_integration: HomeAssistant):
-    """Same schema gap, same fix, on compute_lighting_groups - never
-    exercised live (nothing calls it with an explicit None today), but
-    the identical vol.Length-on-None failure was present before the fix
-    and must not resurface."""
+    """The same, on compute_lighting_groups."""
     hass = setup_integration
     _set_light(hass, "light.a", "off", supported_color_modes=["color_temp"])
 
@@ -416,7 +410,7 @@ async def test_claims_check_and_claims_record_round_trip(setup_integration: Home
 
     # Another caller asking about the same still-matching claim, through
     # the same scope, sees it as *not* blocked. There is no owner
-    # comparison any more: the claim belongs to whatever scope the caller
+    # comparison: the claim belongs to whatever scope the caller
     # named, so any caller naming the same scope co-operates rather than
     # blocking the other.
     _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=100, color_temp_kelvin=3000, context=our_context)
@@ -430,15 +424,14 @@ async def test_claims_check_and_claims_record_round_trip(setup_integration: Home
 
 
 async def test_claims_check_echoes_back_whatever_scope_it_was_given(setup_integration: HomeAssistant):
-    """`scope` is no longer resolved per entity - it simply echoes the
+    """`scope` isn't resolved per entity - it simply echoes the
     caller's own tracking_device_id back as a title, for every entity in the
     call, regardless of whether that light is anywhere near the scope's
     own target."""
     hass = setup_integration
     _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=100, color_temp_kelvin=3000)
     # Not in the Test Scope's area at all - the point is that passing the
-    # scope explicitly tracks it there anyway, unlike the old per-entity
-    # area resolution.
+    # scope explicitly tracks it there anyway.
     hass.states.async_set("light.elsewhere", "on", {"brightness": 100, "color_temp_kelvin": 3000})
 
     results = await _check(hass, ["light.a", "light.elsewhere"])
@@ -537,7 +530,7 @@ async def test_the_last_light_going_off_releases_the_whole_scope(setup_integrati
 
 
 async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_integration: HomeAssistant):
-    """The counterpart, and the point of the change: switching one light
+    """The counterpart: switching one light
     off while the room is still in use is a choice, not a gap to fill.
     light.sibling stays on, so the scope is not released and light.a
     keeps the claim it no longer matches.
@@ -609,15 +602,11 @@ async def test_claims_clear_frees_a_light_stuck_overridden(setup_integration: Ho
 
 
 async def test_claims_clear_frees_every_entity_in_one_call(setup_integration: HomeAssistant):
-    """Regression test: async_clear used to build its "did anything
-    change" check with any(store.claims.pop(...) ... for entity_id in
-    entity_ids) - any() short-circuits on the first True, and pop() is
-    what actually clears each claim, so a generator there stopped
-    popping the moment the first entity's claim came back non-None,
-    silently leaving every entity after it in the list untouched. Caught
-    live: the Clear button needed one press per light on a device instead
-    of clearing the whole scope in one press. A single-entity test can't
-    catch this at all - it needs at least two already-tracked entities in
+    """Guards async_clear's pop-every-entity step: built as
+    any(store.claims.pop(...) for ...), any() would short-circuit on the
+    first claim popped and leave every entity after it untouched, so the
+    Clear button would need one press per light. A single-entity test
+    can't catch this - it needs at least two already-tracked entities in
     one call."""
     hass = setup_integration
     _set_light(hass, "light.a", "on", supported_color_modes=["color_temp"], brightness=100, color_temp_kelvin=3000)
@@ -771,20 +760,15 @@ async def test_override_protection_survives_a_real_write_tracking_round_trip(set
 
 
 async def test_a_devices_own_delayed_echo_does_not_permanently_lock_the_light_out(setup_integration: HomeAssistant):
-    """Real-world incident, not a hypothetical: light.kitchen_3/
-    light.kitchen_5 sat excluded from every tick for over an hour, still
-    correctly lit the whole time, because HA's own Entity._context
-    expires 5 seconds after the service call that set it (confirmed
-    against homeassistant/core.py) - a device whose real Zigbee/MQTT
+    """HA's own Entity._context expires 5 seconds after the service call
+    that set it (homeassistant/core.py) - a device whose real Zigbee/MQTT
     confirmation lands after that window reports back under a brand-new,
     unrelated context.id even though it's echoing exactly the value we
     asked for. Unlike test_override_protection_survives_a_real_write_tracking_round_trip
     above, the light's *values* never actually change here - only its
     context.id does, with nothing in between issuing a real command.
-    Before the fix in grouping.py's externally_set(), this light would
-    stay excluded forever once the curve moved on, exactly like the
-    original bug write_tracking.py's confirmed/pending design already
-    fixes for a dropped write - just triggered by an echo instead."""
+    Judged on context alone, this light would stay excluded forever once
+    the curve moved on, correctly lit the whole time."""
     hass = setup_integration
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
     _set_light(hass, "light.a", "off", supported_color_modes=["color_temp"])
@@ -881,8 +865,7 @@ async def test_two_step_transition_generates_two_distinct_contexts(setup_integra
     assert brightness_call.data == {"entity_id": ["light.a"], "transition": 0.1, "brightness": 200}
     assert color_call.data["color_temp_kelvin"] == 3000
     # Two genuinely different contexts, and neither is the apply_lighting
-    # call's own (nothing threads that through to either light.turn_on
-    # call for a two-step entity anymore - see _two_step_turn_on).
+    # call's own (see _two_step_turn_on).
     assert brightness_call.context.id != color_call.context.id
 
     tracker = _registry(hass)
@@ -892,16 +875,12 @@ async def test_two_step_transition_generates_two_distinct_contexts(setup_integra
 
 
 async def test_two_step_brightness_step_landing_alone_is_recognised_as_ours(setup_integration: HomeAssistant):
-    """The actual incident this fixes: a two-step bulb reporting back
-    after just its brightness-only step (a real, expected intermediate
-    state for these bulbs, not an anomaly) used to look externally-set,
-    because that intermediate report's context matched neither the
-    single shared context.id apply_lighting used to record nor the
-    final combined target's values. Now the brightness step gets its
-    own context, recorded as this claim's secondary_context_id - a
-    device reporting back under exactly that context is recognised
-    directly, even though its colour hasn't caught up to the new target
-    yet."""
+    """A two-step bulb reporting back after just its brightness-only
+    step (a real, expected intermediate state for these bulbs) matches
+    neither the final colour step's context nor the combined target's
+    values. The brightness step gets its own context, recorded as this
+    claim's secondary_context_id, so a device reporting back under it is
+    recognised directly even though its colour hasn't caught up yet."""
     hass = setup_integration
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
     await _label_two_step(hass, "light.a")
@@ -1045,10 +1024,9 @@ async def test_a_dropped_first_write_self_heals_on_the_next_tick_with_no_interfe
     test above: a light whose very first write from us never actually
     lands (the physical bulb silently drops it - state stays completely
     unchanged, unlike the round-trip test's genuine external change)
-    must still be retried on the next tick, not locked out. This is the
-    production bug the whole confirmed/pending redesign exists to fix
-    (a kitchen light that dropped a colour-mode command and sat stuck
-    for over an hour - see write_tracking.py's own module docstring)."""
+    must still be retried on the next tick, not locked out - the case
+    the two-claim design exists for (see write_tracking.py's module
+    docstring)."""
     hass = setup_integration
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
     # Already on, at a brightness/colour that will need correcting -
@@ -1085,10 +1063,8 @@ async def test_a_dropped_first_write_self_heals_on_the_next_tick_with_no_interfe
 
 async def test_force_bypasses_protection_and_reclaims_the_light(setup_integration: HomeAssistant):
     """force=True writes through regardless, and still records the write
-    - so a later, non-forced call under that same owner_id recognises it
-    as its own rather than finding an orphaned record (the bug `force`
-    itself was added to fix - see grouping.py's externally_set() and
-    CLAUDE.md's dated incident)."""
+    - so a later, non-forced call under the same scope recognises it as
+    its own rather than finding an orphaned record."""
     hass = setup_integration
     turn_on_calls = async_mock_service(hass, "light", "turn_on")
 
@@ -1123,9 +1099,8 @@ async def test_force_bypasses_protection_and_reclaims_the_light(setup_integratio
     # updating") rather than conflating the two. Deliberately a
     # different brightness (95, not 90) from the light's very first
     # state above - HA only replaces context on an actual state change,
-    # not a same-state "state_reported" re-set (confirmed live: reusing
-    # 90 here left the light's context untouched, silently defeating
-    # this test).
+    # not a same-state "state_reported" re-set, so reusing 90 would
+    # leave the light's context untouched and silently defeat this test.
     _set_light(
         hass,
         "light.a",
@@ -1323,16 +1298,13 @@ async def test_recovered_light_is_freed_while_an_unrelated_override_stays_protec
 async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_record(
     setup_integration: HomeAssistant,
 ):
-    """Live incident, 2026-08-16: a light dimmed by hand hours after a
-    plain HA restart got silently overwritten on the very next tick.
-    Root cause - the clear-on-unavailable listener cleared the record
-    for *any* observed transition into unavailable/unknown, and nearly
-    every entity passes through unavailable/unknown as a routine part
-    of every restart (a fresh process's state machine has no prior
-    state for anything yet - old_state is None), indistinguishable from
-    a genuine drop if only the destination state is checked.
+    """Nearly every entity passes through unavailable/unknown as a
+    routine part of every restart (a fresh process's state machine has
+    no prior state for anything yet - old_state is None). Clearing the
+    record on any transition into unavailable/unknown would silently hand
+    back every light dimmed by hand, on the first tick after a restart.
 
-    This reproduces that shape directly: seed a real write record, then
+    So: seed a real write record, then
     fire a state_changed event for a transition INTO unavailable with
     no real prior on/off state (old_state None, or old_state itself
     already unavailable/unknown - both routine parts of startup, not a

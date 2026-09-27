@@ -7,11 +7,8 @@ coordinator (see async_set_native_value below) rather than waiting up
 to 60s for the next poll.
 
 entity_category=CONFIG groups these under the device's "Configuration"
-section in the UI, separate from the primary sensor/curve/phase-select
-entities - eight extra always-visible entities per sensor just to
-occasionally tweak one number would be exactly the kind of noise the
-old boundary sensors were criticised for; CONFIG keeps them present
-(and dashboard/automation-usable) without cluttering the main view.
+section, so they stay usable from dashboards and automations without
+cluttering the device's main view.
 """
 
 from __future__ import annotations

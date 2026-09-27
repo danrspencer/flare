@@ -4,10 +4,8 @@ its lights are free to be taken again.
 
 Clearing is the documented escape hatch for a light stuck "overridden"
 (see write_tracking.py's async_clear docstring for how that happens with
-no external cause). It lived only inside a custom dashboard card until
-this existed, which meant the one action you might need in a hurry was
-the one thing you couldn't put on an ordinary dashboard, into a script,
-or behind a physical button.
+no external cause). As an entity it can go on any dashboard, into a
+script, or behind a physical button.
 
 button rather than switch: a stateless "do it now" action with nothing
 to turn back off is exactly what ButtonEntity is for. It also means the
