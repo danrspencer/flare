@@ -27,6 +27,11 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
+- **A room with several occupancy sensors no longer goes dark while you're in it.**
+  Each sensor timed its Wait time on its own, so the room turned off when the first
+  one's ran out, even if another had seen motion since. It now turns off only once
+  every sensor has been clear for the full Wait time. A sensor that is unavailable
+  no longer counts as occupied, so a dead sensor can't keep a room lit.
 - **A light no longer stops following the schedule after an update is cut short.**
   If a room's automation was restarted part-way through changing its lights - a new
   motion event arriving while a two-step bulb was between its two steps, or one
