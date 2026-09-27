@@ -31,3 +31,13 @@ CONF_MIN_BRIGHTNESS_CHANGE = "min_brightness_change"
 CONF_MIN_COLOR_TEMP_CHANGE = "min_color_temp_change"
 DEFAULT_MIN_BRIGHTNESS_CHANGE = 5
 DEFAULT_MIN_COLOR_TEMP_CHANGE = 5
+
+# Options keys: how often each zone ticks (minutes) and the spacing between
+# zones (seconds).
+CONF_TICK_INTERVAL = "tick_interval"
+CONF_TICK_GAP = "tick_gap"
+DEFAULT_TICK_INTERVAL = 1
+DEFAULT_TICK_GAP = 1
+
+# The event_type a zone's tick entity fires, which the blueprint listens for.
+EVENT_TYPE_TICK = "flare_tick"

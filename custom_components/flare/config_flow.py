@@ -25,8 +25,12 @@ from .const import (
     CONF_ENTRY_TYPE,
     CONF_MIN_BRIGHTNESS_CHANGE,
     CONF_MIN_COLOR_TEMP_CHANGE,
+    CONF_TICK_GAP,
+    CONF_TICK_INTERVAL,
     DEFAULT_MIN_BRIGHTNESS_CHANGE,
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    DEFAULT_TICK_GAP,
+    DEFAULT_TICK_INTERVAL,
     CONF_TARGET,
     CONF_TWO_STEP_MODELS,
     DOMAIN,
@@ -127,8 +131,9 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
 
 class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
     """Which bulb models need two-step transitions (see two_step.py), and on
-    the Control entry, the smallest change worth sending. The models field
-    is pre-filled with the shipped defaults and is the whole list."""
+    the Control entry, the zones' tick timing and the smallest change worth
+    sending. The models field is pre-filled with the shipped defaults and is
+    the whole list."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
@@ -144,11 +149,13 @@ class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
             CONF_TWO_STEP_MODELS: options.get(CONF_TWO_STEP_MODELS) or "\n".join(DEFAULT_TWO_STEP_MODEL_PATTERNS),
         }
         if self.config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING:
-            for key, default, maximum, unit in (
-                (CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE, 25, "%"),
-                (CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, 50, "mired"),
+            for key, default, minimum, maximum, step, unit in (
+                (CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL, 1, 60, 1, "min"),
+                (CONF_TICK_GAP, DEFAULT_TICK_GAP, 0, 10, 0.5, "s"),
+                (CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE, 0, 25, 0.5, "%"),
+                (CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, 0, 50, 0.5, "mired"),
             ):
-                fields[vol.Required(key, default=options.get(key, default))] = _number(0, maximum, 0.5, unit)
+                fields[vol.Required(key, default=options.get(key, default))] = _number(minimum, maximum, step, unit)
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), suggested),
