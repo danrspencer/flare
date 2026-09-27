@@ -1,19 +1,14 @@
 """Turn pytest's JUnit XML into a GitHub Actions job summary.
 
 Written to $GITHUB_STEP_SUMMARY, so it renders as a table on the run
-page itself - no third-party action, no extra permissions. Every action
-this repo uses is actions/* bar ruby/setup-ruby, and a test reporter
-that annotates the PR diff (dorny/test-reporter and friends) needs
-`checks: write` plus a third-party dependency for something a dozen
-lines of stdlib already answers.
+page, with no third-party action or extra permissions.
 
-The point is "what ran", which since the behaviour layer landed means
-three groups that fail for genuinely different reasons - see
-tests/behaviour/conftest.py and CLAUDE.md's Testing section:
+The point is "what ran", by layer (see CONTRIBUTING.md's Testing):
 
-  Pure         plain modules, no Home Assistant at all
-  Integration  real HA, services and blueprint wiring
-  Behaviour    real blueprint + real services, only bulbs faked
+  Unit        no running Home Assistant
+  Checks      consistency of the repository itself
+  Functional  a real Home Assistant instance
+  Behaviour   functional, end to end: real blueprint + services, fake bulbs
 
 Usage:  python scripts/test_summary.py junit.xml >> "$GITHUB_STEP_SUMMARY"
 """
@@ -25,12 +20,13 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Longest prefix wins, so tests/integration/ isn't caught by the
-# catch-all. Order matters here; dict order is insertion order.
+# First matching prefix wins, so behaviour comes before functional.
 LAYERS: dict[str, str] = {
-    "tests.behaviour": "Behaviour — real blueprint + services, fake bulbs",
-    "tests.integration": "Integration — real Home Assistant",
-    "": "Pure — no Home Assistant",
+    "tests.unit": "Unit — no running Home Assistant",
+    "tests.checks": "Checks — the repository itself",
+    "tests.functional.behaviour": "Behaviour — real blueprint + services, fake bulbs",
+    "tests.functional": "Functional — real Home Assistant",
+    "": "Other",
 }
 
 

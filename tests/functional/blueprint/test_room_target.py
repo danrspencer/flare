@@ -1,0 +1,185 @@
+"""Resolving Room Target into lights, occupancy sensors and a tracking scope."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+
+from tests.functional.blueprint.harness import (
+    light,
+    occupancy,
+    register_tracking_scope,
+    setup_room_automation,
+)
+
+
+class TestRoomTargetResolution:
+    """docs/blueprint.md#setting-up-a-room"""
+
+    async def test_device_id_room_target_resolves_both_lights_and_occupancy_sensors(self, hass, apply_lighting_calls):
+        dev_reg = dr.async_get(hass)
+        ent_reg = er.async_get(hass)
+        config_entry = MockConfigEntry(domain="test")
+        config_entry.add_to_hass(hass)
+        device = dev_reg.async_get_or_create(
+            config_entry_id=config_entry.entry_id, identifiers={("test", "room_device")}
+        )
+        ent_reg.async_get_or_create("light", "test", "light_d", suggested_object_id="d", device_id=device.id)
+        ent_reg.async_get_or_create(
+            "binary_sensor", "test", "occ_d", suggested_object_id="occ_d", device_id=device.id
+        )
+        light(hass, "light.d", "on")
+        occupancy(hass, "binary_sensor.occ_d", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"device_id": device.id})
+
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        calls = apply_lighting_calls
+        assert calls and calls[-1].data["entities"] == ["light.d"]
+
+    async def test_a_named_light_puts_its_device_siblings_in_scene_scope(
+        self, hass, apply_lighting_calls, scene_turn_on_calls
+    ):
+        """A directly named light also pulls its device's siblings into scene
+        scope."""
+        dev_reg = dr.async_get(hass)
+        ent_reg = er.async_get(hass)
+        config_entry = MockConfigEntry(domain="test")
+        config_entry.add_to_hass(hass)
+        device = dev_reg.async_get_or_create(
+            config_entry_id=config_entry.entry_id, identifiers={("test", "sibling_device")}
+        )
+        ent_reg.async_get_or_create("light", "test", "light_s", suggested_object_id="s", device_id=device.id)
+        ent_reg.async_get_or_create(
+            "switch", "test", "switch_s", suggested_object_id="s_aux", device_id=device.id
+        )
+        light(hass, "light.s", "on")
+        hass.states.async_set("switch.s_aux", "off")
+        # The scene covers the sibling, in scope only through light.s.
+        hass.states.async_set(
+            "scene.sibling_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["switch.s_aux"]}
+        )
+        await hass.async_block_till_done()
+
+        await setup_room_automation(
+            hass, room_target={"entity_id": "light.s"}, evening_scene="scene.sibling_scene"
+        )
+
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        await hass.async_block_till_done()
+
+        assert scene_turn_on_calls and scene_turn_on_calls[-1].data["entity_id"] == ["scene.sibling_scene"]
+        calls = apply_lighting_calls
+        assert calls and calls[-1].data["entities"] == ["light.s"]
+
+    async def test_area_id_room_target_resolves_both_lights_and_occupancy_sensors(
+        self, hass, apply_lighting_calls
+    ):
+        area = ar.async_get(hass).async_get_or_create("test_room")
+        entry = MockConfigEntry(domain="test")
+        entry.add_to_hass(hass)
+        device = dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id, identifiers={("test", "light_device")}
+        )
+        dr.async_get(hass).async_update_device(device.id, area_id=area.id)
+        ent_reg = er.async_get(hass)
+        ent_reg.async_get_or_create(
+            "light", "test", "light_a", suggested_object_id="a", device_id=device.id
+        )
+        ent_reg.async_update_entity("light.a", area_id=area.id)
+        ent_reg.async_get_or_create("binary_sensor", "test", "occ_a", suggested_object_id="occ")
+        ent_reg.async_update_entity("binary_sensor.occ", area_id=area.id)
+
+        light(hass, "light.a", "off")
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"area_id": area.id})
+
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+        calls = apply_lighting_calls
+        assert calls and calls[-1].data["entities"] == ["light.a"]
+
+
+class TestOverrideDetection:
+    """docs/blueprint.md#why-didnt-my-light-change"""
+
+    async def test_apply_lighting_sends_no_scope_when_none_resolves(self, hass, apply_lighting_calls):
+        """No area and no scope anywhere: written untracked, not an error."""
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"entity_id": "light.a"})
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        calls = apply_lighting_calls
+        assert calls and calls[-1].data["tracking_device_id"] is None
+        assert calls[-1].data["force"] is False
+
+    async def test_apply_lighting_resolves_scope_from_a_declared_area(self, hass, apply_lighting_calls):
+        """An area named in Room Target: that area's scope."""
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        device_id = register_tracking_scope(hass, kitchen.id, "kitchen")
+        er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"area_id": kitchen.id})
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls[-1].data["tracking_device_id"] == device_id
+
+    async def test_apply_lighting_falls_back_to_an_entity_only_targets_own_area(self, hass, apply_lighting_calls):
+        """Entities only: the light's own area's scope."""
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        device_id = register_tracking_scope(hass, kitchen.id, "kitchen")
+        er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"entity_id": "light.a"})
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls[-1].data["tracking_device_id"] == device_id
+
+    async def test_the_fallback_uses_the_first_lights_area_when_they_disagree(self, hass, apply_lighting_calls):
+        """Lights in two scoped areas: the first listed wins."""
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        hall = ar.async_get(hass).async_get_or_create("Hall")
+        kitchen_device = register_tracking_scope(hass, kitchen.id, "kitchen")
+        register_tracking_scope(hass, hall.id, "hall")
+        er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
+        er.async_get(hass).async_get_or_create("light", "test", "light_b", suggested_object_id="b")
+        er.async_get(hass).async_update_entity("light.b", area_id=hall.id)
+        light(hass, "light.a", "on")
+        light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"entity_id": ["light.a", "light.b"]})
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls[-1].data["tracking_device_id"] == kitchen_device

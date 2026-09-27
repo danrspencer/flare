@@ -1,6 +1,6 @@
 """Render a captured automation trace as a readable tree.
 
-tests/behaviour/ captures the blueprint's real Home Assistant automation
+tests/functional/behaviour/ captures the blueprint's real Home Assistant automation
 trace (see its conftest.py). This turns one of those dumps into the view
 you actually want when a blueprint run did the wrong thing: which
 conditions passed or failed, which `choose:` branch ran, and what the

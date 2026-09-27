@@ -49,7 +49,7 @@ jobs:
         run: pip install pytest pytest-homeassistant-custom-component
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Capture a fresh blueprint trace for this commit
-        run: pytest tests/behaviour -q
+        run: pytest tests/functional/behaviour -q
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Export the trace report into the site
         run: python scripts/trace_viewer.py --export docs/trace-report

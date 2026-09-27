@@ -1,6 +1,6 @@
 """Local viewer: trace steps on the left, the blueprint YAML on the right.
 
-Hovering a step in a captured trace (see tests/behaviour/ and
+Hovering a step in a captured trace (see tests/functional/behaviour/ and
 scripts/trace_summary.py) scrolls the YAML pane to - and highlights - the
 exact block that step corresponds to. scripts/trace_summary.py's markdown
 table answers "did this pass or fail"; this answers "which line is that",
