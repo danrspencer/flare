@@ -1,16 +1,5 @@
-"""
-Schedule boundary times, as live time entities - one per coordinator.py's
-TIME_KEYS, per schedule instance. Left at a representative default
-(curve.py's DEFAULT_SCHEDULE_HOURS) on first creation; changing one
-persists (RestoreEntity - the `time` domain has no built-in RestoreTime
-equivalent to number's, so this is hand-rolled the same way select.py's
-phase override already restores its own state) and immediately
-refreshes that instance's coordinator rather than waiting up to 60s for
-the next poll.
-
-entity_category=CONFIG groups these under the device's "Configuration"
-section - same reasoning as number.py's curve entities.
-"""
+"""Schedule boundary times as time entities, one per TIME_KEYS per
+schedule. Restored by hand, since the `time` domain has no RestoreTime."""
 
 from __future__ import annotations
 
@@ -36,8 +25,7 @@ _LABELS = {
     "night_time": "Night Start",
 }
 
-# TIME_KEYS entries are literally "<hour_key>_time" for the matching
-# DEFAULT_SCHEDULE_HOURS key (e.g. "morning_time" -> "morning").
+# "morning_time" -> DEFAULT_SCHEDULE_HOURS["morning"], etc.
 _DEFAULTS = {key: datetime.time(hour=DEFAULT_SCHEDULE_HOURS[key[: -len("_time")]]) for key in TIME_KEYS}
 
 
@@ -72,7 +60,5 @@ class _BoundaryTime(TimeEntity, RestoreEntity):
     async def async_set_value(self, value: datetime.time) -> None:
         self._attr_native_value = value
         self.async_write_ha_state()
-        # Apply immediately rather than waiting for the 60s poll - the
-        # whole point of exposing this as an entity is that changing it
-        # takes effect right away.
+        # Apply now rather than at the next poll.
         await self._coordinator.async_request_refresh()

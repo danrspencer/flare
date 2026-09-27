@@ -1,38 +1,19 @@
 /**
- * The shared machinery behind FLARE's card features: Home Assistant's own
- * slider, coloured from the value it is set to rather than from the
- * tile.
- *
- * Two features are built on this - colour temperature and brightness -
- * and they differ only in which entities they accept and what colour a
- * value maps to; everything else lives here once.
- *
- * It renders `ha-control-slider`, the element the built-in
- * `numeric-input` feature uses, with a copy of the frontend's own
- * `cardFeatureStyles` rule for it. Only the colour properties differ,
- * and only those are set per value.
+ * Shared by FLARE's card features: HA's own `ha-control-slider`, coloured
+ * from its value rather than the tile. The features differ only in which
+ * entities they accept and what colour a value maps to.
  *
  * `ha-control-slider` is a frontend internal with no compatibility
- * promise, which is an accepted cost taken deliberately over
- * reimplementing a slider (a hand-rolled one visibly doesn't match its
- * neighbours). If it breaks, follow whatever
- * `hui-numeric-input-card-feature.ts` does next, since this mirrors it.
+ * promise. If it breaks, follow `hui-numeric-input-card-feature.ts`,
+ * which this mirrors.
  */
 
 const SLIDER_TAG = 'ha-control-slider';
 
 /**
- * Resolve `ha-control-slider` before first render.
- *
- * In practice it is already defined - any tile feature in the same view
- * pulls it in. But relying on a sibling card to have loaded your
- * dependency is not a guarantee, and an undefined custom element renders
- * as an empty inline box with no error anywhere. `loadCardHelpers` is
- * the standard way a custom card forces the Lovelace bundle in.
- *
- * Awaited once per page rather than per element: `whenDefined` never
- * resolves if the element genuinely never arrives, so a per-instance
- * promise would leave one pending promise per tile.
+ * Load `ha-control-slider` before first render: an undefined element
+ * renders as an empty box with no error. Once per page, since whenDefined
+ * may never resolve.
  */
 let sliderReady;
 function ensureSlider() {
@@ -43,8 +24,7 @@ function ensureSlider() {
         try {
           await window.loadCardHelpers();
         } catch (err) {
-          // Nothing useful to do - fall through to whenDefined, which
-          // still resolves if something else registers it later.
+          // whenDefined still resolves if something registers it later.
         }
       }
       await customElements.whenDefined(SLIDER_TAG);
@@ -54,23 +34,14 @@ function ensureSlider() {
 }
 
 /**
- * Define a card feature that renders the native slider, coloured by
- * value.
+ * Define a card feature rendering the native slider, coloured by value.
  *
- *   tag       custom element name, used as `custom:<tag>` in a config
+ *   tag       custom element name (`custom:<tag>`)
  *   name      what the card editor calls it
- *   supported (hass, context) => boolean - which entities it is offered
- *             for, and which it refuses to render
- *   fillFor   (value, attributes, config, hass) => CSS colour for the
- *             filled part. config and hass are passed so a feature can
- *             colour itself from something OTHER than its own value -
- *             brightness takes its hue from a colour-temperature entity
- *             named in its config.
- *   trackFor  optional; the same for the unfilled remainder. Omit it and
- *             the remainder falls through to ha-control-slider's own
- *             default, a neutral grey - which is what you want when the
- *             fill's colour is not itself the entity's identity, and
- *             tinting the track would just add a second meaning.
+ *   supported (hass, context) => boolean
+ *   fillFor   (value, attributes, config, hass) => CSS colour of the fill
+ *   trackFor  optional, the same for the remainder; omitted, it's the
+ *             slider's neutral default
  */
 export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
   class FlareValueSlider extends HTMLElement {
@@ -104,22 +75,9 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
       await ensureSlider();
 
       const style = document.createElement('style');
-      // The frontend's cardFeatureStyles rule for ha-control-slider,
-      // minus its two COLOUR properties.
-      //
-      // cardFeatureStyles points both of those at --feature-color, the
-      // tile's own colour. Neither is wanted here: the fill is the
-      // value's, and the unfilled track is deliberately left to
-      // ha-control-slider's own default - --disabled-color at 0.2, a
-      // neutral grey that moves with the theme. Tinting the track with
-      // the tile's colour is what made a brightness slider read as a
-      // phase indicator with a bar on it.
-      //
-      // So --control-slider-background is never declared statically: a
-      // feature that wants it sets it per value, and one that does not
-      // gets Home Assistant's default. Declaring it here as well would
-      // mean the per-value feature has it set twice, where whichever
-      // wins depends silently on specificity.
+      // The frontend's cardFeatureStyles rule for ha-control-slider, minus its
+      // colour properties: the fill is set per value, and the track is left to
+      // the slider's own default unless a feature sets it.
       style.textContent = `
         :host { display: block; }
         ${SLIDER_TAG} {
@@ -131,10 +89,8 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
       `;
 
       this._slider = document.createElement(SLIDER_TAG);
-      // `value-changed` is the commit - once, on release.
       this._slider.addEventListener('value-changed', (ev) => this._setValue(ev.detail.value));
-      // `slider-moved` fires continuously through a drag. Repaint only;
-      // committing here would be one service call per pixel.
+      // Fires through a drag: repaint only.
       this._slider.addEventListener('slider-moved', (ev) => this._paint(ev.detail.value));
 
       this.shadowRoot.append(style, this._slider);
@@ -173,9 +129,7 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
 
       const attrs = stateObj.attributes || {};
       const parsed = Number(stateObj.state);
-      // Matches hui-numeric-input-card-feature: an unavailable/unknown
-      // entity passes `undefined` rather than NaN, which the slider
-      // renders as empty instead of snapping to its own minimum.
+      // undefined, not NaN, renders an unavailable entity as empty.
       const value = Number.isNaN(parsed) ? undefined : parsed;
 
       this._slider.value = value;
@@ -195,8 +149,7 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
   window.customCardFeatures.push({
     type: tag,
     name,
-    // Keeps the feature out of the editor's list for entities it cannot
-    // render - without it, it is offered on every entity in the house.
+    // Keeps the feature out of the editor for entities it can't render.
     isSupported: supported,
   });
 }

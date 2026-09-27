@@ -1,38 +1,21 @@
 /**
- * FLARE Curve — custom Lovelace card
- *
- * Renders the day's brightness + color-temperature curve as an actual
- * rendered-color chart (Kelvin -> RGB). The curve itself is NOT
- * recomputed here: it's read straight off the combined sensor's
- * `points` attribute, produced by the flare
- * integration's curve.py (custom_components/flare/) -
- * the same module the compute_curve service uses. That's the single
- * source of truth; this card just displays it. The "now" marker reads
- * the same sensor's phase/brightness/color_temp attributes directly -
- * and unlike the curve, those DO follow a manual override via the phase
- * select (see coordinator.py), since they represent "right now" rather
- * than the full-day schedule.
+ * FLARE Curve card: the day's brightness and colour-temperature curve,
+ * drawn in the colour it renders. Reads the schedule sensor's `points`
+ * rather than recomputing the curve. The "now" values follow a phase
+ * override; the curve doesn't.
  */
 
 const DEFAULT_ENTITIES = {
-  // Last-resort entity_ids for a card configured with neither `sensor`
-  // nor `entities` (getStubConfig normally supplies `sensor`).
-  // phase/brightness_now/kelvin_now all read from the same combined
-  // entity (state = phase, attributes = brightness/color_temp/
-  // boundaries/points - see sensor.py's _AdaptiveLightingSensor); an
-  // `entities` map can point them at separate sensors instead.
+  // Fallback when a card has neither `sensor` nor `entities`.
   phase: 'sensor.default_flare',
   brightness_now: 'sensor.default_flare',
   kelvin_now: 'sensor.default_flare',
   sun: 'sun.sun',
 };
 
-// How often the card re-renders to keep the "now" marker moving, and the
-// granularity at which "now" participates in the render cache below.
-// One constant for both so they can't drift apart.
+// Re-render interval, and the granularity of "now" in the render cache.
 const RENDER_INTERVAL_MS = 30000;
 
-// Bumped per card instance so each one's SVG gradient gets its own id.
 let _instanceCount = 0;
 
 const VB_W = 960;
@@ -44,17 +27,13 @@ const PAD_BOTTOM = 26;
 const CHART_W = VB_W - PAD_L - PAD_R;
 const CHART_H = VB_H - PAD_TOP - PAD_BOTTOM;
 const BASELINE_Y = VB_H - PAD_BOTTOM;
-// Evening's earliest/latest range ticks (see eveningRange below) hang
-// down from the x-axis, the same direction a normal axis tick would.
 const RANGE_TICK = 6;
 
 function clamp(v, lo, hi) {
   return Math.min(Math.max(v, lo), hi);
 }
 
-// Tanner Helland's Kelvin -> RGB approximation. Purely a display concern
-// (turning a Kelvin number into a colour) -- not part of the schedule
-// logic, so it stays here rather than in the shared macro.
+// Tanner Helland's Kelvin -> RGB approximation, as HA's own is.
 export function kelvinToRgb(kelvin) {
   const temp = kelvin / 100;
   let r, g, b;
@@ -86,15 +65,8 @@ export function rgbToHex([r, g, b]) {
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
-// Mirrors curve.py's phase_at() exactly - same four boundaries, same
-// half-open intervals - so the hover tooltip's phase name always agrees
-// with what the real schedule would report for that instant.
-//
-// Exported (along with phaseMarks and kelvinToRgb below) purely so
-// tests/test_curve_js_parity.py can import this file under node and
-// check them against curve.py. Home Assistant loads this file as an ES
-// module (add_extra_js_url defaults to es5: false), so the exports are
-// simply unused there.
+// Mirrors curve.py's phase_at(). Exported (like the other pure helpers
+// below) so tests can run it under node.
 export function phaseAt(t, morning, day, evening, night) {
   if (t < morning) return 'Night';
   if (t < day) return 'Morning';
@@ -105,25 +77,8 @@ export function phaseAt(t, morning, day, evening, night) {
 
 const PHASE_ORDER = ['Morning', 'Day', 'Evening', 'Night'];
 
-// Mirrors curve.py's phase_marks(). Which phases actually occur today,
-// and where each really starts - which is NOT the same as the four
-// configured boundaries, because phaseAt above is a cascade of `t <
-// boundary` tests that tolerates them being set out of order.
-//
-// With Morning at 10:00 and Day at 08:00, nothing is ever Morning (by
-// the time t clears 10:00 it has already passed the 08:00 test), and Day
-// actually begins at 10:00 rather than its own 08:00. Drawing the raw
-// boundaries would label a phase that isn't happening, and put the next
-// one at a time it doesn't start. Both fall out of one rule: each phase
-// begins at the running maximum of the boundaries up to and including
-// its own, and is real exactly when the span to the next one isn't
-// empty.
-//
-// Night is special both ways: the day always opens on Night, so its
-// boundary marks the RETURN to Night - and if nothing ever leaves Night
-// (a fully reversed schedule) there's no return to draw, so nothing is
-// marked at all. See curve.py's phase_marks docstring, and
-// tests/test_curve.py, which pins this against phaseAt's real output.
+// Mirrors curve.py's phase_marks(): which phases actually occur, and when
+// each really starts, given boundaries that may be out of order.
 export function phaseMarks(morning, day, evening, night) {
   const effectiveStarts = [];
   let running = null;
@@ -144,34 +99,14 @@ export function phaseMarks(morning, day, evening, night) {
   return marks;
 }
 
-// Nudges the phase labels apart so they don't overlap each other.
-//
-// Each label wants to be centred on its own boundary line, which is fine
-// on a wide card and collides on a narrow one - two phases an hour apart
-// are only a few pixels apart at phone width, while the words "Morning"
-// and "Day" need about 60px between them. Measured on a 375px-wide
-// screen, Morning/Day and Evening/Night each overlapped by 7px.
-//
-// The standard two-pass sweep: walk left to right pushing each label
-// right until it clears its predecessor, clamp the last one inside the
-// right edge, then walk back pushing left, and finally clamp the first
-// inside the left edge. Labels move as little as possible and keep their
-// order, so each stays nearest its own line. The lines themselves are
-// never moved - they mark the actual boundary - and every label keeps a
-// `title` with the exact time.
-//
-// If they cannot all fit even packed edge to edge, the ones that don't
-// fit are dropped rather than left overlapping: an unreadable smear of
-// two words on top of each other is worse than one honest label. Later
-// ones go first, so the earliest phases in the day survive.
-//
-// Pure and exported so tests/test_curve_js_parity.py can exercise it
-// under node without a DOM.
+// Nudges phase labels apart so they don't overlap on a narrow card: sweep
+// right pushing each clear of the last, then back left from the right
+// edge. Labels that can't fit at all are dropped, latest first. The lines
+// never move, and each label keeps its exact time as a `title`.
 export function layoutBoundaryLabels(desired, widths, containerWidth, gap = 6) {
   const total = (count) =>
     widths.slice(0, count).reduce((sum, w) => sum + w, 0) + gap * Math.max(0, count - 1);
 
-  // How many, from the left, can physically fit at all.
   let visible = desired.length;
   while (visible > 0 && total(visible) > containerWidth) {
     visible -= 1;
@@ -179,24 +114,15 @@ export function layoutBoundaryLabels(desired, widths, containerWidth, gap = 6) {
 
   const centres = desired.slice(0, visible);
 
-  // Order matters here. The left-edge clamp has to happen BEFORE the
-  // left-to-right sweep, not after it: pushing the first label right to
-  // get it on screen shoves it into its neighbour, and a clamp applied
-  // at the end has no sweep left to repair that. Doing it first means
-  // the sweep carries the displacement along the whole run.
+  // The left clamp goes first, so the sweep carries its displacement along.
   if (visible > 0) centres[0] = Math.max(centres[0], widths[0] / 2);
 
-  // Left to right: clear the previous label.
   for (let i = 1; i < visible; i++) {
     const min = centres[i - 1] + widths[i - 1] / 2 + gap + widths[i] / 2;
     if (centres[i] < min) centres[i] = min;
   }
 
-  // Right to left: pull back inside the right edge, and carry that back
-  // along the run the same way. This can't undo the left-edge clamp
-  // above - `visible` was chosen so the whole run fits, so even packed
-  // hard against the right edge the first label still starts at or after
-  // its own half-width.
+  // Can't undo the left clamp: `visible` was chosen so the run fits.
   if (visible > 0) {
     centres[visible - 1] = Math.min(centres[visible - 1], containerWidth - widths[visible - 1] / 2);
   }
@@ -211,13 +137,8 @@ export function layoutBoundaryLabels(desired, widths, containerWidth, gap = 6) {
   }));
 }
 
-// title unset -> the schedule sensor's own name, so a card added with no
-// config announces which schedule it is drawing rather than repeating the
-// integration's name on every card. title: "" explicitly -> no header at
-// all (ha-card renders nothing for a falsy header), which lets a dashboard
-// that already labels each sensor elsewhere (a heading card, a section
-// title) suppress the card's own redundant one. "FLARE" is the last
-// resort, for the error render where there is no entity to name.
+// title unset: the sensor's name. title: "": no header. "FLARE" only when
+// there's no entity to name.
 function cardHeader(config, stateObj) {
   if (config.title === '') return '';
   if (config.title) return config.title;
@@ -225,10 +146,7 @@ function cardHeader(config, stateObj) {
   return name || 'FLARE';
 }
 
-// brightness_now/kelvin_now default to the same combined entity as
-// phase (state = phase, attributes = brightness/color_temp) - read the
-// named attribute if present, falling back to .state for a custom
-// config pointing at a separate plain-value sensor.
+// Reads the attribute, or .state for a separate plain-value sensor.
 function numFromAttrOrState(stateObj, attrName) {
   if (!stateObj) return undefined;
   const attrVal = stateObj.attributes && stateObj.attributes[attrName];
@@ -240,11 +158,8 @@ function fmtTime(tSec) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// sun.sun's next_rising/next_setting are exactly that - "next" - so
-// whichever of the two already happened today has rolled over to
-// tomorrow's occurrence by the time we read it. The chart only ever
-// shows one calendar day, so shift by the one day that lands the
-// timestamp back inside today's window rather than trusting it as-is.
+// next_rising/next_setting roll over to tomorrow once passed, so shift a
+// day back into the chart's window.
 function sunTimeInWindow(isoString, dayStart, dayEnd) {
   if (!isoString) return null;
   let t = new Date(isoString).getTime() / 1000;
@@ -257,26 +172,9 @@ const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
 
 /**
- * The slug of a FLARE *schedule* sensor, or null for anything else.
- *
- * Two tests, doing two different jobs - worth being precise about which,
- * because it is easy to assume the name check is what excludes things:
- *
- * 1. The `points` attribute is the actual discriminator. Only the
- *    schedule sensor publishes it (sensor.py's _AdaptiveLightingSensor -
- *    it is the 289-sample day curve the chart draws). This is what
- *    rejects the tracking scope's own sensor.<slug>_flare_tracking /
- *    _controlled / _overridden, and equally some unrelated
- *    integration's sensor.solar_flare. It rejects on what the entity
- *    *is*, not what it is called, so it needs no exclusion list to go
- *    stale as this integration grows entities.
- * 2. The `_flare` SUFFIX (not a substring) is a shape gate, and it is
- *    what makes the slug slice below correct: the slug is the entity_id
- *    with a fixed prefix and suffix removed, which is only meaningful if
- *    the id genuinely ends there. Relaxing it to includes('_flare')
- *    would slice `sensor.x_flare_tracking` to the slug `x_flare_tracking`.
- *    Kept as a second line of defence too - matching on an attribute
- *    name alone is thin, so both must hold.
+ * The slug of a FLARE schedule sensor, or null. The `points` attribute is
+ * what identifies one; the exact `_flare` suffix makes the slug slice
+ * correct (`_flare_tracking` must not match).
  */
 export function scheduleSensorSlug(hass, entityId) {
   if (typeof entityId !== 'string') return null;
@@ -287,18 +185,9 @@ export function scheduleSensorSlug(hass, entityId) {
 }
 
 /**
- * Home Assistant's card picker (2026.6+) asks every custom card whether
- * it makes sense for the entity the user just picked; a suggestion shows
- * up under "Community" with a live preview. Returning null means "not
- * mine", which is the answer for everything except a schedule sensor.
- *
- * The suggested config uses the `sensor:` shorthand setConfig already
- * documents rather than a raw `entities` map, and carries
- * grid_options.columns: 'full' deliberately - a card in a sections view
- * does not inherit its section's width, so without it the chart lands at
- * roughly a third of the section and looks broken on arrival (see
- * CLAUDE.md lesson 15). A suggestion is exactly the right place to carry
- * that knowledge, since the user never sees the config to fix it.
+ * The card picker's (2026.6+) suggestion for a schedule sensor.
+ * `columns: 'full'` because a card in a sections view doesn't inherit its
+ * section's width.
  */
 export function entitySuggestion(hass, entityId) {
   const slug = scheduleSensorSlug(hass, entityId);
@@ -312,34 +201,17 @@ export function entitySuggestion(hass, entityId) {
   };
 }
 
-// How far back from a corner the fillet starts, in viewBox units.
-//
-// Chosen by eye, and worth being honest about: lights take 15-30s to
-// transition, but 30s of a 24h chart is about 0.3 units - invisible. So
-// this is cosmetic, not a physical model. It is safe to do anyway
-// because of how the corner is cut (see roundedTopEdge).
+// Corner rounding radius in viewBox units. Cosmetic.
 const CORNER_RADIUS = 4;
 
-// Below this, a vertex is treated as lying on the line between its
-// neighbours and dropped. In viewBox units, so well under one brightness
-// step (CHART_H / 255, about 0.67) - it removes only genuinely collinear
-// points, of which there are many: a flat phase contributes a vertex
-// every five minutes that says nothing.
+// Collinearity tolerance, in viewBox units - well under one brightness step.
 const COLLINEAR_EPSILON = 0.3;
 
 /**
- * Drop points that lie on the straight line between their neighbours.
- *
- * The samples are evenly spaced in time, but the curve is piecewise
- * LINEAR (curve.py interpolates between boundaries), so nearly all of
- * them are redundant as geometry - a flat Day phase is one straight line
- * described by a hundred points. Dropping them leaves a handful of real
- * vertices, which is what makes the corner rounding below controllable:
- * the fillet is capped at half the shorter adjacent segment, and with
- * every sample kept, every segment is one sample wide.
- *
- * Only the SHAPE is simplified. The gradient still gets a stop per
- * sample, because colour varies continuously where brightness does not.
+ * Drop points on the straight line between their neighbours. The curve is
+ * piecewise linear, so most samples are redundant as geometry; this is
+ * what lets the corner rounding be sized sensibly. The gradient still gets
+ * every sample.
  */
 export function simplifyPolyline(points, epsilon = COLLINEAR_EPSILON) {
   if (points.length < 3) return points.slice();
@@ -351,7 +223,6 @@ export function simplifyPolyline(points, epsilon = COLLINEAR_EPSILON) {
     const dx = c.x - a.x;
     const dy = c.y - a.y;
     const len = Math.hypot(dx, dy) || 1;
-    // Perpendicular distance of b from the line a->c.
     const dist = Math.abs((b.x - a.x) * dy - (b.y - a.y) * dx) / len;
     if (dist > epsilon) out.push(b);
   }
@@ -360,23 +231,11 @@ export function simplifyPolyline(points, epsilon = COLLINEAR_EPSILON) {
 }
 
 /**
- * The top edge as an SVG path, with its corners eased off.
- *
- * Each interior vertex is replaced by a quadratic Bezier that leaves the
- * incoming segment `r` before the corner and rejoins the outgoing one
- * `r` after it, with the CONTROL POINT ON THE CORNER ITSELF.
- *
- * That last detail is what makes this safe. A quadratic is contained
- * within the triangle of its three control points, so this curve can
- * only ever cut inside the corner - it cannot overshoot. A smoothing
- * spline through the sample points (Catmull-Rom, cardinal, anything
- * interpolating) would overshoot around the flat tops and draw
- * brightness the schedule never asks for. Cutting corners is a
- * different operation and does not have that failure mode.
- *
- * r is capped at half of each adjacent segment so neighbouring fillets
- * can never overlap or reverse, which is what would happen on a short
- * segment between two close corners.
+ * The top edge as an SVG path with rounded corners: a quadratic Bezier
+ * per corner, with the control point ON the corner, so it can only cut
+ * inside it and never overshoot (an interpolating spline would draw
+ * brightness the schedule never asks for). r is capped at half of each
+ * adjacent segment so fillets can't overlap.
  */
 export function roundedTopEdge(points, radius = CORNER_RADIUS) {
   if (points.length < 2) return '';
@@ -403,20 +262,9 @@ export function roundedTopEdge(points, radius = CORNER_RADIUS) {
 }
 
 /**
- * The curve itself: ONE filled path whose top edge runs through the
- * samples, filled with a single left-to-right gradient carrying a stop
- * per sample.
- *
- * A shape per sample would draw every ramp as a staircase (samples are
- * five minutes apart) and the colour in hard vertical bands.
- *
- * Straight lines between samples are EXACT: curve.py interpolates
- * brightness and Kelvin linearly between boundaries, so the real curve
- * is piecewise linear in time. The only deliberate inaccuracy is the
- * corner rounding above, which is cosmetic and only ever cuts inward.
- *
- * Exported, like phaseAt/phaseMarks/layoutBoundaryLabels above, purely
- * so tests can exercise it under node without a DOM.
+ * The curve: one filled path through the samples, with a gradient stop
+ * per sample. Straight lines between samples are exact, since the curve
+ * is piecewise linear.
  */
 export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
   if (!samples || samples.length < 2) return '';
@@ -425,9 +273,8 @@ export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
   const area =
     `${top}L${xOf(samples[samples.length - 1].t).toFixed(2)},${BASELINE_Y}` +
     `L${xOf(samples[0].t).toFixed(2)},${BASELINE_Y}Z`;
-  // Default gradientUnits (objectBoundingBox) maps 0-1 across the path's
-  // own bounding box, and the path spans exactly dayStart to dayEnd, so
-  // a stop's offset is just its position through the day.
+  // objectBoundingBox spans exactly the day, so an offset is the position
+  // through it.
   const stops = samples
     .map((s) => {
       const offset = (((s.t - dayStart) / span) * 100).toFixed(3);
@@ -441,31 +288,22 @@ export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
 }
 
 class FlareCurveCard extends HTMLElement {
-  // Given hass, point a brand-new card at a schedule sensor that
-  // actually exists, so a card added from the picker (and its
-  // `preview: true` rendering) shows a chart rather than an error.
+  // Points a new card at a schedule sensor that exists.
   static getStubConfig(hass) {
     const entityId = Object.keys((hass && hass.states) || {}).find((id) =>
       scheduleSensorSlug(hass, id)
     );
-    // No title: a fresh card names itself after the sensor it is pointed
-    // at (see cardHeader).
     return entityId ? { sensor: scheduleSensorSlug(hass, entityId) } : {};
   }
 
   setConfig(config) {
     this._config = config || {};
-    // Only used to make this card's SVG gradient id unique on the page -
-    // see the gradientId comment in the render below.
     if (this._instanceId === undefined) {
       _instanceCount += 1;
       this._instanceId = _instanceCount;
     }
-    // `sensor: living_room` is shorthand for pointing every entity at
-    // that named sensor's entities (the value is the sensor's slugified
-    // name, i.e. its entity_id prefix - see coordinator.py's
-    // schedule_instances()). An explicit `entities` map still overrides
-    // individual ids on top.
+    // `sensor: living_room` points every entity at that schedule sensor's.
+    // `entities` overrides individual ids.
     const fromSensor = {};
     if (this._config.sensor) {
       const base = `sensor.${this._config.sensor}_flare`;
@@ -487,11 +325,7 @@ class FlareCurveCard extends HTMLElement {
 
   connectedCallback() {
     this._timer = setInterval(() => this._render(), RENDER_INTERVAL_MS);
-    // A dashboard card gets resized without any state change - dragging
-    // a column wider, rotating a phone - and the label collisions depend
-    // entirely on width. Re-laying out is cheap and changes no layout
-    // the observer itself watches (the labels are absolutely positioned
-    // inside a fixed-height chart), so this cannot feed back on itself.
+    // Label collisions depend on width, which changes without a state change.
     if (typeof ResizeObserver !== 'undefined') {
       this._resizeObserver = new ResizeObserver(() => this._layoutLabels());
       this._resizeObserver.observe(this);
@@ -518,42 +352,23 @@ class FlareCurveCard extends HTMLElement {
     const brightnessNow = get(e.brightness_now);
     const kelvinNow = get(e.kelvin_now);
 
-    // Today's four phase-boundary timestamps live as attributes on the
-    // phase entity itself (see sensor.py's _AdaptiveLightingSensor).
     const boundaries = {
       morning: Number(phase.attributes.morning_start),
       day: Number(phase.attributes.day_start),
       evening: Number(phase.attributes.evening_start),
       night: Number(phase.attributes.night_start),
-      // Absent (null) if the sensor's evening_earliest_time/
-      // evening_latest_time weren't configured.
+      // Null if the bounds aren't configured.
       eveningEarliest: phase.attributes.evening_earliest != null ? Number(phase.attributes.evening_earliest) : null,
       eveningLatest: phase.attributes.evening_latest != null ? Number(phase.attributes.evening_latest) : null,
     };
 
     const pointsRaw = phase.attributes.points;
-    // brightness_now/kelvin_now default to the same combined entity as
-    // phase, read via its brightness/color_temp attributes; a custom
-    // config pointing them at separate plain-value sensors still works
-    // by falling back to .state.
     const brightnessNowValue = numFromAttrOrState(brightnessNow, 'brightness');
     const kelvinNowValue = numFromAttrOrState(kelvinNow, 'color_temp');
 
-    // "now" belongs in this key. It is a real input to the render - it
-    // places the marker line and writes the "Now HH:MM" label - but it
-    // isn't part of the state Home Assistant hands us, because the card
-    // reads the clock itself. Without it a schedule sitting on a flat
-    // stretch of curve (all of Night, all of Morning, Evening's hold)
-    // would produce an identical key minute after minute and the marker
-    // would stop moving - visibly so in the docs playground, which has
-    // no timer and only assigns `hass`.
-    //
-    // Bucketed rather than raw, or the key would differ on every single
-    // call and the cache would never hit at all. One bucket per render
-    // interval costs nothing: it can only allow a render the timer was
-    // about to do anyway, and it is far finer than the marker's own
-    // resolution - the chart is 914 units wide for a whole day, so a
-    // pixel is about 95 seconds.
+    // "now" is in the key because the card reads the clock itself; without it
+    // a flat stretch of curve would freeze the marker. Bucketed to the render
+    // interval so the cache can still hit.
     const nowBucket = Math.floor(Date.now() / RENDER_INTERVAL_MS);
 
     const cacheKey = JSON.stringify([
@@ -565,9 +380,7 @@ class FlareCurveCard extends HTMLElement {
       brightnessNowValue,
       kelvinNowValue,
       nowBucket,
-      // The swatch border depends on it (see _render()'s own swatch
-      // builder) - without this, toggling the theme mid-session doesn't
-      // repaint until some unrelated value happens to change too.
+      // The swatch border depends on it.
       !!(hass.themes && hass.themes.darkMode),
     ]);
 
@@ -583,9 +396,7 @@ class FlareCurveCard extends HTMLElement {
     this._kelvinNow = kelvinNowValue;
 
     if (pointsRaw) {
-      // HA's trigger-template attribute rendering sometimes preserves the
-      // native list from `| tojson` instead of leaving it as a JSON string
-      // (observed: state_attr(...) is string => false) -- accept either.
+      // The attribute may arrive as a list or a JSON string.
       let parsed = null;
       if (Array.isArray(pointsRaw)) {
         parsed = pointsRaw;
@@ -593,8 +404,7 @@ class FlareCurveCard extends HTMLElement {
         try {
           parsed = JSON.parse(pointsRaw);
         } catch (err) {
-          // Keep the last good samples; don't blank the chart over a
-          // transient parse hiccup.
+          // Keep the last good samples.
           parsed = null;
         }
       }
@@ -606,14 +416,7 @@ class FlareCurveCard extends HTMLElement {
     this._render();
   }
 
-  // Applies layoutBoundaryLabels to whatever is currently rendered.
-  //
-  // Split from the pure function above because it needs real measured
-  // widths: the labels are HTML text, so their width depends on the
-  // viewer's font, and guessing from character count would be wrong on
-  // exactly the narrow screens this matters for. Reading
-  // getBoundingClientRect forces a layout, which is why this runs once
-  // after a render rather than per label.
+  // Applies layoutBoundaryLabels using real measured widths, once per render.
   _layoutLabels() {
     const root = this.shadowRoot;
     if (!root) return;
@@ -622,13 +425,10 @@ class FlareCurveCard extends HTMLElement {
     if (!wrap || !labels.length) return;
 
     const width = wrap.clientWidth;
-    // Not laid out yet (detached, or a hidden dashboard tab). The inline
-    // percentage positions still apply, so the labels are simply left
-    // where they were rendered until something asks again.
+    // Not laid out yet; leave the labels at their inline positions.
     if (!width) return;
 
-    // Clear any previous pass before measuring - a label left hidden
-    // measures zero wide, which would let it collide once shown again.
+    // A hidden label measures zero wide.
     labels.forEach((el) => {
       el.style.display = '';
     });
@@ -682,9 +482,7 @@ class FlareCurveCard extends HTMLElement {
     const samples = this._samples;
     const haveSamples = samples && samples.length > 1;
 
-    // Prefer the sample window's own bounds; fall back to a midnight-anchored
-    // guess (for axis/boundary-line layout only) if the curve sensor hasn't
-    // populated yet.
+    // Fall back to a midnight-anchored window before the samples arrive.
     let dayStart;
     let dayEnd;
     if (haveSamples) {
@@ -705,15 +503,8 @@ class FlareCurveCard extends HTMLElement {
       ? curveFillSvg(samples, xOf, hOf, dayStart, span, `flare-curve-fill-${this._instanceId}`)
       : '';
 
-    // Rendered as real HTML text, not SVG <text>, deliberately - the
-    // chart's viewBox is stretched to the card's actual width via
-    // preserveAspectRatio="none" (a non-uniform scale, since only x
-    // stretches - the SVG's height is pinned to a fixed 220px), and SVG
-    // text glyphs get stretched/squished by that same transform along
-    // with everything else, unlike real HTML text which always renders
-    // at native scale. left:% positions each label proportionally
-    // within the chart-wrap div, which is exactly as wide as the SVG
-    // regardless of actual pixels, so this still lines up with xOf(t).
+    // HTML rather than SVG <text>, because the SVG is stretched horizontally
+    // (preserveAspectRatio="none") and would squash the glyphs.
     const hourLabels = [];
     for (let h = 0; h <= 24; h += 3) {
       const t = dayStart + h * 3600;
@@ -721,40 +512,19 @@ class FlareCurveCard extends HTMLElement {
       hourLabels.push(`<span class="axis-label" style="left:${leftPct}%">${String(h).padStart(2, '0')}:00</span>`);
     }
 
-    // Phase name labels - real HTML text for the same squishing reason
-    // the hour ticks are (see hourLabels above), and name-only rather
-    // than "Morning 06:00" - the exact time is a native hover tooltip
-    // (`title`) instead of always-on text, which is what made four of
-    // these side by side illegible in a narrow card in the first place.
-    // All four are treated identically, Evening included - it centres
-    // on its own boundary line just like Morning/Day/Night; the
-    // earliest/latest range it can be clamped between is shown
-    // separately, by eveningRange below, not folded into this label.
-    // Only the phases that actually occur, each at the instant it really
-    // starts - see phaseMarks above. A schedule whose boundaries are out
-    // of order otherwise labels a phase that never happens.
+    // Phase names as HTML text for the same reason, only for phases that
+    // occur. The exact time is a `title` tooltip.
     const marks = phaseMarks(b.morning, b.day, b.evening, b.night);
 
     const topLabels = marks
       .map(([name, t]) => {
         const frac = xOf(t) / VB_W;
-        // data-x-frac is what _layoutLabels re-derives the desired
-        // position from, so the nudging can be recomputed at any width
-        // without re-rendering. The inline % is the pre-layout position,
-        // which is already correct whenever nothing collides.
+        // The desired position, so layout can rerun at any width.
         return `<span class="boundary-label" style="left:${(frac * 100).toFixed(2)}%" data-x-frac="${frac.toFixed(5)}" title="${fmtTime(t)}">${name}</span>`;
       })
       .join('');
 
-    // Evening's boundary is a *range* (clamped between earliest/latest,
-    // tracking sunset in between), not a single instant like the other
-    // three phases - anchored on the chart as two short ticks hanging
-    // off the x-axis at its earliest/latest bound, the same direction a
-    // normal axis tick would point. No connecting bracket between them -
-    // that read as a shape competing with the line+label convention the
-    // other three phases use, rather than a plain axis annotation like
-    // this. Falls back to nothing (same as Morning/Day/Night, which have
-    // no range to show) if earliest/latest aren't configured.
+    // Evening's earliest/latest bounds, as two ticks below the x-axis.
     let eveningRange = '';
     if (b.eveningEarliest != null && b.eveningLatest != null) {
       const xEarliest = xOf(b.eveningEarliest);
@@ -768,14 +538,8 @@ class FlareCurveCard extends HTMLElement {
       `;
     }
 
-    // Rendered after sunMarkers in the svg template below (not right
-    // here where it's built) - Evening commonly starts at exactly
-    // sunset (whenever sunset itself falls inside the earliest/latest
-    // window, Evening just follows it directly), so the two lines are
-    // often pixel-coincident. Drawing this dashed line on top of the
-    // sun-line's solid stroke lets both remain visible - the dashes'
-    // gaps show the orange line underneath instead of one flat-out
-    // hiding the other.
+    // Drawn after the sun markers: Evening often starts exactly at sunset,
+    // and the dashes let both lines show.
     const boundaryLines = marks
       .map(([, t]) => `<line x1="${xOf(t).toFixed(1)}" y1="${PAD_TOP}" x2="${xOf(t).toFixed(1)}" y2="${BASELINE_Y}" class="boundary-line" />`)
       .join('');
@@ -806,9 +570,7 @@ class FlareCurveCard extends HTMLElement {
     const nowInWindow = now >= dayStart && now <= dayEnd;
     const haveNow = nowInWindow && Number.isFinite(this._brightnessNow) && Number.isFinite(this._kelvinNow);
     const nowX = xOf(now).toFixed(1);
-    // Just a line: the current colour is shown by the swatch on the
-    // label below, since a pale, cold colour drawn as a dot on the chart
-    // would be near-invisible against its background.
+    // Just a line; the current colour is the label's swatch.
     const nowMarker = nowInWindow
       ? `<line x1="${nowX}" y1="${PAD_TOP - 4}" x2="${nowX}" y2="${BASELINE_Y}" class="now-line" />`
       : '';
@@ -828,12 +590,7 @@ class FlareCurveCard extends HTMLElement {
       </div>
     `;
 
-    // A theme's own dark mode (hass.themes.darkMode) rather than a
-    // prefers-color-scheme media query - HA's dark mode is a user/theme
-    // setting independent of the OS, and this card only ever has the
-    // real hass object (or the docs playground's synthetic one, which
-    // has no themes key at all and so falls through to the light-mode
-    // border, matching that page's own light background).
+    // HA's theme dark mode, not the OS preference.
     const darkMode = !!(this._hass && this._hass.themes && this._hass.themes.darkMode);
     const swatchBorder = darkMode ? 'none' : '1px solid #000';
     const swatch = (hex) => `<span class="swatch" style="background:${hex};border:${swatchBorder};"></span>`;
@@ -934,9 +691,7 @@ class FlareCurveCard extends HTMLElement {
     this._dayStart = dayStart;
     this._span = span;
 
-    // Before the early return below: the phase labels are drawn whether
-    // or not the curve samples have arrived, so they need laying out
-    // either way.
+    // Labels are drawn whether or not samples have arrived.
     this._layoutLabels();
 
     if (!haveSamples) return;
@@ -958,9 +713,7 @@ class FlareCurveCard extends HTMLElement {
       const s = samples[idx];
       const hex = rgbToHex(kelvinToRgb(s.kelvin));
       const phase = phaseAt(s.t, b.morning, b.day, b.evening, b.night);
-      // sunriseTs/sunsetTs are closed over from _render()'s own scope -
-      // already shifted into this same display window (see
-      // sunTimeInWindow), so a plain interval check is enough.
+      // Already shifted into the display window.
       const sunState = sunriseTs != null && sunsetTs != null ? (s.t >= sunriseTs && s.t < sunsetTs ? 'Sun up' : 'Sun down') : '';
       this._tooltipEl.style.display = 'block';
       this._tooltipEl.style.left = `${clamp((clientX - rect.left), 0, rect.width - 170)}px`;
@@ -985,12 +738,8 @@ window.customCards.push({
   type: 'flare-curve-card',
   name: 'FLARE Curve',
   description: 'Live brightness and rendered-colour curve for a FLARE schedule.',
-  // Renders a real preview in the picker rather than a placeholder -
-  // safe because getStubConfig finds a schedule sensor that exists.
   preview: true,
   documentationURL: 'https://danrspencer.github.io/flare/',
-  // Suggest this card when someone picks a schedule sensor in HA's
-  // entity-first card picker (2026.6+). Ignored by older frontends, so
-  // no min_version bump - the card just isn't suggested there.
+  // The card picker's entity suggestion (2026.6+; ignored before).
   getEntitySuggestion: entitySuggestion,
 });

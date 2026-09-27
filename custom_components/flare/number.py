@@ -1,15 +1,5 @@
-"""
-Brightness/Kelvin curve config, as live number entities - one per
-coordinator.py's CURVE_KEYS, per schedule instance. Left at their
-default (curve.py's DEFAULT_CURVE_VALUES) on first creation; changing
-one persists (RestoreNumber) and immediately refreshes that instance's
-coordinator (see async_set_native_value below) rather than waiting up
-to 60s for the next poll.
-
-entity_category=CONFIG groups these under the device's "Configuration"
-section, so they stay usable from dashboards and automations without
-cluttering the device's main view.
-"""
+"""Curve values and transition lengths as number entities, one per
+CURVE_KEYS per schedule."""
 
 from __future__ import annotations
 
@@ -32,9 +22,8 @@ _LABELS = {
     "evening_kelvin": "Evening Colour Temperature",
     "night_brightness": "Night Brightness",
     "night_kelvin": "Night Colour Temperature",
-    # Named for the phase the transition runs *in* - it is that phase's
-    # exit, so "Day Colour Transition" is how long before Day ends to
-    # start easing to Evening's colour.
+    # A transition belongs to the phase it runs in: "Day Colour Transition"
+    # is how long before Day ends to start easing to Evening's colour.
     "morning_brightness_transition": "Morning Brightness Transition",
     "morning_kelvin_transition": "Morning Colour Transition",
     "day_brightness_transition": "Day Brightness Transition",
@@ -67,9 +56,7 @@ class _CurveNumber(RestoreNumber, NumberEntity):
         self._attr_name = _LABELS[key]
         if key.endswith("_transition"):
             self._attr_native_min_value = 0
-            # A whole day: any value too long for the phase it runs in
-            # clamps to that phase, so the top of the range is simply
-            # "always be transitioning" rather than an error.
+            # A whole day. Longer than its phase clamps to the phase.
             self._attr_native_max_value = 1440
             self._attr_native_unit_of_measurement = "min"
             self._attr_native_step = 1
@@ -93,7 +80,5 @@ class _CurveNumber(RestoreNumber, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         self._attr_native_value = value
         self.async_write_ha_state()
-        # Apply immediately rather than waiting for the 60s poll - the
-        # whole point of exposing this as an entity is that changing it
-        # takes effect right away.
+        # Apply now rather than at the next poll.
         await self._coordinator.async_request_refresh()

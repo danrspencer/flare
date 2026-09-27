@@ -1,21 +1,6 @@
-"""Puts EVENT_LIGHT_OVERRIDDEN into the logbook.
-
-Without this the event is still fired and still recorded (the recorder
-listens on MATCH_ALL and keeps anything not explicitly excluded -
-confirmed against its own core.py), but you'd have to go looking for it
-with a template or a database query. Describing it here makes it appear
-in the light's own logbook timeline, interleaved with the state changes
-that surround it, and - because the event carries the state device's
-device_id - in that device's own Activity, which is where anyone
-investigating "why did this light stop tracking" will be looking. The
-per-scope counters can't appear there themselves: HA excludes
-"continuous" sensors (anything with a unit or a state_class) from the
-logbook outright.
-
-The description deliberately reads as a hand-over rather than a failure.
-A light being taken is a supported outcome - something else asked for it
-and adaptive lighting stepped back.
-"""
+"""Describes EVENT_LIGHT_OVERRIDDEN in the logbook, so it shows on the
+light's timeline and the state device's Activity. Worded as a hand-over,
+not a failure."""
 
 from __future__ import annotations
 
@@ -28,8 +13,6 @@ from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN
 
 
 def _describe_scope(scope: str | None) -> str:
-    """The state device's own name, which is what the row is attributed
-    to - the same name the device page is titled with."""
     return scope or "adaptive lighting"
 
 
@@ -46,9 +29,7 @@ def async_describe_events(
         live = data.get("live") or {}
         latest = data.get("latest") or {}
         target = latest.get("target") or {}
-        # The whole point of the event: what was asked for against what is
-        # actually there. Stated inline so the timeline entry is useful on
-        # its own, without expanding the raw event.
+        # What was asked for against what is actually there.
         if target:
             asked = f"{target.get('brightness')}/{target.get('color_temp_kelvin') or target.get('rgb_color')}"
             found = f"{live.get('brightness')}/{live.get('color_temp_kelvin') or live.get('rgb_color')}"

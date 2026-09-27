@@ -1,26 +1,6 @@
-"""
-Manual override for the computed day phase - see coordinator.py for
-how this feeds back into brightness/colour-temperature.
-
-select.<prefix>flare_phase, options Auto/Morning/Day/Evening/Night,
-default Auto - one per schedule instance (coordinator.py's
-ScheduleInstance/schedule_instances), set up alongside that instance's
-day-phase/curve sensors (sensor.py).
-
-The phase sensor reports the phase in effect; this entity is only the
-override's input, so the two can't disagree about which is which.
-
-RestoreEntity so an override survives a restart rather than silently
-reverting to Auto.
-
-Self-clearing by default: pin the phase to something other than what's
-currently computed (e.g. Evening -> Day) and it holds only until the
-*schedule itself* next moves on (computed_phase changes from what it was
-at override time), then returns to Auto - so overriding "Day" during
-Evening still ends up at Night when Evening would have ended. Turn on
-switch.<prefix>sticky_phase_override (see switch.py) to keep an override
-until cleared by hand instead; that switch is read live each time.
-"""
+"""Phase override select, one per schedule. Self-clearing: an override
+holds until the computed phase next changes, then returns to Auto -
+unless switch.<prefix>sticky_phase_override is on."""
 
 from __future__ import annotations
 
@@ -51,18 +31,11 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_phase_override"
         self.entity_id = f"select.{instance.prefix}flare_phase"
-        # Every instance gets a device (coordinator.py's
-        # ScheduleInstance.device_info) - HA prefixes the plain name
-        # above with the device's name for display - see sensor.py's
-        # _ScheduleSensorBase for the full reasoning.
         self._attr_device_info = instance.device_info
         self._attr_current_option = "Auto"
         self._sticky_entity_id = instance.sticky_entity_id
-        # The computed (non-override) phase at the moment this was last
-        # pinned to something other than Auto - once computed_phase
-        # moves on from this, the override has "seen its boundary" and
-        # self-clears (unless sticky). None whenever current_option is
-        # Auto.
+        # computed_phase when the override was set; once it moves on, the
+        # override clears. None while Auto.
         self._baseline_phase: str | None = None
 
     async def async_added_to_hass(self) -> None:
@@ -71,17 +44,10 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         if last_state is not None and last_state.state in PHASE_OPTIONS:
             self._attr_current_option = last_state.state
         if self._attr_current_option != "Auto":
-            # We don't know what computed_phase was when this override
-            # was originally set (that wasn't persisted) - treat "now"
-            # as the baseline instead, so a restart doesn't accidentally
-            # make a non-sticky override outlive the next boundary by
-            # more than one restart's worth of slack.
+            # The original baseline isn't persisted, so use now.
             self._baseline_phase = self.coordinator.data.get("computed_phase")
-            # The coordinator's first refresh ran before this entity
-            # existed in the state machine, so its data doesn't reflect
-            # the restored override yet. async_request_refresh is
-            # debounced, so this lands after the entity's initial state
-            # write rather than racing it.
+            # The first refresh predates this entity, so it missed the
+            # restored override.
             await self.coordinator.async_request_refresh()
 
     @property
@@ -98,10 +64,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         ):
             self._attr_current_option = "Auto"
             self._baseline_phase = None
-            # The data this very update already reflects the (now-stale)
-            # override - request another refresh so phase/brightness/
-            # color_temp catch up to Auto immediately rather than
-            # waiting up to 60s for the next poll.
+            # This update's data still reflects the override; refresh now.
             self.hass.async_create_task(self.coordinator.async_request_refresh())
         super()._handle_coordinator_update()
 
@@ -109,7 +72,4 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         self._attr_current_option = option
         self._baseline_phase = self.coordinator.data.get("computed_phase") if option != "Auto" else None
         self.async_write_ha_state()
-        # Apply immediately rather than waiting for the 60s poll or the
-        # next sun.sun change - the whole point of an override is that
-        # it takes effect right away.
         await self.coordinator.async_request_refresh()

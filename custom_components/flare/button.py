@@ -1,17 +1,5 @@
-"""
-A per-scope "Clear" button - discards a state device's tracked claims so
-its lights are free to be taken again.
-
-Clearing is the documented escape hatch for a light stuck "overridden"
-(see write_tracking.py's async_clear docstring for how that happens with
-no external cause). As an entity it can go on any dashboard, into a
-script, or behind a physical button.
-
-button rather than switch: a stateless "do it now" action with nothing
-to turn back off is exactly what ButtonEntity is for. It also means the
-entity's state is the last-pressed timestamp, so "when did I last reset
-this room" ends up in history for free.
-"""
+"""A per-scope "Clear" button that discards the scope's claims - the
+escape hatch for a light stuck "overridden"."""
 
 from __future__ import annotations
 
@@ -38,19 +26,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class _ScopeClearButton(ButtonEntity):
-    """Discards every claim held by one state device.
-
-    Deliberately all of them, not just the ones currently "overridden":
-    "clear this room's tracked state" should be a guaranteed reset rather
-    than one that depends on agreeing with classify() about which lights
-    are stuck - and being stuck in a way classify() doesn't recognise is
-    precisely when you reach for this.
-
-    The cost is real and worth knowing: the scope's healthy lights lose
-    their claims too, so each is unprotected until its next write, which
-    is treated exactly like a brand-new entity's first write. For a live
-    room automation that is one tick.
-    """
+    """Discards every claim in the scope, not just overridden ones, so
+    it's a guaranteed reset. Healthy lights are unprotected until their
+    next write."""
 
     _attr_has_entity_name = True
     _attr_name = "Clear"
@@ -73,20 +51,14 @@ class _ScopeClearButton(ButtonEntity):
 
     @callback
     def _handle_update(self) -> None:
-        # Only `tracked` below can change, but it's the thing that tells
-        # you whether pressing would do anything at all.
         self.async_write_ha_state()
 
     def _tracked(self) -> list[str]:
         return sorted(self._registry.records_for_scope(self._instance.subentry_id))
 
     async def async_press(self) -> None:
-        # async_clear publishes the affected scopes and fires
-        # SIGNAL_WRITE_TRACKING_UPDATED, so the counters catch up on
-        # their own, and it's a no-op for a scope tracking nothing.
         await self._registry.async_clear(self._instance.subentry_id, self._tracked())
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        # Says what a press would actually do before you press it.
         return {"tracked": len(self._tracked())}

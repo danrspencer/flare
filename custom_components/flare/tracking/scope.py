@@ -1,18 +1,8 @@
-"""
-Tracking scopes: the named records of which lights FLARE is driving, one
-per "state" subentry of the Tracking config entry. (The code calls them
-state devices; the UI and docs call them tracking scopes.)
-
-A scope is what override-protection claims belong to (see
-write_tracking.py), and it is a real Home Assistant device so that a
-service call can name it with `tracking_device_id`.
-
-Deliberately separate from schedule/coordinator.py's ScheduleInstance: a
-schedule says what values lights should take, a scope says whose claims a
-light belongs to. A house can want one schedule per floor and one scope
-per room, and forcing them to be the same object would make either choice
-constrain the other.
-"""
+"""Tracking scopes ("state devices" in the code): one per "state" subentry
+of the Tracking entry. Override-protection claims belong to a scope, and
+it's a real device so a service call can name it with
+`tracking_device_id`. Separate from ScheduleInstance so a house can have
+one schedule per floor and one scope per room."""
 
 from __future__ import annotations
 
@@ -41,10 +31,8 @@ class StateInstance:
             identifiers={(DOMAIN, self.subentry_id)},
             name=self.title or "Adaptive Lighting State",
             entry_type=DeviceEntryType.SERVICE,
-            # Lets services.yaml's tracking_device_id device selector filter
-            # to tracking-scope devices specifically - ScheduleInstance's
-            # own device_info shares this integration's DOMAIN, so a bare
-            # `integration: flare` filter alone can't tell the two apart.
+            # Lets services.yaml's device selector tell scopes apart from
+            # schedule devices.
             model="Tracking Scope",
         )
 

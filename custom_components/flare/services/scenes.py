@@ -1,14 +1,7 @@
-"""
-Scene-coverage gap filling: given a candidate scene and the set of
-entities you want a "default" behaviour applied to, works out which of
-those entities the scene actually covers - so you can hand covered
-ones to the scene and apply your default (adaptive lighting, or
-anything else) only to whatever's left.
-
-Generic: nothing here is specific to lighting. The blueprint keeps its
-own Jinja copy of this logic because a `condition:` can't call a
-service (see CLAUDE.md's architectural split).
-"""
+"""Which of your target entities a scene covers, so the scene can take
+those and your default behaviour the rest. Nothing lighting-specific.
+The blueprint keeps a Jinja copy, since a `condition:` can't call a
+service."""
 
 from dataclasses import dataclass, field
 from typing import Callable
@@ -34,14 +27,8 @@ def compute_scene_coverage(
     target_entities: list,
     lookup: SceneLookup,
 ) -> SceneCoverage:
-    """A scene only "counts" if it exists and every entity it covers is
-    within scope_entities (e.g. the lights you're controlling, plus
-    sibling entities on the same devices) - a scene reaching outside
-    that scope, or one that doesn't exist (a typo, a renamed scene), is
-    treated the same as no scene at all: nothing is covered, your
-    default applies to every target entity. Call this only when you
-    have a candidate scene - with none, you already know the answer
-    (everything's uncovered) without asking."""
+    """A scene counts only if it exists and everything it covers is within
+    scope_entities; otherwise it's treated as no scene at all."""
     if not lookup.exists(scene_entity_id):
         return SceneCoverage(
             scene_active=False,
