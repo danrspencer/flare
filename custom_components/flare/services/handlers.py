@@ -19,7 +19,14 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from ..const import CONF_TWO_STEP_MODELS, DOMAIN
+from ..const import (
+    CONF_MIN_BRIGHTNESS_CHANGE,
+    CONF_MIN_COLOR_TEMP_CHANGE,
+    CONF_TWO_STEP_MODELS,
+    DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    DOMAIN,
+)
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
@@ -43,6 +50,9 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
         vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
+        # None means "use the integration's setting".
+        vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+        vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         # None means "write, but track nothing".
         vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
     }
@@ -83,6 +93,9 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
         vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
+        # None means "use the integration's setting".
+        vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+        vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         # None means "write, but track nothing".
         vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
     }
@@ -188,6 +201,21 @@ def _two_step_model_patterns(entry: ConfigEntry) -> list[str]:
     return configured or list(DEFAULT_TWO_STEP_MODEL_PATTERNS)
 
 
+def _min_change(entry: ConfigEntry, call: ServiceCall, key: str, default: float) -> float:
+    """The call's own value, else the integration's setting."""
+    value = call.data.get(key)
+    if value is None:
+        value = entry.options.get(key, default)
+    return float(value)
+
+
+def _min_changes(entry: ConfigEntry, call: ServiceCall) -> dict[str, float]:
+    return {
+        "min_brightness_change": _min_change(entry, call, CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE),
+        "min_color_temp_change": _min_change(entry, call, CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE),
+    }
+
+
 def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
     def exists(scene_entity_id: str) -> bool:
         return hass.states.get(scene_entity_id) is not None
@@ -268,6 +296,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
             rgb_color=tuple(rgb_color) if rgb_color else None,
             rgb_color_tolerance=call.data["rgb_color_tolerance"],
             force=call.data["force"],
+            **_min_changes(entry, call),
         )
         return _groups_response(groups)
 
@@ -316,6 +345,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
             rgb_color=rgb_color,
             rgb_color_tolerance=call.data["rgb_color_tolerance"],
             force=force,
+            **_min_changes(entry, call),
         )
 
         transition = call.data["transition"]

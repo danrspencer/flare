@@ -117,6 +117,32 @@ compute_lighting_groups:
         number:
           min: 0
           max: 100
+    min_brightness_change:
+      name: Minimum brightness change
+      description: >-
+        A light already within this percentage of the target brightness
+        is left alone, since a change that small isn't worth the radio
+        traffic. Never tighter than Brightness tolerance. Leave unset to
+        use the integration's setting (Configure on FLARE's entry).
+      selector:
+        number:
+          min: 0
+          max: 25
+          step: 0.5
+          unit_of_measurement: "%"
+    min_color_temp_change:
+      name: Minimum colour temperature change
+      description: >-
+        A light already within this many mireds of the target colour
+        temperature is left alone. Mireds, not Kelvin, because a step of
+        one looks about the same anywhere in the range. Leave unset to use
+        the integration's setting.
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 0.5
+          unit_of_measurement: mired
     force:
       name: Force
       description: >-
@@ -270,6 +296,32 @@ apply_lighting:
         number:
           min: 0
           max: 100
+    min_brightness_change:
+      name: Minimum brightness change
+      description: >-
+        A light already within this percentage of the target brightness
+        is left alone, since a change that small isn't worth the radio
+        traffic. Never tighter than Brightness tolerance. Leave unset to
+        use the integration's setting (Configure on FLARE's entry).
+      selector:
+        number:
+          min: 0
+          max: 25
+          step: 0.5
+          unit_of_measurement: "%"
+    min_color_temp_change:
+      name: Minimum colour temperature change
+      description: >-
+        A light already within this many mireds of the target colour
+        temperature is left alone. Mireds, not Kelvin, because a step of
+        one looks about the same anywhere in the range. Leave unset to use
+        the integration's setting.
+      selector:
+        number:
+          min: 0
+          max: 50
+          step: 0.5
+          unit_of_measurement: mired
     force:
       name: Force
       description: >-

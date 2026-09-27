@@ -24,3 +24,10 @@ EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"
 CONF_ENTRY_TYPE = "entry_type"
 ENTRY_TYPE_SCHEDULES = "schedules"
 ENTRY_TYPE_TRACKING = "tracking"
+
+# Options keys: the smallest change apply_lighting sends, as a percentage
+# of the target brightness and in mireds of colour temperature.
+CONF_MIN_BRIGHTNESS_CHANGE = "min_brightness_change"
+CONF_MIN_COLOR_TEMP_CHANGE = "min_color_temp_change"
+DEFAULT_MIN_BRIGHTNESS_CHANGE = 5
+DEFAULT_MIN_COLOR_TEMP_CHANGE = 5

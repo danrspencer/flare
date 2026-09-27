@@ -66,6 +66,54 @@ class TestTolerance:
         assert _groups({"light.a": far}, prefer_rgb_color=True, rgb_color=WARM_RGB)[0].combined_rgb == ["light.a"]
 
 
+class TestMinimumChange:
+    """A change too small to notice isn't sent: brightness within a
+    percentage of the target, colour temperature within some mireds."""
+
+    def test_brightness_within_the_percentage_is_not_sent(self):
+        # 5% of 200 is 10.
+        assert _groups({"light.a": _on(190, 3000)}, min_brightness_change=5)[0].combined == []
+        assert _groups({"light.a": _on(189, 3000)}, min_brightness_change=5)[0].combined == ["light.a"]
+
+    def test_a_dim_target_still_tracks_to_the_tolerance(self):
+        """5% of 20 is 1, tighter than the 2-point tolerance, which wins."""
+        assert _groups({"light.a": _on(18, 3000)}, brightness=20, min_brightness_change=5)[0].combined == []
+        assert _groups({"light.a": _on(17, 3000)}, brightness=20, min_brightness_change=5)[0].combined == ["light.a"]
+
+    def test_colour_temperature_within_the_mireds_is_not_sent(self):
+        # 2665K is 4.9 mireds from 2700K; 2660K is 5.6.
+        assert _groups({"light.a": _on(200, 2665)}, kelvin=2700, min_color_temp_change=5)[0].combined == []
+        assert _groups({"light.a": _on(200, 2660)}, kelvin=2700, min_color_temp_change=5)[0].combined == ["light.a"]
+
+    def test_the_same_mireds_cover_more_kelvin_at_the_cool_end(self):
+        # 6300K is 4.9 mireds from 6500K, though 200K away.
+        assert _groups({"light.a": _on(200, 6300)}, kelvin=6500, min_color_temp_change=5)[0].combined == []
+
+    def test_the_mireds_apply_to_the_range_clamped_target_too(self):
+        """A bulb capped at 4000K, at 3970K, is 1.9 mireds from what it can reach."""
+        light = _on(200, 3970, min_color_temp_kelvin=2200, max_color_temp_kelvin=4000)
+        assert _groups({"light.a": light}, kelvin=6500, min_color_temp_change=2)[0].combined == []
+
+    def test_both_must_be_close(self):
+        assert _groups(
+            {"light.a": _on(150, 2700)}, kelvin=2700, min_brightness_change=5, min_color_temp_change=5
+        )[0].combined == ["light.a"]
+        assert _groups(
+            {"light.a": _on(200, 2500)}, kelvin=2700, min_brightness_change=5, min_color_temp_change=5
+        )[0].combined == ["light.a"]
+
+    def test_an_off_light_is_always_sent(self):
+        groups = _groups({"light.a": _off(brightness=200, color_temp_kelvin=3000)}, min_brightness_change=5)
+        assert groups[0].combined == ["light.a"]
+
+    def test_rgb_lights_get_the_brightness_percentage(self):
+        light = _on(191, supported_color_modes=["rgb"], rgb_color=list(WARM_RGB))
+        assert _groups({"light.a": light}, prefer_rgb_color=True, rgb_color=WARM_RGB, min_brightness_change=5)[
+            0
+        ].combined_rgb == []
+        assert _groups({"light.a": light}, prefer_rgb_color=True, rgb_color=WARM_RGB)[0].combined_rgb == ["light.a"]
+
+
 # Kelvin targets match the raw target OR the target clamped to the bulb's
 # advertised range, never only the clamped one: some bulbs sit at a ceiling
 # below the target, and some report outside their own advertised range.
