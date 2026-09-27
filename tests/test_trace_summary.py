@@ -142,8 +142,7 @@ def step_lines(block: list[str]) -> list[str]:
     Searching the whole rendered text is a trap: the header carries
     `last step: action/0`, so a bare `text.index("action/0")` finds the
     HEADER rather than the tree and the assertion silently measures the
-    wrong thing. Caught exactly that way - the first version of the
-    ordering test failed against its own header.
+    wrong thing.
     """
     inside = False
     paths = []

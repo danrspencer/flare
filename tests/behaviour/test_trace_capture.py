@@ -1,20 +1,15 @@
 """The trace capture must actually capture something.
 
-Mutation testing found this gap rather than reasoning about it: with the
-capture fixture disabled outright, all 529 tests still passed and zero
-trace files were written. The renderer (tests/test_trace_summary.py) is
-well covered, but nothing noticed that the thing feeding it had stopped.
-
-That matters more than it looks. The capture exists to explain a
+Nothing else notices if it stops: with the capture fixture disabled
+outright, every other test still passes and zero trace files are
+written. That matters more than it looks. The capture exists to explain a
 FAILING run, so a silent breakage surfaces at exactly the moment it is
 needed and not one moment earlier - and a green build looks identical
 either way. See tests/behaviour/conftest.py's capture_trace.
 
-Deliberately self-contained. An earlier version asserted on whatever
-sibling tests had left in TRACE_DIR, which passed in a full run and
-FAILED in isolation - an order-dependent test that reports "the capture
-is broken" when the capture is fine is the same misleading-signal
-problem it was added to prevent.
+Deliberately self-contained rather than asserting on whatever sibling
+tests left in TRACE_DIR: that would pass in a full run and fail in
+isolation, the same misleading signal this exists to prevent.
 """
 
 from __future__ import annotations

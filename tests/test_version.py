@@ -49,8 +49,7 @@ def test_manifest_version_is_orderable():
 def test_the_source_carries_the_placeholder_version():
     """A release is built on the side by scripts/release.py, which writes
     the real version into a copy of the tree. A number typed into the
-    source would be overwritten, so it can only mislead - failing here
-    catches a hand-bump made out of the old habit."""
+    source would be overwritten, so it can only mislead."""
     assert _version() == DEV_VERSION
 
 
@@ -67,8 +66,8 @@ def test_the_changelog_names_the_version_being_worked_toward():
 
 def test_the_release_workflow_checks_the_same_manifest_this_test_does():
     """The workflow greps a hardcoded path. If the component directory is
-    ever renamed and only one of them is updated, releases start passing
-    a check that reads a file that no longer exists."""
+    ever renamed and only one of them is updated, releases would pass
+    a check that reads a file that doesn't exist."""
     assert str(MANIFEST.relative_to(REPO_ROOT)) in RELEASE_WORKFLOW.read_text()
 
 

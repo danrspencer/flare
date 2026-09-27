@@ -129,8 +129,7 @@ def test_liquid_free_pages_dont_use_liquid_filters(page):
 
 @pytest.mark.parametrize("page", PAGES, ids=lambda p: p.name)
 def test_no_page_links_to_a_markdown_file(page):
-    """These pages used to be read on GitHub and linked to each other as
-    sibling .md files. On the site those are 404s."""
+    """A link to a sibling .md file is a 404 on the site."""
     body = page.read_text(encoding="utf-8")
     targets = re.findall(r"\]\(([^)]+)\)", body)
     stale = [t for t in targets if ".md" in t and "github.com" not in t]

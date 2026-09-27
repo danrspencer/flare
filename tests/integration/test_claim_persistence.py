@@ -122,10 +122,10 @@ async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass:
 
 
 async def test_a_light_unchanged_across_the_restart_is_still_ours(hass: HomeAssistant):
-    """The other half, and the reason persistence is safe now: the fresh
-    context can't match, but the value still does. The first persisted
-    version had no value fallback, and read every one of these as
-    overridden - 57 lights excluded after every restart (#69)."""
+    """The other half, and the reason persistence is safe: the fresh
+    context can't match, but the value still does. Without the value
+    fallback every tracked light would read as overridden after every
+    restart."""
     _light(hass, "light.a", "on", brightness=200, color_temp_kelvin=3000)
 
     _, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
@@ -145,12 +145,12 @@ async def test_a_restored_claim_over_a_day_old_is_dropped(hass: HomeAssistant):
 
 
 async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: HomeAssistant):
-    """The listener used to re-baseline any light arriving in a real state
-    from unavailable/unknown, making whatever it showed "ours". It only
-    ever fired on restarts - a genuine dropout has its claim cleared first
-    - so with claims restored it would hand every override back moments
-    later. The sequence is the one a real MQTT light went through on the
-    live instance: unavailable, then its own unknown, then on."""
+    """Re-baselining a light arriving in a real state from
+    unavailable/unknown would make whatever it showed "ours" - and since a
+    genuine dropout has its claim cleared first, that only ever happens on
+    a restart, where it would hand every restored override back. The
+    sequence is the one a real MQTT light goes through: unavailable, then
+    its own unknown, then on."""
     registry, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
     unsub = registry.async_start_listening(hass)
 

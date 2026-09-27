@@ -8,14 +8,10 @@ isn't the plain colour-temp-only default - see conftest.py's own
 FakeBulb docstring for why those variants live there and not here.
 
 Each test pins a behaviour documented in docs/blueprint.md or
-docs/advanced/reference.md that, before this file, only
-test_override_protection.py/test_grouping.py had proven at the pure
-value/mocked-call level - never through a real bulb and real dispatch,
-which is the one thing this layer exists to add (see conftest.py's own
-module docstring). That gap is exactly where this session's two release
-bugs lived: grouping.py and override_protection.py were each correct in
-isolation and wrong once a real device's actual reporting quirks met
-them.
+docs/advanced/reference.md through a real bulb and real dispatch, which
+test_override_protection.py/test_grouping.py can only prove at the pure
+value/mocked-call level: code correct in isolation can still be wrong
+once a real device's reporting quirks meet it.
 """
 
 from homeassistant.core import HomeAssistant
@@ -34,9 +30,8 @@ SENSOR = "binary_sensor.device_quirks_occupancy"
 async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_as_overridden(
     hass: HomeAssistant, add_bulbs, setup_room, tracked_scope
 ) -> None:
-    """The live incident this session's release fixed: an IKEA TRADFRI
-    spot given a Kelvin claim settled at (and only ever reports) the
-    equivalent RGB colour - a real device quirk, not a dropped write or
+    """An IKEA TRADFRI spot given a Kelvin claim settles at (and only ever
+    reports) the equivalent RGB colour - a real device quirk, not a dropped write or
     a genuine override. test_override_protection.py already proves the
     value-level comparison; this proves a real bulb that does this
     isn't excluded from every future update - the actual, observable

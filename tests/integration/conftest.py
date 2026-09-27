@@ -34,8 +34,7 @@ def hass_config_dir(tmp_path) -> str:
     at the package's own bundled testing_config/ - a directory with no
     knowledge of this repo's integration at all, so
     async_setup_component(hass, "flare", {}) fails
-    with "Integration not found" (confirmed live, not guessed - this is
-    exactly the error before this fixture existed). Symlinks (not
+    with "Integration not found". Symlinks (not
     copies) custom_components/ into a throwaway tmp_path so HA reads the
     real, current source, while every other file HA writes during a test
     (.storage/, home-assistant.log, ...) lands in the tmp dir instead of

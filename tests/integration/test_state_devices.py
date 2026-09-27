@@ -609,14 +609,12 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     """The counters are views over the claims, but what they show
     depends on each light's *live* state, which changes with nothing
     here being touched. Without the tracking sensor's poll broadcasting,
-    they only refresh when a claim mutates and sit stale in between -
-    caught live still calling a light overridden minutes after its own
-    state had moved on.
+    they would only refresh when a claim mutates.
 
     Uses unavailable rather than off: an off light with someone else's
-    claim on it is *still* overridden now (see
-    test_being_switched_off_by_hand_is_an_override), so off no longer
-    changes this count on its own."""
+    claim on it is *still* overridden (see
+    test_being_switched_off_by_hand_is_an_override), so off doesn't
+    change this count on its own."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
     _entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
     tracker = next(e for e in added if hasattr(e, "claims"))

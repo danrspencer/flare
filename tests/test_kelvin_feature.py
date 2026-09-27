@@ -280,8 +280,7 @@ def test_the_colour_functions_are_given_the_config_and_hass():
     Dropping either FAILS SILENTLY: every colour function still returns
     a perfectly good colour, just always the fallback one. The features'
     own tests call those functions directly with all four arguments, so
-    they cannot see it either - which is how mutation testing found this
-    was unguarded."""
+    they cannot see it either."""
     source = SLIDER_JS.read_text()
     args = source[source.index("const args = [") : source.index("\n", source.index("const args = ["))]
 
