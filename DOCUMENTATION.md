@@ -95,9 +95,10 @@ describing one. If both are needed, the example comes first.
 | the curve | external | The day's brightness and colour over time. Not "the schedule" — see below. |
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
-| tracking scope | external | The named thing that remembers which lights FLARE is driving, one per room. |
-| ~~state device~~ | internal | The subentry type behind a tracking scope. Code only — the UI and docs both say *tracking scope*. |
-| scope (bare) | both | Write *tracking scope* on first use in a section. Bare *scope* is fine afterwards in `docs/advanced/`, where it reads better than repeating the full term; spell it out every time elsewhere. |
+| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*, its name before 0.17.0. |
+| Tick | external | A zone's `event.<name>_flare_tick` entity. Capitalised: it's the entity's name. The update it causes is still *the regular update*. |
+| ~~scope~~ / ~~tracking scope~~ | internal | The code's name for a zone (`tracking_device_id`, `resolve_scope_device`, the tests). The only place it survives in `docs/` is the `scope` field in `claims_check`'s response and the override event, which are field names. |
+| ~~state device~~ | internal | The subentry type behind a zone. Code only. |
 
 ### Behaviour
 
@@ -127,15 +128,16 @@ Never paraphrase these. They are what the user types or clicks.
 - **Blueprint inputs** — the UI labels, verbatim: FLARE Sensor,
   Lights & Occupancy, Additional Triggers, Prefer RGB During,
   Scene Template, Morning/Day/Evening/Night Scene,
-  Brightness Multiplier Template, Lights Off During Morning/Day/Evening/Night,
-  Wait time, Update Interval, Update Jitter,
+  Brightness Template, Lights Off During Morning/Day/Evening/Night,
+  Idle Brightness Template, Morning/Day/Evening/Night Idle Brightness,
+  Wait time, Update Interval,
   Motion On / Motion Off / Background Transition.
   Several carry a literal "(Optional)" in the label — keep it when
   quoting the label, drop it in running prose.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
-- **Config entries** — FLARE Schedules, FLARE Tracking.
+- **Config entries** — FLARE Schedules, FLARE Control.
 - **Dashboard views** — `custom:flare-schedule`, `custom:flare-tracking`.
 
 ## Keeping this honest
@@ -145,7 +147,7 @@ changes, or a new one is added, grep `docs/` for the old one in the same
 change — and check `strings.json` too, since a term the UI says is a term
 the docs are then obliged to say.
 
-Known gap: the code still calls a tracking scope's subentry type
+Known gap: the code still calls a zone a scope, its subentry type
 `state`, and `SUBENTRY_TYPE_STATE` / `StateInstance` follow from that.
 Nothing user-facing says it any more, so this is a rename to do when
 something else is already touching those files, not on its own.

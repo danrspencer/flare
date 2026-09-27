@@ -26,7 +26,7 @@ call one — a YAML automation, a script, Node-RED, AppDaemon — can drive FLAR
 
 {: .note }
 > A FLARE **schedule sensor** for the values, and — if you want override protection — the
-> `tracking_device_id` of a **tracking scope** covering the lights. Omit it and the call still
+> `tracking_device_id` of a **zone** covering the lights. Omit it and the call still
 > writes the light, it just isn't tracked, so nothing is ever left alone.
 
 The smallest useful automation reads the schedule sensor and applies it:
@@ -48,7 +48,7 @@ The smallest useful automation reads the schedule sensor and applies it:
 
 That is the whole contract. `apply_lighting` handles reachability, tolerance checks,
 two-step bulbs, RGB routing and override protection itself — the last of those only for
-whichever scope you name.
+whichever zone you name.
 
 ### Using override protection standalone
 
@@ -81,7 +81,7 @@ data:
     light.kitchen_1: { brightness: 200, color_temp_kelvin: 3000 }
 ```
 
-`claims_check`'s `status` values are the same ones a tracking scope's `claims` attribute
+`claims_check`'s `status` values are the same ones a zone's `claims` attribute
 shows, and `targets` is the same shape `apply_lighting` records on every write.
 
 `claims_clear` is the escape hatch for a light stuck on `overridden`. An excluded light
@@ -96,8 +96,8 @@ data:
 ```
 
 The next write to a cleared entity is treated like a brand-new entity's first write. Each
-tracking scope exposes the same thing as a `button.<name>_flare_clear` entity, which clears
-every claim in that scope.
+zone exposes the same thing as a `button.<name>_flare_clear` entity, which clears
+every claim in that zone.
 
 ## Sending the commands yourself
 

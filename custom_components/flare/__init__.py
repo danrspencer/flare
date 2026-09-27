@@ -1,4 +1,4 @@
-"""FLARE: sets up the Schedules and Tracking config entries, their
+"""FLARE: sets up the Schedules and Control config entries, their
 platforms, and the dashboard front-end files. Code layout and the
 dependency rule are in CONTRIBUTING.md."""
 
@@ -21,8 +21,10 @@ from .const import (
     CONF_TICK_INTERVAL,
     DEFAULT_TICK_GAP,
     DEFAULT_TICK_INTERVAL,
+    CONTROL_ENTRY_TITLE,
     DOMAIN,
     ENTRY_TYPE_TRACKING,
+    LEGACY_TRACKING_ENTRY_TITLE,
 )
 from homeassistant.helpers.start import async_at_started
 
@@ -66,6 +68,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
+    if is_tracking and entry.title == LEGACY_TRACKING_ENTRY_TITLE:
+        hass.config_entries.async_update_entry(entry, title=CONTROL_ENTRY_TITLE)
 
     write_tracker = ClaimRegistry(hass, entry)
     # Pruning catches entities deleted outright, which the listener never

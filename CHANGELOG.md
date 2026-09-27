@@ -24,6 +24,18 @@ CI — see `.github/workflows/release.yml`.
   `entities`, an optional `transition` and an optional `tracking_device_id`, and does
   no override protection: it turns off exactly what it is given, including lights
   someone set by hand. The blueprint uses it for its own turn-offs.
+- **Rooms take turns updating.** Every zone now has a **Tick**
+  (`event.<name>_flare_tick`), and FLARE fires them one after another, a second apart,
+  instead of every room updating on the same second of every minute. A blueprint
+  automation whose **Lights & Occupancy** points at the zone's area follows it with no
+  change; one that names individual lights keeps updating on the minute until you add the
+  Tick to Lights & Occupancy. The interval and the gap are under **FLARE Control →
+  Configure**.
+- **Changes too small to notice aren't sent.** A light within 5% of its target brightness,
+  or 5 mireds of its colour temperature, is left alone, which cuts the steady stream of
+  tiny updates through a long evening fade. Both are adjustable under **FLARE Control →
+  Configure**, and per call with `min_brightness_change` / `min_color_temp_change` on
+  `flare.apply_lighting` and `flare.compute_lighting_groups`.
 
 ### Fixed
 
@@ -38,6 +50,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **FLARE Tracking is now FLARE Control, and tracking scopes are zones**, now that they
+  do more than track. Existing installs are renamed on the next restart; entity IDs,
+  `tracking_device_id` and the `custom:flare-tracking` dashboard view are unchanged.
 - **The blueprint turns lights off with one call.** It used to call `light.turn_off`
   and then `flare.claims_record` as two steps, in an order that had the same problem
   as above. Behaviour is otherwise unchanged.

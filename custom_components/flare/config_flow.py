@@ -38,6 +38,7 @@ from .const import (
     ENTRY_TYPE_TRACKING,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_STATE,
+    CONTROL_ENTRY_TITLE,
 )
 from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
@@ -103,7 +104,7 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_TRACKING}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
-            title="FLARE Tracking",
+            title=CONTROL_ENTRY_TITLE,
             data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
             subentries=[
                 {

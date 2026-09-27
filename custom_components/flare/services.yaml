@@ -154,17 +154,17 @@ compute_lighting_groups:
       selector:
         boolean:
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) whose claims decide what's already externally-set.
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) whose claims decide what's already externally-set.
         Leave unset and nothing is treated as externally-set - every
         entity is planned as though free to manage.
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone
 
 apply_lighting:
   name: Apply adaptive lighting
@@ -333,17 +333,17 @@ apply_lighting:
       selector:
         boolean:
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) this write belongs to. Leave unset to write the
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) this write belongs to. Leave unset to write the
         light(s) without tracking them at all - no claim is recorded,
         so nothing is protected on a later call.
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone
 
 turn_off:
   name: Turn off lights
@@ -379,16 +379,16 @@ turn_off:
           max: 300
           unit_of_measurement: s
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) this turn-off belongs to. Leave unset to turn the
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) this turn-off belongs to. Leave unset to turn the
         light(s) off without tracking them at all - no claim is recorded.
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone
 
 compute_curve:
   name: Compute adaptive curve point
@@ -675,16 +675,16 @@ claims_check:
         entity:
           multiple: true
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) to check these entities' claims against.
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) to check these entities' claims against.
       required: true
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone
     brightness_tolerance:
       name: Brightness tolerance
       description: >-
@@ -732,7 +732,7 @@ claims_record:
     apply_lighting uses internally.
 
     This service exists only to write tracking claims, so unlike
-    apply_lighting there's nothing useful to do without a scope - it's
+    apply_lighting there's nothing useful to do without a zone - it's
     required.
   fields:
     entities:
@@ -743,16 +743,16 @@ claims_record:
         entity:
           multiple: true
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) to record this write into.
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) to record this write into.
       required: true
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone
     targets:
       name: Targets
       description: >-
@@ -779,7 +779,7 @@ claims_clear:
     treated exactly like a brand-new entity's first write.
 
     This service exists only to discard tracking claims, so unlike
-    apply_lighting there's nothing useful to do without a scope - it's
+    apply_lighting there's nothing useful to do without a zone - it's
     required.
   fields:
     entities:
@@ -790,13 +790,13 @@ claims_clear:
         entity:
           multiple: true
     tracking_device_id:
-      name: Tracking scope
+      name: Zone
       description: >-
-        The FLARE state device (Settings -> Devices & Services -> FLARE
-        Tracking) to clear these entities' claims from.
+        The FLARE zone (Settings -> Devices & Services -> FLARE
+        Control) to clear these entities' claims from.
       required: true
       selector:
         device:
           filter:
             - integration: flare
-              model: Tracking Scope
+              model: Zone

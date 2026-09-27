@@ -374,5 +374,5 @@ def test_the_overridden_lights_are_named_only_while_there_are_any(result):
 def test_no_scopes_explains_itself_rather_than_rendering_blank(result):
     content = result["emptyTracking"]["sections"][0]["cards"][1]["content"]
 
-    assert "No FLARE tracking scopes found" in content
-    assert "Add state device" in content
+    assert "No FLARE zones found" in content
+    assert "Add zone" in content

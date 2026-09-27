@@ -11,7 +11,8 @@ custom_components/flare/
                    the integration itself: setting up the two config
                    entries, the blueprint-update repair, the
                    logbook description, the dashboard front-end files
-    sensor.py, select.py, number.py, time.py, switch.py, button.py
+    sensor.py, select.py, number.py, time.py, switch.py, button.py,
+    event.py
                    the entities. Home Assistant requires platform
                    modules at this level, so they can't live in a folder
                    (see the integration reference for what each is)
@@ -20,15 +21,16 @@ custom_components/flare/
         curve.py         brightness/colour-temperature schedule, Kelvin -> RGB
         coordinator.py   the schedule computation behind the schedule
                          entities - one per sensor added via "Add Sensor"
-    tracking/      who owns a light (override protection)
+    tracking/      zones: who owns a light, and when each zone ticks
         override_protection.py
                          classify(): off / untracked / controlled / overridden
         write_tracking.py
                          the claims: what context.id and target this
                          integration last wrote each light with. They live
-                         on each tracking scope's entity and are restored
-                         across a restart
-        scope.py         tracking scopes (one per room, usually)
+                         on each zone's entity and are restored across a
+                         restart
+        scope.py         zones (one per room, usually; "scopes" in code)
+        ticker.py        fires each zone's Tick in turn, a gap apart
     services/      the services, and the planning behind them
         handlers.py      the eight services, registered against real HA state
         grouping.py      reachability, multiplier bucketing, tolerance checks,

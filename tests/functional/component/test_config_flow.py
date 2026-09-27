@@ -104,7 +104,7 @@ async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, h
     await hass.async_block_till_done()
 
     assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Tracking"
+    assert result["title"] == "FLARE Control"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
 
 
@@ -252,3 +252,17 @@ async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
+
+
+async def test_an_existing_tracking_entry_is_renamed_to_control(stub_entry_setup, hass: HomeAssistant):
+    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title="FLARE Tracking")
+    assert await hass.config_entries.async_setup(renamed.entry_id)
+
+    assert renamed.title == "FLARE Control"
+
+
+async def test_a_title_the_user_chose_is_left_alone(stub_entry_setup, hass: HomeAssistant):
+    chosen = _entry(hass, ENTRY_TYPE_TRACKING, title="Lights")
+    assert await hass.config_entries.async_setup(chosen.entry_id)
+
+    assert chosen.title == "Lights"
