@@ -1,55 +1,25 @@
 """
-Shared schedule coordinator for the optional day-phase/curve sensors
-(sensor.py), the phase-override select (select.py), and the schedule/
-curve config entities (number.py, time.py, switch.py) - all share one
-coordinator instance per schedule instance (see ScheduleInstance
-below), created once in __init__.py and stashed in hass.data, rather
-than each computing independently.
+Schedule coordinator: one per schedule instance (see ScheduleInstance
+below), created in __init__.py and stored in hass.data, shared by that
+schedule's sensor (sensor.py), phase-override select (select.py) and
+config entities (number.py, time.py, switch.py).
 
-Boundary computation mirrors what used to be the live
-packages/adaptive_lighting.yaml Jinja setup: morning/day/night are
-today's configured time-of-day; evening is sunset (sun.sun's
-next_setting), clamped between earliest/latest bounds. The five times,
-and the eight brightness/Kelvin curve values, are read live off this
-instance's own time.*/number.* entities (see time.py/number.py) rather
-than from static config-entry data - the config_flow.py "Add Sensor"
-form only ever asks for a name; every other value is a real HA entity,
-adjustable at any time, with its own default and its own persisted
-state (RestoreEntity/RestoreNumber). This is the same "check live
-state fresh, don't read a frozen snapshot" pattern _phase_override()
-below already used for the phase-override select - now applied
-uniformly to the rest of the schedule/curve config too.
+Boundaries: morning/day/night are today's configured time-of-day;
+evening is sunset (sun.sun's next_setting), clamped between the
+earliest/latest bounds. The times and the curve values are read live off
+this instance's own time.*/number.* entities on every update, not from
+config-entry data - see time.py/number.py.
 
-Override: each instance's own select.<prefix>flare_phase
-can pin the phase used for "right now" - _phase_override() reads its
-*current* live state on every update, the same "check fresh, don't
-remember" style grouping.py's externally_set() uses, so there's nothing
-to expire or persist here beyond what the select entity itself already
-does (see select.py's RestoreEntity use). curve.py's phase-taking
-functions don't care where the phase string came from, so overriding
-needed no changes there.
+Override: select.<prefix>flare_phase can pin the phase used for "right
+now"; _phase_override() reads its live state on every update. The
+override deliberately affects only the "right now" phase/brightness/
+kelvin, NOT the full-day curve (`points`): pinning the present to
+Evening doesn't change what the schedule looks like at 9am.
 
-Deliberately asymmetric: the override affects the "right now" phase/
-brightness/kelvin, but NOT the precomputed curve (`points`) - the curve
-is a full-day schedule/forecast, and pinning "right now" to Evening
-doesn't mean the schedule would have looked different at 9am. This was
-previously an accidental inconsistency in the live Jinja version
-(noted in phase_at()'s docstring); here it's the same behaviour but
-deliberate.
-
-Schedule instances: the config entry itself never carries a schedule -
-it registers no services of its own (they belong to the Tracking
-entry, see services/handlers.py), and no sensor is auto-created. Every schedule is a "sensor" subentry, added via the
-"Add Sensor" flow (config_flow.py's SensorSubentryFlow) - so there's
-exactly one mechanism for adding a schedule, and exactly one way to
-name it: what you type there. Every instance gets both a prefixed
-entity_id (sensor.living_room_flare) and its own device
-(Settings -> Devices, renamable there - see
-ScheduleInstance.device_info). schedule_instances() is the one place
-that enumerates all of them -
-__init__.py, sensor.py, select.py, number.py, time.py, and switch.py
-all iterate its output rather than each re-deriving the subentry
-lookup.
+Every schedule is a "sensor" subentry of the Schedules entry (added via
+config_flow.py's SensorSubentryFlow), with a prefixed entity_id
+(sensor.living_room_flare) and its own device. schedule_instances() is
+the one place that enumerates them.
 """
 
 from __future__ import annotations
@@ -84,14 +54,12 @@ TIME_KEYS = (
     "night_time",
 )
 
-# The eight brightness/Kelvin curve entities every instance gets
-# (number.py) - also each one's entity_id suffix (number.<prefix><key>).
-# Left unset (entity unavailable, e.g. mid-startup before platforms
-# have loaded), targets_for_phase's own defaults (curve.py's
-# DEFAULT_CURVE_VALUES) apply. Grouped by phase (brightness then
-# Kelvin, Morning through Night) rather than by attribute type - this
-# order also drives the compute_curve service schema, built from this
-# tuple.
+# The curve number entities every instance gets (number.py): a
+# brightness and Kelvin per phase, then a transition length for each -
+# also each one's entity_id suffix (number.<prefix><key>). Unset
+# (entity unavailable, e.g. mid-startup before platforms have loaded),
+# curve.py's DEFAULT_CURVE_VALUES apply. This order also drives the
+# compute_curve service schema.
 CURVE_KEYS = (
     "morning_brightness",
     "morning_kelvin",
@@ -119,29 +87,20 @@ class ScheduleInstance:
     device_info below."""
 
     subentry_id: str  # hass.data storage key; also passed to async_add_entities(config_subentry_id=...)
-    prefix: str  # "<slug>_" - entity_id prefix, derived from the (required) name
-    # A blank/empty slug is defensive only, not reachable via the
-    # config_flow form (name is required there) - kept so an existing
-    # subentry saved before that requirement (if any) still gets a
-    # valid, if unprefixed, entity_id instead of a broken "sensor._foo".
+    # "<slug>_" - entity_id prefix, derived from the (required) name. Empty
+    # if the name slugifies to nothing, giving an unprefixed entity_id
+    # rather than a broken "sensor._foo".
+    prefix: str
     override_entity_id: str  # select.<prefix>flare_phase
     sticky_entity_id: str  # switch.<prefix>sticky_phase_override
     title: str  # the subentry's name (required - see SensorSubentryFlow)
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Every instance gets its own device, named exactly what the
-        user typed. Combined with has_entity_name=True on every entity
-        (see sensor.py/select.py/number.py/time.py/switch.py), HA
-        prefixes each entity's short name with this device's name for
-        display automatically, so renaming the sensor is a single
-        action (Settings -> Devices -> rename) instead of us
-        reconstructing a name via string concatenation (which used to
-        just lowercase-concatenate whatever was typed, e.g. "upstairs
-        Adaptive Lighting" - the actual complaint that prompted all of
-        this). The "Adaptive Lighting" fallback below is defensive only
-        (an empty title isn't reachable via the config_flow form - name
-        is required there)."""
+        """Every instance gets its own device, named what the user
+        typed. With has_entity_name=True on every entity, HA prefixes
+        each entity's short name with the device's, so renaming the
+        device renames them all."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.subentry_id)},
             name=self.title or "Adaptive Lighting",
@@ -211,18 +170,12 @@ def _time_ts(hass: HomeAssistant, instance: ScheduleInstance, key: str) -> float
     a real value can't be read - either the entity doesn't exist yet
     (the coordinator's very first refresh runs before platforms are
     forwarded, see __init__.py's async_setup_entry) or it exists but has
-    no value ("unknown"/"unavailable"). The second case is not
-    hypothetical: unloading a config entry does NOT remove its
-    registered entities from the state machine, it leaves them as
-    "unavailable" - so on every reload (which adding/removing a sensor
-    subentry triggers via the update listener) the first refresh sees
-    exactly that. An earlier version returned None there "to surface a
-    real not-configured state", which phase_at() can't compare against a
-    timestamp - crashing the first refresh, failing the whole entry's
-    setup, and wedging it permanently since the retry saw the same
-    unavailable states. The restored real value lands moments later when
-    the platform loads; async_setup_entry refreshes again after
-    forwarding platforms to pick it up."""
+    no value ("unknown"/"unavailable"). The second case happens on every
+    reload: unloading an entry leaves its entities in the state machine
+    as "unavailable". Returning None would crash phase_at() and wedge
+    setup permanently, since every retry sees the same states. The real
+    value lands once the platform loads, and async_setup_entry refreshes
+    again after forwarding platforms to pick it up."""
     state = hass.states.get(instance.time_entity_id(key))
     # parse_time("unknown"/"unavailable") is None, so both no-entity and
     # no-value roads lead through the same default fallback.

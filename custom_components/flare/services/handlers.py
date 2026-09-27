@@ -69,10 +69,8 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         # templating this from a sensor attribute that may not exist
         # (e.g. the blueprint's own adaptive_sensor, for a "bring your
         # own sensor" entity that doesn't populate rgb_color) renders an
-        # explicit None, not an omitted key. A bare vol.All([...],
-        # vol.Length(...)) rejects None outright as "not a list" -
-        # confirmed live as a real gap, not hypothetical, once this
-        # exact call shape was worked through for the blueprint change.
+        # explicit None, not an omitted key, which a bare vol.All([...],
+        # vol.Length(...)) would reject as "not a list".
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
         vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
@@ -159,7 +157,7 @@ TURN_OFF_SCHEMA = vol.Schema(
 # meaningful reason to call any of these three without one. Required,
 # not vol.Any(None, ...): a caller with nothing to name shouldn't be
 # calling these services in the first place, and a schema-level failure
-# is a much louder signal than the previous "always empty, silently" was.
+# is louder than silently answering "untracked".
 CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
@@ -571,15 +569,13 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         # async_record docstring.
         live_context_before_write = {e: lookup.context_id(e) for e in written_entities}
 
-        # RECORD BEFORE DISPATCH, not after. This used to run once the
-        # writes had been awaited, so a run that never got that far - one
-        # group's call raising inside the gather, or the blueprint's
-        # `mode: restart` cancelling this call while a two-step bulb was
-        # asleep between its steps - left lights that HAD changed with no
-        # claim to explain it. The next tick then saw a context and values
-        # it had never written and called the light overridden, which
-        # excludes it until the room goes dark. Nothing errors when that
-        # happens; the light just stops following the curve.
+        # RECORD BEFORE DISPATCH, not after. Recording after the writes
+        # would miss any run that never gets that far - one group's call
+        # raising inside the gather, or the blueprint's `mode: restart`
+        # cancelling this call while a two-step bulb sleeps between its
+        # steps - leaving lights that HAD changed with no claim to explain
+        # them. The next tick would call them overridden and exclude them
+        # until the room goes dark, silently.
         #
         # Recording first is safe because the two-claim model already
         # tolerates an intent that never lands: `latest` is only what we
@@ -588,7 +584,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         # the light still matches its previous, confirmed claim; if only
         # part of it arrives, it matches `latest` via one of the contexts
         # recorded here. It is also free of awaits, so the decision in
-        # build_groups() and its record are now one uninterrupted step.
+        # build_groups() and its record are one uninterrupted step.
         if written_entities:
             await write_tracker.async_record(
                 scope,
@@ -615,14 +611,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         why the blueprint's turn-off paths call this rather than
         apply_lighting.
 
-        It exists as ONE operation so a caller can't get the two halves
-        wrong. They used to be separate - a bare light.turn_off followed by
-        claims_record, with the caller hand-building the `{"state": "off"}`
-        target that is this integration's own private encoding of an off
-        claim - and both the order and the encoding were the caller's to
-        get right. Recording BEFORE dispatching, as apply_lighting does,
-        is what keeps a cancelled or failed run from leaving a light that
-        did switch off with no claim explaining it (see apply_lighting).
+        It is ONE operation so a caller can't get the two halves wrong: the
+        `{"state": "off"}` target is this integration's own private
+        encoding of an off claim, and it must be recorded BEFORE
+        dispatching, as apply_lighting does, so a cancelled or failed run
+        can't leave a light that did switch off with no claim explaining
+        it (see apply_lighting).
 
         Unlike apply_lighting this does no override protection: it turns
         off exactly what it is given. Deciding that a room should go dark

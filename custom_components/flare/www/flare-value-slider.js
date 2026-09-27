@@ -5,11 +5,7 @@
  *
  * Two features are built on this - colour temperature and brightness -
  * and they differ only in which entities they accept and what colour a
- * value maps to. Everything else is identical, and was identical by
- * copy-paste for exactly one release before this existed. A second copy
- * of "wait for ha-control-slider, mirror cardFeatureStyles, commit on
- * value-changed but only repaint on slider-moved" is a second place for
- * that to drift.
+ * value maps to; everything else lives here once.
  *
  * It renders `ha-control-slider`, the element the built-in
  * `numeric-input` feature uses, with a copy of the frontend's own
@@ -18,8 +14,8 @@
  *
  * `ha-control-slider` is a frontend internal with no compatibility
  * promise, which is an accepted cost taken deliberately over
- * reimplementing a slider - see the discarded designs recorded in
- * flare-kelvin-feature.js. If it breaks, follow whatever
+ * reimplementing a slider (a hand-rolled one visibly doesn't match its
+ * neighbours). If it breaks, follow whatever
  * `hui-numeric-input-card-feature.ts` does next, since this mirrors it.
  */
 

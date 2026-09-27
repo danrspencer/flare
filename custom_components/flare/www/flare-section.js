@@ -1,13 +1,10 @@
 /**
  * The dashboard section for one FLARE schedule, as a plain config object.
  *
- * Consumed by flare-view-strategy.js, which turns it into a live view.
- *
- * This layout used to live in a generator on the docs site that emitted
- * YAML for people to paste, which put every subsequent layout change on
- * the user: re-generate, re-paste, once per schedule. That generator is
- * gone. Keeping the layout as a config OBJECT rather than a string is
- * what makes that possible - a strategy hands Home Assistant objects.
+ * Consumed by flare-view-strategy.js, which turns it into a live view
+ * on every dashboard load, so a layout change reaches every install with
+ * an update. An OBJECT rather than a YAML string because a strategy hands
+ * Home Assistant objects.
  *
  * No DOM and no Home Assistant imports - data in, config out - so the
  * strategy and the tests can both use it anywhere.

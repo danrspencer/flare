@@ -12,24 +12,14 @@
  * `color` takes no template either, so "tint it by the current value" is
  * not expressible in the built-in feature at all.
  *
- * TWO EARLIER VERSIONS ARE RECORDED HERE so they are not re-attempted.
- * The first painted the whole track as a warm-to-cool Kelvin GRADIENT
- * with a thumb and a value label - a rainbow bar reads as a colour
- * picker, not as one of a column of matching sliders. The second was a
- * hand-rolled <input type="range"> with a solid fill: it got the colour
- * right, but reimplemented the handle and the rounded fill cap and
- * visibly did not match the slider beside it.
- *
- * Also recorded: the drag handle CANNOT be recoloured. It is hardcoded
- * to white on `.slider .slider-track-bar::after` with no custom property
- * and no `part=`, so near the pale end of the ramp (around 6667K the
- * colour is very nearly white) it blends into the fill. Injecting a rule
- * into the slider's own shadow root was built, shipped and reverted: it
- * coupled to an internal class name and silently did nothing in
- * practice, because a Lit element only has a shadowRoot once connected.
- *
- * card-mod was the other alternative, rejected because it is also
- * coupled to frontend internals AND a third-party dependency.
+ * It renders the frontend's own `ha-control-slider`, so handle, fill cap
+ * and keyboard behaviour match the sliders beside it; only the colour is
+ * ours. The drag handle CANNOT be recoloured: it is hardcoded to white on
+ * `.slider .slider-track-bar::after` with no custom property and no
+ * `part=`, so near the pale end of the ramp (around 6667K) it blends into
+ * the fill. Reaching into the slider's shadow root would couple to an
+ * internal class name, so it is left alone. card-mod is not used for the
+ * same reason, and because it is a third-party dependency.
  */
 
 import { kelvinToRgb } from './flare-curve-card.js';

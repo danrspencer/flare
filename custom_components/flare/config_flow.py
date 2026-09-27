@@ -3,38 +3,23 @@
 Adding the integration once creates both entries - Schedules and
 Tracking (async_step_user explains why it is still two entries, and
 why only one of them is created visibly). Neither asks for anything
-beyond which rooms to track. No sensor is auto-created; every
-day-phase/curve sensor + phase-override select is a "sensor" subentry
-(SensorSubentryFlow below), added explicitly from the Schedules entry's
-own page (Add Sensor) - one mechanism for every sensor, you name it
-yourself from the start.
+beyond which rooms to track. Every day-phase/curve sensor is a "sensor"
+subentry (SensorSubentryFlow below), added from the Schedules entry's
+own page and named by the user.
 
-Deliberately does NOT auto-seed a first sensor the way earlier versions
-did (used to be hardcoded to the name "Default", regardless of what a
-user typed anywhere, since there was nowhere to type a name at all for
-it). Two real problems with that, not just a naming quibble: (1) HA's
-own "integration added" dialog shows an unconditional rename+area-picker
-form whenever a config flow creates a device - not something an
-integration can suppress - so adding this integration always popped up
-that form for a device the user hadn't asked to create yet. (2)
-Renaming that device later only ever changes its *displayed* name
-(HA's own entity-id auto-rename only happens once, in that first-run
-dialog, never again) - so the "Default" entity_id prefix was permanent
-regardless of what the device got renamed to, which is exactly the
-confusion this change avoids by never creating anything unnamed in the
-first place.
+No sensor is created at install time: HA's "integration added" dialog
+shows a device rename + area picker for every device the completing
+flow created, with no way to suppress it, and it is the only place HA
+ever renames entity_ids to match a device. An unnamed seeded sensor
+would get a prompt nobody asked for and a permanent entity_id prefix.
 
-A subentry only ever asks for one thing: a name. It becomes both the
-sensor's device name (Settings -> Devices, renamable later) and its
-entity_id prefix (sensor.living_room_flare etc) - see
-coordinator.py's ScheduleInstance/schedule_instances(). Everything else
-- the five schedule times and the eight brightness/Kelvin curve values
-- is a real HA entity on that device instead of a config-flow field
-(time.py/number.py), each starting at a sensible default
-(curve.DEFAULT_SCHEDULE_HOURS/DEFAULT_CURVE_VALUES) and adjustable at
-any time with no reconfigure flow needed - direct, discoverable, and
-automatable, rather than hidden behind a form only reachable via
-Configure.
+A subentry asks for one thing: a name. It becomes both the sensor's
+device name and its entity_id prefix (sensor.living_room_flare etc) -
+see coordinator.py's ScheduleInstance/schedule_instances(). The five
+schedule times and the eight brightness/Kelvin curve values are real
+HA entities on that device (time.py/number.py), each starting at a
+default (curve.DEFAULT_SCHEDULE_HOURS/DEFAULT_CURVE_VALUES) and
+adjustable at any time without a reconfigure flow.
 """
 
 from __future__ import annotations

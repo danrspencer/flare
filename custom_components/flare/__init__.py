@@ -6,15 +6,14 @@ their platforms, and the dashboard front-end files.
 
 - The eight services - apply_lighting, turn_off, the compute_* planners
   and the claims_* override-protection calls - are registered by
-  services/handlers.py, for the Tracking entry.
+  services/handlers.py, for the Tracking entry. They are plain Home
+  Assistant services, usable from any automation.
 - The code is grouped by concept - schedule/, tracking/, services/ - see
-  CONTRIBUTING.md for why and for the dependency rule. They are plain Home Assistant
-  services, usable from any automation.
+  CONTRIBUTING.md for why and for the dependency rule.
 - Day-phase/curve sensors, the phase-override select and the schedule/curve
   config entities (sensor.py, select.py, time.py, number.py, switch.py) are
-  set up per named schedule, all sharing one ScheduleCoordinator
-  (coordinator.py) - a native replacement for a Jinja packages/*.yaml
-  setup. See config_flow.py for how they are added.
+  set up per named schedule, each with its own ScheduleCoordinator
+  (coordinator.py). See config_flow.py for how they are added.
 - Override protection's claims live on the Tracking entry's state devices
   (write_tracking.py, sensor.py).
 
@@ -80,13 +79,10 @@ CARD_JS_PATH = "flare-curve-card.js"
 # by construction rather than by a second copy of the conversion.
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
 # A Lovelace view strategy: `views: - strategy: {type: custom:flare-schedule}`
-# builds a settings view, one section per schedule sensor. Shipping it
-# here rather than having people paste generated YAML is what lets a
-# layout change reach existing installs through a HACS update.
-# flare-section.js holds the layout both it and anything else would use,
-# and is pulled in by the strategy's own import rather than a third
-# add_extra_js_url - it registers nothing, so loading it on every page
-# would be pure cost.
+# builds a settings view, one section per schedule sensor, regenerated on
+# every load so a layout change reaches existing dashboards with an update.
+# flare-section.js holds the layout and is pulled in by the strategy's own
+# import: it registers nothing, so loading it on every page would be waste.
 STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 # flare-value-slider.js is deliberately absent: it registers nothing on
@@ -95,36 +91,21 @@ BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Serve www/flare-curve-card.js and auto-load it on
-    every frontend page - runs once for the whole domain, regardless of
-    how many config entries/subentries exist, so the cards ship and
-    update with the integration itself (via HACS) rather than needing
-    a separate manual Lovelace resource registration step that can
-    silently drift out of sync with them (see CLAUDE.md for the live
-    incident this replaced). One static path serves the whole www/
-    directory, so a second card would need only a second
-    add_extra_js_url call, not a second StaticPathConfig.
+    """Serve www/ and auto-load the front-end modules on every page, so
+    the cards ship and update with the integration rather than needing a
+    Lovelace resource registered by hand. Runs once for the domain.
 
-    THE URL CARRIES THE VERSION, which is what makes the caching correct.
-    It was previously an unversioned path with cache_headers=False, on
-    the reasoning that not caching beat serving something stale. That
-    reasoning was wrong: cache_headers=False does not disable caching, it
-    only omits Cache-Control - the response still carries ETag and
-    Last-Modified, and a response with no explicit freshness may be
-    cached HEURISTICALLY, commonly a fraction of its own age. Safari does
-    so keenly, and a just-deployed card and feature both rendered as
-    "Configuration error" until that window lapsed.
+    The URL carries the integration version and is cached hard: every
+    release is a new URL, so a cached copy can never be taken for the
+    current one. Note that cache_headers=False would NOT prevent caching -
+    it only omits Cache-Control, leaving ETag/Last-Modified, and browsers
+    (Safari especially) then cache heuristically.
 
-    With the version in the path, every release is a new URL, so a cached
-    copy can never be taken for the current one - and cache_headers goes
-    back to True, since immutable content at an immutable URL is better
-    than revalidating on every load.
-
-    It has to be a path segment rather than a `?v=` query: these modules
-    import each other relatively, and a relative import resolves against
-    the importing module's own URL. A path is inherited by those imports;
-    a query is not, so the card would load twice under two URLs and the
-    second customElements.define would throw."""
+    The version is a path segment rather than a `?v=` query because these
+    modules import each other relatively, and a relative import resolves
+    against the importing module's URL. A path is inherited by those
+    imports; a query is not, so the card would load twice under two URLs
+    and the second customElements.define would throw."""
     integration = await async_get_integration(hass, DOMAIN)
     # Falls back only if the manifest has no version, which a HACS
     # install always does - still better than failing setup outright.
@@ -140,23 +121,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """v2 -> v3: split the single entry into schedules and tracking.
 
-    Both kinds of thing used to live under one entry as sibling
-    subentries, which HA's integration page renders as one section each
-    - so a house with a scope per room got a wall of peers with no
-    grouping. An entry is the only level at which the distinction can be
-    expressed (see const.py's CONF_ENTRY_TYPE).
+    The existing entry becomes the schedules one, keeping its sensor
+    subentries and every schedule time and curve value set on them. Its
+    state subentries are dropped, and the tracking entry re-seeds one per
+    area with a light - a scope holds only a target, so nothing is lost.
 
-    The existing entry becomes the **schedules** one, keeping its sensor
-    subentries and, with them, every schedule time and curve value the
-    user has set - those are real configuration and are worth preserving.
-    Its state subentries are dropped and the tracking entry re-seeds
-    equivalents from the same areas: a scope carries only a target, and
-    claims aren't persisted at all, so there is nothing there to lose.
-
-    (v1 -> v2 seeded state devices onto the single entry. That still runs
-    first for anyone upgrading from v1, and this step then moves them;
-    running it is harmless either way, since the seeding is idempotent
-    per area and the subentries are about to be replaced.)"""
+    v1 -> v2 seeded state devices onto the single entry; it still runs
+    first for a v1 install, and this step then replaces them."""
     if entry.version >= 3:
         return True
 
@@ -194,22 +165,14 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
 
-    # Shared across every apply_lighting call, from whichever automation
-    # made it - see write_tracking.py for why (grouping.py's
-    # externally_set() check only cares "did adaptive control write this
-    # most recently", not which specific caller). The claims themselves
-    # live on the state devices' tracking entities and are restored with
-    # them across a restart - see write_tracking.py's module docstring.
+    # Shared across every service call, from whichever automation made
+    # it. The claims themselves live on the state devices' tracking
+    # entities - see write_tracking.py's module docstring.
     write_tracker = ClaimRegistry(hass, entry)
-    # An entity deleted from HA outright (not just restarting - e.g. a
-    # Zigbee2MQTT group removed at the source) never triggers the
-    # unavailable-transition cleanup async_start_listening watches for,
-    # since hass.states.get(...) just returns None forever with nothing
-    # left to observe - see async_prune_stale's own docstring for the
-    # live incident (light.extension_spots_left) that prompted this.
-    # Called once here (catches anything that went stale while HA was
-    # down) and again every PRUNE_CHECK_INTERVAL below (keeps the
-    # promise current while running, not just at the next restart).
+    # An entity deleted from HA outright never goes through the
+    # unavailable transition async_start_listening watches for, so its
+    # claim would linger forever. Pruned once at setup (for anything
+    # removed while HA was down) and then every PRUNE_CHECK_INTERVAL.
     if is_tracking:
         await write_tracker.async_prune_stale()
 
@@ -221,10 +184,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         entry.async_on_unload(write_tracker.async_start_listening(hass))
 
-    # Raises a fixable repair when the installed blueprint is older than
-    # the one this release ships with - the two halves deploy separately
-    # and nothing else tells you they have drifted (see
-    # blueprint_check.py).
+    # Raises a fixable repair when the installed blueprint is missing or
+    # older than this release's (see blueprint_check.py).
     #
     # Deferred to "started" rather than run here: automations are what
     # decide whether a blueprint is in use at all, and during setup they
@@ -243,16 +204,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if is_tracking:
         async_setup_services(hass, entry, write_tracker)
 
-
-    # Reloads the entry on any entry/subentry change - covers the main
-    # entry's reconfigure flow, and (since adding/removing/reconfiguring a
-    # subentry doesn't otherwise trigger a reload on its own) named
-    # sensors added via the "Add Sensor" subentry flow too. config_flow.py
-    # deliberately uses async_update_and_abort rather than
-    # *_reload_and_abort so this is the only thing that reloads - the
-    # subentry version of *_reload_and_abort raises if an update listener
-    # is registered, and duplicating it here would double-reload anyway.
-
+    # Reloads the entry on any entry/subentry change, including adding,
+    # removing or reconfiguring a subentry, which doesn't reload on its
+    # own. config_flow.py uses async_update_and_abort rather than
+    # *_reload_and_abort so this is the only reload: the subentry
+    # *_reload_and_abort raises when an update listener is registered.
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     if is_tracking:
@@ -270,33 +226,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         @callback
         def _refresh_all(event) -> None:
-            # @callback marks this as event-loop-safe for HA's job
-            # dispatcher - without it, a plain function here gets run in
-            # the executor thread pool instead (HassJobType.Executor),
-            # and hass.async_create_task() is only safe to call from the
-            # event loop itself. Confirmed against HA core source
-            # (get_hassjob_callable_job_type) after this fired a real
-            # "calls hass.async_create_task from a thread other than the
-            # event loop" RuntimeError in production - undecorated sync
-            # listeners are silently unsafe here, not just a lint nit.
+            # Must stay @callback: an undecorated sync listener runs in the
+            # executor (get_hassjob_callable_job_type), where
+            # hass.async_create_task() raises a thread-safety RuntimeError.
             for instance in instances:
                 hass.async_create_task(hass.data[DOMAIN][instance.subentry_id].async_request_refresh())
 
         # Evening tracks sun.sun, so a sunset update should take effect
         # without waiting for the next 60s poll. This is the only entity
         # tracked here: the schedule/curve config entities and the
-        # phase-override select each refresh their own coordinator
-        # themselves on change (see time.py/number.py/select.py) - each
-        # is the only writer of its own state, so routing their changes
-        # back through the state machine here would just be a second,
-        # global copy of a refresh the entity already owns.
+        # phase-override select refresh their own coordinator on change
+        # (see time.py/number.py/select.py).
         entry.async_on_unload(async_track_state_change_event(hass, ["sun.sun"], _refresh_all))
 
-    # Unconditional, not gated on instances - the write-tracking sensor
-    # (sensor.py) is entry-scoped and should exist even with zero
-    # schedule instances configured. Harmless when instances is empty:
-    # each platform's own async_setup_entry loop over schedule_instances()
-    # just adds nothing for the per-instance entities.
+    # Unconditional, so unload always has platforms to unload: with no
+    # schedules each platform simply adds nothing.
     await hass.config_entries.async_forward_entry_setups(entry, SCHEDULE_PLATFORMS)
 
     if instances:
@@ -343,14 +287,9 @@ def _owner_devices(hass: HomeAssistant, entry: ConfigEntry) -> list[dr.DeviceEnt
 
 @callback
 def _async_remove_legacy_owner_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Removes the devices from when tracking scopes were derived from
-    the calling automation's entity_id rather than configured.
-
-    Those were created on the fly from a caller-supplied string, which
-    is exactly the "devices appearing by magic" this replaced. Nothing
-    is lost by deleting them: claims are no longer persisted at all, so
-    there is no state in them to preserve, and removing a device takes
-    its entities with it."""
+    """Removes per-owner devices left by versions that created a device
+    for each calling automation. They hold no claims, and removing a
+    device takes its entities with it."""
     registry = dr.async_get(hass)
     for device in _owner_devices(hass, entry):
         registry.async_remove_device(device.id)

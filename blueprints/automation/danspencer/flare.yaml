@@ -529,9 +529,7 @@ variables:
     {{ ns.items }}
   # Extracted here as plain state_attr() reads and passed to
   # apply_lighting as literal values - it reads no sensor entity itself,
-  # matching compute_lighting_groups exactly. It did read one internally
-  # once; that was reverted deliberately and is meant to stay reverted
-  # (see CLAUDE.md).
+  # matching compute_lighting_groups (see CLAUDE.md).
   brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
   color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
   # None whenever adaptive_sensor doesn't populate this attribute (a
@@ -566,8 +564,7 @@ variables:
       {% endif %}
     {% endfor %}
     {{ ns.m }}
-  # Which FLARE tracking scope this room's writes belong to, resolved
-  # once here rather than left for the integration to search for. Room
+  # Which FLARE tracking scope this room's writes belong to. Room
   # Target naming an area directly wins outright; otherwise falls back
   # to the resolved lights' own area (first one with a state device).
   #
@@ -813,9 +810,9 @@ variables:
   #
   # No allow_turn_on filtering here: the apply_lighting step already
   # sits inside default:'s single `if allow_turn_on` block, so this list
-  # is only ever used when switching a light on is already permitted.
-  # Don't re-add a per-entity `reject('is_state', 'off')` filter here -
-  # it's redundant with that gate, not a second layer of protection.
+  # is only ever used when switching a light on is already permitted,
+  # so a per-entity `reject('is_state', 'off')` filter would be
+  # redundant with that gate, not a second layer of protection.
   target_entities: >
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
@@ -1001,7 +998,7 @@ action:
       # written, so there's no protection to lose, and the next tick
       # that does manage them re-establishes a claim normally.
       # claims_clear is a no-op with no record, so this costs nothing
-      # when nothing changes - but it now requires a scope, so the
+      # when nothing changes - but it requires a scope, so the
       # condition also guards on one resolving at all.
       - alias: "Release lights handed off to a scene or another owner"
         if:

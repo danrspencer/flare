@@ -7,32 +7,19 @@ default Auto - one per schedule instance (coordinator.py's
 ScheduleInstance/schedule_instances), set up alongside that instance's
 day-phase/curve sensors (sensor.py).
 
-This is the write side of what used to be a single dual-purpose entity
-in the live Jinja setup (input_select.day_phase, which downstream
-sensors trusted blindly and a person could also click to override) -
-splitting read (sensor.adaptive_lighting's phase) from write (this
-entity) is deliberate: the old design's docstring-noted wart ("the
-precomputed curve doesn't follow a manual override, so they can
-disagree") was a direct symptom of one entity trying to be both.
+The phase sensor reports the phase in effect; this entity is only the
+override's input, so the two can't disagree about which is which.
 
 RestoreEntity so an override survives a restart rather than silently
-reverting to Auto - matching the rest of this integration's "check
-live state fresh, don't invent hidden expiry" style (see
-grouping.py's externally_set()), just for the select's own state instead
-of a light's.
+reverting to Auto.
 
-Self-correcting by default, matching the old system's behaviour: pin
-the phase to something other than what's currently computed (e.g.
-override Evening -> Day) and it holds there, but only until the
-*schedule itself* next moves on (i.e. when computed_phase next changes
-from whatever it was at override time) - at that point the override
-clears back to Auto on its own, rather than staying pinned forever, so
-overriding "Day" during Evening still ends up at Night once Evening
-would naturally have ended, not stuck on Day indefinitely. Toggle
-switch.<prefix>sticky_phase_override (see switch.py) to disable this
-and keep an override until manually cleared instead - read fresh off
-that entity's live state each time, not a cached value, the same "check
-now, don't remember" style everything else here already uses.
+Self-clearing by default: pin the phase to something other than what's
+currently computed (e.g. Evening -> Day) and it holds only until the
+*schedule itself* next moves on (computed_phase changes from what it was
+at override time), then returns to Auto - so overriding "Day" during
+Evening still ends up at Night when Evening would have ended. Turn on
+switch.<prefix>sticky_phase_override (see switch.py) to keep an override
+until cleared by hand instead; that switch is read live each time.
 """
 
 from __future__ import annotations

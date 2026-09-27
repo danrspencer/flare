@@ -1,18 +1,13 @@
 """
 Solar adaptive-lighting brightness/colour-temperature schedule.
 
-Curve logic, a direct port of the Jinja macros that used to live in
-custom_templates/adaptive_lighting.jinja. Same inputs, same outputs,
-just testable with plain pytest instead of having to render templates
-to check the math.
-
 Free of Home Assistant except for one colour conversion - see
 kelvin_to_rgb, which delegates to homeassistant.util.color rather than
 carrying a copy of the same approximation.
 
 All timestamps are unix seconds. Boundary timestamps (morning/day
-start/evening start/night start) are today's, computed elsewhere from
-the user's input_datetime helpers plus sunset.
+start/evening start/night start) are today's, computed in
+coordinator.py from the schedule's time entities plus sunset.
 """
 
 import math
@@ -25,13 +20,9 @@ import math
 # override_protection.py has the same exception, for mireds.
 from homeassistant.util.color import color_temperature_to_rgb
 
-# The brightness/Kelvin literals every phase would use if nothing
-# overrides them - ported faithfully from the original Jinja package
-# (see CLAUDE.md). The only place these numbers are literals; every
-# other file imports the named constants (or DEFAULT_CURVE_VALUES)
-# instead of repeating them - config_flow.py's form defaults in
-# particular, so what a user sees pre-filled always matches what
-# actually happens when a field is left unset.
+# The brightness/Kelvin literals every phase uses if nothing overrides
+# them. The only place these numbers are literals; every other file
+# imports the named constants (or DEFAULT_CURVE_VALUES).
 DEFAULT_MORNING_BRIGHTNESS = 255
 DEFAULT_DAY_BRIGHTNESS = 255
 DEFAULT_EVENING_BRIGHTNESS = 180
@@ -50,9 +41,7 @@ DEFAULT_NIGHT_KELVIN = 2700
 #
 # Day's Kelvin default is longer than any Day can be on purpose. Because
 # a duration clamps to its own phase, "24 hours" reads as "always be
-# transitioning", and keeps meaning that if the boundaries move - it is
-# how the old hardcoded full-phase slide is expressed now that Day is an
-# ordinary phase.
+# transitioning", and keeps meaning that if the boundaries move.
 #
 # Morning's do nothing on the shipped values, since Day holds the same
 # brightness and colour Morning does and there is nothing to interpolate.
@@ -66,10 +55,9 @@ DEFAULT_EVENING_KELVIN_TRANSITION = 60
 DEFAULT_NIGHT_BRIGHTNESS_TRANSITION = 30
 DEFAULT_NIGHT_KELVIN_TRANSITION = 30
 
-# Sixteen now: eight values and eight transitions, keyed exactly like
-# coordinator.py's CURVE_KEYS - the one
-# place config_flow.py (and anything else wanting the full default set)
-# reads actual numbers from, rather than hand-copying each constant.
+# Eight values and eight transitions, keyed exactly like coordinator.py's
+# CURVE_KEYS - the one place anything wanting the full default set reads
+# it from.
 DEFAULT_CURVE_VALUES = {
     "morning_brightness": DEFAULT_MORNING_BRIGHTNESS,
     "morning_kelvin": DEFAULT_MORNING_KELVIN,
@@ -112,13 +100,9 @@ def kelvin_to_rgb(kelvin: float) -> tuple:
     """Kelvin -> RGB, via Home Assistant's own conversion.
 
     `homeassistant.util.color.color_temperature_to_rgb` is Tanner
-    Helland's approximation - it says so in its own docstring - and this
-    used to be a hand-written copy of the same formula. The copy was
-    checked against it across 1000-10000K and did not differ by a single
-    unit on any channel, so it was 25 lines of arithmetic this repo had
-    no reason to own.
+    Helland's approximation, the same formula the dashboard card uses.
 
-    What stays ours is the ROUNDING. Home Assistant returns floats;
+    What is ours is the ROUNDING. Home Assistant returns floats;
     www/flare-curve-card.js's kelvinToRgb() rounds with JavaScript's
     Math.round, which is half-UP, while Python's round() is
     half-to-even. Matching it is deliberate but, measured, currently
@@ -128,12 +112,9 @@ def kelvin_to_rgb(kelvin: float) -> tuple:
     why this says so rather than leaving a future reader to "simplify"
     it and assume the equivalence holds for good.
 
-    One behavioural difference from the old copy, and it is an
-    improvement: Home Assistant clamps its input to 1000-40000K, where
-    the hand-written version extrapolated. Tanner Helland's formula
-    isn't meaningful below 1000K, and the Kelvin `number` entities are
-    bounded 1000-10000 anyway - but `compute_curve`'s schema is not, so
-    a direct caller can reach it.
+    Home Assistant clamps its input to 1000-40000K. The Kelvin `number`
+    entities are bounded 1000-10000, but `compute_curve`'s schema is
+    not, so a direct caller can reach the clamp.
     """
     return tuple(int(math.floor(c + 0.5)) for c in color_temperature_to_rgb(kelvin))
 
@@ -143,9 +124,9 @@ def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float
 
     Used to precompute the full-day curve for the dashboard graph -
     there's no real day_phase for past/future instants, only "what would
-    it have been". If input_select.day_phase is ever manually overridden,
-    the live sensors follow the override while this does not, so the
-    curve and the "now" marker can disagree briefly.
+    it have been". A phase override moves the live values but not the
+    curve, so the curve and the "now" marker can disagree while one is
+    set.
     """
     if t < morning_ts:
         return "Night"
@@ -285,13 +266,9 @@ def _value_at(
     (the next phase's value): that instant is the boundary itself, where
     "the value arrives at the next phase's exactly as that phase begins"
     (see above) is meant to hold regardless of which phase asked for it.
-    Confirmed live as a real bug: overriding the phase-override select to
-    "Night" during actual evening real time - hours past Night's own
-    span, not merely at its edge - showed Morning's brightness/colour
-    (255/7000K) instead of Night's own (80/2700K), because the
-    interpolation factor clamped to 1 - which is
-    `values[_NEXT_PHASE["Night"]]`, Morning's value, not Night's own.
-    This can only change behaviour for an overridden phase: phase_at()'s
+    Without this, overriding to "Night" during real evening would clamp
+    the factor to 1 and show Morning's values instead of Night's. This
+    can only change behaviour for an overridden phase: phase_at()'s
     own natural output never lets now_ts get past a phase's own span_end
     for that same phase - the instant it does, phase_at() has already
     returned the *next* phase instead - so the full-day curve-preview
@@ -369,8 +346,7 @@ def kelvin_for_phase(
     """Target colour temperature (Kelvin) for the given phase/instant.
 
     Every phase holds its own value and then eases to the next phase's
-    over its own transition - there is no special case for Day any more.
-    Day's default transition is longer than any Day can be, which is how
+    over its own transition. Day's default transition is longer than any Day can be, which is how
     "slide from Morning's colour to Evening's across the whole day" is
     expressed."""
     return round(

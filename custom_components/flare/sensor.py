@@ -1,46 +1,18 @@
 """
-Day-phase/curve sensors, backed by coordinator.py - a native
-replacement for a Jinja `packages/*.yaml` template-sensor setup (see
-CLAUDE.md for the live version this ports). One set of these per
-schedule instance (see coordinator.py's ScheduleInstance/
-schedule_instances) - one per named "sensor" subentry.
+Sensor platform for both entries.
 
-Entity IDs are prefixed with the sensor's slugified name (e.g.
-sensor.living_room_flare) - see coordinator.py's
-schedule_instances(). Every sensor also gets its own device (see
-ScheduleInstance.device_info). has_entity_name=True plus name=None (the
-idiomatic HA pattern for "the entity that represents the device") lets
-it display as just the device's own name ("Upstairs", or "Adaptive
-Lighting" by default), so renaming the sensor is one action
-(Settings -> Devices -> rename) rather than us reconstructing a name
-via string concatenation.
+Schedules: one sensor.<name>_flare per schedule instance (see
+coordinator.py's ScheduleInstance/schedule_instances), displayed as just
+its device's name (has_entity_name=True, name=None). State is the phase;
+the attributes carry everything else - the "right now" brightness/
+color_temp/rgb_color the blueprint's `adaptive_sensor` input reads,
+today's boundary timestamps, and the full-day `points` curve the
+dashboard card draws. One entity rather than one per value: anything
+wanting a single value reads the attribute, and a trigger on just the
+phase is a `state` trigger with `attribute: phase`.
 
-Day-phase, the brightness/colour-temperature "right now" values,
-today's four phase-boundary timestamps, and the full-day brightness/
-colour curve are all combined into a single sensor.<name>_flare
-(state = phase, attributes = phase/brightness/color_temp/morning_start/
-day_start/evening_start/night_start/evening_earliest/evening_latest/
-points) rather than separate sensors per value - `brightness`/
-`color_temp` are exactly the attribute names the blueprint's
-`adaptive_sensor` input already reads via state_attr(), matching the
-shape the old packages/adaptive_lighting.yaml `sensor.solar_flare`
-sensor used, so this is a drop-in for that role. The four boundary
-timestamps used to be their own sensor.morning_start/day_start/
-evening_start/night_start entities - folded into attributes here
-instead (four extra always-on entities per sensor that exist just to be
-read as one-off attribute lookups was judged not worth it; a
-phase-change automation reads sensor.<name>_flare's phase attribute
-directly, and anything that specifically wants a boundary time - the
-dashboard card, in particular - reads it off this same entity's
-attributes). A standalone day-phase entity was considered and dropped
-for the same reason - anything that wants to react to just the phase
-changing can use a `platform: state, attribute: phase` trigger on this
-entity, no separate entity required. `points` (the 289-sample day curve
-the dashboard card renders) used to live on its own sensor.*_curve
-entity - folded in here too, since `_unrecorded_attributes` (what keeps
-it out of the recorder's 16KB-limited attribute storage) is a plain
-per-attribute-name class field, not something that ever needed a
-dedicated entity to work.
+Tracking: per state device, the tracking sensor that holds its claims,
+plus `controlled`/`overridden` counts over them.
 """
 
 from __future__ import annotations
@@ -87,9 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tuple[str, Any, Any]:
     """One light's current status, shared by every sensor in this module
-    so they can't drift apart - this integration has already had one bug
-    from two separate copies of this comparison disagreeing (see
-    override_protection.py's module docstring).
+    so they can't drift apart (see override_protection.py's module
+    docstring).
 
     Returns (status, matched_via, live_context_id).
     "unavailable" is this layer's own case: classify() only ever sees a
@@ -216,9 +187,7 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
         # depends on each light's *live* state, which changes with
         # nothing here being touched - a light switched off, a device
         # reconnecting, someone dimming a bulb by hand. Without this
-        # they only refresh when a claim actually mutates, and sit stale
-        # in between: caught live reporting a light as overridden
-        # minutes after it had been turned off.
+        # they would only refresh when a claim mutates.
         async_dispatcher_send(self.hass, SIGNAL_WRITE_TRACKING_UPDATED)
 
     @callback
@@ -379,12 +348,9 @@ class _ScheduleSensorBase(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
 class _AdaptiveLightingSensor(_ScheduleSensorBase):
     _attr_icon = "mdi:home-lightbulb"
     _attr_name = None  # the entity that represents the device - displays as just the device's own name
-    # points (the full-day curve, 289 samples) is comfortably over the
-    # recorder's 16384-byte attribute limit (it was warning and silently
-    # dropping this attribute in storage every update) - it's only ever
-    # read live off coordinator.data by the dashboard card, never needed
-    # from history, so excluding it from the recorder entirely is
-    # strictly better than a warning-then-drop every 60s.
+    # points (the full-day curve, 289 samples) is over the recorder's
+    # 16384-byte attribute limit, and only ever read live by the
+    # dashboard card, so it is kept out of the recorder.
     _unrecorded_attributes = frozenset({"points"})
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
