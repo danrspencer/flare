@@ -1,28 +1,10 @@
-"""
-Raises a repair when the blueprint is missing or older than the one this
-release ships with, and installs or updates it when the user presses Fix.
+"""Raises a repair when the blueprint is missing or older than this
+release's, and installs or updates it on Fix.
 
-FLARE is two halves that deploy separately: HACS updates the
-integration, but not the blueprint, so without this nothing would say
-the two had drifted.
-
-Two decisions worth knowing, both deliberate:
-
-**Only blueprints an automation actually uses are reported.** Home
-Assistant never removes a blueprint you stop referencing, and importing
-from GitHub installs under the repo OWNER's name (`danrspencer/`), which
-is not the folder name in this repo (`danspencer/`), so an older copy
-can sit at the other path forever. Nagging about a file nothing reads is
-noise, and worse, it is noise the user cannot make go away.
-
-**The fix fetches a COMMIT-PINNED tag, not `main`.** A branch URL on
-raw.githubusercontent.com can serve a stale copy for minutes after a
-push while still reporting success, so a tag URL - which GitHub treats
-as immutable and never serves stale - is the only way to be sure the
-file that lands is the file we meant. It also means the fix installs
-exactly the blueprint this release was tested against, rather than
-whatever has landed on main since.
-"""
+Only blueprints an automation uses count as outdated: a GitHub import
+lands under the repo owner's name (`danrspencer/`), not this repo's
+folder (`danspencer/`), so an orphaned copy can sit at the other path
+forever."""
 
 from __future__ import annotations
 
@@ -43,22 +25,13 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_ID = "outdated_blueprint"
 MISSING_ISSUE_ID = "blueprint_not_installed"
 
-# Where an install from the repair lands. Home Assistant derives this
-# path from the GitHub URL's OWNER, not from the folder name in this
-# repo - `danrspencer` with an r, where the repo says `danspencer`
-# without. Matching it is deliberate: someone who imports the
-# blueprint by URL by hand overwrites this same file instead of
-# ending up with two copies at two paths.
+# HA derives the install path from the GitHub URL's owner (`danrspencer`),
+# so a hand import by URL overwrites this file rather than duplicating it.
 INSTALL_PATH = "danrspencer/flare.yaml"
 
-# Home Assistant renders this as a "Learn more" link on the issue, so
-# the description does not have to carry a URL in prose.
 QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
-# Pinned to the tag the stamp names, for the reason in the module
-# docstring. The path is this repo's own folder spelling; where it lands
-# on the user's disk is decided by Home Assistant from the URL's owner,
-# and we overwrite whatever path we actually found rather than assuming.
+# A tag, not `main`: a branch raw URL can be served stale after a push.
 BLUEPRINT_URL = (
     "https://github.com/danrspencer/flare/blob/v{version}"
     "/blueprints/automation/danspencer/flare.yaml"
@@ -78,13 +51,7 @@ class InstalledBlueprint:
 
 
 def _is_ours(blueprint: Blueprint) -> bool:
-    """Both tests, because either alone has a hole.
-
-    The name is what a locally-edited copy keeps when its source_url has
-    been stripped; the source_url is what an intentionally renamed copy
-    keeps. Neither is worth being clever about - a false positive here
-    offers someone an update they can decline.
-    """
+    """By name or by source_url, since an edited copy may have lost either."""
     metadata = blueprint.metadata
     if metadata.get("name") == _OUR_NAME:
         return True
@@ -98,9 +65,7 @@ async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:
     except Exception:  # noqa: BLE001 - the check is advisory, never fatal
         _LOGGER.debug("Could not read automation blueprints", exc_info=True)
         return {}
-    # async_get_blueprints returns the EXCEPTION for a blueprint that
-    # failed to load, not a Blueprint - so this is a type check, not a
-    # None check.
+    # Blueprints that failed to load come back as the exception.
     return {
         path: bp
         for path, bp in installed.items()
@@ -109,12 +74,7 @@ async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:
 
 
 async def blueprint_is_installed(hass: HomeAssistant) -> bool:
-    """Is our blueprint present at all, in use or not?
-
-    Deliberately NOT "is anyone using it". Someone who imported it and
-    has not built an automation yet is mid-setup, not stuck, and telling
-    them to install what they already have would be wrong.
-    """
+    """In use or not - an unused one means setup is in progress."""
     return bool(await _ours(hass))
 
 
@@ -143,13 +103,7 @@ def describe(blueprints: list[InstalledBlueprint]) -> str:
 
 
 async def async_check(hass: HomeAssistant) -> None:
-    """Raise whichever of the two blueprint repairs applies.
-
-    They are mutually exclusive by construction: a house with no
-    blueprint has nothing that can be out of date, and a house with one
-    is not missing it. Both are cleared on the path that doesn't raise
-    them, so switching between the two states leaves nothing stale.
-    """
+    """Raise whichever of the two blueprint repairs applies, clearing the other."""
     if not await blueprint_is_installed(hass):
         ir.async_delete_issue(hass, DOMAIN, ISSUE_ID)
         ir.async_create_issue(
@@ -185,14 +139,7 @@ async def async_check(hass: HomeAssistant) -> None:
 
 
 async def _fetch(hass: HomeAssistant):
-    """The shipped blueprint, from a commit-pinned tag.
-
-    A tag rather than `main` because raw.githubusercontent.com can serve
-    a branch URL stale for minutes after a push while still reporting
-    success - so a tag, which GitHub treats as immutable, is the only
-    way to be sure the file that lands is the one this release was
-    tested against.
-    """
+    """The shipped blueprint, from this release's tag."""
     from homeassistant.components.blueprint.importer import fetch_blueprint_from_url
 
     return await fetch_blueprint_from_url(
@@ -201,13 +148,7 @@ async def _fetch(hass: HomeAssistant):
 
 
 async def async_install_blueprint(hass: HomeAssistant) -> str:
-    """Install the blueprint for a house that has none.
-
-    `allow_override=False`: this path exists only for the no-blueprint
-    case, and if something did appear at that path between the check and
-    the user pressing Fix, overwriting it silently would be the wrong
-    answer - updating is what the other repair is for.
-    """
+    """Install the blueprint for a house that has none. Never overwrites."""
     imported = await _fetch(hass)
     await async_get_blueprints(hass).async_add_blueprint(
         imported.blueprint, INSTALL_PATH, allow_override=False
@@ -216,14 +157,7 @@ async def async_install_blueprint(hass: HomeAssistant) -> str:
 
 
 async def async_update_blueprints(hass: HomeAssistant) -> list[str]:
-    """Overwrite every stale in-use copy with the shipped version.
-
-    Fetched once and written to each path we found it at, so a house
-    that ended up with the blueprint at two paths (see the module
-    docstring) has both corrected rather than only the one Home
-    Assistant would pick by itself. async_add_blueprint reloads the
-    automations using each path for us.
-    """
+    """Overwrite every stale in-use copy, at whatever path it was found."""
     outdated = await outdated_blueprints(hass)
     if not outdated:
         return []

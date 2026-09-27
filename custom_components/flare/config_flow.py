@@ -1,26 +1,8 @@
 """Config flow for FLARE.
 
-Adding the integration once creates both entries - Schedules and
-Tracking (async_step_user explains why it is still two entries, and
-why only one of them is created visibly). Neither asks for anything
-beyond which rooms to track. Every day-phase/curve sensor is a "sensor"
-subentry (SensorSubentryFlow below), added from the Schedules entry's
-own page and named by the user.
-
-No sensor is created at install time: HA's "integration added" dialog
-shows a device rename + area picker for every device the completing
-flow created, with no way to suppress it, and it is the only place HA
-ever renames entity_ids to match a device. An unnamed seeded sensor
-would get a prompt nobody asked for and a permanent entity_id prefix.
-
-A subentry asks for one thing: a name. It becomes both the sensor's
-device name and its entity_id prefix (sensor.living_room_flare etc) -
-see coordinator.py's ScheduleInstance/schedule_instances(). The five
-schedule times and the eight brightness/Kelvin curve values are real
-HA entities on that device (time.py/number.py), each starting at a
-default (curve.DEFAULT_SCHEDULE_HOURS/DEFAULT_CURVE_VALUES) and
-adjustable at any time without a reconfigure flow.
-"""
+Adding the integration creates both the Schedules and Tracking entries.
+Schedule sensors are "sensor" subentries, added and named by the user;
+their times and curve values are entities on the sensor's device."""
 
 from __future__ import annotations
 
@@ -58,44 +40,17 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
     VERSION = 3
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """One "Add FLARE" creates both entries.
+        """One "Add FLARE" creates both entries, asking only which rooms to track.
 
-        They stay two entries, not one: schedules and tracking are
-        different kinds of thing, and an entry is the only level at
-        which that distinction can be drawn - HA's integration page
-        renders one section per subentry with no way to group them by
-        type, so a single entry flattens schedule sensors and state
-        devices into one long list of siblings. Nothing in that
-        argument asked anyone to walk through Add Integration twice to
-        get there, though, so this step asks the one thing there is to
-        ask - which rooms to track - and creates both.
-
-        Each half is still creatable on its own, so deleting one and
-        adding it back works rather than aborting on the other's
-        account.
-
-        The entry this flow creates *visibly* is always Schedules,
-        because Schedules creates no devices. HA's "integration added"
-        dialog (step-flow-create-entry.ts) shows a device-rename + area
-        picker for every device belonging to the completing flow's
-        entry, and an integration has no way to suppress it - while
-        Tracking seeds a state device per room, which is exactly the
-        pile of rename prompts for things nobody named that the dialog
-        would turn into. Raised through SOURCE_IMPORT instead, it has
-        no visible flow for one to attach to.
-        """
+        The flow visibly completes on Schedules because it creates no devices:
+        HA's "integration added" dialog prompts to rename every device the
+        completing entry has, with no way to suppress it. Tracking, which seeds
+        a device per room, is created through SOURCE_IMPORT instead."""
         configured = {entry.data.get(CONF_ENTRY_TYPE) for entry in self._async_current_entries()}
         needs_schedules = ENTRY_TYPE_SCHEDULES not in configured
         needs_tracking = ENTRY_TYPE_TRACKING not in configured
 
-        # Offers a state device per area that currently holds a light,
-        # pre-selected rather than empty because a room is the unit
-        # almost everyone wants to track by, and an unticked list is a
-        # wall of work before anything does anything. Trimmable, and
-        # skippable entirely - nothing here is required, and more can
-        # be added later from the entry's own page. Areas with no
-        # lights are left out: a state device that can never resolve
-        # anything is just an empty device to wonder about.
+        # Pre-selects every area with a light. Areas with none are left out.
         areas = _areas_with_lights(self.hass) if needs_tracking else []
         if areas and user_input is None:
             return self.async_show_form(
@@ -109,11 +64,8 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
                 ),
             )
 
-        # With nothing left to create both branches below fall through to
-        # _create_schedules_entry, whose unique_id guard aborts with
-        # already_configured - the same guard that stops either half being
-        # duplicated. An explicit abort here would be a second way to reach
-        # an outcome that one already covers.
+        # With nothing left to create, _create_schedules_entry's unique_id guard
+        # aborts with already_configured.
         chosen = [(a, n) for a, n in areas if a in (user_input or {}).get("areas", [])]
         if needs_tracking and not needs_schedules:
             return await self._create_tracking_entry(chosen)
@@ -126,15 +78,13 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
         return await self._create_schedules_entry()
 
     async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
-        """Creates the tracking entry, from async_step_user, without a
-        visible flow of its own (see the dialog note there)."""
+        """Creates the tracking entry without a visible flow (see async_step_user)."""
         chosen = import_data["areas"]
         areas = [(a, n) for a, n in _areas_with_lights(self.hass) if a in chosen]
         return await self._create_tracking_entry(areas)
 
     async def _create_schedules_entry(self) -> FlowResult:
-        """Nothing to ask for. The day-phase/curve sensors themselves
-        are added afterwards from this entry's own page."""
+        """Nothing to ask; schedule sensors are added afterwards as subentries."""
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_SCHEDULES}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
@@ -161,8 +111,6 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        # Each entry offers only its own kind, which is the whole point
-        # of splitting them.
         if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING:
             return {SUBENTRY_TYPE_STATE: StateSubentryFlow}
         return {SUBENTRY_TYPE_SENSOR: SensorSubentryFlow}
@@ -174,28 +122,13 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
 
 
 class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
-    """The install-wide setting: which bulb models need two-step
-    transitions.
-
-    Kept on the main entry rather than per sensor because it describes
-    hardware, not a schedule - which bulbs in this house can't take a
-    combined brightness+colour command. Nothing here affects the curve;
-    it decides which bulbs apply_lighting/compute_lighting_groups route
-    into two-step transitions automatically, no label required (see
-    two_step.py, grouping.py's EntityLookup.matches_two_step_pattern).
-
-    The field is pre-populated with the shipped defaults rather than
-    being an "extras" box layered on top of a hidden list, so what's in
-    the box is exactly what runs: a pattern can be removed as easily as
-    added, with no invisible half to reason about."""
+    """Which bulb models need two-step transitions (see two_step.py). The
+    field is pre-filled with the shipped defaults and is the whole list."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        # Shows the user's own list once saved, otherwise seeds the box
-        # with the shipped defaults so the first thing they see is the
-        # real, complete list rather than an empty field.
         current = self.config_entry.options.get(CONF_TWO_STEP_MODELS)
         return self.async_show_form(
             step_id="init",
@@ -215,24 +148,16 @@ class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
 
 
 class SensorSubentryFlow(ConfigSubentryFlow):
-    """Adds one adaptive lighting sensor. Produces a device named after
-    it, containing sensor.<slug>_flare +
-    sensor.<slug>_flare_curve + select.<slug>_flare_phase
-    + the schedule/curve config entities (time.py/number.py/switch.py),
-    namespaced by the slugified name so multiple sensors can coexist -
-    see coordinator.py's schedule_instances(). No reconfigure flow -
-    there's nothing left to reconfigure once the name is set; the
-    schedule/curve entities are edited directly, live."""
+    """Adds one schedule sensor, with its own device and entities prefixed by
+    the slugified name. No reconfigure flow: everything but the name is an
+    entity."""
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input["name"].strip()
             slug = slugify(name)
-            # Compares slugified titles rather than trusting stored
-            # unique_ids directly - matches coordinator.py's own prefix
-            # derivation exactly, so this can't disagree with what
-            # schedule_instances() would actually consider a collision.
+            # Slugified, to match the entity_id prefix schedule_instances() derives.
             for subentry in self._get_entry().subentries.values():
                 if slugify(subentry.title) == slug:
                     errors["name"] = "already_configured"
@@ -248,10 +173,8 @@ class SensorSubentryFlow(ConfigSubentryFlow):
 
 
 def _areas_with_lights(hass) -> list[tuple[str, str]]:
-    """(area_id, name) for every area a light entity resolves to, by the
-    entity's own area or its device's - just to size the setup offer to
-    areas that actually have something to track; not used to resolve
-    claims (see StateSubentryFlow's own docstring)."""
+    """(area_id, name) for every area holding a light, by the entity's own
+    area or its device's."""
     from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 
     entity_registry = er.async_get(hass)
@@ -276,26 +199,15 @@ def _areas_with_lights(hass) -> list[tuple[str, str]]:
 
 
 class StateSubentryFlow(ConfigSubentryFlow):
-    """Adds one state device - a named, empty tracking scope. Nothing
-    about which lights it tracks is decided here: a caller (typically
-    the blueprint, via room_target) states a scope explicitly on each
-    apply_lighting/claims_record/etc call by passing this device's own
-    tracking_device_id - see write_tracking.py's module docstring.
-
-    The target asked for below decides only where this device's own
-    entry lands in the Area registry (sensor.py's _assign_scope_area,
-    area-only, best-effort) - it plays no part in which lights get
-    tracked. It's the same area/device/entity shape the blueprint's
-    room_target uses only so "the kitchen" reads the same way in both
-    places, not because the two are wired together."""
+    """Adds one state device (a tracking scope). Which lights it tracks is
+    decided by callers passing its tracking_device_id; the target here only
+    places the device in an area."""
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         return await self._async_form(user_input)
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """Retargeting matters more here than for a schedule: rooms get
-        rearranged, and a scope you can't repoint would have to be
-        deleted and recreated, losing its history."""
+        """Lets a scope be repointed without losing it."""
         return await self._async_form(user_input, reconfigure=self._get_reconfigure_subentry())
 
     async def _async_form(self, user_input, reconfigure=None) -> SubentryFlowResult:
@@ -328,9 +240,7 @@ class StateSubentryFlow(ConfigSubentryFlow):
                 vol.Schema(
                     {
                         **SUBENTRY_FIELDS,
-                        # Lesson 14: under a target selector the filter
-                        # list goes directly under `entity:`, with no
-                        # nested `filter:` key.
+                        # A target selector's filter list goes directly under `entity:`.
                         vol.Optional(CONF_TARGET): selector.TargetSelector(
                             selector.TargetSelectorConfig(entity=[{"domain": "light"}])
                         ),

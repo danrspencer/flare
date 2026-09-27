@@ -1,123 +1,38 @@
-"""
-Tracks which context.id this integration last wrote each light with, so
-grouping.py can tell "did WE make the last change" apart from a person,
-another automation, or a device reconnecting under its own fresh
-context.
+"""Records which context.id FLARE last wrote each light with, so override
+protection can tell our changes from anyone else's. context.id, not
+user_id: every call in one automation run shares its run's context,
+while another automation's calls don't.
 
-context.id rather than context.user_id: every service call within one
-automation run shares that run's context.id (HA core's
-helpers/script.py passes Script._context to every action step), while
-anything else - including a different automation - gets an unrelated
-one. user_id can't distinguish our own write from another automation's,
-since neither carries one.
+The caller names the scope (a state device) on every call; with none,
+nothing is tracked. Callers naming the same scope share its claims.
 
-A claim's scope is supplied by the caller, not discovered from the
-entity_id - every read/write method below takes a subentry_id
-identifying which state device to act on. `resolve_scope_device()`
-turns a device_id (what a service call actually receives) into that
-subentry_id; passing none means "don't track this write at all" - see
-its own docstring. Two automations that pass the *same* scope for one
-light share its claims and co-operate rather than each reading the
-other as an intruder; two that pass different scopes are tracked apart.
+Claims live on each scope's tracking entity, a RestoreEntity, so they
+survive restarts. A restart gives every light a new context, so
+restored claims are matched by value (see classify()).
 
-A state device's own `target` plays no part in any of this - it only
-places the device in an area (sensor.py's `_assign_scope_area`).
-grouping.py's externally_set() and override_protection.classify() own
-the comparison itself; this module only records.
+Two claims per light
+--------------------
+- `observed`: a state we've seen and can safely write over - a write
+  seen landing, or for a first-ever write, the context from just before.
+- `latest`: our most recent write, not yet seen landing.
 
-Claims persist across restarts on the tracking entity itself:
-_StateTrackingSensor is a RestoreEntity, so its claims ride HA's own
-restore state - one source of truth, the same object override
-protection reads. A bulb someone set purple stays theirs after a
-restart.
+Claims are recorded before dispatch. On the next write, if the light's
+context matches `latest`, it's promoted to `observed`; if it still
+matches `observed`, `latest` never landed and `observed` stays. Either
+way the light is still ours, so a dropped write can't lock it out.
 
-Restored claims are judged by VALUE, not context. A restart gives every
-entity a fresh context.id, so no restored claim can match on context;
-classify() falls back to comparing live values against each claim's
-recorded target. Unchanged across the restart reads `controlled`,
-different reads `overridden`. Without that fallback, restoring claims
-would exclude every tracked light after every restart.
+HA forgets a write's context after 5s, so a slow device can echo our
+write under a new context. Each claim therefore records its `target`,
+and classify() also compares values.
 
-HA saves restore state every 15 minutes and at shutdown, so a crash can
-lose up to 15 minutes of claims. Those lights fail open - untracked, and
-so manageable.
-
-Two claims per entity, not one
-------------------------------
-- `observed` - a state we have seen and know is safe to write over.
-- `latest`   - the most recent write we sent, not yet re-observed.
-
-`observed` is deliberately not "a write of ours". It is populated two
-ways, only one of which we authored: a write an earlier call saw the
-bulb adopt, and the pre-write baseline for a first-ever write. What they
-share is confidence, not authorship - in both cases nothing unexplained
-has happened to the light, so writing over it is safe.
-
-apply_lighting records the context it is *about to issue*, before it sends
-anything, and nothing waits to confirm the bulb adopted it. Recording first
-is what lets a run that is cancelled or fails part-way through still leave
-an accurate record: the write may or may not have landed, and the two
-claims are exactly what tells those apart. With a single record, one
-dropped write would lock a light out permanently - the next tick compares
-the light's real, unchanged context against a value the device never
-adopted, and nothing afterward can ever make those equal.
-
-Two slots fix that without needing a growing history. If the live
-context matches `latest`, that attempt is now known-good and is promoted
-(`observed <- latest`) before the new attempt overwrites `latest`. If it
-still matches `observed`, `latest` never landed and `observed` is left
-exactly as it was. Either way the light is still recognised as ours and
-retried next tick. `observed` is only ever evicted by a fresh
-observation, so it survives any number of consecutive dropped writes.
-
-An entity's very first write has no `observed` to fall back on, so the
-context.id live *before* that write is recorded as `observed` instead.
-That isn't claiming ownership of it - it's the same "nothing
-unexplained has happened" signal every later dropped write relies on,
-since a dropped first write leaves the context at exactly that value.
-See async_record.
-
-Why a context mismatch still isn't proof
------------------------------------------
-HA's Entity._context expires 5 seconds after the service call that set
-it (homeassistant/core.py), so a device whose Zigbee/MQTT round-trip
-confirmation takes longer reports back under an unrelated context while
-echoing exactly the value asked for. Each claim therefore also records
-its `target` (brightness plus colour temperature or RGB, or None for a
-claim that isn't a real write), and classify() falls back to comparing
-the entity's current values against either claim's target before
-concluding "external".
-
-A context id here is a tag WE attach to our own write, never something
-read back from the device: it is the service call's own Context (or, for
-a two-step write, one Context created per step), and all of them exist
-before anything is dispatched - which is what lets the claim be recorded
-first. If the write lands, the light's state carries exactly that id.
-The 5 second expiry above is about how long the LIGHT remembers it, not
-about when we can know it.
-
-Device recovery and restarts
------------------------------
-async_start_listening() clears an entity's record when it is observed
-dropping from a real on/off state to unavailable/unknown, so a genuine
-reconnect - a state report we can't intercept, carrying a fresh context
-- finds no claim to conflict with, and the light is simply managed again.
-
-There is deliberately NO re-baseline when a light arrives in a real
-state from unavailable/unknown. A genuine dropout has already had its
-record cleared by then, so that could only ever fire on a restart or
-reload - where it would mark every restored override as ours. HA's
-`restored: True` placeholder attribute can't gate it either: MQTT lights
-reach `on` from their own untagged `unknown` state (unavailable ->
-unknown -> on).
-
-Both remaining rules must START from a real on/off state, not merely end
-somewhere. Nearly every entity passes through unavailable/unknown on
-every restart, so clearing on the destination alone would wipe
-protection for practically every light; releasing a scope on any
-transition to `off` would let the first light to reconnect as `off`
-release restored overrides on siblings still reconnecting.
-"""
+Listener rules
+--------------
+A light dropping from on/off to unavailable/unknown loses its claim, so
+its reconnect isn't mistaken for an override. There's deliberately no
+re-baseline on reconnect: after a restart it would mark every restored
+override as ours. Both listener rules require a real on/off starting
+state, since nearly every light passes through unavailable/unknown on
+restart."""
 
 from __future__ import annotations
 
@@ -135,42 +50,19 @@ from homeassistant.util import dt as dt_util
 from ..const import DOMAIN, SUBENTRY_TYPE_STATE
 from .override_protection import _context_matches, _ContextClaim, _WriteRecord
 
-# How long a tracked record is kept after it was last written or
-# observed, before async_prune_stale() discards it outright - see that
-# method's own docstring for why this exists at all (an entity deleted
-# from HA entirely, not just restarting, has no event this integration
-# can observe to know it should stop tracking it). Deliberately short:
-# pruning a record is never actually risky, regardless of how soon it
-# happens - classify() treats "no record at all" identically to
-# "unclaimed" (see its own docstring), never as blocked, so a pruned
-# light simply looks brand-new again and re-establishes a real record
-# on its next write. There's no lockout to guard against by being
-# conservative here, so there's no reason to hold onto a record for a
-# still-real, still-relevant light any longer than "hasn't needed a
-# write in a day" already implies it's not needed.
+# Pruning early is harmless: a light with no record is simply free to
+# manage.
 STALE_RECORD_MAX_AGE_DAYS = 1
 
-# How often async_prune_stale() actually gets called while running (in
-# addition to once at startup, in __init__.py) - with a one-day cutoff,
-# only pruning at startup would mean a record could sit stale for as
-# long as HA happens to stay up between restarts before ever being
-# cleaned, which defeats "a day" as a real promise. Frequent enough to
-# keep that promise, infrequent enough that it costs nothing meaningful
-# (a plain dict scan over however many entities are tracked, typically
-# a few dozen).
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
-# Fired (with no payload - listeners re-read through the registry)
-# whenever any scope's claims change, so the per-scope count sensors
-# refresh immediately instead of polling.
+# Fired whenever any scope's claims change, so the count sensors refresh.
 SIGNAL_WRITE_TRACKING_UPDATED = "flare_claims_updated"
 
 
 class ClaimStore(Protocol):
-    """What ClaimRegistry needs from a state device's tracking entity.
-
-    Declared structurally rather than importing sensor.py, which would
-    be circular - sensor.py imports this module."""
+    """A scope's tracking entity, as ClaimRegistry needs it. Structural, to
+    avoid importing sensor.py circularly."""
 
     claims: dict[str, _WriteRecord]
 
@@ -179,13 +71,8 @@ class ClaimStore(Protocol):
 
 
 class ClaimRegistry:
-    """Routes each light to the state device that tracks it, and reads
-    and writes that device's claims.
-
-    Holds no claims of its own. The dict lives on the state device's
-    tracking entity, which publishes it as an attribute - so what
-    governs behaviour and what you can see in Developer Tools are the
-    same object, not a copy kept in step by convention."""
+    """Routes each light to the scope that holds its claims. Holds no claims
+    itself; they live on each scope's tracking entity."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self._hass = hass
@@ -201,16 +88,8 @@ class ClaimRegistry:
         self._stores.pop(subentry_id, None)
 
     def resolve_scope_device(self, device_id: str | None) -> str | None:
-        """Turns a service call's tracking_device_id into the subentry_id
-        every read/write method below actually wants.
-
-        None in, None out: omitting tracking_device_id means "don't track
-        this write", not "go find out where it belongs" - the caller
-        said nothing, so nothing is recorded, same as every other
-        untracked-light case. A device_id that IS given but isn't one of
-        this tracking entry's own state devices is a caller mistake, not
-        an absent scope, so it raises rather than silently degrading to
-        untracked - a typo'd or stale device_id should be loud."""
+        """tracking_device_id -> subentry_id. None stays None (untracked); a
+        device that isn't one of this entry's scopes raises."""
         if device_id is None:
             return None
         device = dr.async_get(self._hass).async_get(device_id)
@@ -224,39 +103,26 @@ class ClaimRegistry:
         return subentry_id
 
     def title_for_scope(self, subentry_id: str | None) -> str | None:
-        """The scope's display name, for echoing back in a service
-        response - claims_check's own "scope" field, for example."""
         if subentry_id is None:
             return None
         subentry = self._entry.subentries.get(subentry_id)
         return subentry.title if subentry is not None else None
 
     def _store_for(self, entity_id: str) -> ClaimStore | None:
-        """The live tracking entity holding this light's claims, or None
-        if it isn't tracked anywhere.
-
-        A claim lives wherever it was most recently recorded (async_record's
-        caller-supplied subentry_id) - never resolved from the entity's own
-        area/device, so re-pointing a state device's target can't strand an
-        existing claim in a scope nothing reads any more, and an untracked
-        entity simply has no home to find here."""
+        """The tracking entity holding this light's claims, or None."""
         for store in self._stores.values():
             if entity_id in store.claims:
                 return store
         return None
 
     def _record(self, subentry_id: str | None, entity_id: str) -> _WriteRecord | None:
-        """The one place "no scope, no tracking" is
-        implemented for reads: a None scope means nothing to look up,
-        full stop, not a search for where the light might live."""
         if subentry_id is None:
             return None
         store = self._stores.get(subentry_id)
         return store.claims.get(entity_id) if store else None
 
     def all_records(self) -> dict[str, _WriteRecord]:
-        """Every tracked light across every scope, flattened. A light
-        can only appear once - _store_for keeps it in one scope."""
+        """Every tracked light across every scope."""
         merged: dict[str, _WriteRecord] = {}
         for store in self._stores.values():
             merged.update(store.claims)
@@ -303,28 +169,12 @@ class ClaimRegistry:
         return claim.get("secondary_context_id") if claim else None
 
     async def async_clear(self, subentry_id: str | None, entity_ids: list[str]) -> None:
-        """Manually discards entities' tracked records within one scope -
-        deliberately invoked, unlike every other path that removes a
-        record (async_start_listening's drop-detection, which only ever
-        fires on an *observed* unavailable transition). Backs the
-        claims_clear service - the escape hatch for a light that's landed
-        in "overridden" without ever actually going unavailable, and so
-        has no other way back: build_groups() (grouping.py) never calls
-        async_record for anything externally_set() already excludes, so
-        an overridden light's own `latest` target only gets staler
-        over time, and on a ramping curve soon drifts past the value
-        rescue's tolerance for good. A no-op with no scope, or for an entity
-        with no record in that scope."""
-        # subentry_id=None finds no store here just as naturally as a
-        # real id with nothing registered - dict.get(None) is simply
-        # never a key, same reasoning as async_record's own lookup.
+        """Discards claims in one scope - behind claims_clear, the escape hatch for
+        a light stuck "overridden". No-op without a scope or a record."""
         store = self._stores.get(subentry_id)
         if store is None:
             return
-        # Not any(store.claims.pop(...) ... for ...): any() short-circuits
-        # on the first True, and pop() is what actually clears each claim
-        # - a generator here would stop popping after the first entity
-        # that had one, leaving every entity after it untouched.
+        # Not any(...pop...): any() short-circuits and would stop popping.
         popped = [store.claims.pop(entity_id, None) for entity_id in entity_ids]
         if any(value is not None for value in popped):
             self._notify([store])
@@ -339,62 +189,21 @@ class ClaimRegistry:
         secondary_context_ids: dict[str, str] | None = None,
         context_id_overrides: dict[str, str] | None = None,
     ) -> None:
-        """Called once per apply_lighting invocation, with every entity it
-        is about to issue a light.turn_on/turn_off for - not ones it merely
-        considered - and BEFORE any of those calls is sent, so that a run
-        cancelled or failing part-way still leaves a record behind. See the
-        module docstring for the two-claim model this maintains; this
-        documents the arguments.
+        """Records a write for entity_ids, before it's dispatched. Promotes
+        `latest` to `observed` if it landed (see the module docstring). A None
+        scope records nothing. A light claimed by a different scope keeps that
+        claim.
 
-        subentry_id is the caller's scope, resolved once for the whole
-        call - not re-derived per entity. A None scope means "write the
-        light, track nothing": this returns
-        immediately and no claim is recorded for any of entity_ids.
-
-        If a light is already tracked under a *different* scope (its
-        automation's target changed, or a different caller now names it
-        under a different scope), that claim is left where it is rather
-        than migrated. It goes stale and is pruned in the ordinary course,
-        or a Clear press removes it sooner.
-
-        live_context_before_write: each entity's context.id as read
-        *before* any of this call's writes were dispatched. Callers snapshot
-        it themselves rather than having it read in here, so it can never
-        reflect the very write about to be recorded as `latest`, which
-        would make every write look like it promoted itself instantly.
-
-        This is the one and only place promotion happens: if the previous
-        `latest` claim matches what was live just before this write went
-        out, that attempt is proven landed and becomes `observed`.
-        Otherwise `observed` is left untouched and only `latest` is
-        replaced. The exception is an entity's first-ever write, which has
-        no `observed` to fall back on - the pre-write context is recorded
-        as `observed`, so a dropped first write still
-        has a retry signal, and that synthetic baseline never blocks
-        anyone else's claim.
-
-        targets: per entity, what this write asked for. An entity missing
-        from it (an off-command has no colour target) gets None.
-
-        secondary_context_ids / context_id_overrides: two-step entities
-        only. Those writes go out as two light.turn_on calls under two
-        distinct contexts, neither of which is `context_id` above (the
-        triggering call's own, never passed to either). The overrides
-        supply the colour step as the claim's primary context; the
-        secondaries supply the brightness step. Both stay empty for
-        everything else, which keeps using `context_id` alone."""
+        live_context_before_write: each light's context before this call's
+        writes, so it can't reflect the write being recorded.
+        targets: what each write asked for.
+        secondary_context_ids / context_id_overrides: two-step lights only -
+        the brightness and colour steps' contexts."""
         if not entity_ids:
             return
-        # subentry_id=None ("don't track this") finds no
-        # store here just as naturally as a real id whose tracking
-        # entity isn't up yet (services are registered before platforms
-        # are forwarded - see __init__.py) - one guard covers both,
-        # deliberately not a separate `if subentry_id is None` check.
+        # Also covers a scope whose tracking entity isn't up yet.
         store = self._stores.get(subentry_id)
         if store is None:
-            # Dropped, not queued: a lighting override that goes
-            # unrecorded for one tick costs nothing, and the next tick
-            # records it properly.
             return
         targets = targets or {}
         secondary_context_ids = secondary_context_ids or {}
@@ -433,22 +242,9 @@ class ClaimRegistry:
         self._notify([store])
 
     async def async_prune_stale(self) -> None:
-        """Discards any tracked record not written or observed in over
-        STALE_RECORD_MAX_AGE_DAYS days - the cleanup an entity genuinely
-        *deleted* from HA never otherwise gets. Every other cleanup path
-        here needs `hass.states.get()` to return *something* to act on;
-        a removed entity returns None forever and is silently skipped by
-        all of them, leaving its record stranded.
-
-        Called once at startup and every PRUNE_CHECK_INTERVAL after - a
-        startup-only pass would let records sit stale for however long HA
-        stays up.
-
-        Deliberately aggressive on timing, unlike most decisions here:
-        pruning too soon has no failure mode, since classify() treats "no
-        record" as `unclaimed`, never as blocked. A record with no
-        parseable `last_seen` is left alone - when age can't be judged,
-        the same "don't delete on ambiguity" preference used elsewhere."""
+        """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
+        cleanup an entity deleted from HA ever gets. A record with no parseable
+        `last_seen` is kept."""
         cutoff = dt_util.utcnow() - timedelta(days=STALE_RECORD_MAX_AGE_DAYS)
         stale = []
         for entity_id, record in self.all_records().items():
@@ -475,23 +271,9 @@ class ClaimRegistry:
 
     @callback
     def _release_if_dark(self, store: ClaimStore) -> None:
-        """Discards a scope's claims once none of the lights it tracks
-        are on.
-
-        Turning a light off is an override like any other (see
-        override_protection.classify), so a light switched off by hand
-        stays off rather than being relit on the next tick. Something
-        has to end that, and the whole room going dark is the signal:
-        nobody is using the room, so nobody's choice is being
-        overridden by handing it back.
-
-        Anything not reporting `on` counts as dark, including
-        unavailable and unknown. Requiring every tracked light to
-        report `off` would let one permanently unavailable entity - an
-        orphaned Zigbee group, say - veto the release forever, which is
-        the same trap the blueprint's `recovered` trigger avoids by
-        asking whether anything is reachable rather than whether
-        nothing is unavailable."""
+        """Discards a scope's claims once none of its lights are on. Switching a
+        light off is an override, so this is what hands it back. Unavailable
+        counts as dark, so one dead entity can't block the release."""
         if not store.claims:
             return
         for entity_id in store.claims:
@@ -501,23 +283,10 @@ class ClaimRegistry:
         store.claims.clear()
 
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
-        """Watches every tracked entity through one hass-wide
-        "state_changed" listener - cheaper than keeping per-entity
-        subscriptions in sync with the tracked set as apply_lighting adds
-        entities over time. The module docstring's "Device recovery and
-        restarts" explains the shape of each rule.
+        """One listener for every tracked light:
 
-        - **Drop** (a real on/off state -> unavailable/unknown): clears
-          the record, so the eventual reconnect finds nothing to
-          conflict with.
-        - **Off** (a real on/off state -> off): re-checks whether the
-          scope has gone dark, and releases it if so.
-
-        Both require the STARTING state to be a real on/off state. Almost
-        every entity passes through unavailable/unknown on every restart,
-        and reacting to the destination alone would either wipe
-        protection house-wide or release a scope while half its lights
-        were still reconnecting."""
+        - Drop (on/off -> unavailable/unknown): clears the light's claim.
+        - Off (on/off -> off): releases the scope if it has gone dark."""
 
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
@@ -528,17 +297,11 @@ class ClaimRegistry:
             old_state = event.data["old_state"]
             new_state = event.data["new_state"]
             old_available = old_state is not None and old_state.state not in ("unavailable", "unknown")
-            # Drop requires new_state to explicitly report "unavailable"/
-            # "unknown" - not new_state being absent entirely (an entity
-            # removed from the state machine, as every entity is across a
-            # restart before it re-registers). Treating "gone" as
-            # "unavailable" would clear every record at every restart.
+            # Explicitly unavailable, not removed: every entity is removed across a
+            # restart.
             new_explicitly_unavailable = new_state is not None and new_state.state in ("unavailable", "unknown")
             dropped = old_available and new_explicitly_unavailable
-            # A real on/off -> off only. `unknown -> off` is a light
-            # reconnecting after a restart, not somebody switching it off,
-            # and releasing on it would let the first light back release
-            # restored overrides on siblings still reconnecting.
+            # Not unknown -> off, which is a light reconnecting.
             went_off = old_available and new_state is not None and new_state.state == "off"
 
             if dropped:
@@ -546,8 +309,6 @@ class ClaimRegistry:
             elif not went_off:
                 return
 
-            # Either way the scope may now be dark: a light went off, or
-            # a light dropped and its claim was just popped.
             self._release_if_dark(store)
 
             self._notify([store])

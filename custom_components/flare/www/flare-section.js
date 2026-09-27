@@ -1,25 +1,10 @@
 /**
- * The dashboard section for one FLARE schedule, as a plain config object.
- *
- * Consumed by flare-view-strategy.js, which turns it into a live view
- * on every dashboard load, so a layout change reaches every install with
- * an update. An OBJECT rather than a YAML string because a strategy hands
- * Home Assistant objects.
- *
- * No DOM and no Home Assistant imports - data in, config out - so the
- * strategy and the tests can both use it anywhere.
+ * The dashboard section for one FLARE schedule, as a config object for
+ * flare-view-strategy.js. No DOM or HA imports.
  */
 
-// COLOUR encodes the PHASE and ICON encodes the CHANNEL, so the Curve and
-// Transitions groups can be scanned two ways at once: all of Morning is
-// one colour wherever it appears, and every colour-temperature control
-// carries the same icon whichever phase it belongs to.
-//
-// The palette tracks the COLOUR TEMPERATURE the curve actually reaches in
-// each phase, not the time of day: Morning ramps to the coldest, bluest
-// light of the day, and each phase after it is warmer. So Morning is blue
-// and Day is yellow, which reads backwards against a sunrise/sunset
-// mental model and is right against the curve sitting directly above it.
+// Colour encodes the phase and icon the channel. Colours follow the
+// temperature each phase reaches, so Morning (coldest) is blue.
 export const PHASES = [
   { key: 'morning', label: 'Morning', color: 'blue', icon: 'mdi:weather-sunset-up' },
   { key: 'day', label: 'Day', color: 'yellow', icon: 'mdi:weather-sunny' },
@@ -29,13 +14,9 @@ export const PHASES = [
 
 const BRIGHTNESS_ICON = 'mdi:brightness-6';
 const KELVIN_ICON = 'mdi:temperature-kelvin';
-// Transitions are durations, not levels, so they take a timing icon
-// rather than repeating the channel icons from the Curve group - the two
-// groups otherwise use identical tile names.
 const TRANSITION_ICON = 'mdi:timer-sand';
 
-// The five schedule boundaries, in the order the day runs. Evening takes
-// both of its bounds, which is why the phase list doesn't map 1:1.
+// Evening has both of its bounds.
 const SCHEDULE_TIMES = [
   { entity: 'morning_time', name: 'Morning', phase: 'morning' },
   { entity: 'day_time', name: 'Day', phase: 'day' },
@@ -46,21 +27,9 @@ const SCHEDULE_TIMES = [
 
 const phase = (key) => PHASES.find((p) => p.key === key);
 
-// Both curve values get one of FLARE's own sliders rather than the
-// built-in one, for the same reason: the built-in takes its colour from
-// the tile's, which this section spends on encoding the phase, and a
-// tile `color` accepts no template - so it can only ever show which
-// phase a control belongs to, never what it is set to.
-//
-// Colour temperature is painted in the temperature itself. Brightness
-// borrows that same colour via tint_from and fades it by the value, so
-// the two together preview what the light will actually look like - hue
-// from the temperature, intensity from the brightness. See
-// flare-kelvin-feature.js and flare-brightness-feature.js.
-//
-// Which is why COLOUR TEMPERATURE COMES FIRST in each row below: the
-// colour is decided there and then carried across into the brightness
-// slider beside it, so left-to-right is the order the two are read in.
+// FLARE's own sliders, since the built-in one takes the tile's (phase)
+// colour. Colour temperature comes first in each row: brightness borrows
+// its colour via tint_from.
 const KELVIN_SLIDER = [{ type: 'custom:flare-kelvin-feature' }];
 const brightnessSlider = (kelvinEntity) => [
   { type: 'custom:flare-brightness-feature', tint_from: kelvinEntity },
@@ -71,11 +40,7 @@ const TRANSITIONS_NOTE =
   'minutes. 0 is a hard cut. Values are clamped to the phase, so anything ' +
   'longer than the phase itself means "ease across the whole phase".';
 
-// features_position: inline puts the control on the same row as the name
-// instead of below it, roughly halving each tile's height - which matters
-// on a section carrying 25 entities. Only the FIRST feature goes inline
-// (the frontend's computeCardFeatureLayout slices at 1); every tile here
-// has exactly one, so all of them qualify.
+// Puts the control on the name's row, halving tile height.
 function tile({ entity, name, icon, color, columns, features }) {
   const card = { type: 'tile', entity, name };
   if (icon) card.icon = icon;
@@ -84,8 +49,7 @@ function tile({ entity, name, icon, color, columns, features }) {
     card.features = features;
     card.features_position = 'inline';
   }
-  // Omitted inside a pairGrid, which lays its own children out - a
-  // grid_options on a card the section's grid never sees does nothing.
+  // Omitted inside a pairGrid, which lays out its own children.
   if (columns) card.grid_options = { columns };
   return card;
 }
@@ -97,22 +61,10 @@ const heading = (text, style, extra = {}) => ({
   ...extra,
 });
 
-// Curve and Transitions are laid out as a nested grid card at two
-// columns, so a row is always exactly one phase: brightness beside
-// colour, Morning then Day then Evening then Night. Reading down a
-// column then gives one channel across the whole day.
-//
-// This has to be the grid card's own `columns`, not per-tile
-// grid_options. The latter counts against the SECTION's grid, which is
-// 12 wide times its column_span (4 here), so a fixed per-tile value
-// lands on a different number of tiles per row at different window
-// widths - fine where nothing depends on which cards are adjacent, and
-// not fine for a layout that is entirely about which two tiles sit
-// together.
-//
-// grid_options: {columns: full} on the grid card itself is still
-// required: a nested grid implements no getLayoutOptions(), so without
-// it the whole group renders at roughly a third of the section's width.
+// A two-column nested grid, so each row is one phase. It has to be the
+// grid's `columns`: per-tile grid_options count against the section's
+// grid and wrap differently at different widths. `columns: full` because
+// a nested grid otherwise renders at a third of the section's width.
 const pairGrid = (cards) => ({
   type: 'grid',
   columns: 2,
@@ -122,11 +74,8 @@ const pairGrid = (cards) => ({
 });
 
 /**
- * The whole section for one schedule, given its slug and a heading.
- *
- * `slug` is the schedule sensor's entity_id minus the `sensor.` prefix
- * and `_flare` suffix - the same value the curve card's `sensor:`
- * shorthand takes.
+ * The section for one schedule. `slug` is the sensor's entity_id minus
+ * `sensor.` and `_flare`.
  */
 export function sectionConfig(slug, title) {
   const curve = pairGrid(
@@ -148,10 +97,8 @@ export function sectionConfig(slug, title) {
     ])
   );
 
-  // No feature at all on a transition: they run 0-1440 minutes while any
-  // value anyone sets is under an hour, so a slider spends ~96% of its
-  // travel out of reach. Tapping falls through to the more-info dialog,
-  // which these entities already render as a typed box.
+  // No feature on transitions: 0-1440 minutes makes a slider useless for
+  // the values people set. Tapping opens the more-info box instead.
   const transitions = pairGrid(
     PHASES.flatMap((p) => [
       tile({
@@ -210,8 +157,7 @@ export function sectionConfig(slug, title) {
             show_state: true,
             icon: 'mdi:hand-back-right',
             name: 'Override',
-            // It reads "Auto" the vast majority of the time, which is
-            // noise on a header whose job is to show what is happening.
+            // Almost always "Auto", so not worth showing.
             visibility: [{ condition: 'state', entity: select, state_not: 'Auto' }],
           },
         ],
@@ -238,15 +184,10 @@ export function sectionConfig(slug, title) {
 
 const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
-// A tracking scope's own sensor. Note it also ends in SCHEDULE_SUFFIX
-// followed by more, which is why scheduleSensors below tests the suffix
-// exactly rather than with includes().
+// Also ends with SCHEDULE_SUFFIX plus more, hence the exact suffix test.
 const TRACKING_SUFFIX = '_flare_tracking';
 
-// Only reached when a schedule sensor has no friendly_name, which is
-// rare - the device name normally supplies one. Worth doing anyway: a
-// section headed "loft" sitting beside one headed "Downstairs" reads as
-// a bug rather than as a name someone chose.
+// Only when a sensor has no friendly_name.
 function titleCase(slug) {
   return slug
     .split('_')
@@ -256,12 +197,8 @@ function titleCase(slug) {
 }
 
 /**
- * The slug for whatever someone put in a `sensor:` option.
- *
- * Accepts the slug itself (`downstairs`, matching the curve card's own
- * `sensor:` shorthand) or the full entity_id (`sensor.downstairs_flare`),
- * because both are things people reasonably write and neither is wrong.
- * Returns null for an empty value, which callers read as "no filter".
+ * The slug from a `sensor:` option, which may be the slug or the full
+ * entity_id. null for empty ("no filter").
  */
 export function normaliseSlug(value) {
   if (typeof value !== 'string') return null;
@@ -273,14 +210,8 @@ export function normaliseSlug(value) {
 }
 
 /**
- * Every FLARE schedule sensor in `hass`, as {slug, title} pairs, in a
- * stable order.
- *
- * Identified the same way the curve card's picker suggestion does: the
- * name shape, plus the `points` attribute only a schedule sensor
- * publishes. The tracking entities (`_flare_tracking`, `_flare_controlled`,
- * `_flare_overridden`) end in something else and fall out on the suffix,
- * so no exclusion list is needed that could go stale.
+ * Every schedule sensor as {slug, title}, in a stable order. Identified by
+ * the name suffix and the `points` attribute.
  */
 export function scheduleSensors(hass) {
   const states = (hass && hass.states) || {};
@@ -298,15 +229,8 @@ export function scheduleSensors(hass) {
 
 
 /**
- * The tracking section for one scope.
- *
- * Deliberately small - a scope is three numbers and a button, and a
- * house has one per room (sixteen here), so these are sized to flow
- * several to a row rather than to span the view like a schedule does.
- *
- * `controlled` and `overridden` do NOT sum to the total tracked: a light
- * that is off or unavailable is in neither, because override protection
- * does not apply to it at all. See sensor.py.
+ * The tracking section for one scope, sized to flow several to a row.
+ * `controlled` + `overridden` needn't equal the total tracked.
  */
 export function trackingSectionConfig(slug, title) {
   const controlled = `sensor.${slug}_flare_controlled`;
@@ -319,10 +243,7 @@ export function trackingSectionConfig(slug, title) {
       heading(title, 'title', { icon: 'mdi:eye-outline' }),
       tile({ entity: controlled, name: 'Controlled', columns: 6 }),
       tile({ entity: overridden, name: 'Overridden', columns: 6 }),
-      // Naming the lights is the whole reason someone opens this view -
-      // "which light stopped following, and what took it". Hidden while
-      // the count is zero, which is almost always, so the section stays
-      // three lines until something is actually overridden.
+      // Hidden while zero, which is almost always.
       {
         type: 'markdown',
         text_only: true,
@@ -332,10 +253,7 @@ export function trackingSectionConfig(slug, title) {
           `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
         visibility: [{ condition: 'numeric_state', entity: overridden, above: 0 }],
       },
-      // An explicit tap_action rather than relying on the tile card's
-      // per-domain default: pressing is the only thing anyone wants from
-      // this tile, and a default that changes upstream would silently
-      // turn it into a more-info dialog.
+      // Explicit, so an upstream default change can't turn it into more-info.
       {
         type: 'tile',
         entity: clear,
@@ -353,13 +271,8 @@ export function trackingSectionConfig(slug, title) {
 }
 
 /**
- * Every FLARE tracking scope in `hass`, as {slug, title} pairs.
- *
- * Identified by the `claims` attribute, the same way schedule sensors
- * are identified by `points` - a name test alone would also match
- * anything else ending that way. The friendly name is "Bedroom
- * Tracking", so the trailing word is dropped to leave the scope's own
- * name.
+ * Every tracking scope as {slug, title}, identified by the `claims`
+ * attribute. The title drops the trailing "Tracking".
  */
 export function trackingScopes(hass) {
   const states = (hass && hass.states) || {};

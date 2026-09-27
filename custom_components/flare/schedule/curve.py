@@ -1,51 +1,24 @@
-"""
-Solar adaptive-lighting brightness/colour-temperature schedule.
-
-Free of Home Assistant except for one colour conversion - see
-kelvin_to_rgb, which delegates to homeassistant.util.color rather than
-carrying a copy of the same approximation.
-
-All timestamps are unix seconds. Boundary timestamps (morning/day
-start/evening start/night start) are today's, computed in
-coordinator.py from the schedule's time entities plus sunset.
-"""
+"""Brightness/colour-temperature schedule maths. Timestamps are unix
+seconds; boundaries are today's, computed in coordinator.py."""
 
 import math
 
-# The one Home Assistant import in this otherwise-pure module, and a
-# deliberate exception to the rule in the docstring above: a colour
-# conversion is not curve logic, and reimplementing a battle-tested
-# one to keep the module import-free is the wrong trade. Note the
-# pure test suite already requires homeassistant to be importable -
-# override_protection.py has the same exception, for mireds.
+# The one HA import: a colour conversion isn't worth reimplementing.
 from homeassistant.util.color import color_temperature_to_rgb
 
-# The brightness/Kelvin literals every phase uses if nothing overrides
-# them. The only place these numbers are literals; every other file
-# imports the named constants (or DEFAULT_CURVE_VALUES).
+# The only place these numbers are literals.
 DEFAULT_MORNING_BRIGHTNESS = 255
 DEFAULT_DAY_BRIGHTNESS = 255
 DEFAULT_EVENING_BRIGHTNESS = 180
 DEFAULT_NIGHT_BRIGHTNESS = 80
 DEFAULT_MORNING_KELVIN = 6667
-# Day starts at Morning's colour and spends the whole phase easing to
-# Evening's - see DEFAULT_DAY_KELVIN_TRANSITION.
 DEFAULT_DAY_KELVIN = DEFAULT_MORNING_KELVIN
 DEFAULT_EVENING_KELVIN = 3200
 DEFAULT_NIGHT_KELVIN = 2700
 
-# How long before each phase ends to begin easing to the next phase's
-# value, in minutes - one per phase per channel, named for the phase the
-# transition runs *in*. 0 is a hard cut, which is a real choice: some
-# boundaries should be visible.
-#
-# Day's Kelvin default is longer than any Day can be on purpose. Because
-# a duration clamps to its own phase, "24 hours" reads as "always be
-# transitioning", and keeps meaning that if the boundaries move.
-#
-# Morning's do nothing on the shipped values, since Day holds the same
-# brightness and colour Morning does and there is nothing to interpolate.
-# They matter the moment Day is given its own.
+# Minutes before each phase ends to start easing to the next phase's
+# value, named for the phase the transition runs in. 0 is a hard cut.
+# Day's Kelvin default is longer than any Day, so it spans the whole phase.
 DEFAULT_MORNING_BRIGHTNESS_TRANSITION = 60
 DEFAULT_MORNING_KELVIN_TRANSITION = 60
 DEFAULT_DAY_BRIGHTNESS_TRANSITION = 65
@@ -55,9 +28,7 @@ DEFAULT_EVENING_KELVIN_TRANSITION = 60
 DEFAULT_NIGHT_BRIGHTNESS_TRANSITION = 30
 DEFAULT_NIGHT_KELVIN_TRANSITION = 30
 
-# Eight values and eight transitions, keyed exactly like coordinator.py's
-# CURVE_KEYS - the one place anything wanting the full default set reads
-# it from.
+# Keyed like coordinator.py's CURVE_KEYS.
 DEFAULT_CURVE_VALUES = {
     "morning_brightness": DEFAULT_MORNING_BRIGHTNESS,
     "morning_kelvin": DEFAULT_MORNING_KELVIN,
@@ -77,12 +48,7 @@ DEFAULT_CURVE_VALUES = {
     "night_kelvin_transition": DEFAULT_NIGHT_KELVIN_TRANSITION,
 }
 
-# A representative day schedule (hour-of-day), not read by anything
-# below - a single shared "sensible starting point" for anything that
-# wants to seed or preview a schedule without real user input yet
-# (time.py's default value for every new sensor's boundary-time
-# entities, and the docs site's curve playground). The one place these
-# numbers are literals.
+# Hours of day, used to seed new time entities and the docs playground.
 DEFAULT_SCHEDULE_HOURS = {
     "morning": 6,
     "day": 8,
@@ -97,37 +63,16 @@ def _clamp(v: float, lo: float, hi: float) -> float:
 
 
 def kelvin_to_rgb(kelvin: float) -> tuple:
-    """Kelvin -> RGB, via Home Assistant's own conversion.
+    """Kelvin -> RGB via HA's conversion, rounded half-up to match the card's
+    Math.round. (round() would pass today's tests, since no integer Kelvin
+    lands on .5 - keep it anyway.)
 
-    `homeassistant.util.color.color_temperature_to_rgb` is Tanner
-    Helland's approximation, the same formula the dashboard card uses.
-
-    What is ours is the ROUNDING. Home Assistant returns floats;
-    www/flare-curve-card.js's kelvinToRgb() rounds with JavaScript's
-    Math.round, which is half-UP, while Python's round() is
-    half-to-even. Matching it is deliberate but, measured, currently
-    unobservable: no integer Kelvin in 1000-10000 produces a channel
-    landing on an exact .5, and kelvin_for_phase only ever hands this
-    integers. So round() would pass every test today - which is exactly
-    why this says so rather than leaving a future reader to "simplify"
-    it and assume the equivalence holds for good.
-
-    Home Assistant clamps its input to 1000-40000K. The Kelvin `number`
-    entities are bounded 1000-10000, but `compute_curve`'s schema is
-    not, so a direct caller can reach the clamp.
-    """
+    HA clamps input to 1000-40000K, reachable through compute_curve."""
     return tuple(int(math.floor(c + 0.5)) for c in color_temperature_to_rgb(kelvin))
 
 
 def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> str:
-    """Which phase a given instant falls in, given today's boundaries.
-
-    Used to precompute the full-day curve for the dashboard graph -
-    there's no real day_phase for past/future instants, only "what would
-    it have been". A phase override moves the live values but not the
-    curve, so the curve and the "now" marker can disagree while one is
-    set.
-    """
+    """Which phase an instant falls in, given today's boundaries."""
     if t < morning_ts:
         return "Night"
     if t < day_start_ts:
@@ -143,43 +88,17 @@ PHASE_ORDER = ("Morning", "Day", "Evening", "Night")
 
 
 def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> list:
-    """Which phases actually occur today, and the instant each really starts.
+    """Which phases occur today, and when each actually starts, as
+    [(name, start_ts), ...].
 
-    phase_at() above is a cascade of `t < boundary` tests in a fixed
-    order, which quietly tolerates boundaries set out of order - a
-    Morning time later than the Day time, say. Two things follow from
-    that cascade, and neither is obvious from the four raw boundaries:
+    Boundaries can be set out of order. phase_at() cascades through
+    `t < boundary` tests, so a phase can be unreachable (Morning at 10:00,
+    Day at 08:00: never Morning), and the next phase then starts at the
+    later boundary. Each phase starts at the running max of the boundaries
+    up to its own. Night gets a mark only for its return, and only if some
+    other phase happens at all.
 
-    1. A phase can be UNREACHABLE. With Morning at 10:00 and Day at
-       08:00, nothing is ever Morning: by the time `t` clears 10:00 it
-       has already passed the 08:00 test, so the day runs
-       Night -> Day -> Evening -> Night.
-    2. The phase that follows an unreachable one starts at the LATER
-       boundary, not its own. In that same example Day starts at 10:00
-       (Morning's boundary), not at its own 08:00.
-
-    Both fall out of one rule: each phase effectively begins at the
-    running maximum of the boundaries up to and including its own, and
-    occupies the span up to the next phase's effective start - so it is
-    real exactly when that span is non-empty.
-
-    Returned as [(name, start_ts), ...] in order, omitting any phase
-    that never happens. Night is a special case in both directions: the
-    day always *opens* on Night (`t < morning_ts`), so its own boundary
-    marks the RETURN to Night rather than its only appearance - and if
-    nothing ever leaves Night (every other phase unreachable, as with a
-    fully reversed schedule) there is no return to mark, so nothing is
-    returned at all. A mark means "the phase changes here"; a day that is
-    Night throughout changes nowhere.
-
-    This exists because the boundaries are freely settable `time`
-    entities, so an out-of-order schedule is a state a user can reach.
-    The curve itself already handles it correctly, having gone through
-    phase_at(); it's anything drawing the boundaries *directly* from the
-    four timestamps - the dashboard card's phase labels and lines - that
-    would otherwise show a phase that isn't happening, at a time it
-    isn't happening at.
-    """
+    For anything drawing boundaries directly, like the card's labels."""
     raw = (morning_ts, day_start_ts, evening_ts, night_ts)
 
     effective_starts = []
@@ -194,10 +113,7 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
         if effective_starts[i] < effective_starts[i + 1]:
             marks.append((name, effective_starts[i]))
 
-    # Night last, and only if some other phase actually happens - see the
-    # docstring. Without that check a fully reversed schedule (a day that
-    # is Night from end to end) would draw a Night boundary partway
-    # through, implying a change that never occurs.
+    # Night last, and only if some other phase happens.
     if marks:
         marks.append(("Night", effective_starts[-1]))
     return marks
@@ -205,27 +121,19 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
 
 SECONDS_PER_DAY = 86400
 
-# Which phase each one hands over to. Night wraps back to Morning, which
-# is what makes it the only phase whose span crosses midnight.
+# Night wraps to Morning, so it's the only span crossing midnight.
 _NEXT_PHASE = {"Morning": "Day", "Day": "Evening", "Evening": "Night", "Night": "Morning"}
 
 
 def _phase_span(day_phase: str, now_ts: float, boundaries: dict) -> tuple:
-    """(start, end) of the phase's own stretch of the timeline.
-
-    Every phase but Night is a plain [start, end) between two of today's
-    boundaries. Night is two segments of one period - phase_at() returns
-    "Night" both before morning_ts and after night_ts - so which one we
-    are in decides whether its handover to Morning is today's or
-    tomorrow's. Treating it as a single span that crosses midnight keeps
-    the transition maths identical to every other phase's."""
+    """(start, end) of the phase's own span. Night is one span crossing
+    midnight, starting either yesterday or today."""
     if day_phase == "Morning":
         return boundaries["morning"], boundaries["day"]
     if day_phase == "Day":
         return boundaries["day"], boundaries["evening"]
     if day_phase == "Evening":
         return boundaries["evening"], boundaries["night"]
-    # Night, in whichever of its two segments now_ts falls.
     if now_ts >= boundaries["night"]:
         return boundaries["night"], boundaries["morning"] + SECONDS_PER_DAY
     return boundaries["night"] - SECONDS_PER_DAY, boundaries["morning"]
@@ -238,43 +146,13 @@ def _value_at(
     values: dict,
     duration_minutes: float,
 ) -> float:
-    """This phase's value now, easing toward the next phase's over the
-    last `duration_minutes` of the phase.
+    """This phase's value now, easing toward the next phase's over the last
+    `duration_minutes` of the phase, so the next value arrives exactly at
+    the boundary. The duration is clamped to the phase.
 
-    The transition sits *before* the boundary, so the value arrives at
-    the next phase's exactly as that phase begins - "if Morning is at
-    6am, it IS the morning setting at 6am". A duration of 0 is therefore
-    a hard cut, which is the point: some boundaries should be visible.
-
-    The duration is clamped to the phase it runs in, so a value too long
-    to fit simply means "the whole phase" rather than bleeding backwards
-    into the phase before. Clamping happens here rather than by rewriting
-    the config: phase lengths move daily (Evening tracks sunset), so a
-    duration that fits in summer and not in winter has to keep working.
-
-    The interpolation factor is clamped as well, and that is load-bearing
-    for a different reason - day_phase is a *parameter*, not derived from
-    now_ts. coordinator.py passes a manually-overridden phase alongside
-    the real clock, so a phase can legitimately be asked for at an
-    instant outside its own span. Unclamped, the ramp would extrapolate
-    straight past the target and keep going.
-
-    Past the phase's own span entirely - strictly past `span_end`, not
-    merely reaching it - this returns `own` outright, rather than the
-    fully-ramped next-phase value the clamp above would otherwise settle
-    on. `now_ts == span_end` exactly still ramps all the way to t=1
-    (the next phase's value): that instant is the boundary itself, where
-    "the value arrives at the next phase's exactly as that phase begins"
-    (see above) is meant to hold regardless of which phase asked for it.
-    Without this, overriding to "Night" during real evening would clamp
-    the factor to 1 and show Morning's values instead of Night's. This
-    can only change behaviour for an overridden phase: phase_at()'s
-    own natural output never lets now_ts get past a phase's own span_end
-    for that same phase - the instant it does, phase_at() has already
-    returned the *next* phase instead - so the full-day curve-preview
-    computation (coordinator.py's _compute_curve_points, which always
-    derives day_phase fresh via phase_at(t, ...) for that same t) is
-    unaffected."""
+    day_phase can be an override, so now_ts may be outside the phase's
+    span. The factor is clamped so it can't extrapolate, and strictly past
+    the span it returns the phase's own value rather than the next phase's."""
     own = values[day_phase]
     span_start, span_end = _phase_span(day_phase, now_ts, boundaries)
     duration = min(max(duration_minutes, 0) * 60, max(span_end - span_start, 0))
@@ -343,12 +221,7 @@ def kelvin_for_phase(
     evening_kelvin_transition: float = DEFAULT_EVENING_KELVIN_TRANSITION,
     night_kelvin_transition: float = DEFAULT_NIGHT_KELVIN_TRANSITION,
 ) -> int:
-    """Target colour temperature (Kelvin) for the given phase/instant.
-
-    Every phase holds its own value and then eases to the next phase's
-    over its own transition. Day's default transition is longer than any Day can be, which is how
-    "slide from Morning's colour to Evening's across the whole day" is
-    expressed."""
+    """Target colour temperature (Kelvin) for the given phase/instant."""
     return round(
         _value_at(
             day_phase,
@@ -379,24 +252,9 @@ def targets_for_phase(
     morning_ts: float,
     **curve_values,
 ) -> dict:
-    """brightness/kelvin/rgb_color for an already-known phase, in one
-    call - the single orchestration point for
-    brightness_for_phase/kelvin_for_phase/kelvin_to_rgb.
-
-    Takes day_phase rather than computing it via phase_at() itself
-    because some callers need to substitute a different phase first
-    (coordinator.py's manual override reads phase_at()'s result but then
-    may replace it with the phase-override select's value before
-    computing brightness/kelvin from it) - phase_at() stays a separate
-    call so that substitution has somewhere to happen. Callers that don't
-    need it can just call phase_at() immediately before this.
-
-    Curve values arrive as **kwargs and are split by name rather than
-    listed twice: there are sixteen of them now (four phases x value and
-    transition x brightness and Kelvin), and re-declaring every one here
-    only to pass it straight through was the largest source of
-    copy-paste in this file. Unknown keys raise from the callee, so a
-    typo still fails loudly rather than being silently dropped."""
+    """brightness/kelvin/rgb_color for a phase. Takes the phase rather than
+    computing it, so the caller can substitute an override. Curve values
+    pass through as kwargs; unknown keys raise."""
     boundaries = (now_ts, morning_ts, day_start_ts, evening_ts, night_ts)
     brightness = brightness_for_phase(
         day_phase, *boundaries, **{k: v for k, v in curve_values.items() if "brightness" in k}

@@ -1,11 +1,5 @@
-"""
-Fix flows for the repairs this integration raises - the blueprint being
-out of date or not installed, both from blueprint_check.py.
-
-Home Assistant looks for this module by name (`repairs.py`) on the
-integration and calls async_create_fix_flow() when the user presses Fix
-on the issue - there's no registration step for it beyond existing.
-"""
+"""Fix flows for blueprint_check.py's repairs. HA finds this module by
+name."""
 
 from __future__ import annotations
 
@@ -25,15 +19,8 @@ from .blueprint_version import BLUEPRINT_VERSION
 
 
 class OutdatedBlueprintRepairFlow(RepairsFlow):
-    """Re-imports the blueprint this release ships with, over the top of
-    whatever is installed.
-
-    A confirmation step rather than a silent auto-apply: this writes a
-    file into the user's own blueprints folder and reloads every automation using it. Overwriting
-    something a user may have edited is not a thing to do without asking
-    - and if they HAVE edited it, declining and ignoring the repair is
-    the right answer, which the description says.
-    """
+    """Re-imports this release's blueprint over the installed one, after
+    confirmation, since the user may have edited it."""
 
     async def async_step_init(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResult:
         return await self.async_step_confirm()
@@ -45,11 +32,7 @@ class OutdatedBlueprintRepairFlow(RepairsFlow):
             try:
                 updated = await async_update_blueprints(self.hass)
             except Exception:  # noqa: BLE001
-                # Fetching reaches GitHub, so this fails for reasons that
-                # have nothing to do with the user - no network, a rate
-                # limit, a tag that hasn't propagated. Aborting leaves
-                # the repair in place to try again rather than reporting
-                # a success that didn't happen.
+                # A GitHub fetch; aborting leaves the repair to retry.
                 return self.async_abort(reason="update_failed")
             return self.async_create_entry(title="", data={"updated": updated})
 
@@ -65,15 +48,7 @@ class OutdatedBlueprintRepairFlow(RepairsFlow):
 
 
 class MissingBlueprintRepairFlow(RepairsFlow):
-    """Installs the blueprint for a house that has none.
-
-    Raised whenever no copy is present, without asking whether anyone
-    wanted one. Someone can arrive at this integration from the HACS
-    store with no idea the blueprint exists, install it, and reasonably
-    wonder why nothing happened - so the default has to be to say so.
-    Anyone driving the services from their own automations can ignore
-    the repair, which Home Assistant remembers across version bumps.
-    """
+    """Installs the blueprint for a house that has none."""
 
     async def async_step_init(self, user_input: dict[str, str] | None = None) -> data_entry_flow.FlowResult:
         return await self.async_step_confirm()
@@ -85,10 +60,7 @@ class MissingBlueprintRepairFlow(RepairsFlow):
             try:
                 path = await async_install_blueprint(self.hass)
             except Exception:  # noqa: BLE001
-                # Reaches GitHub, so this fails for reasons that have
-                # nothing to do with the user. Aborting leaves the repair
-                # in place to try again rather than reporting a success
-                # that didn't happen.
+                # A GitHub fetch; aborting leaves the repair to retry.
                 return self.async_abort(reason="install_failed")
             return self.async_create_entry(title="", data={"installed": path})
 

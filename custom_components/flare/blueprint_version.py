@@ -1,63 +1,28 @@
-"""
-Which version of the blueprint is installed, and whether it is the one
-this integration shipped with.
+"""Which blueprint version is installed, and whether it's this release's.
+Pure, so parsing is testable on plain strings; blueprint_check.py talks
+to HA.
 
-The two halves of FLARE deploy separately - HACS updates the
-integration, and the blueprint has to be re-imported by hand - so a
-house can quite easily end up running a blueprint from three releases
-ago against today's services. Nothing announces that. It just behaves
-oddly.
-
-BLUEPRINT_VERSION is the version of FLARE the blueprint shipped with, so
-the blueprint carries the same number as the release it came in. This
-module is pure (no Home Assistant imports), so it is held here as a
-constant rather than read from the manifest. `tests/test_blueprint_version.py`
-checks it agrees with the stamp in the blueprint's description, since a
-mismatch otherwise fails silently and users simply never hear about the
-update.
-
-The version travels in the blueprint's own `description`, which is not
-where you would put it given a free choice. Home Assistant's blueprint
-schema (homeassistant/components/blueprint/schemas.py) validates the
-`blueprint:` block against a CLOSED voluptuous schema - name,
-description, domain, source_url, author, homeassistant, input, and
-nothing else - so there is no custom key available, and a top-level key
-alongside `blueprint:` would end up in the generated automation config
-instead. `description` is free text we control, it survives however the
-blueprint was imported, it needs no filesystem access to read back
-(Blueprint.metadata exposes it), and it has the side benefit of showing
-the version to the user in the automation editor, which nothing else
-currently does.
-
-Pure - no Home Assistant imports - so the parsing is testable on plain
-strings. blueprint_check.py is the half that talks to HA.
+The version lives in the blueprint's `description` because HA validates
+the `blueprint:` block against a closed schema, so there's no custom key
+to put it in.
 """
 
 from __future__ import annotations
 
 import re
 
-# Set to the release's version when a release is built, together with the
-# same version in the blueprint's description. What is here in between is
-# just whatever it last held. The test suite checks the two agree.
+# Written by scripts/release.py, along with the blueprint's stamp.
 BLUEPRINT_VERSION = "0.16.0"
 
-# Matches the line the blueprint's description carries. Deliberately
-# loose about what follows the number so the sentence around it can be
-# reworded without breaking every installed copy's version detection.
+# Loose about what follows the number, so the sentence can be reworded.
 _VERSION_IN_DESCRIPTION = re.compile(
     r"Blueprint version\s+(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)"
 )
 
 
 def version_from_description(description: str | None) -> str | None:
-    """The blueprint version named in a description, or None.
-
-    None means "an older blueprint than the one that started stamping
-    itself" as well as "not one of ours", and both want the same
-    outcome: offer the update. Callers decide which blueprints to ask
-    about; this only reads the string.
-    """
+    """The blueprint version named in a description, or None if it has
+    no stamp."""
     if not description:
         return None
     match = _VERSION_IN_DESCRIPTION.search(description)
@@ -65,11 +30,6 @@ def version_from_description(description: str | None) -> str | None:
 
 
 def is_outdated(installed: str | None) -> bool:
-    """Does this installed version want updating?
-
-    A plain inequality, not a "newer than" comparison. Someone running a
-    blueprint from a beta that was later abandoned should be told to get
-    back onto the released one, and an unstamped blueprint (None) is
-    every copy released before this check existed.
-    """
+    """Inequality rather than "older than", so a blueprint from an
+    abandoned beta is also moved back onto this release."""
     return installed != BLUEPRINT_VERSION

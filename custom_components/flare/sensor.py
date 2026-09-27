@@ -1,19 +1,11 @@
-"""
-Sensor platform for both entries.
+"""Sensor platform for both entries.
 
-Schedules: one sensor.<name>_flare per schedule instance (see
-coordinator.py's ScheduleInstance/schedule_instances), displayed as just
-its device's name (has_entity_name=True, name=None). State is the phase;
-the attributes carry everything else - the "right now" brightness/
-color_temp/rgb_color the blueprint's `adaptive_sensor` input reads,
-today's boundary timestamps, and the full-day `points` curve the
-dashboard card draws. One entity rather than one per value: anything
-wanting a single value reads the attribute, and a trigger on just the
-phase is a `state` trigger with `attribute: phase`.
+Schedules: sensor.<name>_flare per schedule. State is the phase; the
+attributes carry the current brightness/color_temp/rgb_color, today's
+boundaries, and the full-day `points` curve.
 
-Tracking: per state device, the tracking sensor that holds its claims,
-plus `controlled`/`overridden` counts over them.
-"""
+Tracking: per scope, the sensor holding its claims, plus
+`controlled`/`overridden` counts."""
 
 from __future__ import annotations
 
@@ -37,8 +29,6 @@ from .tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistr
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    # Both entry types use this platform, and each owns a different set
-    # of entities - see const.py's CONF_ENTRY_TYPE.
     if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_TRACKING:
         for instance in schedule_instances(entry):
             coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
@@ -58,13 +48,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tuple[str, Any, Any]:
-    """One light's current status, shared by every sensor in this module
-    so they can't drift apart (see override_protection.py's module
-    docstring).
-
-    Returns (status, matched_via, live_context_id).
-    "unavailable" is this layer's own case: classify() only ever sees a
-    real on/off, so it has no equivalent."""
+    """One light's status, shared by every sensor here so they agree.
+    Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
     if state is None or state.state in ("unavailable", "unknown"):
@@ -80,25 +65,15 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
         min_color_temp_kelvin=state.attributes.get("min_color_temp_kelvin"),
         max_color_temp_kelvin=state.attributes.get("max_color_temp_kelvin"),
     )
-    # "untracked" (no claim at all, or only one unverified attempt)
-    # displays as "controlled": from a viewer's point of view both mean
-    # "not excluded from the next tick". The distinction only matters to
-    # is_blocked()'s own decision, not to this diagnostic status.
+    # "untracked" shows as "controlled": either way, not excluded.
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
 
 
 @callback
 def _assign_scope_area(hass: HomeAssistant, entity, instance: StateInstance) -> None:
-    """Puts a state device in the area it targets, when it targets
-    exactly one - which is what the setup offer creates. A scope
-    spanning several areas, or targeting devices and entities directly,
-    has no single right answer and is left unassigned.
-
-    Only ever fills in a *blank* area, never overwrites one, so moving a
-    state device by hand sticks. Done on the device rather than via
-    DeviceInfo.suggested_area, which is deprecated (breaks in HA 2026.9)
-    and takes an area *name*, creating the area as a side effect."""
+    """Puts a scope's device in its target area when it targets exactly one.
+    Only fills a blank area, so a hand-set one sticks."""
     areas = instance.target.get("area_id") or []
     areas = [areas] if isinstance(areas, str) else list(areas)
     if len(areas) != 1 or entity.registry_entry is None or entity.registry_entry.device_id is None:
@@ -111,34 +86,16 @@ def _assign_scope_area(hass: HomeAssistant, entity, instance: StateInstance) -> 
 
 
 class _StateTrackingSensor(SensorEntity, RestoreEntity):
-    """One state device's claims - the actual storage, not a view of it.
-
-    `claims` is the dict ClaimRegistry reads and mutates, published as
-    this entity's attribute. There is no copy kept in step behind it, so
-    what Developer Tools shows and what override protection acts on are
-    the same object by construction.
-
-    Not recorded: the largest scope in a real house is around 8 KB of
-    claims and it changes on every tick, so history of it would be both
-    enormous and useless. The same `_unrecorded_attributes` treatment
-    the day-curve `points` attribute already gets.
-
-    Restored across a restart, through HA's own restore state - see
-    extra_restore_state_data, and write_tracking.py's module docstring
-    for why that is safe. "Not recorded" and "not restored" are
-    different things: restore state is its own store, separate from the
-    recorder's history."""
+    """One scope's claims - the storage itself, published as an attribute.
+    Kept out of the recorder but restored across a restart."""
 
     _attr_has_entity_name = True
     _attr_name = "Tracking"
     _attr_icon = "mdi:text-search"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = "lights"
-    # Polls as well as publishing on every mutation. classify() compares
-    # claims against each light's *live* state, which changes
-    # independently of anything this module does - a restart, an entity
-    # reconnecting, a light dimmed by hand. Without the poll, a scope
-    # whose claims happen not to change would never notice.
+    # Polls too, since claims are judged against live state that changes
+    # without any claim changing.
     _unrecorded_attributes = frozenset({"claims"})
 
     def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, instance: StateInstance) -> None:
@@ -153,23 +110,18 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        # Restored BEFORE registering, so the registry never routes a
-        # write into an empty dict that the restore then replaces.
+        # Restored before registering, so no write lands in a dict about to be
+        # replaced.
         last = await self.async_get_last_extra_data()
         if last is not None:
             self.claims = dict(last.as_dict().get("claims") or {})
         self._registry.register(self._instance.subentry_id, self)
-        # The setup-time prune in __init__.py runs before any tracking
-        # entity exists, so without this a restored claim over a day old
-        # would survive until the first hourly prune.
+        # The setup-time prune ran before this entity existed.
         await self._registry.async_prune_stale()
         _assign_scope_area(self.hass, self, self._instance)
 
     @property
     def extra_restore_state_data(self) -> ExtraStoredData:
-        """What HA saves for this entity at shutdown and every 15 minutes:
-        the claims dict itself, so what comes back is the same object
-        override protection reads rather than a copy kept in step."""
         return RestoredExtraData({"claims": self.claims})
 
     async def async_will_remove_from_hass(self) -> None:
@@ -182,27 +134,14 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
 
     async def async_update(self) -> None:
         self._refresh_statuses()
-        # The counters are views over these claims, but what they show
-        # depends on each light's *live* state, which changes with
-        # nothing here being touched - a light switched off, a device
-        # reconnecting, someone dimming a bulb by hand. Without this
-        # they would only refresh when a claim mutates.
+        # Counts depend on live state, not just claims.
         async_dispatcher_send(self.hass, SIGNAL_WRITE_TRACKING_UPDATED)
 
     @callback
     def _refresh_statuses(self) -> None:
-        """Fires EVENT_LIGHT_OVERRIDDEN for any of this scope's lights
-        that has just passed into someone else's hands.
-
-        Edge-triggered deliberately: the event marks the moment a light
-        changed hands, not the fact that it currently has. It carries
-        both claims and the live values as they were at that instant,
-        because that is exactly what can't be reconstructed later - by
-        the time anyone looks, the curve has moved on and a stale target
-        says nothing about why the light was excluded.
-
-        Kept out of extra_state_attributes: firing events is a side
-        effect, and HA reads that property on every state write."""
+        """Fires EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the
+        claims and live values at that moment. Not in extra_state_attributes,
+        which HA reads on every state write."""
         statuses = {}
         for entity_id, record in self.claims.items():
             status, _via, live_context_id = _classify_tracked(self.hass, entity_id, record)
@@ -211,8 +150,7 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
                 continue
             if status == "overridden" and self._last_statuses.get(entity_id) != "overridden":
                 self._fire_overridden(entity_id, record, self._last_statuses.get(entity_id), live_context_id)
-        # Seeded on the first pass without firing, so a restart doesn't
-        # re-announce every light that was already overridden before it.
+        # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
 
     @callback
@@ -220,11 +158,7 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
         self, entity_id: str, record: dict, previous: str | None, live_context_id: str | None
     ) -> None:
         state = self.hass.states.get(entity_id)
-        # async_get_device(identifiers=...) is deprecated - identifiers
-        # are no longer guaranteed unique across every config entry, only
-        # within one, so the by-identifier lookup now also needs the
-        # config_entry_id an already-added entity carries on its own
-        # registry_entry.
+        # Identifiers are only unique per config entry.
         device = None
         if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
             identifier = next(iter(self._instance.device_info["identifiers"]))
@@ -235,19 +169,12 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
             EVENT_LIGHT_OVERRIDDEN,
             {
                 "entity_id": entity_id,
-                # The scope that lost it. device_id is what puts this row
-                # in that device's own Activity: the logbook's
-                # device-scoped query matches on event_data.device_id
-                # (recorder db_schema's DEVICE_ID_IN_EVENT). Omitted
-                # rather than sent as None when the device somehow isn't
-                # registered, so the matcher can't see a null.
+                # device_id puts the event in the device's Activity; omitted, not None,
+                # if the device isn't registered.
                 "scope": self._instance.title,
                 **({"device_id": device.id} if device else {}),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
-                # The live values at this exact moment. Comparing these
-                # against each claim's target is the whole diagnosis, and
-                # neither survives to be looked up afterwards.
                 "live": {
                     "state": state.state if state else None,
                     "brightness": state.attributes.get("brightness") if state else None,
@@ -269,23 +196,8 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
 
 
 class _ScopeCountSensor(SensorEntity):
-    """How many of one scope's lights are currently in one status.
-
-    Two per state device - `controlled` and `overridden` - rather than a
-    single sensor with a status blob: each is then a plain number that
-    graphs, gets long-term statistics, and can be built on directly.
-
-    Note the two counts deliberately do NOT sum to the tracking sensor's
-    own total. A light that is off or unavailable is in neither, because
-    override protection doesn't apply to it at all (see classify()'s own
-    "off" case).
-
-    An overridden light is a supported outcome, not a fault - something
-    else deliberately took it and adaptive lighting correctly stepped
-    back. These report who holds what; they are not a health check.
-
-    A view over the tracking sensor's claims, which is why they carry no
-    storage of their own."""
+    """How many of a scope's lights are in one status. They needn't sum to
+    the total: an unavailable light is in neither."""
 
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -347,9 +259,7 @@ class _ScheduleSensorBase(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
 class _AdaptiveLightingSensor(_ScheduleSensorBase):
     _attr_icon = "mdi:home-lightbulb"
     _attr_name = None  # the entity that represents the device - displays as just the device's own name
-    # points (the full-day curve, 289 samples) is over the recorder's
-    # 16384-byte attribute limit, and only ever read live by the
-    # dashboard card, so it is kept out of the recorder.
+    # Over the recorder's attribute size limit, and only read live.
     _unrecorded_attributes = frozenset({"points"})
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
@@ -367,24 +277,14 @@ class _AdaptiveLightingSensor(_ScheduleSensorBase):
             "phase": data.get("phase"),
             "brightness": data.get("brightness"),
             "color_temp": data.get("kelvin"),
-            # list, not tuple - matches what apply_lighting/
-            # compute_lighting_groups's rgb_color field and HA's own
-            # color_rgb selector expect (see README's "Bring your own
-            # sensor" section for the full attribute contract).
+            # A list, as the rgb_color service fields expect.
             "rgb_color": list(rgb_color) if rgb_color is not None else None,
-            # Today's four phase-boundary timestamps, plus the two
-            # configured bounds evening_start was actually clamped
-            # between - the dashboard card reads all six of these
-            # directly off this entity (see www/flare-curve-card.js).
             "morning_start": data.get("morning_ts"),
             "day_start": data.get("day_ts"),
             "evening_start": data.get("evening_ts"),
             "night_start": data.get("night_ts"),
             "evening_earliest": data.get("evening_earliest_ts"),
             "evening_latest": data.get("evening_latest_ts"),
-            # The full-day brightness/colour curve (289 samples), also
-            # read by the dashboard card - see _unrecorded_attributes
-            # above for why this is excluded from the recorder.
             "points": data.get("points"),
         }
 

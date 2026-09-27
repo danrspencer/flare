@@ -1,41 +1,15 @@
 /**
- * Two Lovelace VIEW strategies: `custom:flare-schedule` for what the
- * lights are scheduled to do, and `custom:flare-tracking` (further down)
- * for what FLARE is currently driving.
- *
- * Every schedule, one view:
+ * Two Lovelace view strategies: `custom:flare-schedule` (what lights are
+ * scheduled to do) and `custom:flare-tracking` (what FLARE is driving).
  *
  *   views:
  *     - title: Lighting
  *       strategy:
  *         type: custom:flare-schedule
+ *         sensor: downstairs   # optional: one schedule per view
  *
- * Or one schedule per view, which is usually what you want once there is
- * more than one:
- *
- *   views:
- *     - title: Downstairs
- *       strategy:
- *         type: custom:flare-schedule
- *         sensor: downstairs
- *     - title: Upstairs
- *       strategy:
- *         type: custom:flare-schedule
- *         sensor: upstairs
- *
- * `sensor` is the schedule sensor's slug - the same value the curve card
- * takes, and the reason it is called `sensor` rather than `target`:
- * `target` in Home Assistant means a service target (entity, device or
- * area), which this is not. A full entity_id works too.
- *
- * A strategy is regenerated on every dashboard load from
- * flare-section.js, which ships inside the integration, so a layout
- * change reaches existing dashboards with a HACS update. Home
- * Assistant's own "Take control" is the route for anyone who wants to
- * own the YAML, and it is one-way.
- *
- * Registered as `ll-strategy-view-flare-schedule`, which is the name Home
- * Assistant resolves `custom:flare-schedule` to for a view strategy.
+ * `sensor` is the schedule sensor's slug or entity_id. Regenerated on
+ * every load, so layout changes arrive with an update.
  */
 
 import {
@@ -48,9 +22,7 @@ import {
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
 
-// A view that says what is wrong and what to do about it. Better than an
-// empty one: a blank screen is the same symptom for "no schedules yet"
-// and "you typed the slug wrong", and neither is guessable from it.
+// A view explaining what's wrong, rather than a blank one.
 const notice = (body) =>
   view([
     {
@@ -79,9 +51,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
 
     const match = all.find((s) => s.slug === wanted);
     if (!match) {
-      // Listing what does exist turns "nothing rendered" into a fixable
-      // typo - the available slugs are the one thing the user needs and
-      // cannot see from the dashboard.
+      // List the slugs that exist, so a typo is fixable.
       const available = all.map((s) => `- \`${s.slug}\``).join('\n');
       return notice(
         `No FLARE schedule called \`${wanted}\`.\n\nAvailable schedules:\n\n${available}`
@@ -95,23 +65,13 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * A second view strategy, for what FLARE is currently DRIVING rather
- * than what it is scheduled to do:
+ * The tracking view: one section per scope, with its counts, its
+ * overridden lights and the Clear button.
  *
  *   views:
  *     - title: Tracking
  *       strategy:
  *         type: custom:flare-tracking
- *
- * One section per tracking scope - how many lights it is controlling,
- * how many something else has taken, which ones those are, and the Clear
- * button that hands them back.
- *
- * Separate from the schedule view rather than a section appended to it:
- * a house has one scope per room (sixteen here) against a handful of
- * schedules, so merging them would bury the schedules, and the two
- * answer different questions - "what should the light be doing" versus
- * "who currently owns it".
  */
 class FlareTrackingViewStrategy extends HTMLElement {
   static async generate(config, hass) {

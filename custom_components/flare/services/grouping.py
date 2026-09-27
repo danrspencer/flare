@@ -1,14 +1,6 @@
-"""
-Turns "these entities, this target brightness/colour-temperature" into
-the minimal set of light.turn_on/turn_off calls actually needed.
-
-Pure logic - HA access (current state, attributes, device/label
-lookups) is injected via an EntityLookup so this is testable with
-plain pytest and fakes, and services/handlers.py stays a thin adapter.
-Transitively imports homeassistant.util.color (via
-override_protection.py's _color_temp_matches) - see that module's
-docstring for why.
-"""
+"""Turns "these entities, this target" into the minimal set of
+light.turn_on/turn_off calls. Pure: HA access is injected through an
+EntityLookup."""
 
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
@@ -23,62 +15,36 @@ from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
-# Home Assistant's own brightness scale. light.turn_on validates with
-# vol.Clamp(min=0, max=255), so it silently accepts an out-of-range value
-# and writes the clamped one - which is exactly what makes an unclamped
-# target here dangerous rather than merely wrong: the light reports 255,
-# _already_set compares it against the un-clamped target, never finds it
-# within tolerance, and re-commands the light on every single tick
-# forever. Clamping here keeps our idea of "at target" identical to what
-# the light can actually report.
+# light.turn_on silently clamps to this, so an unclamped target would
+# never read as reached and be re-sent every tick.
 MAX_BRIGHTNESS = 255
 
 
 @dataclass
 class EntityLookup:
-    """Home Assistant state/registry access, injected so this module
-    never touches `hass` directly."""
+    """HA state/registry access, injected so this module never sees `hass`."""
 
     is_state: Callable[[str, str], bool]
     state_attr: Callable[[str, str], object]
     device_id: Callable[[str], Optional[str]]
     labels: Callable[[str], list]
-    # The entity's device manufacturer/model, or (None, None) if it has
-    # no device - feeds matches_two_step_pattern() below. A single
-    # tuple-returning accessor rather than two callables, since
-    # model_matches() always consumes both together.
+    # (None, None) for an entity with no device.
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
     context_id: Callable[[str], Optional[str]]
-    # Two independent claims per entity, not one - see write_tracking.py's
-    # module docstring for why. "observed" is a write some earlier call
-    # actually observed landing; "latest" is the most recent attempt,
-    # not yet verified either way.
+    # The two claims - see write_tracking.py's module docstring.
     observed_context_id: Callable[[str], Optional[str]]
     latest_context_id: Callable[[str], Optional[str]]
-    # What each claim's write actually intended - {brightness,
-    # color_temp_kelvin} or {brightness, rgb_color}, or None if that
-    # claim isn't a real apply_lighting write (an off-command, or a
-    # write_tracking-observed baseline rather than one we issued). Lets
-    # externally_set() below tell "our own write, echoed back under an
-    # unrelated context" apart from a genuine external change, checking
-    # both claims - not just latest's - since a light that genuinely
-    # hasn't updated at all yet is, by definition, still showing exactly
-    # what observed itself asked for.
+    # What each claim asked for, or None if it isn't one of our writes.
+    # Lets externally_set() recognise our own write echoed back under a new
+    # context.
     latest_target: Callable[[str], Optional[dict]]
     observed_target: Callable[[str], Optional[dict]]
-    # The second context.id a two-step transition's own brightness-only
-    # step gets (see write_tracking.py's async_record docstring) - None
-    # for a combined write, which never has one. Lets externally_set()
-    # recognise a two-step write's first step landing on its own, not
-    # just the final combined state. observed's own secondary context
-    # is whatever latest's was at the moment of promotion (see
-    # async_record) - carried forward automatically once accessed here,
-    # same as observed_target above.
+    # A two-step write's brightness-step context, or None.
     latest_secondary_context_id: Callable[[str], Optional[str]]
     observed_secondary_context_id: Callable[[str], Optional[str]]
 
     def reachable(self, entity_id: str) -> bool:
-        """False for anything HA already knows it can't reach - no point commanding it."""
+        """False for anything HA knows it can't reach."""
         return not self.is_state(entity_id, "unavailable") and not self.is_state(entity_id, "unknown")
 
     def tags(self, entity_id: str) -> list:
@@ -87,13 +53,7 @@ class EntityLookup:
         return self.labels(entity_id) + (self.labels(did) if did else [])
 
     def matches_two_step_pattern(self, entity_id: str, patterns: Iterable[str]) -> bool:
-        """True if this entity's device manufacturer/model matches any of
-        `patterns` (see two_step.model_matches) - the live counterpart of
-        the `no_combined_transition` label check in build_groups(), so a
-        known-bad bulb gets two-step transitions with no label required.
-        `model_matches` itself already returns False for an empty pattern
-        list or a device with no manufacturer/model, so there's nothing
-        extra to guard here."""
+        """True if the device's "<manufacturer> <model>" matches a pattern."""
         manufacturer, model = self.manufacturer_model(entity_id)
         return model_matches(manufacturer, model, patterns)
 
@@ -105,25 +65,9 @@ class EntityLookup:
         color_temp_tolerance: int = 10,
         rgb_color_tolerance: int = 10,
     ) -> bool:
-        """True if the entity is on and something other than the caller's
-        own last write to it has touched it since - a person, another
-        automation, or a device regaining power under a fresh context.
-
-        A thin adapter: it gathers this entity's two claims plus its live
-        state and hands them to override_protection.classify() /
-        is_blocked(), which hold the actual decision table and are shared
-        with sensor.py's diagnostic status and the standalone
-        claims_check service. Those two functions document what each
-        status means and why a context mismatch alone isn't proof of an
-        external touch; write_tracking.py's module docstring covers why
-        there are two claims rather than one.
-
-        Which claims this entity's accessors read is decided one layer
-        up, by whichever scope the caller resolved and bound into this
-        EntityLookup (see services/handlers.py's _build_lookup) - this method has
-        no notion of scope itself, just entity_id in, blocked or not out.
-
-        force bypasses the check outright."""
+        """True if something other than the caller's own writes has touched this
+        light since. An adapter over override_protection.classify()/is_blocked(),
+        which hold the decision table. force bypasses it."""
         observed_ctx = self.observed_context_id(entity_id)
         observed = (
             {
@@ -162,11 +106,7 @@ class EntityLookup:
         return is_blocked(status, force)
 
     def supports_rgb(self, entity_id: str) -> bool:
-        """True if the entity's supported_color_modes includes any mode
-        HA's light.turn_on rgb_color param works with. A derived method
-        (built from the existing state_attr primitive) rather than a new
-        injected closure - no change needed to services/handlers.py's
-        _build_lookup() or tests/fakes.py's make_lookup()."""
+        """True if the entity supports a mode rgb_color works with."""
         modes = self.state_attr(entity_id, "supported_color_modes") or []
         return bool(set(modes) & _RGB_COLOR_MODES)
 
@@ -190,40 +130,12 @@ def _as_int(value, default: int) -> int:
 
 
 def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLookup) -> int:
-    """The target colour temperature, narrowed to what this specific
-    entity can actually reach, per its own reported
-    min_color_temp_kelvin/max_color_temp_kelvin.
+    """The target Kelvin, clamped to the entity's advertised range.
 
-    This is the colour-temperature counterpart of MAX_BRIGHTNESS above,
-    and exists for exactly the same reason - except that where
-    light.turn_on clamps brightness itself (vol.Clamp), it does *not*
-    clamp colour temperature for a light that natively supports
-    COLOR_TEMP: the value is passed straight through to the integration
-    and the physical device clamps it (HA core's light/__init__.py only
-    rewrites color_temp_kelvin when the light *lacks* COLOR_TEMP
-    support).
-
-    So the write is harmless - the bulb goes to its ceiling - but
-    _already_set would then compare that ceiling against the un-clamped
-    target, never find it within tolerance, and re-command the light on
-    every single tick forever. E.g. a bulb with max_color_temp_kelvin
-    6535 against the 6667K Morning default is 132K off, and not
-    mired-equivalent either (153 vs 149).
-
-    Deliberately clamps only what we *compare* against, not what gets
-    sent: entities are dispatched in shared per-multiplier groups, and
-    two bulbs in one group can have different ceilings, so clamping the
-    outgoing value would mean splitting a group per distinct ceiling for
-    no benefit - the device already does this clamping itself. A missing
-    or unparseable bound (0 below - no real bulb reports 0K) leaves the
-    target untouched.
-
-    The advertised range is NOT always authoritative, which is why
-    _already_set treats this as an *additional* way to match rather than
-    a replacement: some bulbs advertise e.g. max_color_temp_kelvin 4000
-    while happily reporting 5813 and tracking the curve correctly. Comparing such a bulb only against its clamped
-    target would re-command it on every tick - the exact bug this
-    function exists to prevent, just inverted."""
+    HA doesn't clamp color_temp_kelvin for a native COLOR_TEMP light; the
+    bulb does, and settles at its ceiling. Only the comparison is clamped,
+    not what's sent, so a group can share one command. Advertised ranges
+    aren't always honest, so callers accept the raw target too."""
     lo = _as_int(lookup.state_attr(entity_id, "min_color_temp_kelvin"), 0)
     hi = _as_int(lookup.state_attr(entity_id, "max_color_temp_kelvin"), 0)
     if lo > 0:
@@ -234,10 +146,8 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
 
 
 def _bucket_by_multiplier(entities: list, brightness_multipliers: dict) -> dict:
-    """Groups entities whose multiplier isn't null/false (that means
-    "don't touch this on power-on, something else owns it" - see the
-    blueprint's brightness_template input, converted) by multiplier
-    value, so each bucket can share one command."""
+    """Buckets entities by multiplier so each bucket shares one command.
+    null/false ("something else owns this") are left out."""
     buckets: dict = {}
     for e in entities:
         m = brightness_multipliers.get(e, 1)
@@ -262,42 +172,19 @@ def build_groups(
     rgb_color_tolerance: int = 10,
     force: bool = False,
 ) -> list:
-    """Compute exactly what needs commanding for `entities`, bucketed by
-    brightness multiplier. Each returned Group is either an off-group
-    (multiplier <= 0, only `needing_off` populated) or an update-group
-    (multiplier > 0, `combined`/`two_step`/`combined_rgb`/`two_step_rgb`
-    populated with whatever isn't already within tolerance of the
-    target).
+    """What needs commanding for `entities`, bucketed by brightness
+    multiplier. Each Group is an off-group (multiplier <= 0, `needing_off`)
+    or an update-group holding whatever isn't already within tolerance.
 
-    prefer_rgb_color/rgb_color: when both are set, entities within each
-    bucket that support RGB (lookup.supports_rgb()) are routed into
-    combined_rgb/two_step_rgb instead of combined/two_step, targeting
-    rgb_color instead of sensor_color_temp_kelvin. Toggle off, or no
-    rgb_color given, and combined_rgb/two_step_rgb are always empty -
-    behaviour is otherwise identical to before this parameter existed.
-
-    two_step_label/two_step_model_patterns: an entity lands in
-    two_step/two_step_rgb if EITHER the label is in lookup.tags(e) OR
-    its device manufacturer/model matches one of the patterns (see
-    EntityLookup.matches_two_step_pattern) - the label is a manual
-    override for anything a pattern doesn't cover, patterns are the
-    automatic path for known-bad hardware. Defaulting
-    two_step_model_patterns to () makes an omitted call behave exactly
-    as it did before this parameter existed.
-
-    force: whether to bypass override protection outright, passed
-    straight through to every EntityLookup.externally_set() check - see
-    its docstring for the full semantics."""
+    prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
+    lists. A light is two-step if it carries two_step_label or its model
+    matches two_step_model_patterns. force bypasses override protection."""
     use_rgb = prefer_rgb_color and rgb_color is not None
     groups = []
     for multiplier, group_entities in _bucket_by_multiplier(entities, brightness_multipliers).items():
         m = float(multiplier)
-        # Clamped at both ends: floored at 1 so a tiny multiplier still
-        # leaves the light on rather than silently off (0 means off, and
-        # that's the multiplier's job to say explicitly), and capped at
-        # MAX_BRIGHTNESS so a multiplier above 1 is a plain "as bright as
-        # it goes" rather than something a template has to do arithmetic
-        # against the current curve value to avoid.
+        # Floored at 1 (0 is the multiplier's way to say off) and capped at
+        # MAX_BRIGHTNESS.
         brightness = 0 if m == 0 else min(max(round(sensor_brightness * m), 1), MAX_BRIGHTNESS)
         group = Group(multiplier=multiplier, brightness=brightness)
 
@@ -352,9 +239,6 @@ def build_groups(
 
 
 def _brightness_close(entity_id: str, target_brightness: int, lookup: EntityLookup, brightness_tolerance: int) -> bool:
-    """Shared by _already_set and _already_set_rgb - brightness tolerance
-    doesn't depend on which colour representation is in play, so there's
-    only one copy of the "how close counts as close enough" check for it."""
     current_brightness = _as_int(lookup.state_attr(entity_id, "brightness"), -999)
     return abs(current_brightness - target_brightness) <= brightness_tolerance
 
@@ -367,16 +251,8 @@ def _already_set(
     brightness_tolerance: int,
     color_temp_tolerance: int,
 ) -> bool:
-    """Within tolerance (not exact match) because some bulbs round-trip
-    brightness/colour-temp a point or two off from what was actually
-    sent - an exact-match check would recommand them forever. Colour
-    temperature also gets the mired-equivalence check on top of the
-    plain Kelvin tolerance (_color_temp_matches) - a target Kelvin
-    value that round-trips through a real device's native mired unit
-    to a *different* Kelvin reading is still "already set", not a
-    genuine mismatch; without this, a light could be needlessly
-    re-commanded every single tick purely from that unit-conversion
-    rounding, never actually settling into "no write needed"."""
+    """Within tolerance, not exact, since bulbs round-trip values a point or
+    two off. Kelvin also matches when both floor to the same mired."""
     if not lookup.is_state(entity_id, "on"):
         return False
     if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance):
@@ -384,14 +260,8 @@ def _already_set(
     current_color_temp = _as_int(lookup.state_attr(entity_id, "color_temp_kelvin"), -999)
     if _color_temp_matches(current_color_temp, target_color_temp_kelvin, color_temp_tolerance):
         return True
-    # Also accept the target narrowed to this bulb's own advertised range:
-    # a bulb that physically can't reach the target settles at its ceiling
-    # and would otherwise never compare equal, so it'd be re-commanded
-    # every tick forever (see clamp_color_temp_kelvin). Checked *in
-    # addition to* the raw target rather than instead of it, because the
-    # advertised range isn't always honest - some bulbs report values
-    # outside their own stated min/max - and clamping unconditionally
-    # would create that same endless churn for them instead.
+    # Also accept the target clamped to the bulb's range - see
+    # clamp_color_temp_kelvin.
     reachable_target = clamp_color_temp_kelvin(entity_id, target_color_temp_kelvin, lookup)
     return reachable_target != target_color_temp_kelvin and _color_temp_matches(
         current_color_temp, reachable_target, color_temp_tolerance
@@ -406,12 +276,8 @@ def _already_set_rgb(
     brightness_tolerance: int,
     rgb_color_tolerance: int,
 ) -> bool:
-    """RGB equivalent of _already_set - per-channel tolerance (0-255
-    scale, not the Kelvin-domain color_temp_tolerance). Defensive: a
-    missing or malformed rgb_color attribute (e.g. a light that hasn't
-    reported a colour yet, or is currently in a different colour mode)
-    counts as "not close" rather than erroring, same fail-safe spirit as
-    _as_int's sentinel default."""
+    """_already_set for RGB, per channel. A missing rgb_color counts as not
+    close."""
     if not lookup.is_state(entity_id, "on"):
         return False
     if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance):
