@@ -561,13 +561,15 @@ variables:
   room_occupancy_entities: >
     {{ all_target_entities | select('match', '^binary_sensor\\.')
        | select('is_state_attr', 'device_class', 'occupancy') | list }}
-  # Every occupancy sensor off for the full Wait time. Hand-written because
-  # occupancy.is_not_detected's `for:` isn't reliable after a restart. True
-  # with no sensors, so callers also check room_occupancy_entities.
+  # No occupancy sensor on, or changed, within the Wait time. Hand-written
+  # because occupancy.is_not_detected's `for:` isn't reliable after a
+  # restart. Only `on` counts as occupied, so a sensor left unavailable
+  # can't hold the room on forever. True with no sensors, so callers also
+  # check room_occupancy_entities.
   occupancy_clear_for_wait: >
     {% set ns = namespace(all_clear=true) %}
     {% for e in room_occupancy_entities %}
-      {% if not is_state(e, 'off') or
+      {% if is_state(e, 'on') or
             (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}
         {% set ns.all_clear = false %}
       {% endif %}
@@ -661,18 +663,16 @@ variables:
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
   - choose:
-      # Turn off only if occupancy is clear across every sensor:
-      # occupancy.cleared fires when any one clears.
+      # occupancy.cleared's `for:` is per sensor, so it fires once each
+      # sensor's own Wait time is up, even if another saw motion since.
       - alias: "Motion timed out and the room is confirmed empty"
         conditions:
           - condition: trigger
             alias: "Triggered by motion_off"
             id: motion_off
-          - alias: "No occupancy sensor still reports the room in use"
-            not:
-              - condition: occupancy.is_detected
-                alias: "Room occupancy currently detected"
-                target: !input room_target
+          - condition: template
+            alias: "Every occupancy sensor has been clear for the full Wait time"
+            value_template: "{{ occupancy_clear_for_wait }}"
         sequence:
           # flare.turn_off records the turn-off as ours, so it isn't read as an
           # override.

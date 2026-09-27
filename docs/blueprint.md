@@ -103,8 +103,8 @@ anything on by itself.
 
 ## When lights turn on and off
 
-Lights come on when occupancy is detected, and go off **Wait time**
-after it clears.
+Lights come on when occupancy is detected, and go off once every
+occupancy sensor in the room has been clear for the **Wait time**.
 
 Three things — and only these three — may switch on a light that is off:
 
