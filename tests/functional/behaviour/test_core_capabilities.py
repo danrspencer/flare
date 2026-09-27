@@ -96,6 +96,26 @@ async def test_one_sensors_wait_running_out_does_not_empty_a_room_another_saw_mo
     )
 
 
+async def test_a_sensor_left_unavailable_does_not_keep_a_room_lit(
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
+) -> None:
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=tracking_scope)
+    occupancy(hass, HALL_SENSOR, "off")
+    occupancy(hass, SECOND_SENSOR, "unavailable")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR, SECOND_SENSOR], no_motion_wait=0)
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}, (
+        "an unavailable sensor held an empty room on"
+    )
+
+
 async def test_a_phase_change_repaints_a_lit_room(
     hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
