@@ -303,30 +303,20 @@ def test_a_light_already_at_max_is_not_recommanded_when_the_multiplier_overshoot
     assert groups[0].two_step == []
 
 
-# Overrides: a light currently on whose live context.id doesn't match
-# either of the two claims this integration itself last wrote it with
-# under the *same owner_id* (per write_tracking.LastWriteTracker) is
-# left exactly alone, even if it doesn't match the current adaptive
-# target - regardless of *what* changed it (a person, another
-# automation with no context.user_id of its own, a device regaining
-# power, or a different owner_id entirely) - checked fresh against live
-# state on every call, so nothing needs to be remembered here or
-# explicitly expired. build_groups' own owner_id defaults to None,
-# which skips this check altogether (every light is free to manage) -
-# the explicit force path, tested separately below.
+# Overrides: a light currently on whose live context.id matches neither
+# of the two claims this integration last wrote it with in the caller's
+# scope (see write_tracking.ClaimRegistry) is left exactly alone, even if
+# it doesn't match the current adaptive target - regardless of *what*
+# changed it (a person, another automation, a device regaining power).
+# Checked fresh against live state on every call, so nothing needs to be
+# remembered here or explicitly expired. `force` skips the check.
 #
-# The tests below through test_turning_the_light_off_ends_the_protection
-# all use only `confirmed_*` - the steady-state case where there's no
-# outstanding, unverified write in flight, which is the vast majority of
-# ticks. The *promotion* behaviour itself - how a `pending` claim earns
-# its way into `confirmed`, and how `confirmed` survives any number of
-# consecutive dropped writes along the way - is a property of
-# write_tracking.LastWriteTracker.async_record, not of this pure check,
-# so it's exercised end-to-end against a real Store in
-# tests/integration/test_services.py instead. What belongs here is
-# narrower: given a specific {confirmed, pending} snapshot, does the
-# check land on the right answer - see the "Confirmed vs pending" tests
-# right after this section for that.
+# How a `latest` claim is promoted to `observed`, and how `observed`
+# survives consecutive dropped writes, is a property of
+# write_tracking.ClaimRegistry.async_record rather than this pure check,
+# so it's exercised end-to-end in tests/integration/test_services.py.
+# What belongs here is narrower: given a specific {observed, latest}
+# snapshot, does the check land on the right answer.
 
 
 # --- EntityLookup.externally_set(): the adapter, not the decision table ---
