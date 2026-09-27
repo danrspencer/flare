@@ -199,8 +199,8 @@ Three layers under `tests/`:
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
   `component/` covers the integration (services, claims, scopes, schedules, config flows, repairs);
   `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
-  `behaviour/` runs the real blueprint and services end to end, with only the bulbs faked, and asserts on
-  the state the bulbs end up in.
+  `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
+  faked, and asserts on the state the bulbs end up in.
 
 This is also why `pyproject.toml`'s `requires-python` floor is 3.14, not something lower: pytest-homeassistant-
 custom-component pins a specific Home Assistant release, which itself pins the Python it needs — since this repo

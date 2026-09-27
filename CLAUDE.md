@@ -1641,8 +1641,9 @@ Shared helpers live in `tests/support/` and each functional directory's
   syntactically fine, wrong only at runtime. It mocks FLARE's services
   and asserts on what the blueprint calls; its classes mirror
   `docs/blueprint.md`'s headings. `tests/functional/behaviour/` runs the
-  real blueprint and services with only the bulbs faked, and asserts on
-  the bulbs' final state.
+  real blueprint, schedule and services with only the bulbs faked, and
+  asserts on the bulbs' final state. The day is pinned (sunset 18:00,
+  clock from 19:00), and a phase change means moving the clock.
 - `tests/functional/conftest.py` overrides the plugin's `hass_config_dir`
   to symlink this repo's `custom_components/` and `blueprints/` into a
   throwaway `tmp_path`.

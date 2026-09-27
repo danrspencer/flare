@@ -4,19 +4,20 @@ network. Each is a documented behaviour, proven through a real bulb."""
 
 from homeassistant.core import HomeAssistant
 
+from custom_components.flare.schedule.curve import kelvin_to_rgb
 from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     CURVE_KELVIN,
-    SCHEDULE_SENSOR,
+    NIGHT_BRIGHTNESS,
+    move_to_phase,
     occupancy,
-    set_phase,
 )
 
 SENSOR = "binary_sensor.device_quirks_occupancy"
 
 
 async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_as_overridden(
-    hass: HomeAssistant, add_bulbs, setup_room, tracked_scope
+    hass: HomeAssistant, add_bulbs, setup_room, tracked_scope, frozen_time
 ) -> None:
     """An IKEA TRADFRI spot given Kelvin reports the equivalent RGB. It must
     not be read as overridden and excluded from updates."""
@@ -40,10 +41,9 @@ async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_
     await bulb.async_echo(is_on=True, brightness=bulb.brightness - 1, rgb_color=bulb.rgb_color)
     await hass.async_block_till_done()
 
-    set_phase(hass, "Day", brightness=40, kelvin=2200)
-    await hass.async_block_till_done()
+    await move_to_phase(hass, frozen_time, "Night")
 
-    assert hass.states.get(bulb.entity_id).attributes.get("brightness") == 40, (
+    assert hass.states.get(bulb.entity_id).attributes.get("brightness") == NIGHT_BRIGHTNESS, (
         "a bulb that merely echoed its colour via rgb instead of kelvin, under an "
         "unrelated context, was wrongly excluded as if something else had taken it"
     )
@@ -54,12 +54,8 @@ async def test_an_rgb_capable_bulb_gets_colour_while_its_non_rgb_neighbour_stays
 ) -> None:
     """One RGB-capable and one colour-temp bulb in the same room each get the
     attribute FLARE chose for them."""
-    rgb_color = (255, 147, 41)
-    hass.states.async_set(
-        SCHEDULE_SENSOR,
-        "Evening",  # a default "Prefer RGB During" phase
-        {"brightness": CURVE_BRIGHTNESS, "color_temp": CURVE_KELVIN, "rgb_color": list(rgb_color)},
-    )
+    # Evening is a default "Prefer RGB During" phase.
+    rgb_color = kelvin_to_rgb(CURVE_KELVIN)
     rgb_bulb, ct_bulb = await add_bulbs(
         "rgb_spot", "ct_spot", area_id=tracking_scope, rgb_spot={"supports_rgb": True}
     )

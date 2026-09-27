@@ -4,33 +4,41 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
 
 from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_RGB_COLOR, ColorMode, LightEntity
-from homeassistant.config_entries import ConfigEntryState, ConfigSubentryData
+from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 from homeassistant.util import color as color_util
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.flare import async_setup_entry
-from custom_components.flare.const import CONF_ENTRY_TYPE, CONF_TARGET, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
-from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.tracking.scope import state_instances
-from custom_components.flare.tracking.write_tracking import ClaimRegistry
+from custom_components.flare.const import (
+    CONF_ENTRY_TYPE,
+    CONF_TARGET,
+    DOMAIN,
+    ENTRY_TYPE_SCHEDULES,
+    ENTRY_TYPE_TRACKING,
+    SUBENTRY_TYPE_SENSOR,
+    SUBENTRY_TYPE_STATE,
+)
 from tests.support import REPO_ROOT
 
 SCHEDULE_SENSOR = "sensor.test_flare"
 TRACE_DIR = REPO_ROOT / "trace-dumps"  # build output, see .gitignore
-# What the schedule sensor publishes throughout.
+
+# The pinned day: sunset at 18:00 starts Evening, the clock starts at
+# 19:00, in Evening's hold at the default curve values.
+SUNSET = time(18, 0)
+START = time(19, 0, 2)  # two seconds past the minute, clear of the tick
 CURVE_BRIGHTNESS = 180
-CURVE_KELVIN = 3000
+CURVE_KELVIN = 3200
+NIGHT_BRIGHTNESS = 80
+# The moment each phase begins on the pinned day.
+PHASE_STARTS = {"Night": time(22, 0, 2)}
 
 HALL_SENSOR = "binary_sensor.hall_occupancy"
 # Several fittings, so they share one multiplier bucket as a real room's do.
@@ -128,9 +136,16 @@ def occupancy(hass: HomeAssistant, entity_id: str, state: str) -> None:
     hass.states.async_set(entity_id, state, {"device_class": "occupancy"})
 
 
-def set_phase(hass: HomeAssistant, phase: str, *, brightness: int = CURVE_BRIGHTNESS, kelvin: int = CURVE_KELVIN) -> None:
-    """Repaint the schedule sensor, as the coordinator would."""
-    hass.states.async_set(SCHEDULE_SENSOR, phase, {"brightness": brightness, "color_temp": kelvin})
+def today_at(when: time) -> datetime:
+    return dt_util.now().replace(hour=when.hour, minute=when.minute, second=when.second, microsecond=0)
+
+
+async def move_to_phase(hass: HomeAssistant, frozen, phase: str) -> None:
+    """Move the clock to the start of `phase` and let the schedule and the
+    blueprint's tick run."""
+    frozen.move_to(today_at(PHASE_STARTS[phase]))
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=61))
+    await hass.async_block_till_done()
 
 
 def room_brightness(hass: HomeAssistant, bulbs) -> dict[str, object]:
@@ -151,14 +166,25 @@ async def let_time_pass(hass: HomeAssistant, frozen, seconds: int) -> None:
     await hass.async_block_till_done()
 
 
-async def setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[MockConfigEntry, str | None]:
-    """The real Tracking entry, so the real services register, optionally
-    with one scope over the area "behaviour_test_room". Returns (entry,
-    area_id); area_id is None when untracked.
+async def setup_schedule(hass: HomeAssistant) -> MockConfigEntry:
+    """A real Schedules entry with one sensor, "Test" (sensor.test_flare)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_SCHEDULES}",
+        version=3,
+        subentries_data=[ConfigSubentryData(subentry_type=SUBENTRY_TYPE_SENSOR, title="Test", unique_id="test", data={})],
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
 
-    Platform forwarding is patched out: it would load the frontend package.
-    A scope a real service call names has to be a subentry of this same
-    entry, since the services validate against it."""
+
+async def setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[MockConfigEntry, str | None]:
+    """A real Tracking entry, optionally with one scope over the area
+    "behaviour_test_room". Returns (entry, area_id); area_id is None when
+    untracked."""
     area_id = ar.async_get(hass).async_get_or_create("behaviour_test_room").id if tracked else None
     subentries = [
         ConfigSubentryData(
@@ -168,36 +194,17 @@ async def setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[M
             data={CONF_TARGET: {"area_id": [area_id]}},
         )
     ] if tracked else []
-    entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING}, subentries_data=subentries)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_TRACKING}",
+        version=3,
+        subentries_data=subentries,
+    )
     entry.add_to_hass(hass)
-    entry.mock_state(hass, ConfigEntryState.LOADED)
-    with patch.object(hass.config_entries, "async_forward_entry_setups", AsyncMock()):
-        assert await async_setup_entry(hass, entry)
+    assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    if tracked:
-        await _attach_tracking_sensor(hass, entry, area_id)
     return entry, area_id
-
-
-async def _attach_tracking_sensor(hass: HomeAssistant, entry: MockConfigEntry, area_id: str) -> None:
-    r"""The scope's real tracking entity, attached with a capturing
-    add_entities. The blueprint finds a scope by searching the room's
-    area for `sensor.*_flare_tracking` in the entity registry, so the
-    device, the entity and its area are all registered by hand here."""
-    added: list = []
-    await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    registry = next(v for v in hass.data[DOMAIN].values() if isinstance(v, ClaimRegistry))
-    for instance, entity in zip(state_instances(entry), [e for e in added if hasattr(e, "claims")]):
-        entity.async_claims_changed = lambda: None
-        registry.register(instance.subentry_id, entity)
-        device = dr.async_get(hass).async_get_or_create(
-            config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name=instance.title
-        )
-        dr.async_get(hass).async_update_device(device.id, area_id=area_id)
-        er.async_get(hass).async_get_or_create(
-            "sensor", DOMAIN, entity.unique_id, suggested_object_id=f"{instance.prefix}flare_tracking", device_id=device.id
-        )
-        hass.states.async_set(entity.entity_id, "0")
 
 
 def dump_traces(hass: HomeAssistant, directory: Path, *, test_id: str, outcome: str, filename: str | None = None) -> Path | None:

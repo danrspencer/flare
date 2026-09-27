@@ -3,7 +3,9 @@ pytest-homeassistant-custom-component."""
 
 import pytest
 from freezegun import freeze_time
+from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import mock_component
 
 from tests.support import REPO_ROOT
 
@@ -36,3 +38,12 @@ def frozen_time():
     anchor = dt_util.utcnow().replace(second=2, microsecond=0)
     with freeze_time(anchor, real_asyncio=True) as frozen:
         yield frozen
+
+
+@pytest.fixture
+def stub_entry_setup(hass: HomeAssistant):
+    """Lets a real entry setup run without loading the frontend package."""
+    mock_component(hass, "frontend")
+    mock_component(hass, "repairs")
+    hass.data.setdefault("frontend_extra_module_url", set())
+    return hass

@@ -1,5 +1,6 @@
 """Behaviour tests: what FLARE does, end to end. The real blueprint, the
-real services and HA's real light component - only the bulbs are fake.
+real schedule and services, and HA's real light component - only the
+bulbs are fake.
 Tests are named for the capability, not the code path.
 
 Every blueprint run's trace is written to trace-dumps/ for CI to render.
@@ -8,6 +9,7 @@ Every blueprint run's trace is written to trace-dumps/ for CI to render.
 from typing import Any
 
 import pytest
+from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -18,29 +20,44 @@ from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     CURVE_KELVIN,
     SCHEDULE_SENSOR,
+    START,
+    SUNSET,
     TRACE_DIR,
     FakeBulb,
     dump_traces,
+    setup_schedule,
     setup_tracking_entry,
+    today_at,
 )
 from tests.support import BLUEPRINT_PATH
 
 
+@pytest.fixture
+def frozen_time(hass: HomeAssistant):
+    """The pinned day's clock, starting at START local time. After `hass`,
+    which sets the time zone."""
+    with freeze_time(today_at(START), real_asyncio=True) as frozen:
+        yield frozen
+
+
 @pytest.fixture(autouse=True)
-def _frozen(frozen_time):
-    yield frozen_time
+async def schedule(stub_entry_setup, frozen_time, hass: HomeAssistant):
+    """The real schedule the room follows, on the pinned day."""
+    hass.states.async_set("sun.sun", "below_horizon", {"next_setting": today_at(SUNSET).isoformat()})
+    entry = await setup_schedule(hass)
+    state = hass.states.get(SCHEDULE_SENSOR)
+    assert (state.state, state.attributes["brightness"], state.attributes["color_temp"]) == (
+        "Evening",
+        CURVE_BRIGHTNESS,
+        CURVE_KELVIN,
+    ), "the pinned day isn't where the tests expect it"
+    return entry
 
 
 @pytest.fixture(autouse=True)
 def expected_lingering_timers():
     """The automation's time_pattern timers are still scheduled at teardown."""
     return True
-
-
-@pytest.fixture(autouse=True)
-def schedule_sensor(hass: HomeAssistant) -> None:
-    """A plain state standing in for the schedule sensor, in Evening."""
-    hass.states.async_set(SCHEDULE_SENSOR, "Evening", {"brightness": CURVE_BRIGHTNESS, "color_temp": CURVE_KELVIN})
 
 
 @pytest.fixture(params=[False, True], ids=["untracked", "tracked"])

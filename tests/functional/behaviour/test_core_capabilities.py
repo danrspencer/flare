@@ -7,10 +7,11 @@ from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     HALL_BULBS,
     HALL_SENSOR,
+    NIGHT_BRIGHTNESS,
     let_time_pass,
+    move_to_phase,
     occupancy,
     room_brightness,
-    set_phase,
 )
 
 # Past the blueprint's Wait time check, with no_motion_wait=0.
@@ -64,15 +65,14 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
 
 
 async def test_a_phase_change_repaints_a_lit_room(
-    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """Evening becomes Night: the room follows, without anyone moving."""
     bulbs = await lit_room(hass, add_bulbs, setup_room, tracking_scope)
 
-    set_phase(hass, "Night", brightness=40, kelvin=2200)
-    await hass.async_block_till_done()
+    await move_to_phase(hass, frozen_time, "Night")
 
-    assert room_brightness(hass, bulbs) == {b.entity_id: 40 for b in bulbs}, (
+    assert room_brightness(hass, bulbs) == {b.entity_id: NIGHT_BRIGHTNESS for b in bulbs}, (
         "the phase changed but the room did not follow"
     )
 
@@ -162,7 +162,7 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
 
 
 async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
-    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
 ) -> None:
     """Lit first, so the exclusion has to turn the spot off. (Can't tell
     needing_off from turn_on at brightness 0, which HA also turns off;
@@ -176,10 +176,9 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
         "precondition: the spot must be lit before the exclusion applies"
     )
 
-    set_phase(hass, "Night", brightness=CURVE_BRIGHTNESS, kelvin=2200)
-    await hass.async_block_till_done()
+    await move_to_phase(hass, frozen_time, "Night")
 
-    expected = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    expected = {b.entity_id: NIGHT_BRIGHTNESS for b in bulbs}
     expected[spot] = "off"
     assert room_brightness(hass, bulbs) == expected, (
         "the excluded fitting should have been turned off, the rest left lit"
