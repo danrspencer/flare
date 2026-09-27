@@ -80,5 +80,5 @@ class _CurveNumber(RestoreNumber, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         self._attr_native_value = value
         self.async_write_ha_state()
-        # Apply now rather than at the next poll.
+        # Refresh rather than wait for the next poll (debounced: at most 10s).
         await self._coordinator.async_request_refresh()
