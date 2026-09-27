@@ -9,7 +9,7 @@ code itself.
 custom_components/flare/
     __init__.py, config_flow.py, repairs.py, logbook.py, const.py
                    the integration itself: setting up the two config
-                   entries, migration, the blueprint-update repair, the
+                   entries, the blueprint-update repair, the
                    logbook description, the dashboard front-end files
     sensor.py, select.py, number.py, time.py, switch.py, button.py
                    the entities. Home Assistant requires platform

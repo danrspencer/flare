@@ -504,65 +504,6 @@ async def test_setup_with_no_areas_creates_the_entry_and_no_scopes(stub_entry_se
 # --- upgrading an existing entry -----------------------------------------
 
 
-async def test_upgrading_splits_the_entry_and_keeps_the_schedule_config(stub_entry_setup, hass: HomeAssistant):
-    """The existing entry becomes the schedules one, keeping its sensor
-    subentries and with them every schedule time and curve value the
-    user has set - real configuration worth preserving. Its state
-    subentries go; the tracking entry re-seeds equivalents, which cost
-    nothing since a scope carries only a target and claims aren't
-    persisted."""
-    from custom_components.flare import async_migrate_entry
-    from custom_components.flare.const import (
-        CONF_ENTRY_TYPE as CET,
-        ENTRY_TYPE_SCHEDULES,
-        SUBENTRY_TYPE_SENSOR,
-    )
-
-    kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-    _light(hass, "light.k", area_id=kitchen.id)
-
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={},
-        version=2,
-        subentries_data=[
-            ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_SENSOR, title="Ground Floor", unique_id="ground_floor", data={}
-            ),
-            _scope("Old Scope", {"area_id": [kitchen.id]}),
-        ],
-    )
-    entry.add_to_hass(hass)
-
-    assert await async_migrate_entry(hass, entry)
-    await hass.async_block_till_done()
-
-    assert entry.version == 3
-    assert entry.data[CET] == ENTRY_TYPE_SCHEDULES
-    # The schedule subentry survives; the state one doesn't.
-    assert [s.subentry_type for s in entry.subentries.values()] == [SUBENTRY_TYPE_SENSOR]
-
-    tracking = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CET) == ENTRY_TYPE_TRACKING]
-    assert len(tracking) == 1
-    assert [s.title for s in state_instances(tracking[0])] == ["Kitchen"]
-
-
-async def test_upgrading_an_already_migrated_entry_adds_nothing(stub_entry_setup, hass: HomeAssistant):
-    """The version bump is the guard, so neither the split nor the
-    seeding is redone on the next restart."""
-    from custom_components.flare import async_migrate_entry
-
-    kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-    _light(hass, "light.k", area_id=kitchen.id)
-    entry = MockConfigEntry(domain=DOMAIN, data={}, version=3)
-    entry.add_to_hass(hass)
-
-    assert await async_migrate_entry(hass, entry)
-
-    assert state_instances(entry) == []
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 1
-
-
 async def test_a_state_device_lands_in_the_area_it_targets(hass: HomeAssistant):
     """A scope created per area should turn up under that room rather
     than in an unsorted heap."""
