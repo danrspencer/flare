@@ -33,18 +33,15 @@ accurate description, not "has no Home Assistant dependency".)
 from __future__ import annotations
 
 from pathlib import Path
-from types import MappingProxyType
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.loader import async_get_integration
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry, ConfigSubentry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.util import slugify
 
 from .const import (
     CONF_ENTRY_TYPE,
@@ -57,7 +54,6 @@ from .const import (
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
-from .config_flow import _areas_with_lights
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .tracking.write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
@@ -118,50 +114,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """v2 -> v3: split the single entry into schedules and tracking.
-
-    The existing entry becomes the schedules one, keeping its sensor
-    subentries and every schedule time and curve value set on them. Its
-    state subentries are dropped, and the tracking entry re-seeds one per
-    area with a light - a scope holds only a target, so nothing is lost.
-
-    v1 -> v2 seeded state devices onto the single entry; it still runs
-    first for a v1 install, and this step then replaces them."""
-    if entry.version >= 3:
-        return True
-
-    if entry.version < 2:
-        for area_id, name in _areas_with_lights(hass):
-            hass.config_entries.async_add_subentry(
-                entry,
-                ConfigSubentry(
-                    data=MappingProxyType({CONF_TARGET: {"area_id": [area_id]}}),
-                    subentry_type=SUBENTRY_TYPE_STATE,
-                    title=name,
-                    unique_id=slugify(name),
-                ),
-            )
-
-    for subentry in list(entry.subentries.values()):
-        if subentry.subentry_type == SUBENTRY_TYPE_STATE:
-            hass.config_entries.async_remove_subentry(entry, subentry.subentry_id)
-
-    hass.config_entries.async_update_entry(
-        entry,
-        version=3,
-        title="FLARE Schedules",
-        unique_id=f"{DOMAIN}_{ENTRY_TYPE_SCHEDULES}",
-        data={**entry.data, CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES},
-    )
-    # Created as its own entry rather than here, so it goes through the
-    # same flow a fresh install uses and can't drift from it.
-    hass.async_create_task(
-        hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT}, data={})
-    )
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
 
@@ -213,7 +165,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if is_tracking:
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = write_tracker
-        _async_remove_legacy_owner_devices(hass, entry)
         await hass.config_entries.async_forward_entry_setups(entry, TRACKING_PLATFORMS)
         return True
 
@@ -272,24 +223,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     for instance in instances:
         hass.data.get(DOMAIN, {}).pop(instance.subentry_id, None)
     return unloaded
-
-
-def _owner_devices(hass: HomeAssistant, entry: ConfigEntry) -> list[dr.DeviceEntry]:
-    """Every per-owner device on this entry - i.e. everything except the
-    schedule-instance devices (coordinator.py's ScheduleInstance.
-    device_info), which are keyed on a subentry_id instead."""
-    return [
-        device
-        for device in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
-        if any(domain == DOMAIN and key.startswith("owner_") for domain, key in device.identifiers)
-    ]
-
-
-@callback
-def _async_remove_legacy_owner_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Removes per-owner devices left by versions that created a device
-    for each calling automation. They hold no claims, and removing a
-    device takes its entities with it."""
-    registry = dr.async_get(hass)
-    for device in _owner_devices(hass, entry):
-        registry.async_remove_device(device.id)

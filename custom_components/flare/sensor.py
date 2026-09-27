@@ -91,10 +91,9 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
 @callback
 def _assign_scope_area(hass: HomeAssistant, entity, instance: StateInstance) -> None:
     """Puts a state device in the area it targets, when it targets
-    exactly one - which is what both the setup offer and the upgrade
-    migration create. A scope spanning several areas, or targeting
-    devices and entities directly, has no single right answer and is
-    left unassigned.
+    exactly one - which is what the setup offer creates. A scope
+    spanning several areas, or targeting devices and entities directly,
+    has no single right answer and is left unassigned.
 
     Only ever fills in a *blank* area, never overwrites one, so moving a
     state device by hand sticks. Done on the device rather than via

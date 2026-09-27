@@ -126,14 +126,10 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
         return await self._create_schedules_entry()
 
     async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
-        """Creates the tracking entry where there is nobody to show a
-        form to: from async_step_user (see the dialog note there), and
-        from the v2 -> v3 split in __init__.py's async_migrate_entry,
-        which passes no "areas" key at all and so seeds every room that
-        has a light."""
-        areas = _areas_with_lights(self.hass)
-        if (chosen := import_data.get("areas")) is not None:
-            areas = [(a, n) for a, n in areas if a in chosen]
+        """Creates the tracking entry, from async_step_user, without a
+        visible flow of its own (see the dialog note there)."""
+        chosen = import_data["areas"]
+        areas = [(a, n) for a, n in _areas_with_lights(self.hass) if a in chosen]
         return await self._create_tracking_entry(areas)
 
     async def _create_schedules_entry(self) -> FlowResult:

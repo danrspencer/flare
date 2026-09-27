@@ -738,8 +738,7 @@ home-assistant/frontend rather than recalled:
 Net: only the **main config flow, at entry creation** is affected, which
 is exactly what the zero-devices rule above protects. Devices created
 later are fine - and every schedule subentry already creates one, so the
-entry is never device-free in practice. This is why the per-owner
-entities (sensor.py's `owner_device_info`) do get a device each.
+entry is never device-free in practice.
 
 Every schedule is a named "sensor" subentry (Settings → Devices &
 Services → Add Sensor). `schedule_instances(entry)` in `coordinator.py`
