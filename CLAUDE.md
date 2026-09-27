@@ -446,7 +446,7 @@ and they match the two config entries, Schedules and Tracking.
 
 **Dependencies run one way**: `schedule/` and `tracking/` import only
 `const.py`; `services/` may use both; the root may use all three.
-`tests/test_layering.py` enforces it from the source, so it cannot drift
+`tests/checks/test_layering.py` enforces it from the source, so it cannot drift
 silently. `services/__init__.py` holds no imports; the root imports
 `.services.handlers` directly.
 
@@ -604,7 +604,7 @@ rather than assumed:
   **"Seen" means a context match only** - promotion never compares
   values, so a bulb that echoes under a fresh context after HA's 5s
   expiry is never promoted. Pinned by
-  `tests/integration/test_interrupted_writes.py`.
+  `tests/functional/component/test_interrupted_writes.py`.
 - **`flare.claims_record` is documented as call-BEFORE-your-write** for
   the same reason, for anyone composing their own automation.
 - **A scope releases every claim once none of its lights report `on`**
@@ -644,7 +644,7 @@ light still showing what FLARE asked for matches on value and reads
 `controlled`.
 
 Two listener rules changed with it, both pinned in
-`tests/integration/test_claim_persistence.py`:
+`tests/functional/component/test_claim_persistence.py`:
 
 - **No recovery re-baseline.** The listener used to replace `observed`
   with the live context whenever a light arrived in a real state from
@@ -805,7 +805,7 @@ facts:
   One behaviour change came with the delegation: HA clamps input to
   1000-40000K where the old copy extrapolated. The `number` entities are
   bounded 1000-10000, but `compute_curve`'s schema is not.
-  `test_below_1000k_clamps_instead_of_extrapolating` pins it - and note
+  `test_below_1000k_clamps` pins it - and note
   that test is a **dependency contract**, not a logic test: the clamping
   is HA's code, so there is nothing of ours to mutate against it.
 
@@ -924,7 +924,7 @@ Exactly two things in the blueprint can switch a light on -
 `if allow_turn_on` block in `default:`. Nothing else in `action:` ever
 writes an "on" state (the rest is two `flare.turn_off` calls and
 one `claims_clear` bookkeeping step). Anything added later that can switch a
-light on belongs in that same block; `tests/integration/test_blueprint.py`'s
+light on belongs in that same block; `tests/functional/blueprint/test_occupancy.py`'s
 `test_no_trigger_reaching_default_can_light_a_dark_empty_room` sweeps
 every trigger reaching `default:` to enforce it.
 
@@ -1006,7 +1006,7 @@ which is *narrower*, so the curve still cannot light an empty room.
 **Inbound doc links are now tested.** `docs/blueprint.md`'s headings are
 deep-linked from the blueprint's own input descriptions and from every
 test class docstring, and the #172 restructure silently broke six of
-them. `tests/test_docs_site.py::test_every_referenced_blueprint_anchor_exists`
+them. `tests/checks/test_docs_site.py::test_every_referenced_blueprint_anchor_exists`
 derives kramdown's slugs and fails on a dead anchor.
 
 **Self-heal** shares `tick` rather than its own interval. Its
@@ -1329,7 +1329,7 @@ raising, so a house moving between the two states leaves nothing behind.
   stamp left at an earlier value would make Fix fetch the wrong
   blueprint, or a URL that does not exist, silently.
 
-**`tests/integration/test_blueprint_version_repair.py` overrides
+**`tests/functional/component/test_blueprint_version_repair.py` overrides
 `hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The
 shared fixture symlinks the real directory, so a test writing blueprint
 files writes them into the actual repo - which happened while this was
@@ -1377,7 +1377,7 @@ caught. Don't "simplify" it back to the shared fixture.
   ruleset requires linear history, so a pull request's squash or rebase
   would give `main` commits `dev` never sees.
 - **Versioning**: `manifest.json`'s `version` is what HACS reports, read
-  out of the release's own tag. `tests/test_version.py` pins that the
+  out of the release's own tag. `tests/checks/test_versions.py` pins that the
   source holds the placeholder and the changelog's top heading is
   parseable; `release.yml` re-checks tag/manifest agreement for tags
   made by hand. Full flow in CONTRIBUTING.md.
@@ -1513,7 +1513,7 @@ caught. Don't "simplify" it back to the shared fixture.
   imports, a query is not, so `?v=` would load the card twice under two
   URLs and the second `customElements.define` would throw. That
   relative-import invariant is pinned by
-  `tests/test_static_imports.py`. This replaced a separate symlink path
+  `tests/checks/test_static_imports.py`. This replaced a separate symlink path
   that silently went stale for over a week.
 - `scripts/link_into_ha.sh` was **deleted**, not fixed - once the cards
   travel with the integration there was nothing left for it to do, and
@@ -1577,7 +1577,7 @@ caught. Don't "simplify" it back to the shared fixture.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the
-  card are exported and covered by `tests/test_curve_chart.py`. Only
+  card are exported and covered by `tests/unit/dashboard/test_curve_chart.py`. Only
   the GEOMETRY is simplified (the curve is piecewise linear, so most
   sample points are redundant as shape) - the gradient still carries a
   stop per sample, because colour moves continuously where brightness
@@ -1607,12 +1607,12 @@ caught. Don't "simplify" it back to the shared fixture.
   those three paths *relative to itself*, not as absolute `/api/...`
   URLs, so the identical file works unmodified whether "itself" is the
   server's own root or a docs-site subdirectory. `.github/workflows/
-  docs.yml` runs `tests/behaviour` fresh for the commit being built,
+  docs.yml` runs `tests/functional/behaviour` fresh for the commit being built,
   then exports into `docs/trace-report/`, gated to `push` on `main`
   (same condition as `deploy`) so a PR's preview build doesn't pay for
   a full `pytest-homeassistant-custom-component` install for a page
   that build never serves. Deliberately front-matter-free (`tests/
-  test_docs_site.py`'s `_BUILD_DIRS` excludes it) so Jekyll copies it
+  checks/test_docs_site.py`'s `_BUILD_DIRS` excludes it) so Jekyll copies it
   through as-is rather than theming it into the nav/search - "you have
   to already know the URL" is the point, at the user's own request.
 
@@ -1627,43 +1627,26 @@ the flat repo layout isn't set up for setuptools discovery and doesn't
 need to be, since nothing is distributed as a Python package. `dev` in
 `pyproject.toml` is a versions reference only.
 
-Two layers:
+Three layers, laid out in CONTRIBUTING.md: `tests/unit/` (no running
+Home Assistant), `tests/checks/` (the repo agreeing with itself) and
+`tests/functional/` (a real HA via pytest-homeassistant-custom-component).
+Shared helpers live in `tests/support/` and each functional directory's
+`harness.py`; a test module never imports another test module.
 
-- **Pure** (`test_curve.py`, `test_grouping.py`, `test_scenes.py`,
-  `test_override_protection.py`, `test_two_step.py`,
-  `test_services_yaml.py`). They import through the package
-  (`from custom_components.flare.curve import ...`) like everything else.
-  They used to import `curve`/`grouping` as bare top-level modules via a
-  `sys.path` insertion in `tests/conftest.py`, to avoid running
-  `__init__.py` and so importing `homeassistant`; that bought nothing
-  once the suite needed HA anyway (`override_protection.py` and
-  `curve.py` both import `homeassistant.util.color`, and pytest's own
-  `testpaths` collects `tests/integration/conftest.py` regardless of
-  which file you target), and it cost a try/except import fallback in
-  `grouping.py` plus two copies of the same module (bare and packaged)
-  in one test run. `tests/fakes.py` provides a fake `EntityLookup` so
-  `grouping.py` runs on plain dicts.
-- **Integration** (`tests/integration/`), real HA via
-  [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `test_services.py` exercises the registered services end-to-end,
-  calling `async_setup_entry` directly rather than
-  `hass.config_entries.async_setup()` - the latter resolves the
-  manifest's `http`/`frontend` dependencies and pulls in the large
-  `home-assistant-frontend` package for something these tests never
-  touch. `test_blueprint.py` loads the real blueprint into a test
-  automation and fires real triggers, mocking only `apply_lighting` /
-  `scene.turn_on` / `light.turn_off`.
-
-`test_blueprint.py` is the **only** layer that can catch a bug in the
-blueprint's own trigger/condition/action wiring - syntactically fine,
-wrong only at runtime, invisible to YAML parsing or an isolated
-`ha_eval_template` check. Its classes mirror `docs/blueprint.md`'s
-section headings so it reads as a spec of what the blueprint does.
-
-`tests/integration/conftest.py` overrides the plugin's own
-`hass_config_dir` fixture (which otherwise points at its bundled
-`testing_config/`) to symlink this repo's `custom_components/` and
-`blueprints/` into a throwaway `tmp_path`.
+- The component functional tests call `async_setup_entry` directly (or
+  stub `frontend`) rather than `hass.config_entries.async_setup()`,
+  which would load the large `home-assistant-frontend` package.
+- `tests/functional/blueprint/` is the **only** layer that can catch a
+  bug in the blueprint's own trigger/condition/action wiring -
+  syntactically fine, wrong only at runtime. It mocks FLARE's services
+  and asserts on what the blueprint calls; its classes mirror
+  `docs/blueprint.md`'s headings. `tests/functional/behaviour/` runs the
+  real blueprint, schedule and services with only the bulbs faked, and
+  asserts on the bulbs' final state. The day is pinned (sunset 18:00,
+  clock from 19:00), and a phase change means moving the clock.
+- `tests/functional/conftest.py` overrides the plugin's `hass_config_dir`
+  to symlink this repo's `custom_components/` and `blueprints/` into a
+  throwaway `tmp_path`.
 
 **Practices this repo relies on, worth keeping:**
 
@@ -1672,9 +1655,9 @@ section headings so it reads as a spec of what the blueprint does.
   This has repeatedly caught tests that passed for the wrong reason.
   Commit before mutating - `git checkout <file>` to undo a mutation
   will silently discard uncommitted work in that file.
-- Timing tests use the file-wide `frozen_time` fixture
-  (`freeze_time(..., real_asyncio=True)`) and call `.tick()`/`.move_to()`
-  on it. **Never open a nested `freeze_time`**, and never freeze without
+- Timing tests use the `frozen_time` fixture
+  (`freeze_time(..., real_asyncio=True)`, autouse in the blueprint and
+  behaviour suites) and call `.tick()`/`.move_to()` on it. **Never open a nested `freeze_time`**, and never freeze without
   `real_asyncio=True`: plain `freeze_time` also mocks
   `time.monotonic()`, which is the clock asyncio's event loop uses for
   every timer, and a live loop does not tolerate that - it hangs, or

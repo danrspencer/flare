@@ -64,7 +64,8 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         ):
             self._attr_current_option = "Auto"
             self._baseline_phase = None
-            # This update's data still reflects the override; refresh now.
+            # This update's data still reflects the override. The refresh is
+            # debounced, so the sensor catches up within 10s.
             self.hass.async_create_task(self.coordinator.async_request_refresh())
         super()._handle_coordinator_update()
 

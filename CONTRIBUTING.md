@@ -88,7 +88,14 @@ dashboard/
                                flare-section.js, not committed as YAML.
 
 tests/
-    pytest suite for curve.py, grouping.py, and scenes.py.
+    unit/        no running Home Assistant: the pure modules, the
+                 dashboard JS (under node), and scripts/
+    checks/      consistency of the repo itself: docs, versions,
+                 services.yaml, import layering
+    functional/  a real Home Assistant instance: the integration,
+                 the blueprint (services mocked), and behaviour
+                 (end to end, only the bulbs faked)
+    support/     shared paths, fakes and the node runner
 
 docs/
     index.md          the pitch, and what the four phases are for
@@ -158,7 +165,7 @@ Two things about it are less obvious than they look:
   `pytest-homeassistant-custom-component` install just to produce a page that build never serves anyway.
 
 Every page needs front matter — Jekyll only renders a file as a *page* if it has a literal front matter block,
-and copies it through verbatim otherwise. `tests/test_docs_site.py` checks that (`docs/trace-report/` is
+and copies it through verbatim otherwise. `tests/checks/test_docs_site.py` checks that (`docs/trace-report/` is
 excluded from that check the same way `_site`/`_preview`/etc. are — it's deliberately front-matter-free).
 
 ## Testing
@@ -167,8 +174,10 @@ Via [mise](https://mise.jdx.dev) (`mise.toml` pins Python 3.14 and manages a `.v
 
 ```bash
 mise run install   # pip install pytest pytest-homeassistant-custom-component, into .venv
-mise run test       # pytest
-mise run test:behaviour   # tests/behaviour only, captures blueprint traces into trace-dumps/
+mise run test              # everything
+mise run test:unit         # tests/unit and tests/checks - fast, no Home Assistant instance
+mise run test:functional   # tests/functional
+mise run test:behaviour    # tests/functional/behaviour only; captures blueprint traces into trace-dumps/
 mise run traces      # render captured traces (run test:behaviour first)
 ```
 
@@ -179,18 +188,19 @@ pip install pytest pytest-homeassistant-custom-component
 pytest
 ```
 
-Two layers, both under `tests/`:
+Three layers under `tests/`:
 
-- `test_curve.py`/`test_grouping.py`/`test_scenes.py` - the pure logic, with no HA event loop or fixtures.
-  `tests/fakes.py` provides a fake state/registry lookup. They import through the package, like every other test.
-- `tests/integration/` - real Home Assistant, via
+- `unit/` - no running Home Assistant. `component/` tests the pure modules (curve, grouping, override
+  protection, scenes, two-step, the blueprint stamp), `dashboard/` runs the front-end modules under node,
+  and `scripts/` covers the release and CI-summary scripts.
+- `checks/` - the repository agreeing with itself: docs pages and anchors, versions, services.yaml, the
+  static imports and the package layering.
+- `functional/` - a real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `test_services.py` exercises the actual registered services (`services/handlers.py`, `write_tracking.py`) end to end;
-  `test_state_devices.py` covers scope resolution and the per-scope entities that hold the claims;
-  `test_blueprint.py` loads the real blueprint file into a test automation and fires real triggers - the only
-  place bugs living in the blueprint's own trigger/condition/action wiring can be caught at all, as opposed to
-  pure YAML/template checks that are syntactically fine but wrong at runtime (see its own module docstring for
-  the two real incidents this suite exists to guard against).
+  `component/` covers the integration (services, claims, scopes, schedules, config flows, repairs);
+  `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
+  `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
+  faked, and asserts on the state the bulbs end up in.
 
 This is also why `pyproject.toml`'s `requires-python` floor is 3.14, not something lower: pytest-homeassistant-
 custom-component pins a specific Home Assistant release, which itself pins the Python it needs — since this repo

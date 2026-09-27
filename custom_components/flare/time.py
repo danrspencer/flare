@@ -60,5 +60,5 @@ class _BoundaryTime(TimeEntity, RestoreEntity):
     async def async_set_value(self, value: datetime.time) -> None:
         self._attr_native_value = value
         self.async_write_ha_state()
-        # Apply now rather than at the next poll.
+        # Refresh rather than wait for the next poll (debounced: at most 10s).
         await self._coordinator.async_request_refresh()

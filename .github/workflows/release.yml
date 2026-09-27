@@ -46,10 +46,9 @@ jobs:
             exit 1
           fi
 
-      # A hyphen is the whole rule, which is why it isn't shared with
-      # tests/test_version.py as code - that file asserts this workflow
-      # still wires the result up, which is the part that could silently
-      # break.
+      # A hyphen is the whole rule, so it isn't shared with
+      # tests/checks/test_versions.py as code; that file checks the
+      # wiring below.
       - name: Which channel is this
         id: channel
         run: |

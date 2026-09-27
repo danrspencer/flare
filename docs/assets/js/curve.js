@@ -9,7 +9,7 @@
  * of data a live Home Assistant would, rather than reimplementing the card.
  *
  * Being a second implementation of the schedule, it can drift from curve.py.
- * tests/test_curve_js_parity.py runs this module under node against a grid
+ * tests/unit/dashboard/test_js_parity.py runs this module under node against a grid
  * of inputs and asserts every value matches curve.py exactly, so drift fails
  * CI rather than silently leaving the docs graph wrong.
  *

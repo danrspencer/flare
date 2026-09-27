@@ -12,9 +12,17 @@ run = "pip install pytest pytest-homeassistant-custom-component"
 description = "Run the full pytest suite"
 run = "pytest"
 
+[tasks."test:unit"]
+description = "Run the unit tests and repo checks (no Home Assistant instance)"
+run = "pytest tests/unit tests/checks"
+
+[tasks."test:functional"]
+description = "Run the functional tests (real Home Assistant)"
+run = "pytest tests/functional"
+
 [tasks."test:behaviour"]
 description = "Run the behaviour suite (captures blueprint automation traces into trace-dumps/)"
-run = "pytest tests/behaviour -v"
+run = "pytest tests/functional/behaviour -v"
 
 [tasks.traces]
 description = "Render captured blueprint automation traces from trace-dumps/ (run test:behaviour first)"

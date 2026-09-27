@@ -6,7 +6,7 @@ permalink: /advanced/reference/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
-# as empty strings and nothing errors - see tests/test_docs_site.py.
+# as empty strings and nothing errors - see tests/checks/test_docs_site.py.
 ---
 
 # Integration reference
