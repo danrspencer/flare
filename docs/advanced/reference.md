@@ -32,7 +32,7 @@ handling reachability, tolerance, override protection, two-step transitions and
 RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
-[schedule sensor](#optional-day-phasecurve-sensors)'s attributes is an ordinary template on your side.
+[schedule sensor](#schedule-sensors)'s attributes is an ordinary template on your side.
 
 ```yaml
 action: flare.apply_lighting
@@ -399,10 +399,11 @@ defaults, so it can't quietly switch off detection.
 Keep patterns narrow. Too broad is worse than missing — it routes those bulbs into two-step transitions live,
 which makes them transition *worse*, two calls where one was fine.
 
-## Optional: day-phase/curve sensors
+## Schedule sensors
 
-To have the curve running continuously rather than calling `compute_curve` yourself, add a sensor from the
-Schedules entry (Settings → Devices & Services → FLARE Schedules → Add schedule sensor). It asks only for a name.
+The curve runs continuously in a schedule sensor, rather than by calling `compute_curve` yourself. Adding FLARE
+creates the first one; add more from the Schedules entry (Settings → Devices & Services → FLARE Schedules → Add
+schedule sensor). It asks only for a name.
 
 Add as many as you like; each is independent and gets its own device. Renaming the device later updates every
 entity's displayed name, but **entity_ids keep the name you first typed**, so it's worth getting right up front.
