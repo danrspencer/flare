@@ -40,8 +40,8 @@ explanation:
 
 ```markdown
 {: .note }
-> **Changed in 0.14.0** — the schedule view was `custom:flare` before.
-> A view still using the old name shows "Custom element doesn't exist".
+> **Changed in 1.2.0** — the Schedule input is now a device picker.
+> Re-pick the schedule in each room's automation.
 ```
 
 Rules for these:
@@ -95,7 +95,7 @@ describing one. If both are needed, the example comes first.
 | the curve | external | The day's brightness and colour over time. Not "the schedule" — see below. |
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
-| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*, its name before 0.17.0. |
+| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*. |
 | Tick | external | A zone's `event.<name>_flare_tick` entity. Capitalised: it's the entity's name. The update it causes is still *the regular update*. |
 | ~~scope~~ / ~~tracking scope~~ | internal | The code's name for a zone (`tracking_device_id`, `resolve_scope_device`, the tests). The only place it survives in `docs/` is the `scope` field in `claims_check`'s response and the override event, which are field names. |
 | ~~state device~~ | internal | The subentry type behind a zone. Code only. |
@@ -147,7 +147,6 @@ changes, or a new one is added, grep `docs/` for the old one in the same
 change — and check `strings.json` too, since a term the UI says is a term
 the docs are then obliged to say.
 
-Known gap: the code still calls a zone a scope, its subentry type
-`state`, and `SUBENTRY_TYPE_STATE` / `StateInstance` follow from that.
-Nothing user-facing says it any more, so this is a rename to do when
-something else is already touching those files, not on its own.
+The code still calls a zone a scope, its subentry type `state`, and
+`SUBENTRY_TYPE_STATE` / `StateInstance` follow from that. Nothing
+user-facing says it.
