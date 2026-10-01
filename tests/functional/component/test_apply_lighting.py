@@ -19,10 +19,10 @@ from tests.functional.component.harness import (
     claim_registry,
     claims_check,
     label_two_step,
-    scope_id,
+    zone_id,
     set_light,
-    setup_tracking_entry,
-    tracking_device_id,
+    setup_zones_entry,
+    zone_device_id,
 )
 
 TRADFRI = "TRADFRI bulb GU10, color/white spectrum, 345 lm"
@@ -118,7 +118,7 @@ class TestOverrideProtection:
         result = await hass.services.async_call(
             DOMAIN,
             "compute_lighting_groups",
-            {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "tracking_device_id": tracking_device_id(hass)},
+            {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "zone_device_id": zone_device_id(hass)},
             blocking=True,
             return_response=True,
         )
@@ -138,9 +138,9 @@ class TestTwoStep:
         assert brightness_call.data == {"entity_id": ["light.a"], "transition": 0.1, "brightness": 200}
         assert color_call.data["color_temp_kelvin"] == 3000
         assert brightness_call.context.id != color_call.context.id
-        registry, scope = claim_registry(hass), scope_id(hass)
-        assert registry.latest_context_id(scope, "light.a") == color_call.context.id
-        assert registry.latest_secondary_context_id(scope, "light.a") == brightness_call.context.id
+        registry, zone = claim_registry(hass), zone_id(hass)
+        assert registry.latest_context_id(zone, "light.a") == color_call.context.id
+        assert registry.latest_secondary_context_id(zone, "light.a") == brightness_call.context.id
 
     async def test_the_brightness_step_landing_alone_is_ours(self, setup_integration: HomeAssistant):
         hass = setup_integration
@@ -155,7 +155,7 @@ class TestTwoStep:
             "blocked": False,
             "status": "controlled",
             "matched_via": "latest-context",
-            "scope": "Test Scope",
+            "zone": "Test Zone",
         }
 
     async def test_only_the_brightness_step_landing_still_promotes_the_write(self, setup_integration: HomeAssistant):
@@ -165,19 +165,19 @@ class TestTwoStep:
         async_mock_service(hass, "light", "turn_on")
         await label_two_step(hass, "light.a")
         set_light(hass, "light.a", "off", supported_color_modes=CT)
-        registry, scope = claim_registry(hass), scope_id(hass)
+        registry, zone = claim_registry(hass), zone_id(hass)
 
         await apply_lighting(hass, ["light.a"], transition=0.2)
-        brightness_ctx = registry.latest_secondary_context_id(scope, "light.a")
-        color_ctx = registry.latest_context_id(scope, "light.a")
+        brightness_ctx = registry.latest_secondary_context_id(zone, "light.a")
+        color_ctx = registry.latest_context_id(zone, "light.a")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, context=Context(id=brightness_ctx))
         await apply_lighting(hass, ["light.a"], transition=0.2)
 
-        assert registry.observed_context_id(scope, "light.a") == color_ctx
-        assert registry.observed_secondary_context_id(scope, "light.a") == brightness_ctx
+        assert registry.observed_context_id(zone, "light.a") == color_ctx
+        assert registry.observed_secondary_context_id(zone, "light.a") == brightness_ctx
 
     async def test_a_device_matching_the_default_patterns_needs_no_label(self, hass: HomeAssistant):
-        await setup_tracking_entry(hass)
+        await setup_zones_entry(hass)
         turn_on = async_mock_service(hass, "light", "turn_on")
         await add_device_light(hass, "light.spot_1", manufacturer="IKEA", model=TRADFRI)
         set_light(hass, "light.spot_1", "off", supported_color_modes=CT)
@@ -188,7 +188,7 @@ class TestTwoStep:
         assert turn_on[1].data["color_temp_kelvin"] == 3000
 
     async def test_the_configured_patterns_replace_the_defaults(self, hass: HomeAssistant):
-        await setup_tracking_entry(hass, options={CONF_TWO_STEP_MODELS: "*weird bulb*"})
+        await setup_zones_entry(hass, options={CONF_TWO_STEP_MODELS: "*weird bulb*"})
         turn_on = async_mock_service(hass, "light", "turn_on")
         await add_device_light(hass, "light.spot_1", manufacturer="IKEA", model=TRADFRI)
         set_light(hass, "light.spot_1", "off", supported_color_modes=CT)
@@ -212,7 +212,7 @@ class TestMinimumChange:
         assert turn_on == [], "8 points off a 200 target is inside the default 5%"
 
     async def test_the_entrys_option_sets_it(self, hass: HomeAssistant):
-        await setup_tracking_entry(hass, options={CONF_MIN_BRIGHTNESS_CHANGE: 1, CONF_MIN_COLOR_TEMP_CHANGE: 0})
+        await setup_zones_entry(hass, options={CONF_MIN_BRIGHTNESS_CHANGE: 1, CONF_MIN_COLOR_TEMP_CHANGE: 0})
         turn_on = async_mock_service(hass, "light", "turn_on")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=192, color_temp_kelvin=3000)
 

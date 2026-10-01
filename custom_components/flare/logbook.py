@@ -1,5 +1,5 @@
 """Describes EVENT_LIGHT_OVERRIDDEN in the logbook, so it shows on the
-light's timeline and the state device's Activity. Worded as a hand-over,
+light's timeline and the zone's Activity. Worded as a hand-over,
 not a failure."""
 
 from __future__ import annotations
@@ -12,8 +12,8 @@ from homeassistant.core import Event, HomeAssistant, callback
 from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN
 
 
-def _describe_scope(scope: str | None) -> str:
-    return scope or "adaptive lighting"
+def _describe_zone(zone: str | None) -> str:
+    return zone or "FLARE"
 
 
 @callback
@@ -21,7 +21,7 @@ def async_describe_events(
     hass: HomeAssistant,
     async_describe_event: Callable[[str, str, Callable[[Event], dict[str, str]]], None],
 ) -> None:
-    """Describe adaptive lighting logbook events."""
+    """Describe FLARE's logbook events."""
 
     @callback
     def async_describe_override(event: Event) -> dict[str, str]:
@@ -37,7 +37,7 @@ def async_describe_events(
         else:
             detail = ""
         return {
-            LOGBOOK_ENTRY_NAME: _describe_scope(data.get("scope")),
+            LOGBOOK_ENTRY_NAME: _describe_zone(data.get("zone")),
             LOGBOOK_ENTRY_MESSAGE: f"released this light to something else{detail}",
             LOGBOOK_ENTRY_ENTITY_ID: data["entity_id"],
         }

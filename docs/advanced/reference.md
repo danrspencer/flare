@@ -53,7 +53,7 @@ automation — and picks it up again when released.
 
 **You say which zone a call belongs to.** A zone is a named record of which lights FLARE is
 driving, usually one per room, configured at Settings → Devices & Services → **FLARE Zones** →
-Add zone. Each one is a real HA device. Pass its `tracking_device_id` on any of
+Add zone. Each one is a real HA device. Pass its `zone_device_id` on any of
 `apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
 ```yaml
@@ -63,19 +63,19 @@ data:
   brightness: 200
   color_temp_kelvin: 3200
   transition: 2
-  tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-**`tracking_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
+**`zone_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
 three do something useful (set, turn off or plan lights) with no zone at all. **Omitting it writes the light but
 tracks nothing** — no claim is recorded, and nothing is excluded as already externally-set. Tracking
 is opt-in per call, not something the integration goes looking for on your behalf.
 
 **It's required on `claims_check`, `claims_record` and `claims_clear`** — each of those exists only
-to read or write tracking claims, so a call with nothing to name has nothing useful to do; the schema
+to read or write claims, so a call with nothing to name has nothing useful to do; the schema
 rejects it outright rather than always silently answering "untracked" or recording nothing.
 
-A `tracking_device_id` that *is* given but isn't one of your zones raises rather than silently
+A `zone_device_id` that *is* given but isn't one of your zones raises rather than silently
 behaving like it was omitted — a typo'd or stale id is a mistake worth knowing about.
 
 Every entity passed in one call goes into the *same* zone, so a call spanning several rooms needs one call per
@@ -85,10 +85,10 @@ Because the zone is something you state rather than something resolved from conf
 same zone share its claims and co-operate.** Name different zones to track two automations apart.
 
 `force: true` writes through regardless of who holds a light. The write is still recorded against
-`tracking_device_id`, so protection works again on the next non-forced call naming that same zone.
+`zone_device_id`, so protection works again on the next non-forced call naming that same zone.
 
 The blueprint passes its [Zone](../../blueprint/#setting-up-a-room) input, so you only need
-`tracking_device_id` when calling these services yourself.
+`zone_device_id` when calling these services yourself.
 
 #### The two claims
 
@@ -138,7 +138,7 @@ Every time a tracked light passes into someone else's hands, this fires
 
 ```yaml
 entity_id: light.kitchen_1
-scope: Kitchen                        # the zone that lost it
+zone: Kitchen                        # the zone that lost it
 device_id: ...                        # so the row lands in that device's Activity
 previous_status: controlled
 live_context_id: 01M11...
@@ -172,7 +172,7 @@ Each zone carries five entities, all on its own device so they're renamed and de
 
 | entity | |
 |---|---|
-| `sensor.<name>_flare_tracking` | **the claims themselves.** State is the number of lights tracked; the `claims` attribute holds the per-light `observed`/`latest` records |
+| `sensor.<name>_flare_claims` | **the claims themselves.** State is the number of lights tracked; the `claims` attribute holds the per-light `observed`/`latest` records |
 | `sensor.<name>_flare_controlled` | how many of its lights it is currently driving |
 | `sensor.<name>_flare_overridden` | how many are currently held by something else |
 | `button.<name>_flare_clear` | press to discard this zone's tracked state |
@@ -216,7 +216,7 @@ whole afternoon while its brightness eases over the last hour.
 
 ### Inspecting tracked state
 
-`sensor.<name>_flare_tracking`'s `claims` attribute holds the raw `observed`/`latest` records per light.
+`sensor.<name>_flare_claims`'s `claims` attribute holds the raw `observed`/`latest` records per light.
 `claims_check` turns those into a `status` plus a `matched_via` — `"latest-context"`, `"latest-value"`,
 `"observed-context"` or `"observed-value"` — telling you *how* a light was matched, not just that it was.
 
@@ -227,7 +227,7 @@ whole afternoon while its brightness eases over the last hour.
 | `unavailable` | no live state to compare against |
 | `off` | the light is off and holds no claim at all. A light FLARE turned off is `controlled`; one somebody else turned off is `overridden` |
 
-The tracking sensor updates on every write and clear, and also polls, since a light's live state can change
+The claims sensor updates on every write and clear, and also polls, since a light's live state can change
 without FLARE doing anything.
 
 Each claim carries `recorded_at` (ISO 8601, or `null` for the first-write baseline). With the claim's
@@ -247,14 +247,14 @@ action: flare.turn_off
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   transition: 15
-  tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
 | Field | |
 |---|---|
 | `entities` | The lights to turn off. |
 | `transition` | Seconds. Defaults to 0. |
-| `tracking_device_id` | The [zone](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
+| `zone_device_id` | The [zone](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
 
 **It does no override protection.** It turns off exactly what it is given, including lights someone set by hand —
 use it once you have decided the room should go dark. To turn lights off only if FLARE is still driving them, ask
@@ -442,5 +442,5 @@ There are no separate boundary sensors: a phase-change automation triggers on
 not a right-now value.
 
 For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
-schedule sensor, plus a tracking view for what's currently being driven. The sensor's own device page
+schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
 already groups the same entities for free.

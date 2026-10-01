@@ -16,7 +16,7 @@ PLAIN = {"attributes": {}}
 STATES = {
     "sensor.downstairs_flare": SCHEDULE,
     "sensor.ground_floor_flare": SCHEDULE,
-    "sensor.downstairs_flare_tracking": PLAIN,
+    "sensor.downstairs_flare_claims": PLAIN,
     "sensor.downstairs_flare_controlled": PLAIN,
     "sensor.downstairs_flare_overridden": PLAIN,
     "select.downstairs_flare_phase": PLAIN,
@@ -26,9 +26,9 @@ STATES = {
     "button.downstairs_flare_clear": PLAIN,
     "sensor.solar_flare": PLAIN,  # someone else's, same suffix
     "light.kitchen": PLAIN,
-    # Contrived: tracking-shaped but carrying `points`. The only case that
+    # Contrived: claims-shaped but carrying `points`. The only case that
     # tests the suffix check independently of the attribute check.
-    "sensor.upstairs_flare_tracking": SCHEDULE,
+    "sensor.upstairs_flare_claims": SCHEDULE,
 }
 
 
@@ -71,7 +71,7 @@ def test_a_multi_word_slug_survives(result):
     assert result["slugs"]["sensor.ground_floor_flare"] == "ground_floor"
 
 
-@pytest.mark.parametrize("entity_id", [e for e in STATES if STATES[e] is PLAIN] + ["sensor.upstairs_flare_tracking"])
+@pytest.mark.parametrize("entity_id", [e for e in STATES if STATES[e] is PLAIN] + ["sensor.upstairs_flare_claims"])
 def test_nothing_else_is_suggested(result, entity_id):
     assert result["suggestions"][entity_id] is None
     assert result["slugs"][entity_id] is None

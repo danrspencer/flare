@@ -1,11 +1,11 @@
 """Override protection's decision table: given one light's claims and live
 state, is it ours to write? Pure; the caller supplies the claims for
-whatever scope it named. Shared by grouping.py's externally_set(),
+whatever zone it named. Shared by grouping.py's externally_set(),
 sensor.py's status, and claims_check, so they can't disagree.
 
 Each light has two claims: `observed`, a state we've seen and can safely
 write over, and `latest`, our most recent write, not yet seen landing.
-See write_tracking.py's module docstring."""
+See claims.py's module docstring."""
 
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ def classify(
 
 def is_blocked(status: str, force: bool = False) -> bool:
     """classify()'s status as a yes/no. There's no owner check: callers naming
-    the same scope share its claims. `force` bypasses."""
+    the same zone share its claims. `force` bypasses."""
     if force:
         return False
     return status == "overridden"

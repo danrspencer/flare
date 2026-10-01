@@ -160,7 +160,7 @@ const SCHEDULE_SUFFIX = '_flare';
 /**
  * The slug of a FLARE schedule sensor, or null. The `points` attribute is
  * what identifies one; the exact `_flare` suffix makes the slug slice
- * correct (`_flare_tracking` must not match).
+ * correct (`_flare_claims` must not match).
  */
 export function scheduleSensorSlug(hass, entityId) {
   if (typeof entityId !== 'string') return null;

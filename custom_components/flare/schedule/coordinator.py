@@ -74,7 +74,7 @@ class ScheduleInstance:
         """With has_entity_name, renaming the device renames every entity."""
         return DeviceInfo(
             identifiers={(DOMAIN, self.subentry_id)},
-            name=self.title or "Adaptive Lighting",
+            name=self.title,
             entry_type=DeviceEntryType.SERVICE,
             # Lets the blueprint's device selector offer only schedules.
             model="Schedule",
@@ -209,7 +209,7 @@ def _phase_override(hass: HomeAssistant, override_entity_id: str) -> str | None:
 
 class ScheduleCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(self, hass: HomeAssistant, instance: ScheduleInstance) -> None:
-        super().__init__(hass, _LOGGER, name=f"Adaptive Lighting schedule ({instance.title})", update_interval=UPDATE_INTERVAL)
+        super().__init__(hass, _LOGGER, name=f"FLARE schedule ({instance.title})", update_interval=UPDATE_INTERVAL)
         self._instance = instance
 
     async def _async_update_data(self) -> dict[str, Any]:

@@ -670,7 +670,7 @@ action:
             data:
               entities: "{{ turn_off_entities }}"
               transition: !input motion_off_transition
-              tracking_device_id: !input zone
+              zone_device_id: !input zone
           # Idle lights are dimmed instead. Does nothing with no idle brightness.
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
@@ -687,7 +687,7 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: !input motion_off_transition
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  tracking_device_id: !input zone
+                  zone_device_id: !input zone
       # Self-heal: on a tick, with the room empty, retry turn-offs that didn't
       # land. Exclusive of default:, which would work from the same stale list.
       - alias: "Self-heal: retry an earlier turn-off that didn't land"
@@ -716,7 +716,7 @@ action:
             data:
               entities: "{{ entities_still_on }}"
               transition: !input motion_off_transition
-              tracking_device_id: !input zone
+              zone_device_id: !input zone
     default:
       # Everything that can switch a light on is under this gate (see
       # allow_turn_on). An empty room settles to its idle brightness, outside
@@ -738,7 +738,7 @@ action:
               rgb_color: "{{ rgb_color }}"
               transition: "{{ script_transition }}"
               prefer_rgb_color: "{{ prefer_rgb_color }}"
-              tracking_device_id: !input zone
+              zone_device_id: !input zone
       - alias: "Only motion, a manual run, or a room already in use may switch a light on"
         if:
           - condition: template
@@ -776,7 +776,7 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  tracking_device_id: !input zone
+                  zone_device_id: !input zone
                   # A manual run forces the tick through override protection.
                   force: "{{ manual_run }}"
       # Bookkeeping only, so outside the gate.
@@ -790,4 +790,4 @@ action:
           - action: flare.claims_clear
             data:
               entities: "{{ handed_off_entities }}"
-              tracking_device_id: !input zone
+              zone_device_id: !input zone
