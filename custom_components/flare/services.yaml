@@ -800,3 +800,55 @@ claims_clear:
           filter:
             - integration: flare
               model: Zone
+
+export_schedule:
+  name: Export schedule
+  description: >-
+    Returns a FLARE schedule's times, brightness, colour temperature and
+    transitions as YAML, keyed by phase, to keep as a backup or paste into
+    another schedule or the docs site's playground. The response's
+    `schedule` field holds the text.
+  fields:
+    schedule_device_id:
+      name: Schedule
+      description: The FLARE schedule to export.
+      required: true
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Schedule
+
+import_schedule:
+  name: Import schedule
+  description: >-
+    Sets a FLARE schedule from YAML in the format export_schedule returns.
+    Anything left out keeps its current value. Everything is checked
+    first, so a schedule with a mistake changes nothing.
+  fields:
+    schedule_device_id:
+      name: Schedule
+      description: The FLARE schedule to set.
+      required: true
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Schedule
+    schedule:
+      name: Schedule
+      description: >-
+        The schedule, keyed by phase (morning, day, evening, night). Each
+        phase takes brightness, kelvin, brightness_transition and
+        kelvin_transition, plus a start time (time) or, for evening, the
+        earliest and latest times around sunset.
+      required: true
+      example: |
+        morning:
+          time: "06:30"
+          brightness: 255
+        night:
+          kelvin: 2000
+      selector:
+        text:
+          multiline: true
