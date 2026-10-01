@@ -21,9 +21,9 @@ from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_TRACKING,
+    ENTRY_TYPE_ZONES,
     SUBENTRY_TYPE_SENSOR,
-    SUBENTRY_TYPE_STATE,
+    SUBENTRY_TYPE_ZONE,
 )
 from tests.support import REPO_ROOT
 
@@ -189,13 +189,13 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     areas = {name: ar.async_get(hass).async_get_or_create(name).id for name in names}
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
-        unique_id=f"{DOMAIN}_{ENTRY_TYPE_TRACKING}",
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_ZONES}",
         version=3,
         options=options or {},
         subentries_data=[
             ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_STATE, title=name, unique_id=name, data={}
+                subentry_type=SUBENTRY_TYPE_ZONE, title=name, unique_id=name, data={}
             )
             for name, area_id in areas.items()
         ],
@@ -219,7 +219,7 @@ def schedule_device(hass: HomeAssistant) -> str:
 def zone_device(hass: HomeAssistant, name: str) -> str:
     """The device of the zone called `name`, which the blueprint's Zone input
     takes."""
-    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING]
+    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES]
     (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == name]
     device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry.entry_id)
     assert device is not None, f"zone {name} has no device"

@@ -1,4 +1,4 @@
-"""What happens to claims as lights change on their own: a scope going
+"""What happens to claims as lights change on their own: a zone going
 dark, a light dropping and recovering, and pruning."""
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
-from custom_components.flare.tracking.write_tracking import STALE_RECORD_MAX_AGE_DAYS
+from custom_components.flare.zone.claims import STALE_RECORD_MAX_AGE_DAYS
 from tests.functional.component.harness import (
     CT,
     apply_lighting,
@@ -19,11 +19,11 @@ from tests.functional.component.harness import (
     claims_check,
     claims_record,
     set_light,
-    tracking_device_id,
+    zone_device_id,
 )
 
 
-async def test_the_last_light_going_off_releases_the_whole_scope(setup_integration: HomeAssistant):
+async def test_the_last_light_going_off_releases_the_whole_zone(setup_integration: HomeAssistant):
     """Nobody is using the room, so every light is free again."""
     hass = setup_integration
     our_context = Context()
@@ -33,13 +33,13 @@ async def test_the_last_light_going_off_releases_the_whole_scope(setup_integrati
     await hass.async_block_till_done()
 
     assert await claims_check(hass, ["light.a"]) == {
-        "light.a": {"blocked": False, "status": "off", "matched_via": None, "scope": "Test Scope"}
+        "light.a": {"blocked": False, "status": "off", "matched_via": None, "zone": "Test Zone"}
     }
 
 
 async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_integration: HomeAssistant):
     """Switching one light off in a room still in use is a choice: the sibling
-    holds the scope, so the claim stays. (The scope, not the physical room:
+    holds the zone, so the claim stays. (The zone, not the physical room:
     an untracked light holds nothing open.)"""
     hass = setup_integration
     ours = Context()
@@ -59,7 +59,7 @@ async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_inte
     assert results["light.a"]["blocked"] is True
 
 
-async def test_write_tracking_record_is_cleared_when_light_goes_unavailable(setup_integration: HomeAssistant):
+async def test_claim_is_cleared_when_light_goes_unavailable(setup_integration: HomeAssistant):
     """Its claim goes when it drops, so the reconnect - under a context we
     never issued - isn't read as an override."""
     hass = setup_integration
@@ -131,7 +131,7 @@ async def test_recovered_light_is_freed_while_an_unrelated_override_stays_protec
             "entities": ["light.recovering", "light.sibling"],
             "brightness": 180,
             "color_temp_kelvin": 3200,
-            "tracking_device_id": tracking_device_id(hass),
+            "zone_device_id": zone_device_id(hass),
         },
         blocking=True,
         return_response=True,
@@ -187,7 +187,7 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
             "entities": ["light.a"],
             "brightness": 180,
             "color_temp_kelvin": 3200,
-            "tracking_device_id": tracking_device_id(hass),
+            "zone_device_id": zone_device_id(hass),
         },
         blocking=True,
         return_response=True,

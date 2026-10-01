@@ -1,4 +1,4 @@
-"""Resolving Room Target into lights, occupancy sensors and a tracking scope."""
+"""Resolving Room Target into lights, occupancy sensors and a zone."""
 
 from __future__ import annotations
 
@@ -193,5 +193,5 @@ class TestOverrideDetection:
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
-        assert calls and calls[-1].data["tracking_device_id"] == study
+        assert calls and calls[-1].data["zone_device_id"] == study
         assert calls[-1].data["force"] is False

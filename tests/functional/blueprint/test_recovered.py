@@ -16,7 +16,7 @@ class TestRecoveredTrigger:
     """docs/blueprint.md's "A device regaining power after an outage".
 
     `recovered` only makes an ordinary tick run promptly. Freeing the light
-    from its claim is write_tracking's listener, tested in
+    from its claim is claims.py's listener, tested in
     functional/component."""
 
     async def test_fires_and_resyncs_a_light_that_reconnects_on(self, hass, apply_lighting_calls):

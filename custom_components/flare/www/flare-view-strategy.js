@@ -1,6 +1,6 @@
 /**
  * Two Lovelace view strategies: `custom:flare-schedule` (what lights are
- * scheduled to do) and `custom:flare-tracking` (what FLARE is driving).
+ * scheduled to do) and `custom:flare-zone` (what FLARE is driving).
  *
  *   views:
  *     - title: Lighting
@@ -16,8 +16,8 @@ import {
   sectionConfig,
   scheduleSensors,
   normaliseSlug,
-  trackingSectionConfig,
-  trackingScopes,
+  zoneSectionConfig,
+  listZones,
 } from './flare-section.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
@@ -65,19 +65,19 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * The tracking view: one section per zone, with its counts, its
+ * The zone view: one section per zone, with its counts, its
  * overridden lights and the Clear button.
  *
  *   views:
- *     - title: Tracking
+ *     - title: Zones
  *       strategy:
- *         type: custom:flare-tracking
+ *         type: custom:flare-zone
  */
-class FlareTrackingViewStrategy extends HTMLElement {
+class FlareZoneViewStrategy extends HTMLElement {
   static async generate(config, hass) {
-    const scopes = trackingScopes(hass);
+    const zones = listZones(hass);
 
-    if (!scopes.length) {
+    if (!zones.length) {
       return notice(
         'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
           '& Services → FLARE Zones → Add zone**, and it will appear here ' +
@@ -85,8 +85,8 @@ class FlareTrackingViewStrategy extends HTMLElement {
       );
     }
 
-    return view(scopes.map(({ slug, title }) => trackingSectionConfig(slug, title)));
+    return view(zones.map(({ slug, title }) => zoneSectionConfig(slug, title)));
   }
 }
 
-customElements.define('ll-strategy-view-flare-tracking', FlareTrackingViewStrategy);
+customElements.define('ll-strategy-view-flare-zone', FlareZoneViewStrategy);

@@ -97,8 +97,6 @@ describing one. If both are needed, the example comes first.
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
 | zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*. |
 | Tick | external | A zone's `event.<name>_flare_tick` entity. Capitalised: it's the entity's name. The update it causes is still *the regular update*. |
-| ~~scope~~ / ~~tracking scope~~ | internal | The code's name for a zone (`tracking_device_id`, `resolve_scope_device`, the tests). The only place it survives in `docs/` is the `scope` field in `claims_check`'s response and the override event, which are field names. |
-| ~~state device~~ | internal | The subentry type behind a zone. Code only. |
 
 ### Behaviour
 
@@ -138,7 +136,7 @@ Never paraphrase these. They are what the user types or clicks.
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
 - **Config entries** — FLARE Schedules, FLARE Zones.
-- **Dashboard views** — `custom:flare-schedule`, `custom:flare-tracking`.
+- **Dashboard views** — `custom:flare-schedule`, `custom:flare-zone`.
 
 ## Keeping this honest
 
@@ -147,6 +145,5 @@ changes, or a new one is added, grep `docs/` for the old one in the same
 change — and check `strings.json` too, since a term the UI says is a term
 the docs are then obliged to say.
 
-The code still calls a zone a scope, its subentry type `state`, and
-`SUBENTRY_TYPE_STATE` / `StateInstance` follow from that. Nothing
-user-facing says it.
+A zone's subentry type is still stored as `state` (HA can't retype a
+subentry), behind `SUBENTRY_TYPE_ZONE`. Nothing user-facing says it.

@@ -240,7 +240,7 @@ async def test_a_light_switched_off_by_hand_stays_off(
     hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
 ) -> None:
     """An off light is judged against its claims like an on one. The rest of
-    the room stays on, so the scope isn't released."""
+    the room stays on, so the zone isn't released."""
     bulbs = await lit_room(hass, add_bulbs, setup_room, zone)
     target = bulbs[0]
 

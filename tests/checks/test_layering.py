@@ -1,8 +1,8 @@
 """The integration's packages import in one direction only:
 
     schedule/  -> const
-    tracking/  -> const
-    services/  -> schedule/, tracking/, const
+    zone/  -> const
+    services/  -> schedule/, zone/, const
 
 and none reach back up into the package root. Parsed from the source."""
 
@@ -12,8 +12,8 @@ from tests.support import COMPONENT as PACKAGE
 
 ALLOWED = {
     "schedule": {"schedule", "const"},
-    "tracking": {"tracking", "const"},
-    "services": {"services", "schedule", "tracking", "const"},
+    "zone": {"zone", "const"},
+    "services": {"services", "schedule", "zone", "const"},
 }
 
 
@@ -53,8 +53,8 @@ def test_no_package_imports_something_it_is_not_allowed_to():
 def test_the_check_actually_sees_imports():
     seen = {(package, area) for package in ALLOWED for _, area in _imports(package)}
     assert ("services", "schedule") in seen, "services/ should be importing from schedule/"
-    assert ("services", "tracking") in seen, "services/ should be importing from tracking/"
-    assert ("schedule", "const") in seen and ("tracking", "const") in seen
+    assert ("services", "zone") in seen, "services/ should be importing from zone/"
+    assert ("schedule", "const") in seen and ("zone", "const") in seen
 
 
 def test_every_package_is_covered():
