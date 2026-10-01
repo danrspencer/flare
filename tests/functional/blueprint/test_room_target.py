@@ -7,6 +7,8 @@ from datetime import timedelta
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import floor_registry as fr
+from homeassistant.helpers import label_registry as lr
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
@@ -109,6 +111,67 @@ class TestRoomTargetResolution:
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
 
+
+    async def test_floor_room_target_resolves_the_lights_on_every_area_of_that_floor(
+        self, hass, apply_lighting_calls
+    ):
+        floor = fr.async_get(hass).async_create("Upstairs")
+        areas = ar.async_get(hass)
+        for name, light_id in (("Landing", "landing"), ("Study", "study")):
+            area = areas.async_get_or_create(name)
+            areas.async_update(area.id, floor_id=floor.floor_id)
+            er.async_get(hass).async_get_or_create("light", "test", light_id, suggested_object_id=light_id)
+            er.async_get(hass).async_update_entity(f"light.{light_id}", area_id=area.id)
+            light(hass, f"light.{light_id}", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"floor_id": floor.floor_id})
+
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and sorted(apply_lighting_calls[-1].data["entities"]) == [
+            "light.landing",
+            "light.study",
+        ]
+
+    async def test_label_room_target_resolves_labelled_lights_devices_and_areas(
+        self, hass, apply_lighting_calls
+    ):
+        label = lr.async_get(hass).async_create("Downlights").label_id
+        ent_reg = er.async_get(hass)
+        entry = MockConfigEntry(domain="test")
+        entry.add_to_hass(hass)
+
+        ent_reg.async_get_or_create("light", "test", "named", suggested_object_id="named")
+        ent_reg.async_update_entity("light.named", labels={label})
+
+        device = dr.async_get(hass).async_get_or_create(
+            config_entry_id=entry.entry_id, identifiers={("test", "labelled_device")}
+        )
+        dr.async_get(hass).async_update_device(device.id, labels={label})
+        ent_reg.async_get_or_create("light", "test", "on_device", suggested_object_id="on_device", device_id=device.id)
+
+        area = ar.async_get(hass).async_get_or_create("Hall")
+        ar.async_get(hass).async_update(area.id, labels={label})
+        ent_reg.async_get_or_create("light", "test", "in_area", suggested_object_id="in_area")
+        ent_reg.async_update_entity("light.in_area", area_id=area.id)
+
+        ent_reg.async_get_or_create("light", "test", "unlabelled", suggested_object_id="unlabelled")
+        for entity_id in ("light.named", "light.on_device", "light.in_area", "light.unlabelled"):
+            light(hass, entity_id, "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"label_id": label})
+
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and sorted(apply_lighting_calls[-1].data["entities"]) == [
+            "light.in_area",
+            "light.named",
+            "light.on_device",
+        ]
 
 class TestOverrideDetection:
     """docs/blueprint.md#why-didnt-my-light-change"""
