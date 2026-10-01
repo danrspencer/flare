@@ -94,7 +94,6 @@ class TestRoomTargetResolution:
         ent_reg.async_get_or_create(
             "light", "test", "light_a", suggested_object_id="a", device_id=device.id
         )
-        ent_reg.async_update_entity("light.a", area_id=area.id)
         ent_reg.async_get_or_create("binary_sensor", "test", "occ_a", suggested_object_id="occ")
         ent_reg.async_update_entity("binary_sensor.occ", area_id=area.id)
 

@@ -144,5 +144,5 @@ async def add_device_light(hass: HomeAssistant, entity_id: str, *, manufacturer:
     device = dr.async_get(hass).async_get_or_create(
         config_entry_id=owner.entry_id, identifiers={("test", object_id)}, manufacturer=manufacturer, model=model, name=object_id
     )
+    dr.async_get(hass).async_update_device(device.id, area_id=test_area(hass).id)
     er.async_get(hass).async_get_or_create(domain, "test", object_id, suggested_object_id=object_id, device_id=device.id)
-    er.async_get(hass).async_update_entity(entity_id, area_id=test_area(hass).id)
