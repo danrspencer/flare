@@ -32,9 +32,8 @@ handling reachability, tolerance, override protection, two-step transitions and
 RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
-sensor's attributes is an ordinary template on your side — see
-[Bring your own sensor](../../blueprint/#bring-your-own-sensor) for the attribute shape the
-blueprint uses.
+schedule sensor's attributes (see [schedule sensors](#schedule-sensors)) is an ordinary
+template on your side.
 
 ```yaml
 action: flare.apply_lighting

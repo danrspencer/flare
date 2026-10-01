@@ -1,6 +1,7 @@
 DOMAIN = "flare"
 
-PHASE_OPTIONS = ["Auto", "Morning", "Day", "Evening", "Night"]
+PHASES = ["Morning", "Day", "Evening", "Night"]
+PHASE_OPTIONS = ["Auto", *PHASES]
 
 # Subentry type for a schedule sensor.
 SUBENTRY_TYPE_SENSOR = "sensor"

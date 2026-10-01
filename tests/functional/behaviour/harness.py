@@ -206,6 +206,16 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     return areas
 
 
+def schedule_device(hass: HomeAssistant) -> str:
+    """The device of the "Test" schedule, which the blueprint's Schedule input
+    takes."""
+    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SCHEDULES]
+    (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == "Test"]
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry.entry_id)
+    assert device is not None, "the Test schedule has no device"
+    return device.id
+
+
 def zone_device(hass: HomeAssistant, name: str) -> str:
     """The device of the zone called `name`, which the blueprint's Zone input
     takes."""

@@ -27,6 +27,7 @@ from tests.functional.behaviour.harness import (
     FakeBulb,
     dump_traces,
     setup_schedule,
+    schedule_device,
     setup_zones,
     zone_device,
     today_at,
@@ -142,7 +143,7 @@ def setup_room(hass: HomeAssistant, zone: str):
         entity_ids = [light if isinstance(light, str) else light.entity_id for light in lights]
         target = entity_ids + list(occupancy_sensors or [])
         input_ = {
-            "adaptive_sensor": SCHEDULE_SENSOR,
+            "schedule": schedule_device(hass),
             "room_target": {"entity_id": target},
             "zone": zone_device(hass, ZONE),
             **inputs,

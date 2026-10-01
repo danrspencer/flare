@@ -21,8 +21,11 @@ CI — see `.github/workflows/release.yml`.
   remembers driving, and the room's regular update follows the zone's Tick, replacing
   the guess the blueprint used to make from areas. Until one is picked, an automation
   stops with "Missing input zone". **Update Interval** is gone; the zone's timing
-  replaces it. **Lights &
-  Occupancy** is now required too.
+  replaces it. **Lights & Occupancy** is now required too.
+- **Schedule is now a device, and "bring your own sensor" is gone.** The blueprint's
+  **Schedule** input (the `schedule` key, was `adaptive_sensor`) picks a FLARE schedule's
+  device rather than its sensor, the same way **Zone** does. A sensor from elsewhere can
+  no longer be used; build your own automation on FLARE's services for that.
 
 ### Added
 
@@ -31,6 +34,8 @@ CI — see `.github/workflows/release.yml`.
   `entities`, an optional `transition` and an optional `tracking_device_id`, and does
   no override protection: it turns off exactly what it is given, including lights
   someone set by hand. The blueprint uses it for its own turn-offs.
+- **Each schedule has a Phase event** (`event.<name>_flare_phase`), fired with the phase
+  name whenever the phase changes, a manual override included.
 - **Rooms take turns updating.** Every zone now has a **Tick**
   (`event.<name>_flare_tick`), and FLARE fires them one after another, a second apart,
   instead of every room updating on the same second of every minute. A blueprint

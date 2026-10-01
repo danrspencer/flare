@@ -17,16 +17,16 @@ blueprint:
     # Required by the occupancy.* triggers/conditions.
     min_version: 2026.4.0
   input:
-    adaptive_sensor:
+    schedule:
       name: Schedule
       description: >
         The FLARE schedule the room follows: the brightness and colour
         temperature it applies.
       selector:
-        entity:
+        device:
           filter:
             - integration: flare
-              domain: sensor
+              model: Schedule
     zone:
       name: Zone
       description: >
@@ -284,16 +284,18 @@ trigger_variables:
   room_target: !input room_target
 
 trigger:
-  # `to:` stops attribute-only updates firing it; `from:` is open so a
-  # restart still fires.
-  - platform: state
-    entity_id: !input adaptive_sensor
-    id: phase_change
-    to:
-      - Morning
-      - Day
-      - Evening
-      - Night
+  # The schedule's Phase, which fires on a real phase change (and once at
+  # startup), never on an attribute-only update.
+  - id: phase_change
+    trigger: event.received
+    target:
+      device_id: !input schedule
+    options:
+      event_type:
+        - Morning
+        - Day
+        - Evening
+        - Night
   # The zone's Tick, spaced from every other zone's. The curve is flat in
   # Morning/Night, so phase_change goes quiet there. Also runs self-heal.
   - id: tick
@@ -377,7 +379,10 @@ condition:
 
 variables:
   room_target: !input room_target
-  adaptive_sensor: !input adaptive_sensor
+  schedule: !input schedule
+  # The schedule device's one sensor, which carries the curve.
+  adaptive_sensor: >
+    {{ device_entities(schedule) | select('match', '^sensor\\.') | first | default(none) }}
   scene_template: !input scene_template
   background_transition: !input background_transition
   motion_on_transition: !input motion_on_transition
@@ -636,18 +641,9 @@ variables:
   # going stale into "overridden".
   handed_off_entities: >
     {{ ((scene_covered_entities if scene_active else []) + hands_off_entities) | unique | list }}
-  # Re-activating a scene every minute would stomp manual changes, so a
-  # phase_change is skipped unless the phase really changed. The tick has
-  # no from_state/to_state to compare, so it's excluded.
-  scene_recheck_due: >
-    {% if trigger is defined and trigger.id is defined and trigger.id == 'tick' %}
-      false
-    {% else %}
-      {{ not (trigger is defined and trigger.id is defined and trigger.id == 'phase_change')
-         or trigger.from_state is none
-         or trigger.to_state is none
-         or trigger.from_state.state != trigger.to_state.state }}
-    {% endif %}
+  # Re-activating a scene every minute would stomp manual changes, so the
+  # tick never does.
+  scene_recheck_due: "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}"
   # Everything the active scene doesn't cover. No off-light filter: the
   # step using it is already behind allow_turn_on.
   target_entities: >

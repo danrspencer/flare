@@ -158,13 +158,16 @@ Blueprint input mechanics worth knowing:
   in a section does **not** change its name for `!input` purposes.
 - The blueprint declares `homeassistant.min_version: 2026.4.0` - what
   the `occupancy.*` triggers require, not `sections`' lower floor.
-- `adaptive_sensor` uses `entity: filter: [{integration: ..., domain:
-  sensor}]` - the `filter:` list is the only documented shape combining
-  `integration:` with `domain:`; don't mix a bare top-level `domain:`
-  with a sibling `filter:` (same class of trap as lesson 14). Accepted
-  trade-off: this hides a hand-rolled "bring your own sensor" entity
-  from the picker, so `docs/blueprint.md` documents pointing at one via
-  "Edit in YAML".
+- **Schedule and Zone are both device selectors** (`integration: flare`,
+  `model: Schedule` / `model: Zone`). The blueprint finds the schedule
+  device's one `sensor` in `variables:`. A trigger can't do that lookup
+  (trigger templates can't read the registry, and a `state` trigger only
+  takes entity IDs), which is why each schedule has a Phase `event`
+  entity: `phase_change` is `event.received` on the device, like the
+  Tick. "Bring your own sensor" (any entity with the right attributes,
+  set via Edit in YAML) went with the entity selector on 2026-10-01, at
+  the user's direction: anyone wanting something different builds their
+  own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
   automation needs the old key removed outright, not left blank, as
@@ -494,9 +497,8 @@ in `docs/helpers.md` and `services.yaml` - not repeated here.
 
 `rgb_color` on both `apply_lighting` and `compute_lighting_groups`
 accepts an explicit `None`, not just an omitted key (`vol.Any(None,
-...)`): the blueprint templates it unconditionally from a sensor
-attribute that a hand-rolled "bring your own sensor" entity is free not
-to publish, so it renders a literal null.
+...)`): a caller templating it from a sensor attribute that may be
+missing renders a literal null rather than omitting the key.
 
 ### Override protection
 
@@ -913,9 +915,11 @@ fallback.
 - The Tick is one recorder row per zone per interval. Accepted: the
   schedule sensor already writes one per minute.
 
-- `phase_change` needs the `to:` filter because a plain `state` trigger
-  with no `from`/`to` fires on attribute-only changes; with any of
-  those keys set HA rejects events where `old_value == new_value`.
+- `phase_change` is the schedule's Phase event, which `event.py` fires
+  only when the phase actually changes (a manual override included) and
+  once on the first refresh after setup, so a restart still repaints
+  rooms. Attribute-only updates never fire it, which is why
+  `scene_recheck_due` no longer compares from/to states.
 - `tick` exists because the curve is **flat** during Morning
   and Night, so the coordinator re-writes identical state and HA emits
   `state_reported`, not `state_changed` - `phase_change` goes silent

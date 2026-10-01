@@ -6,16 +6,18 @@ from datetime import datetime, time, timedelta
 import pytest
 from freezegun import freeze_time
 from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SCHEDULES, SUBENTRY_TYPE_SENSOR
-from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS
+from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS, ScheduleCoordinator
 
 SENSOR = "sensor.ground_floor_flare"
 SELECT = "select.ground_floor_flare_phase"
 STICKY = "switch.ground_floor_sticky_phase_override"
+PHASE = "event.ground_floor_flare_phase"
 
 
 def _today_at(hour: int, minute: int = 0) -> datetime:
@@ -61,7 +63,7 @@ async def schedule(stub_entry_setup, frozen, hass: HomeAssistant):
 
 
 async def test_every_entity_is_created(schedule, hass: HomeAssistant):
-    expected = [SENSOR, SELECT, STICKY]
+    expected = [SENSOR, SELECT, STICKY, PHASE]
     expected += [f"time.ground_floor_{key}" for key in TIME_KEYS]
     expected += [f"number.ground_floor_{key}" for key in CURVE_KEYS]
     assert [e for e in expected if hass.states.get(e) is None] == []
@@ -93,6 +95,59 @@ async def test_a_boundary_change_applies_at_once(schedule, hass: HomeAssistant):
     await hass.async_block_till_done()
 
     assert hass.states.get(SENSOR).state == "Morning"
+
+
+class TestPhaseEvent:
+    """What the blueprint triggers on: one event per real phase change."""
+
+    async def test_it_fires_the_current_phase_once_set_up(self, schedule, hass: HomeAssistant):
+        assert hass.states.get(PHASE).attributes["event_type"] == "Day"
+
+    async def test_a_value_change_within_the_phase_does_not_fire_it(self, schedule, hass: HomeAssistant):
+        fired_at = hass.states.get(PHASE).state
+
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": "number.ground_floor_day_brightness", "value": 100}, blocking=True
+        )
+        await hass.async_block_till_done()
+
+        assert _attr(hass, "brightness") == 100, "precondition: the sensor did update"
+        assert hass.states.get(PHASE).state == fired_at
+
+    async def test_a_phase_change_fires_it(self, schedule, hass: HomeAssistant):
+        await hass.services.async_call(
+            "time", "set_value", {"entity_id": "time.ground_floor_day_time", "time": time(13, 0)}, blocking=True
+        )
+        await hass.async_block_till_done()
+
+        assert hass.states.get(PHASE).attributes["event_type"] == "Morning"
+
+    async def test_the_sensor_already_shows_the_phase_when_it_fires(self, schedule, hass: HomeAssistant):
+        """An automation it triggers reads the sensor straight away."""
+        seen: list[tuple[str, str]] = []
+
+        @callback
+        def _fired(event) -> None:
+            seen.append((event.data["new_state"].attributes["event_type"], hass.states.get(SENSOR).state))
+
+        async_track_state_change_event(hass, [PHASE], _fired)
+        # The order that loses: the Phase entity hears the refresh before
+        # the sensor does. Which comes first otherwise depends on setup order.
+        coordinator = next(v for v in hass.data[DOMAIN].values() if isinstance(v, ScheduleCoordinator))
+        coordinator._listeners = dict(
+            sorted(coordinator._listeners.items(), key=lambda item: getattr(item[1][0], "__self__", None) is None
+                   or item[1][0].__self__.entity_id != PHASE)
+        )
+        await hass.services.async_call("select", "select_option", {"entity_id": SELECT, "option": "Night"}, blocking=True)
+        await hass.async_block_till_done()
+
+        assert seen == [("Night", "Night")]
+
+    async def test_an_override_fires_it(self, schedule, hass: HomeAssistant):
+        await hass.services.async_call("select", "select_option", {"entity_id": SELECT, "option": "Night"}, blocking=True)
+        await hass.async_block_till_done()
+
+        assert hass.states.get(PHASE).attributes["event_type"] == "Night"
 
 
 class TestPhaseOverride:

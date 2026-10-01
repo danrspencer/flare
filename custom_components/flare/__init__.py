@@ -37,7 +37,7 @@ from .tracking.write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
-SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH]
+SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
 TRACKING_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
 
 

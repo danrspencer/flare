@@ -10,10 +10,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 
 from tests.functional.behaviour.harness import (
-    SCHEDULE_SENSOR,
     at,
     occupancy,
     room_brightness,
+    schedule_device,
     setup_zones,
     zone_device,
 )
@@ -50,7 +50,7 @@ async def rooms(hass: HomeAssistant, rooms_by_name: dict[str, tuple[list, str]])
                     "use_blueprint": {
                         "path": BLUEPRINT_PATH,
                         "input": {
-                            "adaptive_sensor": SCHEDULE_SENSOR,
+                            "schedule": schedule_device(hass),
                             "room_target": {"entity_id": [b.entity_id for b in bulbs] + [ROOM_SENSOR]},
                             "zone": zone,
                             "no_motion_wait": 0,

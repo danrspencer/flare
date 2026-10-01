@@ -76,6 +76,8 @@ class ScheduleInstance:
             identifiers={(DOMAIN, self.subentry_id)},
             name=self.title or "Adaptive Lighting",
             entry_type=DeviceEntryType.SERVICE,
+            # Lets the blueprint's device selector offer only schedules.
+            model="Schedule",
         )
 
     def time_entity_id(self, key: str) -> str:

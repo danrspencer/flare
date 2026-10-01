@@ -31,7 +31,7 @@ see the [Quickstart](../installation/); for the services underneath, the
 
 | Input | Default | What it does |
 |---|---|---|
-| **Schedule** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
+| **Schedule** | — | The FLARE schedule whose brightness and colour the room follows. |
 | **Zone** | — | The FLARE zone the room belongs to: it remembers which lights FLARE is driving. See [setting up a room](#setting-up-a-room). |
 | **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
 | **Additional Triggers** | none | Extra entities that make the room re-evaluate immediately. See [additional triggers](#additional-triggers). |
@@ -79,7 +79,7 @@ see the [Quickstart](../installation/); for the services underneath, the
 
 ## Setting up a room
 
-Point **Schedule** at a schedule sensor, **Zone** at the room's zone,
+Point **Schedule** at a FLARE schedule, **Zone** at the room's zone,
 and **Lights & Occupancy** at the room's area. That's it.
 
 One target does both jobs: every light in that area is controlled, and
@@ -300,34 +300,6 @@ template:
 
 Name it as an entity rather than relying on area membership, so it's a
 deliberate addition.
-
-## Using your own sensor
-
-**Schedule** accepts any entity with these attributes, not just
-FLARE's own schedule sensors:
-
-| Attribute | Type | Required |
-|---|---|---|
-| `brightness` | 0–255 | yes |
-| `color_temp` | Kelvin | yes |
-| `rgb_color` | `[r, g, b]` | only with **Prefer RGB During** |
-
-```yaml
-template:
-  - sensor:
-      - name: "My Room's FLARE"
-        state: "{{ 'Evening' if now().hour >= 18 else 'Day' }}"
-        attributes:
-          brightness: "{{ 180 if now().hour >= 18 else 255 }}"
-          color_temp: "{{ 3200 if now().hour >= 18 else 5500 }}"
-```
-
-The picker only lists FLARE's own sensors, so point at yours through the
-automation's **Edit in YAML** view.
-
-The state can be anything. Only the phase-keyed inputs — **Prefer RGB
-During**, the per-phase scenes, the per-phase off lists and the per-phase
-idle brightnesses — read a phase name from it.
 
 ## Additional triggers
 

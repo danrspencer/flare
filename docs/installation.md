@@ -77,7 +77,7 @@ Create an automation from it and fill in three things:
 
 | Input | What to put |
 |---|---|
-| **Schedule** | The schedule sensor from step 2. |
+| **Schedule** | The schedule from step 2. |
 | **Zone** | The room's zone from step 2 — usually the one named after the room. |
 | **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
 
