@@ -31,18 +31,27 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy-class sensors within it decide when, and a
-        FLARE zone's Tick within it sets when the room re-checks.
+        controlled, occupancy-class sensors within it decide when.
         [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
-      default: {}
       selector:
         target:
           entity:
             - domain: light
             - domain: binary_sensor
               device_class: occupancy
-            - domain: event
-              integration: flare
+    zone:
+      name: Zone
+      description: >
+        The FLARE zone this room belongs to. It records which lights FLARE
+        is driving, so a light someone else changes is left alone, and its
+        Tick sets when the room updates. Zones are added under FLARE
+        Control.
+        [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Zone
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -240,18 +249,6 @@ blueprint:
               min: 0
               max: 3600
               unit_of_measurement: seconds
-        update_interval:
-          name: Update Interval (Optional)
-          description: >
-            How often to check the lights are up to date, for a room whose
-            Lights & Occupancy doesn't reach a FLARE zone's Tick. A room
-            that does follows the zone's timing, set on FLARE's Control
-            entry, and ignores this. Home Assistant's time_pattern syntax,
-            e.g. '/1' for every minute.
-            [Details](https://danrspencer.github.io/flare/blueprint/#timing).
-          default: "/1"
-          selector:
-            text: {}
         motion_on_transition:
           name: Motion On Transition
           description: Transition duration when turning on via motion or a manual run.
@@ -298,19 +295,15 @@ trigger:
       - Day
       - Evening
       - Night
-  # The curve is flat in Morning/Night, so phase_change goes quiet there.
-  # Also runs self-heal. The zone's Tick, spaced from every other zone's;
-  # the time pattern only for a room that doesn't reach one (see
-  # condition:).
+  # The zone's Tick, spaced from every other zone's. The curve is flat in
+  # Morning/Night, so phase_change goes quiet there. Also runs self-heal.
   - id: tick
     trigger: event.received
-    target: !input room_target
+    target:
+      device_id: !input zone
     options:
       event_type:
         - flare_tick
-  - id: tick
-    platform: time_pattern
-    minutes: !input update_interval
   - id: extra
     platform: state
     entity_id: !input extra_triggers
@@ -359,13 +352,6 @@ trigger:
          | list | length > 0 }}
 
 condition:
-  - alias: "Not the time pattern in a room that has a zone tick"
-    not:
-      - condition: template
-        alias: "The time pattern fired, and a zone tick reaches this room"
-        value_template: >-
-          {{ trigger is defined and trigger.platform is defined
-             and trigger.platform == 'time_pattern' and room_ticks | length > 0 }}
   # Never checks occupancy: an already-on light should follow the curve
   # regardless. allow_turn_on decides whether lights may come on.
   #
@@ -439,11 +425,6 @@ variables:
     {{ ns.entities | unique | list }}
   all_target_entities: >
     {{ (target_named_entities + target_expanded_entities) | unique | list }}
-  # The zone ticks the event.received trigger reaches, named or through an
-  # area or device.
-  room_ticks: >
-    {% set ticks = integration_entities('flare') | select('match', '^event\\.') | list %}
-    {{ all_target_entities | select('in', ticks) | list }}
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
   # Up here because variables: render top to bottom and the turn-off lists
@@ -512,19 +493,8 @@ variables:
       {% endif %}
     {% endfor %}
     {{ ns.m }}
-  # This room's tracking scope: an area named in Room Target, else the
-  # area of the first resolved light that has a scope. Only finds scopes
-  # targeting a single area. None means untracked.
-  tracking_scope_device_id: >
-    {% if room_target is not none and room_target.area_id is defined %}
-      {% set aids = room_target.area_id %}
-      {% set aid = (aids if aids is iterable and aids is not string else [aids]) | first %}
-    {% else %}
-      {% set candidate_areas = resolved_entities | map('area_id') | reject('none') | unique | list %}
-      {% set aid = candidate_areas | first if candidate_areas | length > 0 else none %}
-    {% endif %}
-    {% set tracking_entities = area_entities(aid) | select('search', '^sensor\\..*_flare_tracking$') | list if aid is not none else [] %}
-    {{ device_id(tracking_entities | first) if tracking_entities | length > 0 else none }}
+  # The room's zone, which every FLARE call names.
+  tracking_scope_device_id: !input zone
   # Up here because the turn-off lists below exclude idle lights. Empty
   # means dark.
   template_idle_brightness: !input idle_brightness_template
@@ -814,13 +784,13 @@ action:
                   tracking_device_id: "{{ tracking_scope_device_id }}"
                   # A manual run forces the tick through override protection.
                   force: "{{ manual_run }}"
-      # Bookkeeping only, so outside the gate. claims_clear needs a scope.
+      # Bookkeeping only, so outside the gate.
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template
-            alias: "There are lights to release, and a scope to release them from"
+            alias: "There are lights to release"
             value_template: >-
-              {{ handed_off_entities | length > 0 and tracking_scope_device_id is not none }}
+              {{ handed_off_entities | length > 0 }}
         then:
           - action: flare.claims_clear
             data:

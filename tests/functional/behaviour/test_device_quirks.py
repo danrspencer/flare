@@ -17,11 +17,11 @@ SENSOR = "binary_sensor.device_quirks_occupancy"
 
 
 async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_as_overridden(
-    hass: HomeAssistant, add_bulbs, setup_room, tracked_scope, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
 ) -> None:
     """An IKEA TRADFRI spot given Kelvin reports the equivalent RGB. It must
     not be read as overridden and excluded from updates."""
-    (bulb,) = await add_bulbs("spot", area_id=tracked_scope, spot={"reports_via_rgb": True})
+    (bulb,) = await add_bulbs("spot", area_id=zone, spot={"reports_via_rgb": True})
     occupancy(hass, SENSOR, "off")
     await setup_room(lights=[bulb], occupancy_sensors=[SENSOR])
 
@@ -50,14 +50,14 @@ async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_
 
 
 async def test_an_rgb_capable_bulb_gets_colour_while_its_non_rgb_neighbour_stays_on_colour_temperature(
-    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
+    hass: HomeAssistant, add_bulbs, setup_room, zone
 ) -> None:
     """One RGB-capable and one colour-temp bulb in the same room each get the
     attribute FLARE chose for them."""
     # Evening is a default "Prefer RGB During" phase.
     rgb_color = kelvin_to_rgb(CURVE_KELVIN)
     rgb_bulb, ct_bulb = await add_bulbs(
-        "rgb_spot", "ct_spot", area_id=tracking_scope, rgb_spot={"supports_rgb": True}
+        "rgb_spot", "ct_spot", area_id=zone, rgb_spot={"supports_rgb": True}
     )
     occupancy(hass, SENSOR, "off")
     await setup_room(lights=[rgb_bulb, ct_bulb], occupancy_sensors=[SENSOR])
@@ -81,13 +81,13 @@ async def test_an_rgb_capable_bulb_gets_colour_while_its_non_rgb_neighbour_stays
 
 
 async def test_a_device_matching_the_two_step_pattern_lands_at_the_right_brightness_and_colour(
-    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
+    hass: HomeAssistant, add_bulbs, setup_room, zone
 ) -> None:
     """A bulb matched by model gets two writes and ends up with both values.
     needs_two_step makes a combined call visibly fail."""
     (bulb,) = await add_bulbs(
         "tradfri_spot",
-        area_id=tracking_scope,
+        area_id=zone,
         tradfri_spot={
             "device": {"manufacturer": "IKEA", "model": "TRADFRI bulb GU10 WS 400lm"},
             "needs_two_step": True,
@@ -112,13 +112,13 @@ async def test_a_device_matching_the_two_step_pattern_lands_at_the_right_brightn
 
 
 async def test_a_light_that_reconnects_already_on_is_corrected_immediately_not_on_the_next_scheduled_tick(
-    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope
+    hass: HomeAssistant, add_bulbs, setup_room, zone
 ) -> None:
     """A single bulb that drops out and returns already on, at a stale value,
     is brought back to the curve straight away by `recovered`. A single
     bulb, because a sibling staying reachable would stop `recovered`
     arming."""
-    (bulb,) = await add_bulbs("recovering", area_id=tracking_scope)
+    (bulb,) = await add_bulbs("recovering", area_id=zone)
     occupancy(hass, SENSOR, "off")
     await setup_room(lights=[bulb], occupancy_sensors=[SENSOR])
     occupancy(hass, SENSOR, "on")

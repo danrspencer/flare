@@ -23,10 +23,12 @@ from tests.functional.behaviour.harness import (
     START,
     SUNSET,
     TRACE_DIR,
+    ZONE,
     FakeBulb,
     dump_traces,
     setup_schedule,
-    setup_tracking_entry,
+    setup_zones,
+    zone_device,
     today_at,
 )
 from tests.support import BLUEPRINT_PATH
@@ -60,27 +62,12 @@ def expected_lingering_timers():
     return True
 
 
-@pytest.fixture(params=[False, True], ids=["untracked", "tracked"])
-async def tracking_scope(request, hass: HomeAssistant) -> str | None:
-    """The real Tracking entry, run twice: without a scope, and with one
-    over the room. Returns the scope's area id (for add_bulbs), or None.
-    Use this or `tracked_scope` or `flare`, never two of them."""
-    _entry, area_id = await setup_tracking_entry(hass, tracked=request.param)
-    return area_id
-
-
 @pytest.fixture
-async def tracked_scope(hass: HomeAssistant) -> str:
-    """For tests that are themselves about tracking: always a scope."""
-    _entry, area_id = await setup_tracking_entry(hass, tracked=True)
-    return area_id
-
-
-@pytest.fixture
-async def flare(hass: HomeAssistant) -> MockConfigEntry:
-    """The real Tracking entry with no scope."""
-    entry, _ = await setup_tracking_entry(hass, tracked=False)
-    return entry
+async def zone(hass: HomeAssistant) -> str:
+    """The real Control entry with one zone, placed in the area
+    "behaviour_test_room". Returns that area's id, for add_bulbs."""
+    areas = await setup_zones(hass, [ZONE])
+    return areas[ZONE]
 
 
 @pytest.fixture(autouse=True)
@@ -146,14 +133,20 @@ def add_bulbs(hass: HomeAssistant):
 
 
 @pytest.fixture
-def setup_room(hass: HomeAssistant):
+def setup_room(hass: HomeAssistant, zone: str):
     """setup_room(lights=..., occupancy_sensors=..., **inputs): a real
-    automation from the blueprint. Unset inputs take their defaults."""
+    automation from the blueprint, in the `zone` fixture's zone. Unset
+    inputs take their defaults."""
 
     async def _setup(*, lights: list[FakeBulb | str], occupancy_sensors: list[str] | None = None, **inputs: Any) -> None:
         entity_ids = [light if isinstance(light, str) else light.entity_id for light in lights]
         target = entity_ids + list(occupancy_sensors or [])
-        input_ = {"adaptive_sensor": SCHEDULE_SENSOR, "room_target": {"entity_id": target}, **inputs}
+        input_ = {
+            "adaptive_sensor": SCHEDULE_SENSOR,
+            "room_target": {"entity_id": target},
+            "zone": zone_device(hass, zone),
+            **inputs,
+        }
         assert await async_setup_component(
             hass,
             "automation",

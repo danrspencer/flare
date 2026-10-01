@@ -12,7 +12,7 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from tests.functional.blueprint.harness import (
     light,
     occupancy,
-    register_tracking_scope,
+    add_zone,
     setup_room_automation,
 )
 
@@ -49,7 +49,7 @@ class TestSceneHandoff:
         """A scene-owned light isn't written, so its claim is released rather
         than going stale into "overridden"."""
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        register_tracking_scope(hass, kitchen.id, "kitchen")
+        add_zone(hass, kitchen.id, "kitchen")
         er.async_get(hass).async_get_or_create("light", "test", "light_covered", suggested_object_id="covered")
         er.async_get(hass).async_update_entity("light.covered", area_id=kitchen.id)
         light(hass, "light.covered", "on")

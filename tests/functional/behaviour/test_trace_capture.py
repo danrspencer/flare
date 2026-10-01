@@ -14,7 +14,7 @@ HALL = HALL_SENSOR
 
 
 async def test_a_blueprint_run_produces_a_complete_trace(
-    hass: HomeAssistant, flare, add_bulbs, setup_room
+    hass: HomeAssistant, zone, add_bulbs, setup_room
 ) -> None:
     """And finished: a trace read mid-run shows unreached branches."""
     from homeassistant.components.trace.const import DATA_TRACE
@@ -43,7 +43,7 @@ async def test_a_blueprint_run_produces_a_complete_trace(
 
 
 async def test_the_capture_writes_a_readable_dump(
-    hass: HomeAssistant, flare, add_bulbs, setup_room, tmp_path
+    hass: HomeAssistant, zone, add_bulbs, setup_room, tmp_path
 ) -> None:
     """The write half, exercised against a temp directory.
 

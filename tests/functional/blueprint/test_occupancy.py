@@ -5,15 +5,13 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
-from homeassistant.helpers import area_registry as ar
-from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from tests.functional.blueprint.harness import (
     light,
     occupancy,
-    register_tracking_scope,
+    add_zone,
     setup_room_automation,
 )
 
@@ -34,17 +32,14 @@ class TestOccupancyDrivenOnOff:
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
 
-    async def test_the_turn_off_names_the_rooms_tracking_scope(self, hass, turn_off_calls):
+    async def test_the_turn_off_names_the_rooms_zone(self, hass, turn_off_calls):
         """Otherwise every emptied room's turn-off reads as an override."""
-        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        scope = register_tracking_scope(hass, kitchen.id, "kitchen")
-        er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
-        er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
+        zone = add_zone(hass)
         occupancy(hass, "binary_sensor.occ", "on")
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
         await setup_room_automation(
-            hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]}, no_motion_wait=0
+            hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]}, zone=zone, no_motion_wait=0
         )
 
         occupancy(hass, "binary_sensor.occ", "off")
@@ -53,24 +48,7 @@ class TestOccupancyDrivenOnOff:
         await hass.async_block_till_done()
 
         assert turn_off_calls, "precondition: the room should have been turned off"
-        assert turn_off_calls[-1].data["tracking_device_id"] == scope
-
-    async def test_an_untracked_turn_off_still_happens(self, hass, turn_off_calls):
-        """With no scope, sent untracked."""
-        occupancy(hass, "binary_sensor.occ", "on")
-        light(hass, "light.a", "on")
-        await hass.async_block_till_done()
-        await setup_room_automation(
-            hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]}, no_motion_wait=0
-        )
-
-        occupancy(hass, "binary_sensor.occ", "off")
-        await hass.async_block_till_done()
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
-        await hass.async_block_till_done()
-
-        assert turn_off_calls, "the turn-off itself must still happen"
-        assert turn_off_calls[-1].data["tracking_device_id"] is None
+        assert turn_off_calls[-1].data["tracking_device_id"] == zone
 
     async def test_occupancy_cleared_turns_lights_off_after_the_wait(self, hass, turn_off_calls):
         occupancy(hass, "binary_sensor.occ", "on")

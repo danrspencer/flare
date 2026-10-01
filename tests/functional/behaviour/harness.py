@@ -12,6 +12,7 @@ from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELV
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import device_registry as dr
 from homeassistant.util import color as color_util
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
@@ -41,6 +42,8 @@ NIGHT_BRIGHTNESS = 80
 PHASE_STARTS = {"Night": time(22, 0, 2)}
 
 HALL_SENSOR = "binary_sensor.hall_occupancy"
+# The `zone` fixture's zone, and the name of the area it's placed in.
+ZONE = "behaviour_test_room"
 # Several fittings, so they share one multiplier bucket as a real room's do.
 HALL_BULBS = ("hall_pendant", "hall_spot_1", "hall_spot_2", "hall_spot_3", "hall_spot_4", "hall_lamp")
 
@@ -181,32 +184,6 @@ async def setup_schedule(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
-async def setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[MockConfigEntry, str | None]:
-    """A real Tracking entry, optionally with one scope over the area
-    "behaviour_test_room". Returns (entry, area_id); area_id is None when
-    untracked."""
-    area_id = ar.async_get(hass).async_get_or_create("behaviour_test_room").id if tracked else None
-    subentries = [
-        ConfigSubentryData(
-            subentry_type=SUBENTRY_TYPE_STATE,
-            title="behaviour_test_room",
-            unique_id="behaviour_test_room",
-            data={CONF_TARGET: {"area_id": [area_id]}},
-        )
-    ] if tracked else []
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
-        unique_id=f"{DOMAIN}_{ENTRY_TYPE_TRACKING}",
-        version=3,
-        subentries_data=subentries,
-    )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    return entry, area_id
-
-
 async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
     """A real Control entry with a zone per name, each over its own area of
     that name. Returns {name: area_id}."""
@@ -228,6 +205,13 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return areas
+
+
+def zone_device(hass: HomeAssistant, area_id: str) -> str:
+    """The device of the zone placed in `area_id`, which the blueprint's Zone
+    input takes."""
+    (device,) = [d for d in dr.async_entries_for_area(dr.async_get(hass), area_id) if d.model == "Zone"]
+    return device.id
 
 
 async def at(hass: HomeAssistant, frozen, hour: int, minute: int, second: float) -> None:
