@@ -241,9 +241,9 @@ async def test_the_options_flow_offers_the_minimum_change_starting_at_the_defaul
     assert (entry.options[CONF_MIN_BRIGHTNESS_CHANGE], entry.options[CONF_MIN_COLOR_TEMP_CHANGE]) == (2.5, 0)
 
 
-async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup, hass: HomeAssistant):
-    entry = _entry(hass, ENTRY_TYPE_SCHEDULES)
+async def test_only_the_zones_entry_has_options(stub_entry_setup, hass: HomeAssistant):
+    """Nothing reads the Schedules entry's options, so it doesn't offer any."""
+    schedules = _entry(hass, ENTRY_TYPE_SCHEDULES)
+    zones = _entry(hass, ENTRY_TYPE_TRACKING)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-
-    assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
+    assert (schedules.supports_options, zones.supports_options) == (False, True)
