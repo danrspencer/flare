@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .schedule.coordinator import CURVE_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .schedule.curve import DEFAULT_CURVE_VALUES
+from .schedule.curve import DEFAULT_CURVE_VALUES, value_range
 
 _LABELS = {
     "morning_brightness": "Morning Brightness",
@@ -54,21 +54,12 @@ class _CurveNumber(RestoreNumber, NumberEntity):
         self.entity_id = instance.number_entity_id(key)
         self._attr_device_info = instance.device_info
         self._attr_name = _LABELS[key]
+        self._attr_native_min_value, self._attr_native_max_value = value_range(key)
+        self._attr_native_step = 1
         if key.endswith("_transition"):
-            self._attr_native_min_value = 0
-            # A whole day. Longer than its phase clamps to the phase.
-            self._attr_native_max_value = 1440
             self._attr_native_unit_of_measurement = "min"
-            self._attr_native_step = 1
-        elif key.endswith("_brightness"):
-            self._attr_native_min_value = 0
-            self._attr_native_max_value = 255
-            self._attr_native_step = 1
-        else:
-            self._attr_native_min_value = 1000
-            self._attr_native_max_value = 10000
+        elif key.endswith("_kelvin"):
             self._attr_native_unit_of_measurement = "K"
-            self._attr_native_step = 1
         self._attr_native_value = DEFAULT_CURVE_VALUES[key]
 
     async def async_added_to_hass(self) -> None:

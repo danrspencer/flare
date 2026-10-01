@@ -39,6 +39,8 @@ from .const import (
     SUBENTRY_TYPE_ZONE,
     ZONES_ENTRY_TITLE,
 )
+from .schedule.transfer import ScheduleError, dump, parse
+from .services.schedules import async_apply_schedule, read_schedule, schedule_instance_for
 from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
@@ -177,8 +179,8 @@ def _number(minimum: float, maximum: float, step: float, unit: str) -> selector.
 
 class SensorSubentryFlow(ConfigSubentryFlow):
     """Adds one schedule sensor, with its own device and entities prefixed by
-    the slugified name. No reconfigure flow: everything but the name is an
-    entity."""
+    the slugified name. Reconfigure exports and imports the schedule; the
+    name can't change, since the entity_ids are derived from it."""
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         errors: dict[str, str] = {}
@@ -197,6 +199,34 @@ class SensorSubentryFlow(ConfigSubentryFlow):
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(vol.Schema(SUBENTRY_FIELDS), user_input or {}),
             errors=errors,
+        )
+
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        """The schedule as YAML, to copy out or replace. Applying it sets the
+        entities, so nothing about the subentry itself changes."""
+        instance = schedule_instance_for(self.hass, self._get_reconfigure_subentry().subentry_id)
+        errors: dict[str, str] = {}
+        placeholders = {"error": ""}
+        if user_input is not None:
+            try:
+                values = parse(user_input["schedule"])
+            except ScheduleError as err:
+                errors["schedule"] = "invalid_schedule"
+                placeholders["error"] = str(err)
+            else:
+                await async_apply_schedule(self.hass, instance, values)
+                return self.async_abort(reason="schedule_imported")
+
+        text = user_input["schedule"] if user_input else dump(read_schedule(self.hass, instance))
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Required("schedule"): selector.TextSelector(selector.TextSelectorConfig(multiline=True))}),
+                {"schedule": text},
+            ),
+            errors=errors,
+            description_placeholders=placeholders,
         )
 
 

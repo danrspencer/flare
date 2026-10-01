@@ -27,6 +27,8 @@ def test_every_documented_service_is_registered():
         "claims_check",
         "claims_record",
         "claims_clear",
+        "export_schedule",
+        "import_schedule",
     }
 
 
