@@ -39,6 +39,11 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **Copy and paste a schedule.** A schedule's times and curve values can be copied out
+  as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
+  buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new
+  `flare.export_schedule` and `flare.import_schedule` services. A pasted schedule with a
+  mistake changes nothing and says what's wrong.
 - **Floors and labels in Lights & Occupancy control lights.** They used to drive
   occupancy only. A floor covers every area on it; a label covers the lights, devices
   and areas carrying it.

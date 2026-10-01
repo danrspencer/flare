@@ -754,6 +754,25 @@ Per sensor:
 - Five `time.*` boundaries and eight `number.*` curve values, as live
   `entity_category: config` entities.
 
+**A schedule exports and imports as YAML** (`schedule/transfer.py`),
+keyed by phase, through `flare.export_schedule` / `flare.import_schedule`,
+the schedule's Reconfigure step, the schedule view's transfer card and the
+docs playground. Things worth knowing:
+
+- Parsed with PyYAML's `BaseLoader`, which reads every scalar as a string:
+  YAML 1.1 reads an unquoted `06:30` as the base-60 number 390.
+- `dump()` writes the text by hand so every time is quoted;
+  `yaml.safe_dump` quotes a time only when it looks like a 1.1 number.
+  `docs/assets/js/schedule-yaml.js` is the playground's copy of both
+  halves, held to it by `test_schedule_yaml_parity.py`.
+- Import sets the entities through `time.set_value` / `number.set_value`,
+  so Reconfigure aborts rather than updating the subentry (no reload).
+  Everything is parsed before anything is set.
+- Times aren't required to be in order, because the entities aren't
+  (`phase_marks` handles it).
+- The two services are registered in `async_setup`, not by an entry:
+  they need only a schedule's entities, and the Zones entry may not exist.
+
 **Config lives in entity state, not `subentry.data`** - `coordinator.py`
 reads `hass.states.get(...)` for each. Writing back into `subentry.data`
 was rejected: every subentry data change triggers a full entry reload,

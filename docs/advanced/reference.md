@@ -22,7 +22,7 @@ schedule sensors.
 {:toc}
 </details>
 
-Eight services, callable from your own automations or scripts with no blueprint involved.
+Ten services, callable from your own automations or scripts with no blueprint involved.
 Each field is documented in full in Developer Tools → Actions.
 
 ## `flare.apply_lighting`
@@ -437,6 +437,47 @@ there is no configuration form. Removing a schedule means removing its device fr
 
 There are no separate boundary sensors: a phase-change automation triggers on
 `event.<name>_flare_phase`.
+
+### Copying a schedule
+
+A schedule's times and curve values travel as one block of YAML, keyed by phase:
+
+```yaml
+morning:
+  time: "06:00"
+  brightness: 255
+  kelvin: 6667
+  brightness_transition: 30
+  kelvin_transition: 30
+evening:
+  earliest: "17:00"
+  latest: "20:00"
+  brightness: 180
+night:
+  kelvin: 2000
+```
+
+Each phase takes `brightness`, `kelvin`, `brightness_transition` and `kelvin_transition`,
+plus its start `time` — or, for Evening, the `earliest` and `latest` times around sunset.
+Anything left out keeps its current value, so a paste can change just one thing. Quote
+the times; an unquoted one works too.
+
+There are four ways to move one:
+
+- **The schedule view's Copy and Paste buttons**, at the bottom of each schedule's section.
+- **The schedule's Reconfigure** (Settings → Devices & Services → FLARE Schedules → the
+  schedule's three-dot menu), which shows the schedule in a text box: copy it out, or paste
+  one in and submit.
+- **`flare.export_schedule`**, which returns the text as `schedule` in its response, and
+  **`flare.import_schedule`**, which takes it as `schedule`. Both name the schedule by its
+  device, as `schedule_device_id`. `import_schedule` also accepts the same structure written
+  straight into an automation's YAML.
+- **The [curve playground](../../playground/)** has a Copy schedule button and a Load
+  panel, so a schedule can be tried out there before it goes into Home Assistant.
+
+A schedule with a mistake in it — an unknown phase or setting, a time that isn't a time,
+a value out of range — is refused with a message saying which, and nothing is changed.
+Times don't have to be in order, just as the time entities don't.
 
 `points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
 not a right-now value.
