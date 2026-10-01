@@ -128,6 +128,10 @@ it back overrides nobody's choice — and it is what ends a hand turn-off. Two t
 
 This is also the automatic way out of `overridden`.
 
+**Give each light one zone.** Two zones driving the same light each read the other's writes as an override, so
+the light stops following either. When FLARE sees it, it raises a repair naming the light and the zones. It
+clears when Home Assistant restarts, and comes back if it happens again.
+
 ### The hand-over event
 
 Every time a tracked light passes into someone else's hands, this fires
