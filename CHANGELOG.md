@@ -16,6 +16,12 @@ CI — see `.github/workflows/release.yml`.
   have, so a new blueprint against an old integration fails with "service not found".
   The blueprint-update repair fetches the version that matches the integration, so
   updating through it keeps the two in step.
+- **Every blueprint automation needs a Zone.** The blueprint has a new required
+  **Zone** input: the FLARE zone the room belongs to. It decides which lights FLARE
+  remembers driving and when the room updates, replacing the guess the blueprint used
+  to make from areas. Until one is picked, an automation stops with "Missing input
+  zone". **Update Interval** is gone; the zone's timing replaces it. **Lights &
+  Occupancy** is now required too.
 
 ### Added
 
@@ -27,10 +33,8 @@ CI — see `.github/workflows/release.yml`.
 - **Rooms take turns updating.** Every zone now has a **Tick**
   (`event.<name>_flare_tick`), and FLARE fires them one after another, a second apart,
   instead of every room updating on the same second of every minute. A blueprint
-  automation whose **Lights & Occupancy** points at the zone's area follows it with no
-  change; one that names individual lights keeps updating on the minute until you add the
-  Tick to Lights & Occupancy. The interval and the gap are under **FLARE Control →
-  Configure**.
+  automation updates on its Zone's Tick. The interval and the gap are under **FLARE
+  Control → Configure**.
 - **Changes too small to notice aren't sent.** A light within 5% of its target brightness,
   or 5 mireds of its colour temperature, is left alone, which cuts the steady stream of
   tiny updates through a long evening fade. Both are adjustable under **FLARE Control →

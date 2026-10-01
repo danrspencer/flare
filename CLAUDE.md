@@ -570,12 +570,15 @@ rather than assumed:
   didn't actually have. A state device's `target` now does exactly one
   thing - seeds `_assign_scope_area`'s best-effort, blank-only Area
   placement for the device's own registry entry (sensor.py) - and plays
-  no part in which lights get tracked. The blueprint resolves
-  `tracking_device_id` itself from `room_target` (its own
-  `tracking_scope_device_id` variable) - area named directly wins
-  outright, entities/a device with no area fall back to the first
-  resolved light's own area - so this is invisible to a room
-  automation; it only surfaces when calling the services directly.
+  no part in which lights get tracked. **The blueprint never guesses
+  either**: its required **Zone** input (a device selector filtered to
+  `integration: flare, model: Zone`) is passed straight through as
+  `tracking_device_id`. It used to guess from areas (a named area, else
+  the first light's area, then a `sensor.*_flare_tracking` in it), and
+  that was replaced at the user's direction on 2026-10-01 - *"there's
+  just too much weird behaviour if it gets the wrong one"*. A wrong or
+  missing zone used to mean silently untracked; now a deleted zone makes
+  the service reject the call, loudly.
 - **Being switched off is an override.** `classify()` does *not*
   short-circuit on `not is_on`; an off light is judged against its
   claims like any other. A turn-off records `{"state": "off"}` as its
@@ -587,11 +590,7 @@ rather than assumed:
   which record the `{"state": "off"}` claim themselves. A bare
   `light.turn_off` records nothing, so every light in the room would
   read as externally switched off each time the room empties, firing
-  `flare_light_overridden` for each of them. `tracking_device_id` may be
-  `None` (no resolvable scope) and the lights are then turned off
-  untracked; only the `claims_clear` scene-handoff step still needs the
-  `tracking_scope_device_id is not none` guard, since that service
-  requires a scope.
+  `flare_light_overridden` for each of them.
 - **Claims are recorded before the write, never after.** `apply_lighting`
   and `turn_off` call `async_record` before dispatching anything.
   It used to run once the writes had been awaited, so a run that never
@@ -863,8 +862,7 @@ doing double duty: lights within it are controlled, occupancy-class
 integration (2026.4+). That integration filters strictly by
 `device_class: occupancy` - motion-class sensors are never picked up,
 even targeted directly. Both `occupancy.*` schemas require `target:` to
-be present though every field inside is optional, which is why
-`room_target` defaults to `{}` rather than `null`.
+be present, and `room_target` is a required input with no default.
 
 `room_target` is resolved **once**, into `target_named_entities` +
 `target_expanded_entities`, which the three consumers filter:
@@ -883,9 +881,8 @@ an occupancy sensor at all. That matters because
 would otherwise permanently fail the condition.
 
 **Triggers:** `phase_change` (state on the sensor, filtered `to:` the
-four phase names so attribute-only ticks don't fire), `tick` (twice:
-`event.received` on the zone's Tick through `room_target`, and
-`time_pattern` with `!input update_interval`), `extra`, `motion_on` /
+four phase names so attribute-only ticks don't fire), `tick`
+(`event.received` on the Zone device's Tick), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
 **Zone ticks exist to stop every room writing in the same second.**
@@ -893,31 +890,24 @@ Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
 :00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
 seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
 command timeouts landing at :10 - sent at :00. `tracking/ticker.py`
-fires each zone's `event.<slug>_flare_tick` a gap apart (title order);
-the blueprint's decision still happens fresh at trigger time, so this
-is NOT the jitter that was removed (see Standing decisions).
+fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
+starting on each interval boundary; the blueprint's decision still
+happens fresh at trigger time, so this is NOT the jitter that was
+removed (see Standing decisions). There is no `time_pattern` and no
+Update Interval input: every room has a zone, so nothing needs a
+fallback.
 
-- **Slot 0 is reserved.** Zones start one gap after each boundary,
-  because rooms still on the `time_pattern` fire at the boundary. HA
-  already offsets every `time_pattern` by a random 0.05-0.5s
-  (`RANDOM_MICROSECOND_MIN/MAX` in `helpers/event.py`), so the default 1s
-  gap clears it. Boundaries mirror a `/N` pattern (minutes of the hour
-  divisible by N) so the fallback's slot 0 lines up.
-- **Both triggers share `id: tick`**, so every `trigger.id == 'tick'`
-  check (transition, scene recheck, self-heal) covers both. The top-level
-  `condition:` drops the `time_pattern` one when `room_ticks` is
-  non-empty, which is what makes a room tick once, not twice.
-- **`room_ticks` must match what `event.received` resolves**, or a room
-  ticks twice or never. HA expands an area/device target to entities
-  with no `entity_category` and not hidden (`helpers/target.py`,
-  `_primary_entities_only`; same rule in 2026.4.0, checked). So the Tick
-  entity has no category, and `room_ticks` uses the same named +
-  area/device expansion the rest of the blueprint does. A user hiding the
-  Tick breaks this silently; the docs say not to.
-- A room naming only light entities doesn't reach its zone's Tick (6 of
-  17 of this house's automations, e.g. Jacob's), so the `time_pattern`
-  fallback stays rather than requiring a Tick. `room_target`'s selector
-  accepts FLARE `event` entities so the Tick can be named directly.
+- **The Tick has no `entity_category` and must not be hidden.** The
+  trigger targets the zone's *device*, and HA expands a device target to
+  entities with no category and not hidden (`helpers/target.py`,
+  `_primary_entities_only`; same rule in 2026.4.0, checked). A user
+  hiding the Tick silently stops the room's ticks; the docs say not to.
+- **Lights & Occupancy's selector has no device filter or `event`
+  entry.** It was briefly given both so a zone could be picked inside it;
+  the frontend only lists a device in a target picker if it ALSO has an
+  entity passing the entity filter (`getDevices` in
+  `src/data/device/device_picker.ts`), which forced the Tick to be
+  pickable too. A separate Zone input avoids all of it.
 - The Tick is one recorder row per zone per interval. Accepted: the
   schedule sensor already writes one per minute.
 

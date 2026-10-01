@@ -75,12 +75,13 @@ transition durations as ordinary entities you can edit from the device page.
 FLARE will spot that its blueprint isn't installed and offer it in
 **Settings → System → Repairs**. Press **Fix** and it downloads it.
 
-Create an automation from it and fill in two things:
+Create an automation from it and fill in three things:
 
 | Input | What to put |
 |---|---|
 | **FLARE Sensor** | The schedule sensor from step 2. |
 | **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
+| **Zone** | The room's zone from step 2 — usually the one named after the room. |
 
 That's the minimum. Everything else has a working default.
 

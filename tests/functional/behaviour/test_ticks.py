@@ -64,21 +64,22 @@ async def rooms(hass: HomeAssistant, rooms_by_name: dict[str, tuple[list, str]])
     await hass.async_block_till_done()
 
 
-async def test_a_room_updates_on_its_zones_tick_not_on_the_minute(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
+async def test_a_room_updates_on_its_zones_tick(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
+    """A lone zone ticks on the minute."""
     areas = await setup_zones(hass, ["lounge"], options=GAP)
     bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
     await rooms(hass, {"lounge": (bulbs, zone_device(hass, areas["lounge"]))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
-    await at(hass, frozen_time, 19, 1, 5)
-    assert not is_off(hass, bulbs), "nothing should tick the room on the minute"
+    await at(hass, frozen_time, 19, 0, 55)
+    assert not is_off(hass, bulbs), "nothing should tick the room between Ticks"
 
-    await at(hass, frozen_time, 19, 1, 15)
-    assert is_off(hass, bulbs), "the zone's Tick, one gap past the minute, never reached the room"
+    await at(hass, frozen_time, 19, 1, 5)
+    assert is_off(hass, bulbs), "the zone's Tick never reached the room"
 
 
 async def test_zones_tick_one_gap_apart(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
-    """In title order: attic one gap past the minute, study two."""
+    """In title order: attic on the minute, study one gap later."""
     areas = await setup_zones(hass, ["study", "attic"], options=GAP)
     attic_lamp, study_lamp = await add_bulbs("attic_lamp", "study_lamp")
     await rooms(
@@ -90,10 +91,10 @@ async def test_zones_tick_one_gap_apart(hass: HomeAssistant, add_bulbs, frozen_t
     )
     await switched_on_in_an_empty_room(hass, frozen_time, [attic_lamp, study_lamp])
 
-    await at(hass, frozen_time, 19, 1, 15)
+    await at(hass, frozen_time, 19, 1, 5)
     assert (is_off(hass, [attic_lamp]), is_off(hass, [study_lamp])) == (True, False)
 
-    await at(hass, frozen_time, 19, 1, 25)
+    await at(hass, frozen_time, 19, 1, 15)
     assert is_off(hass, [study_lamp])
 
 
@@ -106,10 +107,10 @@ async def test_the_picked_zone_wins_over_the_area_the_lights_are_in(
     await rooms(hass, {"lamp": ([lamp], zone_device(hass, areas["study"]))})
     await switched_on_in_an_empty_room(hass, frozen_time, [lamp])
 
-    await at(hass, frozen_time, 19, 1, 15)
+    await at(hass, frozen_time, 19, 1, 5)
     assert not is_off(hass, [lamp]), "the attic's Tick shouldn't reach a room in the study's zone"
 
-    await at(hass, frozen_time, 19, 1, 25)
+    await at(hass, frozen_time, 19, 1, 15)
     assert is_off(hass, [lamp])
 
 
@@ -119,8 +120,8 @@ async def test_the_interval_is_set_on_the_entry(hass: HomeAssistant, add_bulbs, 
     await rooms(hass, {"lounge": (bulbs, zone_device(hass, areas["lounge"]))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
-    await at(hass, frozen_time, 19, 1, 15)
+    await at(hass, frozen_time, 19, 1, 5)
     assert not is_off(hass, bulbs), "19:01 isn't on a two-minute boundary"
 
-    await at(hass, frozen_time, 19, 2, 15)
+    await at(hass, frozen_time, 19, 2, 5)
     assert is_off(hass, bulbs)

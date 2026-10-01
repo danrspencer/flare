@@ -27,12 +27,13 @@ see the [Quickstart](../installation/); for the services underneath, the
 
 ## Inputs
 
-Only **FLARE Sensor** is required. Everything else has a working default.
+**FLARE Sensor**, **Lights & Occupancy** and **Zone** are required. Everything else has a working default.
 
 | Input | Default | What it does |
 |---|---|---|
 | **FLARE Sensor** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
-| **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when; a zone's Tick inside it sets when the room updates. See [setting up a room](#setting-up-a-room). |
+| **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
+| **Zone** | — | The FLARE zone the room belongs to: it remembers which lights FLARE is driving, and its Tick sets when the room updates. See [setting up a room](#setting-up-a-room). |
 | **Additional Triggers** | none | Extra entities that make the room re-evaluate immediately. See [additional triggers](#additional-triggers). |
 
 ### Colour
@@ -72,15 +73,14 @@ Only **FLARE Sensor** is required. Everything else has a working default.
 | Input | Default | What it does |
 |---|---|---|
 | **Wait time** | 120s | How long after occupancy clears before the lights go off. |
-| **Update Interval** | every minute | How often the room re-applies the curve, when Lights & Occupancy doesn't reach a zone's Tick. See [when does the room update?](#when-does-the-room-update) |
 | **Motion On Transition** | | How quickly lights change when someone walks in, or you run the automation by hand. |
 | **Motion Off Transition** | | How quickly lights fade when the room empties. |
 | **Background Transition** | | How quickly lights change on the regular update — nobody is waiting on these, so they can be slow and smooth. |
 
 ## Setting up a room
 
-Point **FLARE Sensor** at a schedule sensor and **Lights & Occupancy**
-at the room's area. That's it.
+Point **FLARE Sensor** at a schedule sensor, **Lights & Occupancy** at
+the room's area, and **Zone** at the room's zone. That's it.
 
 One target does both jobs: every light in that area is controlled, and
 every occupancy sensor in it decides when. Lights you add to the area
@@ -101,26 +101,28 @@ Motion-class sensors are not picked up. To drive a room from one, see
 A room with no occupancy sensor works fine — it simply never switches
 anything on by itself.
 
+**Zone** is one of FLARE's zones, usually the one named after the room
+(Settings → Devices & Services → FLARE Control). Two automations sharing
+a room — a lamp and a pendant driven separately, say — pick the same
+zone.
+
+{: .note }
+> **Changed in 0.17.0** — **Zone** is new and required, and **Update
+> Interval** is gone. An automation from an earlier version stops with
+> "Missing input zone" until you pick one.
+
 ## When does the room update?
 
 Straight away on a phase change, on motion, on an Additional Trigger,
-and when a light comes back online. Between those, it checks its lights regularly, and when depends
-on whether **Lights & Occupancy** reaches a FLARE zone's **Tick**:
-
-- **It does** — pointing it at the zone's area does this. The room
-  updates when the zone's Tick fires. FLARE ticks each zone in turn, a
-  moment apart, so a house full of rooms doesn't send every command at
-  once. The interval and the gap between zones are set under
-  **Settings → Devices & Services → FLARE Control → Configure**.
-- **It doesn't** — Lights & Occupancy names individual lights, say. The
-  room updates on its own **Update Interval**, on the minute. To move it
-  onto its zone's Tick, add the Tick (`event.<zone>_flare_tick`) to
-  Lights & Occupancy.
+and when a light comes back online. Between those, it updates whenever
+its zone's **Tick** fires. FLARE ticks each zone in turn, a moment
+apart, so a house full of rooms doesn't send every command at once. The
+interval and the gap between zones are set under **Settings → Devices &
+Services → FLARE Control → Configure**.
 
 {: .note }
 > Don't hide a zone's Tick entity. Home Assistant leaves hidden entities
-> out when it looks inside an area, so a room pointed at the area would
-> stop updating.
+> out when it looks inside a device, so the room would stop updating.
 
 ## When lights turn on and off
 
@@ -255,8 +257,8 @@ and the one template covers dusk, the small hours and dark winter
 mornings without naming a phase at all.
 
 The sun changing state is picked up by the next scheduled update rather
-than instantly, so the hall can take up to your **Update Interval** to
-dim in at dusk. Adding `sun.sun` to **Additional Triggers** would make it
+than instantly, so the hall can take up to the update interval to dim
+in at dusk. Adding `sun.sun` to **Additional Triggers** would make it
 immediate, but it is deliberately not suggested here: at sunrise the idle
 level disappears while the lights are still on, and an additional trigger
 reaches the curve rather than the self-heal that switches them off.

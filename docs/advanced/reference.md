@@ -306,15 +306,14 @@ protection still recognises FLARE's own writes by the tolerances.
 ## When zones tick
 
 Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update interval. The zones
-fire in turn, in name order, a gap apart, starting one gap after each interval boundary, so that rooms re-checking
-their lights don't all send at the same moment. The boundary itself is left free for automations still using
-a time pattern on the minute.
+fire in turn, in name order, a gap apart, starting on each interval boundary, so that rooms re-checking their
+lights don't all send at the same moment.
 
 Both are set under **FLARE Control → Configure**:
 
 | option | default | |
 |---|---|---|
-| Update interval | 1 minute | how often each zone ticks, 1–60 minutes; boundaries are the minutes of the hour divisible by it, like a `/N` time pattern |
+| Update interval | 1 minute | how often each zone ticks, 1–60 minutes |
 | Gap between zones | 1 second | shrinks automatically when the zones wouldn't otherwise fit in the interval |
 
 To tick your own automation with a zone, listen for its event:
@@ -323,13 +322,13 @@ To tick your own automation with a zone, listen for its event:
 triggers:
   - trigger: event.received
     target:
-      area_id: kitchen
+      entity_id: event.kitchen_flare_tick
     options:
       event_type: [flare_tick]
 ```
 
-Targeting an area finds the Tick of the zone placed in it. Don't hide the Tick entity: Home Assistant leaves
-hidden entities out when it looks inside an area or device.
+Targeting the zone's device works too, as the blueprint does. Don't hide the Tick entity: Home Assistant leaves
+hidden entities out when it looks inside a device or area.
 
 ## `flare.compute_curve`
 

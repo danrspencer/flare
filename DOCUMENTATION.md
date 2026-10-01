@@ -126,11 +126,11 @@ describing one. If both are needed, the example comes first.
 Never paraphrase these. They are what the user types or clicks.
 
 - **Blueprint inputs** — the UI labels, verbatim: FLARE Sensor,
-  Lights & Occupancy, Additional Triggers, Prefer RGB During,
+  Lights & Occupancy, Zone, Additional Triggers, Prefer RGB During,
   Scene Template, Morning/Day/Evening/Night Scene,
   Brightness Template, Lights Off During Morning/Day/Evening/Night,
   Idle Brightness Template, Morning/Day/Evening/Night Idle Brightness,
-  Wait time, Update Interval,
+  Wait time,
   Motion On / Motion Off / Background Transition.
   Several carry a literal "(Optional)" in the label — keep it when
   quoting the label, drop it in running prose.
