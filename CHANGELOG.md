@@ -59,6 +59,8 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **The blueprint's first three inputs are Schedule, Zone and Lights & Occupancy**, in
+  that order. **Schedule** is what was labelled **FLARE Sensor**; nothing to re-enter.
 - **A zone no longer has a "Lights, devices or areas" field.** It only put the zone's
   device in an area, and nothing uses that now. Existing zones keep whatever area their
   device is in; set one on the device page if you want it.

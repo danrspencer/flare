@@ -18,15 +18,28 @@ blueprint:
     min_version: 2026.4.0
   input:
     adaptive_sensor:
-      name: FLARE Sensor
+      name: Schedule
       description: >
-        Sensor providing brightness and colour temperature to apply -
-        filtered to FLARE's own schedule sensors.
+        The FLARE schedule the room follows: the brightness and colour
+        temperature it applies.
       selector:
         entity:
           filter:
             - integration: flare
               domain: sensor
+    zone:
+      name: Zone
+      description: >
+        The FLARE zone this room belongs to. It records which lights FLARE
+        is driving, so a light someone else changes is left alone, and its
+        Tick sets when the room updates. Zones are added under FLARE
+        Zones.
+        [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Zone
     room_target:
       name: Lights & Occupancy
       description: >
@@ -39,19 +52,6 @@ blueprint:
             - domain: light
             - domain: binary_sensor
               device_class: occupancy
-    zone:
-      name: Zone
-      description: >
-        The FLARE zone this room belongs to. It records which lights FLARE
-        is driving, so a light someone else changes is left alone, and its
-        Tick sets when the room updates. Zones are added under FLARE
-        Control.
-        [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
-      selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >

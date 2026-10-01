@@ -409,7 +409,7 @@ Each sensor's device contains, computed the same way `compute_curve` computes th
 
 | Entity | What it is |
 |---|---|
-| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's FLARE Sensor input at this |
+| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's Schedule input at this |
 | `select.<name>_flare_phase` | Manual phase override — `Auto` (default) or a specific phase. An override holds until the schedule itself next moves on: pin `Day` during Evening and it still becomes `Night` when Evening would have ended. The sticky switch below changes that |
 | `time.<name>_morning_time` / `day_time` / `evening_earliest_time` / `evening_latest_time` / `night_time` | The five schedule boundaries — start times for Morning, Day, and Night, and Evening's earliest/latest bound. Each starts at a representative default (06:00/08:00/17:00/20:00/22:00) and is adjustable at any time; the change applies within seconds, not on the next 60s poll |
 | `number.<name>_<phase>_brightness` / `_kelvin` | The eight curve values — brightness (0-255) and colour temperature (1000-10000K), one pair per phase. Each starts at the value shown in `compute_curve`'s field list above, and is adjustable at any time |

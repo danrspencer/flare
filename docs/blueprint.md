@@ -27,13 +27,13 @@ see the [Quickstart](../installation/); for the services underneath, the
 
 ## Inputs
 
-**FLARE Sensor**, **Lights & Occupancy** and **Zone** are required. Everything else has a working default.
+**Schedule**, **Zone** and **Lights & Occupancy** are required. Everything else has a working default.
 
 | Input | Default | What it does |
 |---|---|---|
-| **FLARE Sensor** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
-| **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
+| **Schedule** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
 | **Zone** | — | The FLARE zone the room belongs to: it remembers which lights FLARE is driving, and its Tick sets when the room updates. See [setting up a room](#setting-up-a-room). |
+| **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
 | **Additional Triggers** | none | Extra entities that make the room re-evaluate immediately. See [additional triggers](#additional-triggers). |
 
 ### Colour
@@ -79,8 +79,8 @@ see the [Quickstart](../installation/); for the services underneath, the
 
 ## Setting up a room
 
-Point **FLARE Sensor** at a schedule sensor, **Lights & Occupancy** at
-the room's area, and **Zone** at the room's zone. That's it.
+Point **Schedule** at a schedule sensor, **Zone** at the room's zone,
+and **Lights & Occupancy** at the room's area. That's it.
 
 One target does both jobs: every light in that area is controlled, and
 every occupancy sensor in it decides when. Lights you add to the area
@@ -303,7 +303,7 @@ deliberate addition.
 
 ## Using your own sensor
 
-**FLARE Sensor** accepts any entity with these attributes, not just
+**Schedule** accepts any entity with these attributes, not just
 FLARE's own schedule sensors:
 
 | Attribute | Type | Required |
