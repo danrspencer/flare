@@ -3,14 +3,19 @@
     "step": {
       "user": {
         "title": "FLARE",
-        "description": "Installs both halves. Schedules provides the day-phase and colour curve sensors; Zones registers FLARE's services and keeps track of which lights FLARE is currently driving.\n\nPick the rooms to set up - each becomes a zone named after it, with its own controlled/overridden counts, a Clear button and a Tick that tells the room's automation when to check its lights. A room's automation picks its zone. You can add, rename or remove zones at any time, and add schedule sensors from the Schedules entry once it exists.",
+        "description": "Sets up FLARE with a schedule and a zone per room, so it works straight away.\n\nThe schedule is the day's curve: when each phase starts and how bright and warm the light is. One is enough for most homes; add more later for floors that should differ.\n\nA zone is usually one room. It remembers which lights FLARE is driving, and its Tick tells the room's automation when to update. Every room with lights is pre-selected. You can add, rename or remove schedules and zones at any time.",
         "data": {
+          "schedule": "Schedule name",
           "areas": "Rooms to set up as zones"
         }
       }
     },
     "abort": {
-      "already_configured": "Already configured"
+      "already_configured": "Already configured",
+      "setup_complete": "FLARE is set up with {created}. Next, add a room automation from the FLARE blueprint: see the quickstart."
+    },
+    "error": {
+      "invalid_name": "Give the schedule a name with at least one letter or number"
     }
   },
   "config_subentries": {

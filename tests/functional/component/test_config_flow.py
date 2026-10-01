@@ -34,61 +34,66 @@ def _entry_of_type(hass: HomeAssistant, entry_type: str):
     return next(e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == entry_type)
 
 
-async def test_setup_offers_one_state_device_per_area_that_has_lights(stub_entry_setup, hass: HomeAssistant):
-    """A room is the unit almost everyone wants to track by, so the list
-    arrives pre-selected rather than as a wall of work. Areas with no
-    lights are left out - a zone that can never resolve anything is
-    just an empty device to wonder about."""
+async def test_setup_offers_one_zone_per_area_that_has_lights(stub_entry_setup, hass: HomeAssistant):
+    """Pre-selected, so the common case is one click. Areas with no lights
+    are left out: a zone there could never drive anything."""
     kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
     hall = ar.async_get(hass).async_get_or_create("Hall")
     garage = ar.async_get(hass).async_get_or_create("Garage")
     _light(hass, "light.k", area_id=kitchen.id)
     _light(hass, "light.h", area_id=hall.id)
-    # The Garage has entities, just no lights - so it must not be
-    # offered. Without a non-light here, "lights only" would look
-    # covered while actually being untested.
+    # Entities, just no lights. Without one, "lights only" would look
+    # covered while untested.
     door = er.async_get(hass).async_get_or_create("switch", "test", "garage_door")
     er.async_get(hass).async_update_entity(door.entity_id, area_id=garage.id)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["type"] == "form"
-    suggested = result["data_schema"]({})["areas"]
-    assert sorted(suggested) == sorted([hall.id, kitchen.id])
+    assert sorted(result["data_schema"]({})["areas"]) == sorted([hall.id, kitchen.id])
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"areas": [kitchen.id]})
+    await hass.config_entries.flow.async_configure(result["flow_id"], {"schedule": "Home", "areas": [kitchen.id]})
+    await hass.async_block_till_done()
 
-    assert result["type"] == "create_entry"
-    zones = zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))
-    assert [s.title for s in zones] == ["Kitchen"]
+    assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
 
 
-async def test_adding_the_integration_once_creates_both_entries(stub_entry_setup, hass: HomeAssistant):
-    """Two entries is a grouping decision, not a reason to walk through
-    Add Integration twice. The one the flow finishes on must be
-    Schedules: HA's "integration added" dialog shows an unsuppressable
-    rename + area form for every device on the completing flow's entry,
-    and Zones is the half that seeds a device per room."""
+async def test_adding_the_integration_once_gives_a_working_schedule_and_zones(stub_entry_setup, hass: HomeAssistant):
+    """Both entries, a first schedule with its entities, and a zone per room.
+    The flow ends on a summary rather than on either entry: HA's
+    "integration added" dialog would prompt to rename and place every
+    device the entry it completes on has."""
     kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
     _light(hass, "light.k", area_id=kitchen.id)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"areas": [kitchen.id]})
+    assert result["data_schema"]({})["schedule"] == "Home"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"schedule": "Downstairs", "areas": [kitchen.id]}
+    )
     await hass.async_block_till_done()
 
-    assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Schedules"
+    assert result["type"] == "abort" and result["reason"] == "setup_complete"
+    assert result["description_placeholders"] == {"created": "a schedule called Downstairs and 1 zone"}
     assert {e.data[CONF_ENTRY_TYPE] for e in hass.config_entries.async_entries(DOMAIN)} == {
         ENTRY_TYPE_SCHEDULES,
         ENTRY_TYPE_ZONES,
     }
-    assert [s.title for s in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
+    assert hass.states.get("sensor.downstairs_flare").state in ("Morning", "Day", "Evening", "Night")
+    assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
 
 
-async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, hass: HomeAssistant):
-    """Deleting one entry has to be recoverable. With Schedules already
-    present the flow creates only Zones - and this time Zones is
-    what the flow itself returns, since there is no second entry to
-    hand the visible completion to."""
+async def test_a_schedule_name_with_nothing_to_name_entities_after_is_refused(stub_entry_setup, hass: HomeAssistant):
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"schedule": " !! "})
+
+    assert result["type"] == "form"
+    assert result["errors"] == {"schedule": "invalid_name"}
+    assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+async def test_the_missing_zones_can_be_added_back_on_their_own(stub_entry_setup, hass: HomeAssistant):
+    """Deleting one entry has to be recoverable, and only that half is
+    created again."""
     kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
     _light(hass, "light.k", area_id=kitchen.id)
     MockConfigEntry(
@@ -99,12 +104,30 @@ async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, h
     ).add_to_hass(hass)
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert "schedule" not in result["data_schema"]({})
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"areas": [kitchen.id]})
     await hass.async_block_till_done()
 
-    assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Zones"
+    assert result["description_placeholders"] == {"created": "1 zone"}
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
+
+
+async def test_the_missing_schedules_can_be_added_back_with_a_first_schedule(stub_entry_setup, hass: HomeAssistant):
+    MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_ZONES}",
+        version=3,
+    ).add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert "areas" not in result["data_schema"]({})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"schedule": "Home"})
+    await hass.async_block_till_done()
+
+    assert result["description_placeholders"] == {"created": "a schedule called Home"}
+    schedules = _entry_of_type(hass, ENTRY_TYPE_SCHEDULES)
+    assert [s.title for s in schedules.subentries.values()] == ["Home"]
 
 
 async def test_adding_it_again_with_both_present_aborts(stub_entry_setup, hass: HomeAssistant):
@@ -124,14 +147,15 @@ async def test_adding_it_again_with_both_present_aborts(stub_entry_setup, hass: 
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
 
 
-async def test_setup_with_no_areas_creates_the_entry_and_no_zones(stub_entry_setup, hass: HomeAssistant):
-    """Nothing here is required. With no areas there is nothing to
-    offer, so both entries are created straight away and lights simply
-    stay untracked until a zone exists."""
+async def test_setup_with_no_areas_still_creates_a_schedule_and_no_zones(stub_entry_setup, hass: HomeAssistant):
+    """With no areas there are no rooms to offer; lights stay untracked
+    until a zone exists."""
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert "areas" not in result["data_schema"]({})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"schedule": "Home"})
     await hass.async_block_till_done()
 
-    assert result["type"] == "create_entry"
+    assert result["description_placeholders"] == {"created": "a schedule called Home and 0 zones"}
     assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
 
 

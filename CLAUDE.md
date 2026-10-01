@@ -690,28 +690,27 @@ The services live with **zones**, not schedules: every one of them is
 about which lights are being driven and by whom, and they need the claim
 registry that entry owns.
 
-**One "Add Integration" creates both.** Two entries is a grouping
-decision, never an argument for two trips through the flow -
-`async_step_user` asks the single question there is to ask (which rooms
-to track) and raises the other entry itself via `SOURCE_IMPORT`. Each
-half is still creatable alone, so deleting one and adding it back
-works. The entry the flow *visibly* completes on is always **Schedules**,
-because Schedules creates no devices and Zones seeds one per room -
-see the device-dialog constraint below, which is what makes this
-ordering load-bearing rather than arbitrary.
+**One "Add Integration" sets FLARE up ready to use.** Two entries is a
+grouping decision, never an argument for two trips through the flow.
+`async_step_user` asks for a first schedule's name (default Home) and
+which rooms become zones, creates each missing entry through
+`SOURCE_IMPORT` - Schedules with that schedule as its subentry, Zones
+with a zone per room - and ends on an abort, `setup_complete`, carrying
+a summary. Each half is still creatable alone, so deleting one and
+adding it back works.
+
+**The flow ends on an abort, never on an entry,** because of HA's
+"integration added" dialog (`step-flow-create-entry.ts`). It shows a
+device-rename + area-picker form for every device on the entry the flow
+completes on, with no way to suppress it. Both entries now have devices
+from the start, so completing on either would put the schedule or every
+zone through that form. An abort has no entry, so no dialog; HA's own
+`reconfigure_successful` is the same pattern.
 
 ### Multi-sensor schedule architecture
 
 The schedules entry registers no services and carries no schedule of its
-own.
-"Add Integration" creates **zero devices and zero entities** - that's
-deliberate: HA's "integration added" dialog
-(`step-flow-create-entry.ts`) shows a device-rename + area-picker form
-whenever the completing flow has devices, with no way to suppress it,
-and that dialog is also the only place HA ever auto-renames entity_ids
-to match a device name. Auto-seeding a device therefore popped a rename
-prompt for something the user hadn't asked for, and a later rename via
-Settings → Devices silently didn't propagate to entity_ids.
+own; each schedule is a subentry.
 
 **That constraint is narrower than it was once written up here**, and
 the overstated version caused a wrong call once - re-verified against
@@ -727,9 +726,8 @@ home-assistant/frontend rather than recalled:
   device anywhere.
 
 Net: only the **main config flow, at entry creation** is affected, which
-is exactly what the zero-devices rule above protects. Devices created
-later are fine - and every schedule subentry already creates one, so the
-entry is never device-free in practice.
+is what ending setup on an abort avoids. Devices created later, by a
+subentry flow, are fine.
 
 Every schedule is a named "sensor" subentry (Settings → Devices &
 Services → Add Sensor). `schedule_instances(entry)` in `coordinator.py`
