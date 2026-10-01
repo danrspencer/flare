@@ -181,7 +181,7 @@ function buildHass() {
           next_setting: new Date((midnight + state.sunset * 60) * 1000).toISOString(),
         },
       },
-      // Matches sensor.py's _AdaptiveLightingSensor exactly: state is the
+      // Matches sensor.py's _ScheduleSensor exactly: state is the
       // phase name, everything else is an attribute.
       'sensor.default_flare': {
         state: phase,
@@ -418,7 +418,7 @@ async function main() {
   }
 
   card = document.createElement('flare-curve-card');
-  card.setConfig({ title: 'Lighting graph' });
+  card.setConfig({ title: 'Lighting graph', sensor: 'default' });
   host.appendChild(card);
   refresh();
 }
