@@ -32,7 +32,7 @@ see the [Quickstart](../installation/); for the services underneath, the
 | Input | Default | What it does |
 |---|---|---|
 | **Schedule** | — | The schedule sensor whose brightness and colour the room follows. See [using your own sensor](#using-your-own-sensor). |
-| **Zone** | — | The FLARE zone the room belongs to: it remembers which lights FLARE is driving, and its Tick sets when the room updates. See [setting up a room](#setting-up-a-room). |
+| **Zone** | — | The FLARE zone the room belongs to: it remembers which lights FLARE is driving. See [setting up a room](#setting-up-a-room). |
 | **Lights & Occupancy** | — | One target for the room. Lights inside it are controlled; occupancy sensors inside it decide when. See [setting up a room](#setting-up-a-room). |
 | **Additional Triggers** | none | Extra entities that make the room re-evaluate immediately. See [additional triggers](#additional-triggers). |
 

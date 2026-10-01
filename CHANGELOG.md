@@ -18,9 +18,10 @@ CI — see `.github/workflows/release.yml`.
   updating through it keeps the two in step.
 - **Every blueprint automation needs a Zone.** The blueprint has a new required
   **Zone** input: the FLARE zone the room belongs to. It decides which lights FLARE
-  remembers driving and when the room updates, replacing the guess the blueprint used
-  to make from areas. Until one is picked, an automation stops with "Missing input
-  zone". **Update Interval** is gone; the zone's timing replaces it. **Lights &
+  remembers driving, and the room's regular update follows the zone's Tick, replacing
+  the guess the blueprint used to make from areas. Until one is picked, an automation
+  stops with "Missing input zone". **Update Interval** is gone; the zone's timing
+  replaces it. **Lights &
   Occupancy** is now required too.
 
 ### Added
