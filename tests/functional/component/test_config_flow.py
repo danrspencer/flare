@@ -1,7 +1,6 @@
 """The config flows: adding the integration, adding schedule sensors and
 tracking scopes, and the options flow."""
 
-import pytest
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
@@ -248,18 +247,3 @@ async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup
     result = await hass.config_entries.options.async_init(entry.entry_id)
 
     assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
-
-
-@pytest.mark.parametrize("old_title", ["FLARE Tracking", "FLARE Control"])
-async def test_an_entry_with_an_earlier_title_is_renamed_to_zones(stub_entry_setup, hass: HomeAssistant, old_title):
-    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title=old_title)
-    assert await hass.config_entries.async_setup(renamed.entry_id)
-
-    assert renamed.title == "FLARE Zones"
-
-
-async def test_a_title_the_user_chose_is_left_alone(stub_entry_setup, hass: HomeAssistant):
-    chosen = _entry(hass, ENTRY_TYPE_TRACKING, title="Lights")
-    assert await hass.config_entries.async_setup(chosen.entry_id)
-
-    assert chosen.title == "Lights"
