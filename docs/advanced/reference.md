@@ -53,9 +53,9 @@ data:
 FLARE stops driving a light once something else has taken it — a switch, a scene, another
 automation — and picks it up again when released.
 
-**You say which scope a call belongs to.** A tracking scope is a named record of which lights FLARE is
-driving, usually one per room, configured at Settings → Devices & Services → **FLARE Tracking** →
-Add tracking scope. Each one is a real HA device. Pass its `tracking_device_id` on any of
+**You say which zone a call belongs to.** A zone is a named record of which lights FLARE is
+driving, usually one per room, configured at Settings → Devices & Services → **FLARE Control** →
+Add zone. Each one is a real HA device. Pass its `tracking_device_id` on any of
 `apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
 ```yaml
@@ -69,7 +69,7 @@ data:
 ```
 
 **`tracking_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
-three do something useful (set, turn off or plan lights) with no scope at all. **Omitting it writes the light but
+three do something useful (set, turn off or plan lights) with no zone at all. **Omitting it writes the light but
 tracks nothing** — no claim is recorded, and nothing is excluded as already externally-set. Tracking
 is opt-in per call, not something the integration goes looking for on your behalf.
 
@@ -77,24 +77,24 @@ is opt-in per call, not something the integration goes looking for on your behal
 to read or write tracking claims, so a call with nothing to name has nothing useful to do; the schema
 rejects it outright rather than always silently answering "untracked" or recording nothing.
 
-A `tracking_device_id` that *is* given but isn't one of your tracking scopes raises rather than silently
+A `tracking_device_id` that *is* given but isn't one of your zones raises rather than silently
 behaving like it was omitted — a typo'd or stale id is a mistake worth knowing about.
 
-Every entity passed in one call goes into the *same* scope — there's no per-entity resolution any more, so a
-call spanning several rooms needs one call per room's own scope.
+Every entity passed in one call goes into the *same* zone — there's no per-entity resolution any more, so a
+call spanning several rooms needs one call per room's own zone.
 
-Because scope is something you state rather than something resolved from configuration, **two calls naming the
-same scope share its claims and co-operate.** Name different scopes to track two automations apart.
+Because the zone is something you state rather than something resolved from configuration, **two calls naming the
+same zone share its claims and co-operate.** Name different zones to track two automations apart.
 
 `force: true` writes through regardless of who holds a light. The write is still recorded against
-`tracking_device_id`, so protection works again on the next non-forced call naming that same scope.
+`tracking_device_id`, so protection works again on the next non-forced call naming that same zone.
 
 The blueprint resolves this for you from `room_target` — see [One target, two jobs](../../blueprint/#one-target-two-jobs)
 — so you only need to pass `tracking_device_id` by hand when calling these services directly.
 
 #### The two claims
 
-Each tracked light carries two claims on its tracking scope:
+Each tracked light carries two claims on its zone:
 
 - **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, the
   pre-write baseline for a first write, or the snapshot taken when a device returns from unavailable.
@@ -119,10 +119,10 @@ A turn-off records a target of its own (`{"state": "off"}`), which is what separ
 from *somebody else did*. `apply_lighting` and [`turn_off`](#flareturn_off) both record it for you. Without it there would be nothing to compare once the write's context expires after
 five seconds, and a room turned off at bedtime could never be turned on again.
 
-**A scope releases every claim it holds once none of its lights are on.** Nobody is using the room, so handing
+**A zone releases every claim it holds once none of its lights are on.** Nobody is using the room, so handing
 it back overrides nobody's choice — and it is what ends a hand turn-off. Two things to know:
 
-- **"The room" is the scope, not the physical room.** A light no tracking scope covers is not consulted, so
+- **"The room" is the zone, not the physical room.** A light no zone covers is not consulted, so
   it holds nothing open.
 - **Anything not reporting `on` counts as dark**, including unavailable. Requiring every tracked light to report
   `off` would let one permanently unavailable entity — an orphaned Zigbee group, say — veto the release forever.
@@ -136,7 +136,7 @@ Every time a tracked light passes into someone else's hands, this fires
 
 ```yaml
 entity_id: light.kitchen_1
-scope: Kitchen                        # the tracking scope that lost it
+scope: Kitchen                        # the zone that lost it
 device_id: ...                        # so the row lands in that device's Activity
 previous_status: controlled
 live_context_id: 01M11...
@@ -164,16 +164,17 @@ trigger:
     event_type: flare_light_overridden
 ```
 
-### A tracking scope's entities
+### A zone's entities
 
-Each tracking scope carries four entities, all on its own device so they're renamed and deleted together:
+Each zone carries five entities, all on its own device so they're renamed and deleted together:
 
 | entity | |
 |---|---|
 | `sensor.<name>_flare_tracking` | **the claims themselves.** State is the number of lights tracked; the `claims` attribute holds the per-light `observed`/`latest` records |
 | `sensor.<name>_flare_controlled` | how many of its lights it is currently driving |
 | `sensor.<name>_flare_overridden` | how many are currently held by something else |
-| `button.<name>_flare_clear` | press to discard this scope's tracked state |
+| `button.<name>_flare_clear` | press to discard this zone's tracked state |
+| `event.<name>_flare_tick` | fires once per update interval — see [when zones tick](#when-zones-tick) |
 
 The `claims` attribute is excluded from the recorder, so it has no history; the two counters are plain numbers
 that graph and produce long-term statistics.
@@ -184,7 +185,7 @@ no claim.
 **Overridden is a normal outcome, not a fault** — something else took the light and FLARE stepped back. These
 entities report who holds what; they aren't a health check.
 
-**Clear discards every claim in the scope**, not just the overridden ones. The healthy lights lose their claims
+**Clear discards every claim in the zone**, not just the overridden ones. The healthy lights lose their claims
 too and are unprotected until their next write — one tick, for a live room automation.
 
 ### Transitions
@@ -251,7 +252,7 @@ data:
 |---|---|
 | `entities` | The lights to turn off. |
 | `transition` | Seconds. Defaults to 0. |
-| `tracking_device_id` | The [tracking scope](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
+| `tracking_device_id` | The [zone](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
 
 **It does no override protection.** It turns off exactly what it is given, including lights someone set by hand —
 use it once you have decided the room should go dark. To turn lights off only if FLARE is still driving them, ask
@@ -286,6 +287,49 @@ are unaffected. Neither service invents an RGB target on its own, or reads one o
 below (or `sensor.<name>_flare`'s own `rgb_color` attribute) for where that value comes from, or supply your
 own. `rgb_color` can be left unset, or passed explicitly as `null` (useful if you're templating it from a source
 that doesn't always have one) — either way it's simply ignored unless `prefer_rgb_color` is also on.
+
+### Leaving small changes alone
+
+A light already close to its target isn't sent anything. Close means within the tolerances
+(`brightness_tolerance`, `color_temp_tolerance`, `rgb_color_tolerance`), or within the minimum change worth
+sending:
+
+| field | default | |
+|---|---|---|
+| `min_brightness_change` | 5 | percent of the target brightness; never tighter than `brightness_tolerance` |
+| `min_color_temp_change` | 5 | mireds of colour temperature |
+
+Both services take these per call. Leave them out and they come from **Settings → Devices & Services → FLARE
+Control → Configure**, which is where the defaults above are set. They only decide what's sent: override
+protection still recognises FLARE's own writes by the tolerances.
+
+## When zones tick
+
+Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update interval. The zones
+fire in turn, in name order, a gap apart, starting one gap after each interval boundary, so that rooms re-checking
+their lights don't all send at the same moment. The boundary itself is left free for automations still using
+a time pattern on the minute.
+
+Both are set under **FLARE Control → Configure**:
+
+| option | default | |
+|---|---|---|
+| Update interval | 1 minute | how often each zone ticks, 1–60 minutes; boundaries are the minutes of the hour divisible by it, like a `/N` time pattern |
+| Gap between zones | 1 second | shrinks automatically when the zones wouldn't otherwise fit in the interval |
+
+To tick your own automation with a zone, listen for its event:
+
+```yaml
+triggers:
+  - trigger: event.received
+    target:
+      area_id: kitchen
+    options:
+      event_type: [flare_tick]
+```
+
+Targeting an area finds the Tick of the zone placed in it. Don't hide the Tick entity: Home Assistant leaves
+hidden entities out when it looks inside an area or device.
 
 ## `flare.compute_curve`
 

@@ -47,23 +47,24 @@ with type **Integration**. Then find **FLARE** in the HACS list and download it.
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
 
 Adding it once creates both of FLARE's entries. The only thing it asks for is which
-rooms to track:
+rooms to set up:
 
 - **FLARE Schedules** — the day-phase and colour curve. Add a schedule sensor per part of
   the house that should share a rhythm; one for the whole house is fine to start.
-- **FLARE Tracking** — which lights FLARE is currently driving. Every area containing
-  lights is offered, pre-selected, and each one you keep becomes a tracking scope. Trim
-  the list if you like; anything you leave out simply isn't tracked.
+- **FLARE Control** — one zone per room. A zone remembers which lights FLARE is
+  currently driving, and its **Tick** tells the room's automation when to update. Every
+  area containing lights is offered, pre-selected, and each one you keep becomes a zone.
+  Trim the list if you like; anything you leave out simply isn't tracked.
 
-Scopes can be added, retargeted or removed at any time from the Tracking entry.
+Zones can be added, retargeted or removed at any time from the Control entry.
 
 {: .note }
-> Adding another schedule sensor or tracking scope later shows a Home Assistant entry
-> picker offering **both FLARE Schedules and FLARE Tracking**, regardless of which one
+> Adding another schedule sensor or zone later shows a Home Assistant entry
+> picker offering **both FLARE Schedules and FLARE Control**, regardless of which one
 > you clicked "Add" from — a Home Assistant frontend quirk, not a FLARE bug: the picker
 > lists every entry for the domain before checking which one actually supports what
 > you're adding. Pick the entry matching what you clicked (Schedules for a schedule
-> sensor, Tracking for a tracking scope) — picking the other one simply fails rather than
+> sensor, Control for a zone) — picking the other one simply fails rather than
 > creating anything in the wrong place.
 
 Each schedule sensor gets its own device, with the phase boundaries, curve values and
@@ -132,7 +133,7 @@ something else has taken over. Nothing to fill in — see the
 
 ## What now
 
-- Lights not behaving as you expect? Each tracking scope has **Controlled** and
+- Lights not behaving as you expect? Each zone has **Controlled** and
   **Overridden** counters and a **Clear** button — see
   [the integration reference]({{ site.baseurl }}/advanced/reference/#override-protection).
 - Want a scene to own the room at certain times?

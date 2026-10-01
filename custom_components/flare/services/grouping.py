@@ -171,10 +171,17 @@ def build_groups(
     rgb_color: Optional[tuple] = None,
     rgb_color_tolerance: int = 10,
     force: bool = False,
+    min_brightness_change: float = 0,
+    min_color_temp_change: float = 0,
 ) -> list:
     """What needs commanding for `entities`, bucketed by brightness
     multiplier. Each Group is an off-group (multiplier <= 0, `needing_off`)
-    or an update-group holding whatever isn't already within tolerance.
+    or an update-group holding whatever isn't already close enough.
+
+    Close enough is within tolerance, or within the minimum change worth
+    sending: `min_brightness_change` percent of the target brightness, and
+    `min_color_temp_change` mireds. These only decide what's sent; override
+    protection still matches on the tolerances.
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
     lists. A light is two-step if it carries two_step_label or its model
@@ -210,7 +217,16 @@ def build_groups(
             for e in temp_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set(e, brightness, sensor_color_temp_kelvin, lookup, brightness_tolerance, color_temp_tolerance)
+            and not _already_set(
+                e,
+                brightness,
+                sensor_color_temp_kelvin,
+                lookup,
+                brightness_tolerance,
+                color_temp_tolerance,
+                min_brightness_change,
+                min_color_temp_change,
+            )
         ]
         group.two_step = [
             e
@@ -224,7 +240,9 @@ def build_groups(
             for e in rgb_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set_rgb(e, brightness, rgb_color, lookup, brightness_tolerance, rgb_color_tolerance)
+            and not _already_set_rgb(
+                e, brightness, rgb_color, lookup, brightness_tolerance, rgb_color_tolerance, min_brightness_change
+            )
         ]
         group.two_step_rgb = [
             e
@@ -238,9 +256,27 @@ def build_groups(
     return groups
 
 
-def _brightness_close(entity_id: str, target_brightness: int, lookup: EntityLookup, brightness_tolerance: int) -> bool:
+def _brightness_close(
+    entity_id: str, target_brightness: int, lookup: EntityLookup, brightness_tolerance: int, min_change: float
+) -> bool:
+    """Within tolerance, or within `min_change` percent of the target."""
     current_brightness = _as_int(lookup.state_attr(entity_id, "brightness"), -999)
-    return abs(current_brightness - target_brightness) <= brightness_tolerance
+    allowed = max(brightness_tolerance, target_brightness * min_change / 100)
+    return abs(current_brightness - target_brightness) <= allowed
+
+
+def _within_mireds(current_kelvin: int, target_kelvin: int, min_change: float) -> bool:
+    """Mireds, because equal steps in them look roughly equal across the
+    range, where a flat Kelvin gap doesn't."""
+    if current_kelvin <= 0 or target_kelvin <= 0:
+        return False
+    return abs(1_000_000 / current_kelvin - 1_000_000 / target_kelvin) <= min_change
+
+
+def _color_temp_close(current_kelvin: int, target_kelvin: int, tolerance: int, min_change: float) -> bool:
+    return _color_temp_matches(current_kelvin, target_kelvin, tolerance) or _within_mireds(
+        current_kelvin, target_kelvin, min_change
+    )
 
 
 def _already_set(
@@ -250,21 +286,24 @@ def _already_set(
     lookup: EntityLookup,
     brightness_tolerance: int,
     color_temp_tolerance: int,
+    min_brightness_change: float = 0,
+    min_color_temp_change: float = 0,
 ) -> bool:
-    """Within tolerance, not exact, since bulbs round-trip values a point or
-    two off. Kelvin also matches when both floor to the same mired."""
+    """Close enough not to send: within tolerance, since bulbs round-trip
+    values a point or two off, or within the minimum change worth sending.
+    Kelvin also matches when both floor to the same mired."""
     if not lookup.is_state(entity_id, "on"):
         return False
-    if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance):
+    if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance, min_brightness_change):
         return False
     current_color_temp = _as_int(lookup.state_attr(entity_id, "color_temp_kelvin"), -999)
-    if _color_temp_matches(current_color_temp, target_color_temp_kelvin, color_temp_tolerance):
+    if _color_temp_close(current_color_temp, target_color_temp_kelvin, color_temp_tolerance, min_color_temp_change):
         return True
     # Also accept the target clamped to the bulb's range - see
     # clamp_color_temp_kelvin.
     reachable_target = clamp_color_temp_kelvin(entity_id, target_color_temp_kelvin, lookup)
-    return reachable_target != target_color_temp_kelvin and _color_temp_matches(
-        current_color_temp, reachable_target, color_temp_tolerance
+    return reachable_target != target_color_temp_kelvin and _color_temp_close(
+        current_color_temp, reachable_target, color_temp_tolerance, min_color_temp_change
     )
 
 
@@ -275,12 +314,13 @@ def _already_set_rgb(
     lookup: EntityLookup,
     brightness_tolerance: int,
     rgb_color_tolerance: int,
+    min_brightness_change: float = 0,
 ) -> bool:
     """_already_set for RGB, per channel. A missing rgb_color counts as not
     close."""
     if not lookup.is_state(entity_id, "on"):
         return False
-    if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance):
+    if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance, min_brightness_change):
         return False
     current_rgb = lookup.state_attr(entity_id, "rgb_color")
     return (

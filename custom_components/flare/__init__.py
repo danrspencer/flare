@@ -1,4 +1,4 @@
-"""FLARE: sets up the Schedules and Tracking config entries, their
+"""FLARE: sets up the Schedules and Control config entries, their
 platforms, and the dashboard front-end files. Code layout and the
 dependency rule are in CONTRIBUTING.md."""
 
@@ -15,18 +15,30 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING
+from .const import (
+    CONF_ENTRY_TYPE,
+    CONF_TICK_GAP,
+    CONF_TICK_INTERVAL,
+    CONTROL_ENTRY_TITLE,
+    DEFAULT_TICK_GAP,
+    DEFAULT_TICK_INTERVAL,
+    DOMAIN,
+    ENTRY_TYPE_TRACKING,
+    LEGACY_TRACKING_ENTRY_TITLE,
+)
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
+from .event import ticks_key
+from .tracking.ticker import TickScheduler
 from .tracking.write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH]
-TRACKING_PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
+TRACKING_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
 
 
 CARD_URL_BASE = "/flare_static"
@@ -56,6 +68,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
+    if is_tracking and entry.title == LEGACY_TRACKING_ENTRY_TITLE:
+        hass.config_entries.async_update_entry(entry, title=CONTROL_ENTRY_TITLE)
 
     write_tracker = ClaimRegistry(hass, entry)
     # Pruning catches entities deleted outright, which the listener never
@@ -88,6 +102,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if is_tracking:
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = write_tracker
+        scheduler = TickScheduler(
+            hass,
+            int(entry.options.get(CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL)),
+            float(entry.options.get(CONF_TICK_GAP, DEFAULT_TICK_GAP)),
+        )
+        hass.data[DOMAIN][ticks_key(entry)] = scheduler
+        entry.async_on_unload(scheduler.stop)
         await hass.config_entries.async_forward_entry_setups(entry, TRACKING_PLATFORMS)
         return True
 
@@ -128,6 +149,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_unload_services(hass)
         unloaded = await hass.config_entries.async_unload_platforms(entry, TRACKING_PLATFORMS)
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+        hass.data.get(DOMAIN, {}).pop(ticks_key(entry), None)
         return unloaded
 
     instances = schedule_instances(entry)

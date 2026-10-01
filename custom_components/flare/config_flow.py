@@ -23,8 +23,17 @@ from homeassistant.util import slugify
 
 from .const import (
     CONF_ENTRY_TYPE,
+    CONF_MIN_BRIGHTNESS_CHANGE,
+    CONF_MIN_COLOR_TEMP_CHANGE,
     CONF_TARGET,
+    CONF_TICK_GAP,
+    CONF_TICK_INTERVAL,
     CONF_TWO_STEP_MODELS,
+    CONTROL_ENTRY_TITLE,
+    DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    DEFAULT_TICK_GAP,
+    DEFAULT_TICK_INTERVAL,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -95,7 +104,7 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_TRACKING}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
-            title="FLARE Tracking",
+            title=CONTROL_ENTRY_TITLE,
             data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
             subentries=[
                 {
@@ -122,29 +131,44 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
 
 
 class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
-    """Which bulb models need two-step transitions (see two_step.py). The
-    field is pre-filled with the shipped defaults and is the whole list."""
+    """Which bulb models need two-step transitions (see two_step.py), and on
+    the Control entry, the zones' tick timing and the smallest change worth
+    sending. The models field is pre-filled with the shipped defaults and is
+    the whole list."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        current = self.config_entry.options.get(CONF_TWO_STEP_MODELS)
+        options = self.config_entry.options
+        fields: dict = {
+            vol.Optional(CONF_TWO_STEP_MODELS, default=""): selector.TextSelector(
+                selector.TextSelectorConfig(multiline=True)
+            ),
+        }
+        suggested: dict = {
+            CONF_TWO_STEP_MODELS: options.get(CONF_TWO_STEP_MODELS) or "\n".join(DEFAULT_TWO_STEP_MODEL_PATTERNS),
+        }
+        if self.config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING:
+            for key, default, minimum, maximum, step, unit in (
+                (CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL, 1, 60, 1, "min"),
+                (CONF_TICK_GAP, DEFAULT_TICK_GAP, 0, 10, 0.5, "s"),
+                (CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE, 0, 25, 0.5, "%"),
+                (CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, 0, 50, 0.5, "mired"),
+            ):
+                fields[vol.Required(key, default=options.get(key, default))] = _number(minimum, maximum, step, unit)
         return self.async_show_form(
             step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(
-                    {
-                        vol.Optional(CONF_TWO_STEP_MODELS, default=""): selector.TextSelector(
-                            selector.TextSelectorConfig(multiline=True)
-                        ),
-                    }
-                ),
-                {
-                    CONF_TWO_STEP_MODELS: current or "\n".join(DEFAULT_TWO_STEP_MODEL_PATTERNS),
-                },
-            ),
+            data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), suggested),
         )
+
+
+def _number(minimum: float, maximum: float, step: float, unit: str) -> selector.NumberSelector:
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=minimum, max=maximum, step=step, unit_of_measurement=unit, mode=selector.NumberSelectorMode.BOX
+        )
+    )
 
 
 class SensorSubentryFlow(ConfigSubentryFlow):

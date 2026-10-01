@@ -62,5 +62,5 @@ classifies as `overridden` and is excluded from the next tick — see
 
 Switching it **off** by hand counts too: that's a choice like any other, so FLARE leaves it
 off rather than relighting it on the next tick. It comes back under FLARE's control once
-every light in its tracking scope is off, when the device drops and reconnects, or when
-you press that scope's **Clear** button.
+every light in its zone is off, when the device drops and reconnects, or when
+you press that zone's **Clear** button.

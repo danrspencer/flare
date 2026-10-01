@@ -31,7 +31,8 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy-class sensors within it decide when.
+        controlled, occupancy-class sensors within it decide when, and a
+        FLARE zone's Tick within it sets when the room re-checks.
         [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
       default: {}
       selector:
@@ -40,6 +41,8 @@ blueprint:
             - domain: light
             - domain: binary_sensor
               device_class: occupancy
+            - domain: event
+              integration: flare
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -240,11 +243,12 @@ blueprint:
         update_interval:
           name: Update Interval (Optional)
           description: >
-            How often to check the lights are up to date, outside of a
-            phase change or motion - if everything's already correct,
-            nothing is sent. Home Assistant's time_pattern syntax, e.g.
-            '/1' for every minute.
-            [Details](https://www.home-assistant.io/docs/automation/trigger/#time-pattern-trigger).
+            How often to check the lights are up to date, for a room whose
+            Lights & Occupancy doesn't reach a FLARE zone's Tick. A room
+            that does follows the zone's timing, set on FLARE's Control
+            entry, and ignores this. Home Assistant's time_pattern syntax,
+            e.g. '/1' for every minute.
+            [Details](https://danrspencer.github.io/flare/blueprint/#timing).
           default: "/1"
           selector:
             text: {}
@@ -295,7 +299,15 @@ trigger:
       - Evening
       - Night
   # The curve is flat in Morning/Night, so phase_change goes quiet there.
-  # Also runs self-heal.
+  # Also runs self-heal. The zone's Tick, spaced from every other zone's;
+  # the time pattern only for a room that doesn't reach one (see
+  # condition:).
+  - id: tick
+    trigger: event.received
+    target: !input room_target
+    options:
+      event_type:
+        - flare_tick
   - id: tick
     platform: time_pattern
     minutes: !input update_interval
@@ -347,6 +359,13 @@ trigger:
          | list | length > 0 }}
 
 condition:
+  - alias: "Not the time pattern in a room that has a zone tick"
+    not:
+      - condition: template
+        alias: "The time pattern fired, and a zone tick reaches this room"
+        value_template: >-
+          {{ trigger is defined and trigger.platform is defined
+             and trigger.platform == 'time_pattern' and room_ticks | length > 0 }}
   # Never checks occupancy: an already-on light should follow the curve
   # regardless. allow_turn_on decides whether lights may come on.
   #
@@ -420,6 +439,11 @@ variables:
     {{ ns.entities | unique | list }}
   all_target_entities: >
     {{ (target_named_entities + target_expanded_entities) | unique | list }}
+  # The zone ticks the event.received trigger reaches, named or through an
+  # area or device.
+  room_ticks: >
+    {% set ticks = integration_entities('flare') | select('match', '^event\\.') | list %}
+    {{ all_target_entities | select('in', ticks) | list }}
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
   # Up here because variables: render top to bottom and the turn-off lists

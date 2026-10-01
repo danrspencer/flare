@@ -8,7 +8,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
+    CONF_MIN_BRIGHTNESS_CHANGE,
+    CONF_MIN_COLOR_TEMP_CHANGE,
     CONF_TWO_STEP_MODELS,
+    DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    DEFAULT_MIN_COLOR_TEMP_CHANGE,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -100,7 +104,7 @@ async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, h
     await hass.async_block_till_done()
 
     assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Tracking"
+    assert result["title"] == "FLARE Control"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
 
 
@@ -222,4 +226,43 @@ async def test_the_options_flow_starts_from_the_shipped_patterns_and_saves_the_w
 
     result = await hass.config_entries.options.async_configure(result["flow_id"], {CONF_TWO_STEP_MODELS: "*weird bulb*"})
 
-    assert entry.options == {CONF_TWO_STEP_MODELS: "*weird bulb*"}
+    assert entry.options[CONF_TWO_STEP_MODELS] == "*weird bulb*"
+
+
+async def test_the_options_flow_offers_the_minimum_change_starting_at_the_defaults(stub_entry_setup, hass: HomeAssistant):
+    entry = _entry(hass, ENTRY_TYPE_TRACKING)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {})
+
+    assert entry.options[CONF_MIN_BRIGHTNESS_CHANGE] == DEFAULT_MIN_BRIGHTNESS_CHANGE
+    assert entry.options[CONF_MIN_COLOR_TEMP_CHANGE] == DEFAULT_MIN_COLOR_TEMP_CHANGE
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_MIN_BRIGHTNESS_CHANGE: 2.5, CONF_MIN_COLOR_TEMP_CHANGE: 0}
+    )
+
+    assert (entry.options[CONF_MIN_BRIGHTNESS_CHANGE], entry.options[CONF_MIN_COLOR_TEMP_CHANGE]) == (2.5, 0)
+
+
+async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup, hass: HomeAssistant):
+    entry = _entry(hass, ENTRY_TYPE_SCHEDULES)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
+
+
+async def test_an_existing_tracking_entry_is_renamed_to_control(stub_entry_setup, hass: HomeAssistant):
+    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title="FLARE Tracking")
+    assert await hass.config_entries.async_setup(renamed.entry_id)
+
+    assert renamed.title == "FLARE Control"
+
+
+async def test_a_title_the_user_chose_is_left_alone(stub_entry_setup, hass: HomeAssistant):
+    chosen = _entry(hass, ENTRY_TYPE_TRACKING, title="Lights")
+    assert await hass.config_entries.async_setup(chosen.entry_id)
+
+    assert chosen.title == "Lights"

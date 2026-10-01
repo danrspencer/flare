@@ -427,14 +427,15 @@ and the claims are each exposed through BOTH entities and services, so
 `entities` and `services` imported each other in both directions
 (`services` used `coordinator.CURVE_KEYS` and `curve`; `sensor`/`button`
 used `write_tracking` and `override_protection`). Those are two concepts,
-and they match the two config entries, Schedules and Tracking.
+and they match the two config entries, Schedules and Control (`tracking` in code).
 
 - `schedule/` - what lights should look like: `curve.py`,
   `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`).
-- `tracking/` - who owns a light: `override_protection.py`,
-  `write_tracking.py`, `scope.py` (`StateInstance`, the tracking scope;
-  it lived in `coordinator.py` next to `ScheduleInstance` until the
-  split, one file holding two concepts).
+- `tracking/` - zones: who owns a light (`override_protection.py`,
+  `write_tracking.py`), the zone device itself (`scope.py`,
+  `StateInstance`; it lived in `coordinator.py` next to
+  `ScheduleInstance` until the split, one file holding two concepts),
+  and when each zone ticks (`ticker.py`).
 - `services/` - `handlers.py` (the eight services) and the planning
   behind them: `grouping.py`, `scenes.py`, `two_step.py`.
 - package root - what Home Assistant dictates: `__init__`, `config_flow`,
@@ -527,6 +528,14 @@ rather than assumed:
   honest** - `light.utility_spot_1` advertises max 4000 and reports
   5813. So `_already_set` accepts the raw target *or* the range-clamped
   one, never only the clamped one.
+- **The minimum change (`min_brightness_change` %, `min_color_temp_change`
+  mireds) lives only in `_already_set`**, never in `classify()`. It
+  decides what's worth sending; widening override protection's value
+  matching by the same amount would let a hand-set light near the curve
+  read as ours. Brightness is a percentage floored at the tolerance so a
+  dim target still tracks closely; colour is in mireds because a flat
+  Kelvin gap is ~4x coarser at 6500K than at 2700K. Defaults (5 / 5) sit
+  on the Control entry's options; a call can override them.
 - `force` is the only bypass. There is no caller-supplied owner: a
   light's claims belong to whatever scope the caller names, so any
   caller naming that scope writes through it.
@@ -683,9 +692,18 @@ also proves a claim survives HA's JSON encoder.
 
 ### Two config entries
 
-The integration installs as **two** entries, not one: *Adaptive Lighting
-Schedules* (day-phase/curve sensors) and *Adaptive Lighting Tracking*
-(the services, the claim registry, and the state devices). Both use the
+The integration installs as **two** entries, not one: *FLARE Schedules*
+(day-phase/curve sensors) and *FLARE Control* (the services, the claim
+registry, the zone scheduler, and the state devices).
+
+**User-facing names: "FLARE Control" and "zone"**, chosen by the user on
+2026-09-27 once scopes started ticking as well as tracking (the entry
+was "FLARE Tracking", scopes "tracking scopes"). Only what users see was
+renamed: code still says tracking/scope/state throughout
+(`ENTRY_TYPE_TRACKING`, `tracking_device_id`, `sensor.*_flare_tracking`,
+`custom:flare-tracking`), since renaming those breaks installs. An
+entry still titled "FLARE Tracking" is retitled on setup; any other
+title is the user's and is left alone. Both use the
 sensor platform; each platform module branches on
 `entry.data[CONF_ENTRY_TYPE]`.
 
@@ -865,9 +883,43 @@ an occupancy sensor at all. That matters because
 would otherwise permanently fail the condition.
 
 **Triggers:** `phase_change` (state on the sensor, filtered `to:` the
-four phase names so attribute-only ticks don't fire), `tick`
-(`time_pattern`, `!input update_interval`), `extra`, `motion_on` /
+four phase names so attribute-only ticks don't fire), `tick` (twice:
+`event.received` on the zone's Tick through `room_target`, and
+`time_pattern` with `!input update_interval`), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
+
+**Zone ticks exist to stop every room writing in the same second.**
+Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
+:00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
+seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
+command timeouts landing at :10 - sent at :00. `tracking/ticker.py`
+fires each zone's `event.<slug>_flare_tick` a gap apart (title order);
+the blueprint's decision still happens fresh at trigger time, so this
+is NOT the jitter that was removed (see Standing decisions).
+
+- **Slot 0 is reserved.** Zones start one gap after each boundary,
+  because rooms still on the `time_pattern` fire at the boundary. HA
+  already offsets every `time_pattern` by a random 0.05-0.5s
+  (`RANDOM_MICROSECOND_MIN/MAX` in `helpers/event.py`), so the default 1s
+  gap clears it. Boundaries mirror a `/N` pattern (minutes of the hour
+  divisible by N) so the fallback's slot 0 lines up.
+- **Both triggers share `id: tick`**, so every `trigger.id == 'tick'`
+  check (transition, scene recheck, self-heal) covers both. The top-level
+  `condition:` drops the `time_pattern` one when `room_ticks` is
+  non-empty, which is what makes a room tick once, not twice.
+- **`room_ticks` must match what `event.received` resolves**, or a room
+  ticks twice or never. HA expands an area/device target to entities
+  with no `entity_category` and not hidden (`helpers/target.py`,
+  `_primary_entities_only`; same rule in 2026.4.0, checked). So the Tick
+  entity has no category, and `room_ticks` uses the same named +
+  area/device expansion the rest of the blueprint does. A user hiding the
+  Tick breaks this silently; the docs say not to.
+- A room naming only light entities doesn't reach its zone's Tick (6 of
+  17 of this house's automations, e.g. Jacob's), so the `time_pattern`
+  fallback stays rather than requiring a Tick. `room_target`'s selector
+  accepts FLARE `event` entities so the Tick can be named directly.
+- The Tick is one recorder row per zone per interval. Accepted: the
+  schedule sensor already writes one per minute.
 
 - `phase_change` needs the `to:` filter because a plain `state` trigger
   with no `from`/`to` fires on attribute-only changes; with any of
@@ -1121,7 +1173,10 @@ trigger/condition machinery only looks at entity state, not origin.
   to turn lights on). Built, shipped, then reverted: "added complexity
   for something that someone can just do via another automation".
 - **Jitter, in any form** - removed in 0.16.0, don't reintroduce it
-  without new evidence. It was added preventively in #73 with no observed
+  without new evidence. (Congestion was later observed, 2026-09-27, and
+  answered with zone ticks: deterministic trigger-side spacing, with the
+  decision made after the trigger - see Triggers above. The reasoning
+  below still rules out a delay anywhere after the decision.) It was added preventively in #73 with no observed
   congestion, and the evidence against keeping it was concrete: it caused
   a live relight bug (see the no-delay rule above), `grouping.py`'s
   tolerance check already suppresses most writes so a routine tick sends
@@ -1684,3 +1739,8 @@ Shared helpers live in `tests/support/` and each functional directory's
   - confirmed via the trace log showing an unwanted second "Restarting".
   A zero-length `await asyncio.sleep(0)` is safe (routed via `call_soon`,
   not `call_later`) and is the way to let a task start.
+- **`async_fire_time_changed` can run a point-in-time timer ~0.1s
+  early** - observed with the zone scheduler, a timer due at :01.0 fired
+  when the clock was moved to :00.9. So `test_ticks.py` spaces zones 10s
+  apart and checks well clear of each boundary, rather than asserting
+  sub-second ordering.

@@ -65,7 +65,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * The tracking view: one section per scope, with its counts, its
+ * The tracking view: one section per zone, with its counts, its
  * overridden lights and the Clear button.
  *
  *   views:
@@ -79,8 +79,8 @@ class FlareTrackingViewStrategy extends HTMLElement {
 
     if (!scopes.length) {
       return notice(
-        'No FLARE tracking scopes found yet.\n\nAdd one under **Settings → Devices ' +
-          '& Services → FLARE Tracking → Add state device**, and it will appear here ' +
+        'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
+          '& Services → FLARE Control → Add zone**, and it will appear here ' +
           'automatically.'
       );
     }

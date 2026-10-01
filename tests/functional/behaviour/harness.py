@@ -207,6 +207,36 @@ async def setup_tracking_entry(hass: HomeAssistant, *, tracked: bool) -> tuple[M
     return entry, area_id
 
 
+async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
+    """A real Control entry with a zone per name, each over its own area of
+    that name. Returns {name: area_id}."""
+    areas = {name: ar.async_get(hass).async_get_or_create(name).id for name in names}
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_TRACKING}",
+        version=3,
+        options=options or {},
+        subentries_data=[
+            ConfigSubentryData(
+                subentry_type=SUBENTRY_TYPE_STATE, title=name, unique_id=name, data={CONF_TARGET: {"area_id": [area_id]}}
+            )
+            for name, area_id in areas.items()
+        ],
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return areas
+
+
+async def at(hass: HomeAssistant, frozen, hour: int, minute: int, second: float) -> None:
+    """Move the clock to a moment today and fire whatever's due by then."""
+    frozen.move_to(dt_util.now().replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(seconds=second))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+
+
 def dump_traces(hass: HomeAssistant, directory: Path, *, test_id: str, outcome: str, filename: str | None = None) -> Path | None:
     """Write every automation trace hass holds to `directory`. Returns the
     path, or None if there was nothing to write."""

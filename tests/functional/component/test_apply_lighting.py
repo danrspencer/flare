@@ -6,7 +6,12 @@ from __future__ import annotations
 from homeassistant.core import Context, HomeAssistant
 from pytest_homeassistant_custom_component.common import async_mock_service
 
-from custom_components.flare.const import CONF_TWO_STEP_MODELS, DOMAIN
+from custom_components.flare.const import (
+    CONF_MIN_BRIGHTNESS_CHANGE,
+    CONF_MIN_COLOR_TEMP_CHANGE,
+    CONF_TWO_STEP_MODELS,
+    DOMAIN,
+)
 from tests.functional.component.harness import (
     CT,
     add_device_light,
@@ -190,4 +195,38 @@ class TestTwoStep:
 
         await apply_lighting(hass, ["light.spot_1"], transition=0.2)
 
+        assert len(turn_on) == 1
+
+
+class TestMinimumChange:
+    """A change too small to notice isn't sent. The entry's options set it;
+    a call can set its own."""
+
+    async def test_a_small_change_is_not_sent_by_default(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=192, color_temp_kelvin=3000)
+
+        await apply_lighting(hass, ["light.a"])
+
+        assert turn_on == [], "8 points off a 200 target is inside the default 5%"
+
+    async def test_the_entrys_option_sets_it(self, hass: HomeAssistant):
+        await setup_tracking_entry(hass, options={CONF_MIN_BRIGHTNESS_CHANGE: 1, CONF_MIN_COLOR_TEMP_CHANGE: 0})
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=192, color_temp_kelvin=3000)
+
+        await apply_lighting(hass, ["light.a"])
+
+        assert len(turn_on) == 1
+
+    async def test_a_call_can_set_its_own(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=2900)
+
+        await apply_lighting(hass, ["light.a"], min_color_temp_change=20)
+        assert turn_on == [], "2900K is 11 mireds from 3000K"
+
+        await apply_lighting(hass, ["light.a"], min_color_temp_change=0)
         assert len(turn_on) == 1

@@ -33,7 +33,7 @@ class StateInstance:
             entry_type=DeviceEntryType.SERVICE,
             # Lets services.yaml's device selector tell scopes apart from
             # schedule devices.
-            model="Tracking Scope",
+            model="Zone",
         )
 
 
