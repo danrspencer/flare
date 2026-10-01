@@ -137,7 +137,7 @@ Never paraphrase these. They are what the user types or clicks.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
-- **Config entries** — FLARE Schedules, FLARE Control.
+- **Config entries** — FLARE Schedules, FLARE Zones.
 - **Dashboard views** — `custom:flare-schedule`, `custom:flare-tracking`.
 
 ## Keeping this honest

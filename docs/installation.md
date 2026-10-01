@@ -51,18 +51,18 @@ rooms to set up:
 
 - **FLARE Schedules** — the day-phase and colour curve. Add a schedule sensor per part of
   the house that should share a rhythm; one for the whole house is fine to start.
-- **FLARE Control** — one zone per room. A zone remembers which lights FLARE is
+- **FLARE Zones** — one zone per room. A zone remembers which lights FLARE is
   currently driving, and its **Tick** tells the room's automation when to update. Every
   area containing lights is offered, pre-selected, and each one you keep becomes a zone
   named after it. Trim the list if you like; you can add more later.
 
-Zones can be added, renamed or removed at any time from the Control entry.
+Zones can be added, renamed or removed at any time from the Zones entry.
 
 {: .note }
 > On Home Assistant 2026.9 and earlier, adding another schedule sensor or zone shows
-> an entry picker offering **both FLARE Schedules and FLARE Control**, whichever one you
+> an entry picker offering **both FLARE Schedules and FLARE Zones**, whichever one you
 > clicked "Add" from. Pick the one matching what you're adding (Schedules for a schedule
-> sensor, Control for a zone); the other simply fails. Home Assistant 2026.10 goes
+> sensor, Zones for a zone); the other simply fails. Home Assistant 2026.10 goes
 > straight to the right one.
 
 Each schedule sensor gets its own device, with the phase boundaries, curve values and

@@ -34,10 +34,10 @@ CI — see `.github/workflows/release.yml`.
   (`event.<name>_flare_tick`), and FLARE fires them one after another, a second apart,
   instead of every room updating on the same second of every minute. A blueprint
   automation updates on its Zone's Tick. The interval and the gap are under **FLARE
-  Control → Configure**.
+  Zones → Configure**.
 - **Changes too small to notice aren't sent.** A light within 5% of its target brightness,
   or 5 mireds of its colour temperature, is left alone, which cuts the steady stream of
-  tiny updates through a long evening fade. Both are adjustable under **FLARE Control →
+  tiny updates through a long evening fade. Both are adjustable under **FLARE Zones →
   Configure**, and per call with `min_brightness_change` / `min_color_temp_change` on
   `flare.apply_lighting` and `flare.compute_lighting_groups`.
 
@@ -62,7 +62,7 @@ CI — see `.github/workflows/release.yml`.
 - **A zone no longer has a "Lights, devices or areas" field.** It only put the zone's
   device in an area, and nothing uses that now. Existing zones keep whatever area their
   device is in; set one on the device page if you want it.
-- **FLARE Tracking is now FLARE Control, and tracking scopes are zones**, now that they
+- **FLARE Tracking is now FLARE Zones, and tracking scopes are zones**, now that they
   do more than track. Existing installs are renamed on the next restart; entity IDs,
   `tracking_device_id` and the `custom:flare-tracking` dashboard view are unchanged.
 - **The blueprint turns lights off with one call.** It used to call `light.turn_off`

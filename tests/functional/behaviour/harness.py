@@ -184,7 +184,7 @@ async def setup_schedule(hass: HomeAssistant) -> MockConfigEntry:
 
 
 async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
-    """A real Control entry with a zone per name, plus an area of each name
+    """A real Zones entry with a zone per name, plus an area of each name
     for bulbs to sit in. Returns {name: area_id}."""
     areas = {name: ar.async_get(hass).async_get_or_create(name).id for name in names}
     entry = MockConfigEntry(

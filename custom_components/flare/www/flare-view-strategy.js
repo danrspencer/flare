@@ -80,7 +80,7 @@ class FlareTrackingViewStrategy extends HTMLElement {
     if (!scopes.length) {
       return notice(
         'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
-          '& Services → FLARE Control → Add zone**, and it will appear here ' +
+          '& Services → FLARE Zones → Add zone**, and it will appear here ' +
           'automatically.'
       );
     }

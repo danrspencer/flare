@@ -427,7 +427,7 @@ and the claims are each exposed through BOTH entities and services, so
 `entities` and `services` imported each other in both directions
 (`services` used `coordinator.CURVE_KEYS` and `curve`; `sensor`/`button`
 used `write_tracking` and `override_protection`). Those are two concepts,
-and they match the two config entries, Schedules and Control (`tracking` in code).
+and they match the two config entries, Schedules and Zones (`tracking` in code).
 
 - `schedule/` - what lights should look like: `curve.py`,
   `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`).
@@ -535,7 +535,7 @@ rather than assumed:
   read as ours. Brightness is a percentage floored at the tolerance so a
   dim target still tracks closely; colour is in mireds because a flat
   Kelvin gap is ~4x coarser at 6500K than at 2700K. Defaults (5 / 5) sit
-  on the Control entry's options; a call can override them.
+  on the Zones entry's options; a call can override them.
 - `force` is the only bypass. There is no caller-supplied owner: a
   light's claims belong to whatever scope the caller names, so any
   caller naming that scope writes through it.
@@ -692,17 +692,19 @@ also proves a claim survives HA's JSON encoder.
 ### Two config entries
 
 The integration installs as **two** entries, not one: *FLARE Schedules*
-(day-phase/curve sensors) and *FLARE Control* (the services, the claim
+(day-phase/curve sensors) and *FLARE Zones* (the services, the claim
 registry, the zone scheduler, and the state devices).
 
-**User-facing names: "FLARE Control" and "zone"**, chosen by the user on
-2026-09-27 once scopes started ticking as well as tracking (the entry
-was "FLARE Tracking", scopes "tracking scopes"). Only what users see was
-renamed: code still says tracking/scope/state throughout
-(`ENTRY_TYPE_TRACKING`, `tracking_device_id`, `sensor.*_flare_tracking`,
-`custom:flare-tracking`), since renaming those breaks installs. An
-entry still titled "FLARE Tracking" is retitled on setup; any other
-title is the user's and is left alone. Both use the
+**User-facing names: "FLARE Zones" and "zone"**, the entry named after
+what it holds. Scopes became zones on 2026-09-27 once they ticked as well
+as tracked; the entry was briefly "FLARE Control", which the user found
+confusing next to "zone" ("a control is just a collection of zones?")
+and renamed on 2026-10-01. Before both it was "FLARE Tracking". Only
+what users see was renamed: code still says tracking/scope/state
+throughout (`ENTRY_TYPE_TRACKING`, `tracking_device_id`,
+`sensor.*_flare_tracking`, `custom:flare-tracking`), since renaming those
+breaks installs. An entry still carrying an earlier title is retitled on
+setup; any other title is the user's and is left alone. Both use the
 sensor platform; each platform module branches on
 `entry.data[CONF_ENTRY_TYPE]`.
 

@@ -54,7 +54,7 @@ FLARE stops driving a light once something else has taken it — a switch, a sce
 automation — and picks it up again when released.
 
 **You say which zone a call belongs to.** A zone is a named record of which lights FLARE is
-driving, usually one per room, configured at Settings → Devices & Services → **FLARE Control** →
+driving, usually one per room, configured at Settings → Devices & Services → **FLARE Zones** →
 Add zone. Each one is a real HA device. Pass its `tracking_device_id` on any of
 `apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
@@ -300,7 +300,7 @@ sending:
 | `min_color_temp_change` | 5 | mireds of colour temperature |
 
 Both services take these per call. Leave them out and they come from **Settings → Devices & Services → FLARE
-Control → Configure**, which is where the defaults above are set. They only decide what's sent: override
+Zones → Configure**, which is where the defaults above are set. They only decide what's sent: override
 protection still recognises FLARE's own writes by the tolerances.
 
 ## When zones tick
@@ -309,7 +309,7 @@ Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once p
 fire in turn, in name order, a gap apart, starting on each interval boundary, so that rooms re-checking their
 lights don't all send at the same moment.
 
-Both are set under **FLARE Control → Configure**:
+Both are set under **FLARE Zones → Configure**:
 
 | option | default | |
 |---|---|---|

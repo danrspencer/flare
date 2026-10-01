@@ -64,7 +64,7 @@ def expected_lingering_timers():
 
 @pytest.fixture
 async def zone(hass: HomeAssistant) -> str:
-    """The real Control entry with one zone, placed in the area
+    """The real Zones entry with one zone, placed in the area
     "behaviour_test_room". Returns that area's id, for add_bulbs."""
     areas = await setup_zones(hass, [ZONE])
     return areas[ZONE]

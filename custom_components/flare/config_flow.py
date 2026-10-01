@@ -28,7 +28,6 @@ from .const import (
     CONF_TICK_GAP,
     CONF_TICK_INTERVAL,
     CONF_TWO_STEP_MODELS,
-    CONTROL_ENTRY_TITLE,
     DEFAULT_MIN_BRIGHTNESS_CHANGE,
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
     DEFAULT_TICK_GAP,
@@ -38,6 +37,7 @@ from .const import (
     ENTRY_TYPE_TRACKING,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_STATE,
+    ZONES_ENTRY_TITLE,
 )
 from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
@@ -103,7 +103,7 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_TRACKING}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
-            title=CONTROL_ENTRY_TITLE,
+            title=ZONES_ENTRY_TITLE,
             data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
             subentries=[
                 {
@@ -131,7 +131,7 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
 
 class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
     """Which bulb models need two-step transitions (see two_step.py), and on
-    the Control entry, the zones' tick timing and the smallest change worth
+    the Zones entry, the zones' tick timing and the smallest change worth
     sending. The models field is pre-filled with the shipped defaults and is
     the whole list."""
 

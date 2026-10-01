@@ -102,7 +102,7 @@ A room with no occupancy sensor works fine — it simply never switches
 anything on by itself.
 
 **Zone** is one of FLARE's zones, usually the one named after the room
-(Settings → Devices & Services → FLARE Control). Two automations sharing
+(Settings → Devices & Services → FLARE Zones). Two automations sharing
 a room — a lamp and a pendant driven separately, say — pick the same
 zone.
 
@@ -118,7 +118,7 @@ and when a light comes back online. Between those, it updates whenever
 its zone's **Tick** fires. FLARE ticks each zone in turn, a moment
 apart, so a house full of rooms doesn't send every command at once. The
 interval and the gap between zones are set under **Settings → Devices &
-Services → FLARE Control → Configure**.
+Services → FLARE Zones → Configure**.
 
 {: .note }
 > Don't hide a zone's Tick entity. Home Assistant leaves hidden entities
@@ -354,7 +354,7 @@ Most often, one of these:
   brightness or 5 mireds of colour temperature isn't sent, and nor is
   anything within ±2 brightness or ±10 K, so bulbs that round values off
   aren't fought with every minute. The first two are set under **FLARE
-  Control → Configure**.
+  Zones → Configure**.
 - **It's unavailable.** Unreachable lights are skipped, and picked up
   when they come back.
 - **A scene owns it**, or a **`null` brightness** hands it over.

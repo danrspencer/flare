@@ -1,6 +1,7 @@
 """The config flows: adding the integration, adding schedule sensors and
 tracking scopes, and the options flow."""
 
+import pytest
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
@@ -103,7 +104,7 @@ async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, h
     await hass.async_block_till_done()
 
     assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Control"
+    assert result["title"] == "FLARE Zones"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
 
 
@@ -249,11 +250,12 @@ async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup
     assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
 
 
-async def test_an_existing_tracking_entry_is_renamed_to_control(stub_entry_setup, hass: HomeAssistant):
-    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title="FLARE Tracking")
+@pytest.mark.parametrize("old_title", ["FLARE Tracking", "FLARE Control"])
+async def test_an_entry_with_an_earlier_title_is_renamed_to_zones(stub_entry_setup, hass: HomeAssistant, old_title):
+    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title=old_title)
     assert await hass.config_entries.async_setup(renamed.entry_id)
 
-    assert renamed.title == "FLARE Control"
+    assert renamed.title == "FLARE Zones"
 
 
 async def test_a_title_the_user_chose_is_left_alone(stub_entry_setup, hass: HomeAssistant):
