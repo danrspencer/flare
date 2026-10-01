@@ -164,10 +164,8 @@ Blueprint input mechanics worth knowing:
   (trigger templates can't read the registry, and a `state` trigger only
   takes entity IDs), which is why each schedule has a Phase `event`
   entity: `phase_change` is `event.received` on the device, like the
-  Tick. "Bring your own sensor" (any entity with the right attributes,
-  set via Edit in YAML) went with the entity selector on 2026-10-01, at
-  the user's direction: anyone wanting something different builds their
-  own automation on the services.
+  Tick. There is no "bring your own sensor": anyone wanting something
+  different builds their own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
   automation needs the old key removed outright, not left blank, as
@@ -446,7 +444,7 @@ and they match the two config entries, Schedules and Zones (`tracking` in code).
   Platform modules **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`), which is why "entities" is not a
   folder here. `services.yaml` must stay at the root too. `www/` is the
-  dashboard and needed no change.
+  dashboard.
 
 **Dependencies run one way**: `schedule/` and `tracking/` import only
 `const.py`; `services/` may use both; the root may use all three.
@@ -454,31 +452,24 @@ and they match the two config entries, Schedules and Zones (`tracking` in code).
 silently. `services/__init__.py` holds no imports; the root imports
 `.services.handlers` directly.
 
-Logger names follow the module path, so e.g.
-`custom_components.flare.coordinator` is now
-`custom_components.flare.schedule.coordinator`. Configuring
-`custom_components.flare` (the usual way) is unaffected.
-
-The `sys.path` insertion that used to let tests and `brand/generate_icon.py`
-import these as bare modules is gone; everything imports through the
-package.
+Logger names follow the module path (e.g.
+`custom_components.flare.schedule.coordinator`). Everything, tests and
+`brand/generate_icon.py` included, imports through the package.
 
 ### Services (`custom_components/flare/services/handlers.py`)
 
 Eight, all unit tested and confirmed working live. Full field contracts
-in `docs/helpers.md` and `services.yaml` - not repeated here.
+in `docs/advanced/reference.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
   - pure planners, no side effects.
 - `apply_lighting` - the only side-effecting one; wraps the same
   grouping logic and issues `light.turn_on`/`turn_off`. Takes
   `brightness`/`color_temp_kelvin`/`rgb_color` as **plain values**, not
-  a sensor entity_id. It read a sensor internally once; that was
-  reverted deliberately, and the reversal is meant to stick - entity
-  *selection* happens via the blueprint's `adaptive_sensor` regardless
-  of which layer reads the attributes, and voluptuous's own required-
-  field validation gives the same hard failure the internal read was
-  added for.
+  a sensor entity_id, so it stays usable with any source of values.
+  Don't move the sensor read into the service: the blueprint picks the
+  schedule, and voluptuous's required fields already fail hard on a
+  missing value.
 - `turn_off` - the turn-off counterpart of `apply_lighting`:
   records `{"state": "off"}`, THEN calls `light.turn_off`, as one
   operation. Takes no brightness/colour and does **no** override
@@ -506,7 +497,7 @@ Each tracked entity carries two claims - `confirmed` (a write an earlier
 call observed landing) and `pending` (the most recent attempt). The full
 model, and why two rather than one, lives in `write_tracking.py`'s module
 docstring; the decision table lives in `override_protection.classify()`;
-the user-facing contract lives in `docs/helpers.md`. Three consumers
+the user-facing contract lives in `docs/advanced/reference.md`. Three consumers
 share that one table - `grouping.py`'s `externally_set()`, `sensor.py`'s
 diagnostic status, and `claims_check` - deliberately, because they
 previously drifted.
@@ -557,30 +548,13 @@ rather than assumed:
   "untracked" or recording nothing. A device_id that *is* given but
   isn't one of this entry's own state devices raises
   `ServiceValidationError` on any of the five, rather than behaving
-  like it was omitted. **The old implicit resolver, `scope_for()`
-  (entity → device → area, searched across every configured state
-  device), has been removed entirely.** It was kept alive as an
-  internal-only fallback for the state-changed listener and staleness
-  pruning (the two call sites with no caller to ask), but tracing both
-  showed it never actually had an effect: each only reaches a
-  target-based lookup for an entity with no existing claim anywhere,
-  and each immediately discards that result unless the entity is
-  *already* claimed - which, if true, `_store_for()`'s direct
-  claims-dict scan always finds first, without ever reaching
-  `scope_for()`. Confirmed live: a user pointed out that a state
-  device's setup form asking for a target implied claim ownership it
-  didn't actually have. The `target` field was then kept only to place
-  the zone's device in an area, and removed outright on 2026-10-01 once
-  nothing looked zones up by area: a zone is now just a name. **The
-  blueprint never guesses
-  either**: its required **Zone** input (a device selector filtered to
+  like it was omitted. **Nothing resolves a scope implicitly** - not
+  from areas, not from a light's device. A zone is just a name, and the
+  blueprint's required **Zone** input (a device selector filtered to
   `integration: flare, model: Zone`) is passed straight through as
-  `tracking_device_id`. It used to guess from areas (a named area, else
-  the first light's area, then a `sensor.*_flare_tracking` in it), and
-  that was replaced at the user's direction on 2026-10-01 - *"there's
-  just too much weird behaviour if it gets the wrong one"*. A wrong or
-  missing zone used to mean silently untracked; now a deleted zone makes
-  the service reject the call, loudly.
+  `tracking_device_id`. Guessing was removed at the user's direction:
+  *"there's just too much weird behaviour if it gets the wrong one"*. A
+  deleted zone makes the service reject the call, loudly.
 - **Being switched off is an override.** `classify()` does *not*
   short-circuit on `not is_on`; an off light is judged against its
   claims like any other. A turn-off records `{"state": "off"}` as its
@@ -707,15 +681,9 @@ The integration installs as **two** entries, not one: *FLARE Schedules*
 registry, the zone scheduler, and the state devices).
 
 **User-facing names: "FLARE Zones" and "zone"**, the entry named after
-what it holds. Scopes became zones on 2026-09-27 once they ticked as well
-as tracked; the entry was briefly "FLARE Control", which the user found
-confusing next to "zone" ("a control is just a collection of zones?")
-and renamed on 2026-10-01. Before both it was "FLARE Tracking". Only
-what users see was renamed: code still says tracking/scope/state
-throughout (`ENTRY_TYPE_TRACKING`, `tracking_device_id`,
-`sensor.*_flare_tracking`, `custom:flare-tracking`), since renaming those
-breaks installs. An entry still carrying an earlier title is retitled on
-setup; any other title is the user's and is left alone. Both use the
+what it holds. Code still says tracking/scope/state
+(`ENTRY_TYPE_TRACKING`, `tracking_device_id`, `sensor.*_flare_tracking`,
+`custom:flare-tracking`). Both use the
 sensor platform; each platform module branches on
 `entry.data[CONF_ENTRY_TYPE]`.
 
@@ -893,8 +861,8 @@ an occupancy sensor at all. That matters because
 **false** over a target matching zero entities - so a light-only room
 would otherwise permanently fail the condition.
 
-**Triggers:** `phase_change` (state on the sensor, filtered `to:` the
-four phase names so attribute-only ticks don't fire), `tick`
+**Triggers:** `phase_change` (`event.received` on the Schedule device's
+Phase), `tick`
 (`event.received` on the Zone device's Tick), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
@@ -906,9 +874,8 @@ command timeouts landing at :10 - sent at :00. `tracking/ticker.py`
 fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
 starting on each interval boundary; the blueprint's decision still
 happens fresh at trigger time, so this is NOT the jitter that was
-removed (see Standing decisions). There is no `time_pattern` and no
-Update Interval input: every room has a zone, so nothing needs a
-fallback.
+removed (see Standing decisions). Every room has a zone, so there is no
+`time_pattern` fallback.
 
 - **The Tick has no `entity_category` and must not be hidden.** The
   trigger targets the zone's *device*, and HA expands a device target to
@@ -916,23 +883,20 @@ fallback.
   `_primary_entities_only`; same rule in 2026.4.0, checked). A user
   hiding the Tick silently stops the room's ticks; the docs say not to.
 - **Lights & Occupancy's selector has no device filter or `event`
-  entry.** It was briefly given both so a zone could be picked inside it;
-  the frontend only lists a device in a target picker if it ALSO has an
-  entity passing the entity filter (`getDevices` in
-  `src/data/device/device_picker.ts`), which forced the Tick to be
-  pickable too. A separate Zone input avoids all of it.
+  entry**, so the zone can't be picked there: the frontend only lists a
+  device in a target picker if it ALSO has an entity passing the entity
+  filter (`getDevices` in `src/data/device/device_picker.ts`), which
+  would make the Tick pickable too. Hence the separate Zone input.
 - The Tick is one recorder row per zone per interval. Accepted: the
   schedule sensor already writes one per minute.
 
 - `phase_change` is the schedule's Phase event, which `event.py` fires
   only when the phase actually changes (a manual override included) and
   once on the first refresh after setup, so a restart still repaints
-  rooms. Attribute-only updates never fire it, which is why
-  `scene_recheck_due` no longer compares from/to states.
-- `tick` exists because the curve is **flat** during Morning
-  and Night, so the coordinator re-writes identical state and HA emits
-  `state_reported`, not `state_changed` - `phase_change` goes silent
-  entirely in those phases.
+  rooms. Attribute-only updates never fire it.
+- `tick` exists because `phase_change` fires only at a phase boundary,
+  while the curve ramps within Evening and lights drift between
+  boundaries.
 - `recovered` arms on "at least one of our lights is reachable", firing
   as the first bulb returns. The inverse ("none unavailable") is wrong:
   one permanently-unavailable orphan holds it false forever and disables
@@ -941,8 +905,8 @@ fallback.
   `tick` mops that up.
 - `recovered`'s `value_template` **cannot reference `trigger.*`** - HA
   renders it with only `trigger_variables` in scope, injecting `trigger`
-  afterwards for the fired action only. An earlier version referenced
-  `trigger.entity_id` there and could never fire at all.
+  afterwards for the fired action only; a reference there means it never
+  fires.
 
 **There is no delay anywhere in `action:`, and there must not be.**
 `variables:` render once, at trigger time, so anything reached after a
@@ -1083,21 +1047,17 @@ watching, which isn't reliable right after a restart.
 per-phase scene pickers, and the four per-phase exclude lists. A
 deliberate exception to "the blueprint doesn't know phase names",
 explicitly chosen. All phase-keyed dict lookups use `.get(key, default)`,
-never direct indexing: `states(adaptive_sensor)` can legitimately be
+never direct indexing: the schedule sensor can legitimately be
 `unknown`/`unavailable`, and direct indexing would crash the whole tick.
 `scene_template` wins over the per-phase pick whenever it returns a valid
 scene; `brightness_template`'s per-entity values likewise win over the
 phase exclude lists (`dict(phase_base, **template_result)`).
 
 **Brightness levels are ABSOLUTE 0-255, not multipliers of the curve.**
-`brightness_template` (renamed from `brightness_multiplier_template` in
-0.16.0) and the four `*_idle_brightness` inputs all name the brightness a
-light sits at, on the same scale as the per-phase brightness `number`
-entities. Changed at the user's direction: the multiplier form was the
-one place you had to think in multiples of the curve, and the
-workarounds were visible in his own live configs - dividing by
-`state_attr(sensor, 'brightness')` to pin a light at 10, and passing a
-multiplier of 255 purely to land on `MAX_BRIGHTNESS`.
+`brightness_template` and the four `*_idle_brightness` inputs all name
+the brightness a light sits at, on the same scale as the per-phase
+brightness `number` entities. Chosen at the user's direction: a
+multiplier of the curve made pinning a light at a fixed level awkward.
 
 **The service contract did NOT change.** `apply_lighting` still takes one
 `brightness` plus per-entity *multipliers*, which is a fine primitive for
@@ -1622,9 +1582,7 @@ caught. Don't "simplify" it back to the shared fixture.
 - **Two view strategies, not one**: `custom:flare-schedule` and
   `custom:flare-tracking`, registered as
   `ll-strategy-view-flare-schedule` and
-  `ll-strategy-view-flare-tracking`. The schedule one was plain
-  `custom:flare` in 0.12.x, while it was the only one; renamed in 0.14.0
-  because the bare name gives no hint which of the two you get. Kept
+  `ll-strategy-view-flare-tracking`. Kept
   apart because a house has one scope per room against a handful of
   schedules, so merging would bury the schedules, and they answer
   different questions - what a light should be doing versus who
