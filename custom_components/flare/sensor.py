@@ -32,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_TRACKING:
         for instance in schedule_instances(entry):
             coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
-            async_add_entities([_AdaptiveLightingSensor(coordinator, instance)], config_subentry_id=instance.subentry_id)
+            async_add_entities([_ScheduleSensor(coordinator, instance)], config_subentry_id=instance.subentry_id)
         return
 
     registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
@@ -230,24 +230,18 @@ class _ScopeCountSensor(SensorEntity):
         return {"lights": lights, "total_tracked": total}
 
 
-class _ScheduleSensorBase(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
+class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
     _attr_has_entity_name = True
-
-    def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance, unique_id_suffix: str, forced_object_id: str) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{instance.subentry_id}_{unique_id_suffix}"
-        self.entity_id = f"sensor.{instance.prefix}{forced_object_id}"
-        self._attr_device_info = instance.device_info
-
-
-class _AdaptiveLightingSensor(_ScheduleSensorBase):
     _attr_icon = "mdi:home-lightbulb"
     _attr_name = None  # the entity that represents the device - displays as just the device's own name
     # Over the recorder's attribute size limit, and only read live.
     _unrecorded_attributes = frozenset({"points"})
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
-        super().__init__(coordinator, instance, "flare", "flare")
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{instance.subentry_id}_flare"
+        self.entity_id = f"sensor.{instance.prefix}flare"
+        self._attr_device_info = instance.device_info
 
     @property
     def native_value(self):

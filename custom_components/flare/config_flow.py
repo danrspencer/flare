@@ -44,7 +44,7 @@ from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
 
 
-class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 3
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -132,10 +132,10 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> config_entries.OptionsFlow:
-        return AdaptiveLightingHelpersOptionsFlow()
+        return FlareOptionsFlow()
 
 
-class AdaptiveLightingHelpersOptionsFlow(config_entries.OptionsFlow):
+class FlareOptionsFlow(config_entries.OptionsFlow):
     """The Zones entry's options: which bulb models need two-step transitions
     (see two_step.py), the zones' tick timing, and the smallest change worth
     sending. The models field is pre-filled with the shipped defaults and is
