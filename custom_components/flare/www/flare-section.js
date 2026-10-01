@@ -178,6 +178,8 @@ export function sectionConfig(slug, title) {
       heading('Transitions', 'subtitle'),
       { type: 'markdown', text_only: true, grid_options: { columns: 'full' }, content: TRANSITIONS_NOTE },
       transitions,
+      heading('Copy or paste', 'subtitle'),
+      { type: 'custom:flare-schedule-transfer-card', sensor: slug },
     ],
   };
 }

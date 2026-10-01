@@ -45,6 +45,7 @@ CARD_JS_PATH = "flare-curve-card.js"
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
 STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
+TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
 # flare-section.js and flare-value-slider.js register nothing; the modules
 # above import them.
 
@@ -61,7 +62,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
     )
-    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, STRATEGY_JS_PATH):
+    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
     async_setup_schedule_services(hass)
     return True

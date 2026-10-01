@@ -174,6 +174,11 @@ def test_every_schedule_time_and_curve_entity_is_present(result):
     assert "switch.ground_floor_sticky_phase_override" in entities
 
 
+def test_a_schedule_can_be_copied_or_pasted_from_its_section(result):
+    cards = [c for c in _cards(result["section"]) if c.get("type") == "custom:flare-schedule-transfer-card"]
+    assert [c["sensor"] for c in cards] == ["ground_floor"]
+
+
 def test_the_slug_reaches_every_entity(result):
     for tile in _tiles(result["section"]):
         assert "ground_floor" in tile["entity"], f"{tile['entity']} does not carry the slug"
