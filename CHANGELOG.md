@@ -59,6 +59,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **A zone no longer has a "Lights, devices or areas" field.** It only put the zone's
+  device in an area, and nothing uses that now. Existing zones keep whatever area their
+  device is in; set one on the device page if you want it.
 - **FLARE Tracking is now FLARE Control, and tracking scopes are zones**, now that they
   do more than track. Existing installs are renamed on the next restart; entity IDs,
   `tracking_device_id` and the `custom:flare-tracking` dashboard view are unchanged.
