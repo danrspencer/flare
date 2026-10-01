@@ -59,13 +59,11 @@ rooms to set up:
 Zones can be added, renamed or removed at any time from the Control entry.
 
 {: .note }
-> Adding another schedule sensor or zone later shows a Home Assistant entry
-> picker offering **both FLARE Schedules and FLARE Control**, regardless of which one
-> you clicked "Add" from — a Home Assistant frontend quirk, not a FLARE bug: the picker
-> lists every entry for the domain before checking which one actually supports what
-> you're adding. Pick the entry matching what you clicked (Schedules for a schedule
-> sensor, Control for a zone) — picking the other one simply fails rather than
-> creating anything in the wrong place.
+> On Home Assistant 2026.9 and earlier, adding another schedule sensor or zone shows
+> an entry picker offering **both FLARE Schedules and FLARE Control**, whichever one you
+> clicked "Add" from. Pick the one matching what you're adding (Schedules for a schedule
+> sensor, Control for a zone); the other simply fails. Home Assistant 2026.10 goes
+> straight to the right one.
 
 Each schedule sensor gets its own device, with the phase boundaries, curve values and
 transition durations as ordinary entities you can edit from the device page.
