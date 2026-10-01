@@ -68,7 +68,7 @@ async def test_a_room_updates_on_its_zones_tick(hass: HomeAssistant, add_bulbs, 
     """A lone zone ticks on the minute."""
     areas = await setup_zones(hass, ["lounge"], options=GAP)
     bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": (bulbs, zone_device(hass, areas["lounge"]))})
+    await rooms(hass, {"lounge": (bulbs, zone_device(hass, "lounge"))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
     await at(hass, frozen_time, 19, 0, 55)
@@ -80,13 +80,13 @@ async def test_a_room_updates_on_its_zones_tick(hass: HomeAssistant, add_bulbs, 
 
 async def test_zones_tick_one_gap_apart(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
     """In title order: attic on the minute, study one gap later."""
-    areas = await setup_zones(hass, ["study", "attic"], options=GAP)
+    await setup_zones(hass, ["study", "attic"], options=GAP)
     attic_lamp, study_lamp = await add_bulbs("attic_lamp", "study_lamp")
     await rooms(
         hass,
         {
-            "attic": ([attic_lamp], zone_device(hass, areas["attic"])),
-            "study": ([study_lamp], zone_device(hass, areas["study"])),
+            "attic": ([attic_lamp], zone_device(hass, "attic")),
+            "study": ([study_lamp], zone_device(hass, "study")),
         },
     )
     await switched_on_in_an_empty_room(hass, frozen_time, [attic_lamp, study_lamp])
@@ -104,7 +104,7 @@ async def test_the_picked_zone_wins_over_the_area_the_lights_are_in(
     """The lamp sits in the attic, but the room picks the study's zone."""
     areas = await setup_zones(hass, ["study", "attic"], options=GAP)
     (lamp,) = await add_bulbs("lamp", area_id=areas["attic"])
-    await rooms(hass, {"lamp": ([lamp], zone_device(hass, areas["study"]))})
+    await rooms(hass, {"lamp": ([lamp], zone_device(hass, "study"))})
     await switched_on_in_an_empty_room(hass, frozen_time, [lamp])
 
     await at(hass, frozen_time, 19, 1, 5)
@@ -117,7 +117,7 @@ async def test_the_picked_zone_wins_over_the_area_the_lights_are_in(
 async def test_the_interval_is_set_on_the_entry(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
     areas = await setup_zones(hass, ["lounge"], options={**GAP, "tick_interval": 2})
     bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": (bulbs, zone_device(hass, areas["lounge"]))})
+    await rooms(hass, {"lounge": (bulbs, zone_device(hass, "lounge"))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
     await at(hass, frozen_time, 19, 1, 5)

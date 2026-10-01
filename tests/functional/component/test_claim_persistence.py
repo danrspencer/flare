@@ -6,7 +6,6 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant, State
-from homeassistant.helpers import area_registry as ar
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
@@ -15,7 +14,7 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from custom_components.flare.const import CONF_ENTRY_TYPE, CONF_TARGET, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
 from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
@@ -37,7 +36,6 @@ def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
 async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
     """One scope, its tracking entity added for real, with claims in the
     restore cache if given."""
-    area = ar.async_get(hass).async_get_or_create("Kitchen")
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
@@ -46,7 +44,7 @@ async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
                 subentry_type=SUBENTRY_TYPE_STATE,
                 title="Kitchen",
                 unique_id="kitchen",
-                data={CONF_TARGET: {"area_id": [area.id]}},
+                data={},
             )
         ],
     )

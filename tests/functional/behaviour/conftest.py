@@ -144,7 +144,7 @@ def setup_room(hass: HomeAssistant, zone: str):
         input_ = {
             "adaptive_sensor": SCHEDULE_SENSOR,
             "room_target": {"entity_id": target},
-            "zone": zone_device(hass, zone),
+            "zone": zone_device(hass, ZONE),
             **inputs,
         }
         assert await async_setup_component(

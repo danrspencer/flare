@@ -19,7 +19,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.flare import async_setup_entry
-from custom_components.flare.const import CONF_ENTRY_TYPE, CONF_TARGET, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.tracking.write_tracking import ClaimRegistry
@@ -48,7 +48,7 @@ async def setup_tracking_entry(hass: HomeAssistant, options: dict | None = None)
                 subentry_type=SUBENTRY_TYPE_STATE,
                 title="Test Scope",
                 unique_id="test_scope",
-                data={CONF_TARGET: {"area_id": [test_area(hass).id]}},
+                data={},
             )
         ],
     )

@@ -25,7 +25,6 @@ from .const import (
     CONF_ENTRY_TYPE,
     CONF_MIN_BRIGHTNESS_CHANGE,
     CONF_MIN_COLOR_TEMP_CHANGE,
-    CONF_TARGET,
     CONF_TICK_GAP,
     CONF_TICK_INTERVAL,
     CONF_TWO_STEP_MODELS,
@@ -111,7 +110,7 @@ class AdaptiveLightingHelpersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN
                     "subentry_type": SUBENTRY_TYPE_STATE,
                     "title": name,
                     "unique_id": slugify(name),
-                    "data": {CONF_TARGET: {"area_id": [area_id]}},
+                    "data": {},
                 }
                 for area_id, name in areas
             ],
@@ -223,15 +222,14 @@ def _areas_with_lights(hass) -> list[tuple[str, str]]:
 
 
 class StateSubentryFlow(ConfigSubentryFlow):
-    """Adds one state device (a tracking scope). Which lights it tracks is
-    decided by callers passing its tracking_device_id; the target here only
-    places the device in an area."""
+    """Adds one zone (a "state" subentry). Which lights it tracks is decided
+    by callers passing its tracking_device_id."""
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         return await self._async_form(user_input)
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """Lets a scope be repointed without losing it."""
+        """Lets a zone be renamed without losing it."""
         return await self._async_form(user_input, reconfigure=self._get_reconfigure_subentry())
 
     async def _async_form(self, user_input, reconfigure=None) -> SubentryFlowResult:
@@ -246,30 +244,15 @@ class StateSubentryFlow(ConfigSubentryFlow):
                     errors["name"] = "already_configured"
                     break
             if not errors:
-                data = {CONF_TARGET: user_input.get(CONF_TARGET) or {}}
                 if reconfigure is not None:
-                    return self.async_update_and_abort(
-                        self._get_entry(), reconfigure, title=name, data=data
-                    )
-                return self.async_create_entry(title=name, unique_id=slug or None, data=data)
+                    return self.async_update_and_abort(self._get_entry(), reconfigure, title=name)
+                return self.async_create_entry(title=name, unique_id=slug or None, data={})
 
-        suggested = user_input or (
-            {"name": reconfigure.title, CONF_TARGET: reconfigure.data.get(CONF_TARGET, {})}
-            if reconfigure
-            else {}
-        )
+        suggested = user_input or ({"name": reconfigure.title} if reconfigure else {})
         return self.async_show_form(
             step_id="reconfigure" if reconfigure else "user",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(
-                    {
-                        **SUBENTRY_FIELDS,
-                        # A target selector's filter list goes directly under `entity:`.
-                        vol.Optional(CONF_TARGET): selector.TargetSelector(
-                            selector.TargetSelectorConfig(entity=[{"domain": "light"}])
-                        ),
-                    }
-                ),
+                vol.Schema(SUBENTRY_FIELDS),
                 suggested,
             ),
             errors=errors,

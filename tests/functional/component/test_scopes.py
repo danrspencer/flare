@@ -13,7 +13,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.flare.button import async_setup_entry as button_setup
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
-    CONF_TARGET,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -21,7 +20,6 @@ from custom_components.flare.const import (
     SUBENTRY_TYPE_STATE,
 )
 from custom_components.flare.schedule.coordinator import ScheduleCoordinator, schedule_instances
-from custom_components.flare.sensor import _assign_scope_area
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
@@ -29,9 +27,9 @@ from custom_components.flare.tracking.write_tracking import SIGNAL_WRITE_TRACKIN
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
 
-def _scope(title: str, target: dict) -> ConfigSubentryData:
+def _scope(title: str) -> ConfigSubentryData:
     return ConfigSubentryData(
-        subentry_type=SUBENTRY_TYPE_STATE, title=title, unique_id=title.lower().replace(" ", "_"), data={CONF_TARGET: target}
+        subentry_type=SUBENTRY_TYPE_STATE, title=title, unique_id=title.lower().replace(" ", "_"), data={}
     )
 
 
@@ -82,9 +80,8 @@ def _scope_id(entry, title: str) -> str:
 
 
 async def test_a_light_with_no_scope_named_is_not_tracked_and_stays_manageable(hass: HomeAssistant):
-    """A scope's target plays no part: only a caller naming the scope does."""
-    area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, _ = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    """Only a caller naming the scope makes a light tracked."""
+    _entry, registry, _ = await _setup(hass, _scope("Kitchen"))
     _light(hass, "light.elsewhere")
 
     await _record(registry, None, "light.elsewhere", "ctx-1", ASKED)
@@ -98,7 +95,7 @@ async def test_a_write_before_the_scopes_entity_exists_is_dropped(hass: HomeAssi
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
-        subentries_data=[_scope("Kitchen", {"area_id": [area.id]})],
+        subentries_data=[_scope("Kitchen")],
     )
     entry.add_to_hass(hass)
     registry = ClaimRegistry(hass, entry)  # no entities registered yet
@@ -111,7 +108,7 @@ async def test_a_write_before_the_scopes_entity_exists_is_dropped(hass: HomeAssi
 
 async def test_claims_live_on_the_tracking_entity_and_are_published_there(hass: HomeAssistant):
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, added = await _setup(hass, _scope("Kitchen"))
     tracker = next(e for e in added if hasattr(e, "claims"))
     _light(hass, "light.a", area_id=area.id)
 
@@ -127,7 +124,7 @@ async def test_claims_live_on_the_tracking_entity_and_are_published_there(hass: 
 
 async def test_counters_split_one_scopes_lights_by_status(hass: HomeAssistant):
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, added = await _setup(hass, _scope("Kitchen"))
     controlled = next(e for e in added if e.entity_id.endswith("_flare_controlled"))
     overridden = next(e for e in added if e.entity_id.endswith("_flare_overridden"))
 
@@ -149,7 +146,7 @@ async def test_counters_split_one_scopes_lights_by_status(hass: HomeAssistant):
 async def test_two_callers_writing_one_light_share_the_scopes_claims(hass: HomeAssistant):
     """Two automations driving one room co-operate."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, _ = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, _ = await _setup(hass, _scope("Kitchen"))
     scope = _scope_id(_entry, "Kitchen")
     _light(hass, "light.a", area_id=area.id)
 
@@ -164,7 +161,7 @@ async def test_an_unavailable_light_holding_a_claim_does_not_hold_a_scope_open(h
     """Anything not `on` is dark, so one dead entity can't hold a room open.
     The claim predates the listener, as after a restart."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, _ = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, _ = await _setup(hass, _scope("Kitchen"))
     scope = _scope_id(_entry, "Kitchen")
     _light(hass, "light.a", area_id=area.id)
     _light(hass, "light.dead", area_id=area.id)
@@ -187,7 +184,7 @@ async def test_scopes_release_independently(hass: HomeAssistant):
     kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
     hall = ar.async_get(hass).async_get_or_create("Hall")
     _entry, registry, _ = await _setup(
-        hass, _scope("Kitchen", {"area_id": [kitchen.id]}), _scope("Hall", {"area_id": [hall.id]})
+        hass, _scope("Kitchen"), _scope("Hall")
     )
     _light(hass, "light.k", area_id=kitchen.id)
     _light(hass, "light.h", area_id=hall.id)
@@ -206,7 +203,7 @@ async def test_the_clear_button_clears_only_its_own_scope(hass: HomeAssistant):
     kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
     hall = ar.async_get(hass).async_get_or_create("Hall")
     _entry, registry, added = await _setup(
-        hass, _scope("Kitchen", {"area_id": [kitchen.id]}), _scope("Hall", {"area_id": [hall.id]})
+        hass, _scope("Kitchen"), _scope("Hall")
     )
     _light(hass, "light.k", area_id=kitchen.id)
     _light(hass, "light.h", area_id=hall.id)
@@ -223,7 +220,7 @@ async def test_the_clear_button_clears_only_its_own_scope(hass: HomeAssistant):
 async def test_the_override_event_carries_the_scopes_device_id(hass: HomeAssistant):
     """device_id puts the event in the scope device's Activity."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    entry, registry, added = await _setup(hass, _scope("Kitchen"))
     instance = state_instances(entry)[0]
     device = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Kitchen"
@@ -256,7 +253,7 @@ async def test_the_override_event_carries_the_scopes_device_id(hass: HomeAssista
 async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssistant):
     """Absent, not null."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, added = await _setup(hass, _scope("Kitchen"))
     tracker = next(e for e in added if hasattr(e, "claims"))
 
     events: list = []
@@ -273,47 +270,12 @@ async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssis
     assert "device_id" not in events[0].data
 
 
-async def test_a_state_device_lands_in_the_area_it_targets(hass: HomeAssistant):
-    kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-    entry, _registry_, added = await _setup(hass, _scope("Kitchen", {"area_id": [kitchen.id]}))
-    instance = state_instances(entry)[0]
-    device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Kitchen"
-    )
-    tracker = next(e for e in added if hasattr(e, "claims"))
-    tracker.registry_entry = er.async_get(hass).async_get_or_create(
-        "sensor", DOMAIN, tracker.unique_id, config_entry=entry, device_id=device.id
-    )
-
-    _assign_scope_area(hass, tracker, instance)
-
-    assert dr.async_get(hass).async_get(device.id).area_id == kitchen.id
-
-
-async def test_a_scope_spanning_several_areas_is_left_unassigned(hass: HomeAssistant):
-    kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-    hall = ar.async_get(hass).async_get_or_create("Hall")
-    entry, _registry_, added = await _setup(hass, _scope("Both", {"area_id": [kitchen.id, hall.id]}))
-    instance = state_instances(entry)[0]
-    device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Both"
-    )
-    tracker = next(e for e in added if hasattr(e, "claims"))
-    tracker.registry_entry = er.async_get(hass).async_get_or_create(
-        "sensor", DOMAIN, tracker.unique_id, config_entry=entry, device_id=device.id
-    )
-
-    _assign_scope_area(hass, tracker, instance)
-
-    assert dr.async_get(hass).async_get(device.id).area_id is None
-
-
 async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssistant):
     """The counts depend on live state, which changes with no claim changing.
     Unavailable rather than off: off with someone else's claim is still
     overridden."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
-    _entry, registry, added = await _setup(hass, _scope("Kitchen", {"area_id": [area.id]}))
+    _entry, registry, added = await _setup(hass, _scope("Kitchen"))
     tracker = next(e for e in added if hasattr(e, "claims"))
     overridden = next(e for e in added if e.entity_id.endswith("_flare_overridden"))
 

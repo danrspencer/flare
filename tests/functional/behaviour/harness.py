@@ -19,7 +19,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
-    CONF_TARGET,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_TRACKING,
@@ -185,8 +184,8 @@ async def setup_schedule(hass: HomeAssistant) -> MockConfigEntry:
 
 
 async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
-    """A real Control entry with a zone per name, each over its own area of
-    that name. Returns {name: area_id}."""
+    """A real Control entry with a zone per name, plus an area of each name
+    for bulbs to sit in. Returns {name: area_id}."""
     areas = {name: ar.async_get(hass).async_get_or_create(name).id for name in names}
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -196,7 +195,7 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
         options=options or {},
         subentries_data=[
             ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_STATE, title=name, unique_id=name, data={CONF_TARGET: {"area_id": [area_id]}}
+                subentry_type=SUBENTRY_TYPE_STATE, title=name, unique_id=name, data={}
             )
             for name, area_id in areas.items()
         ],
@@ -207,10 +206,13 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     return areas
 
 
-def zone_device(hass: HomeAssistant, area_id: str) -> str:
-    """The device of the zone placed in `area_id`, which the blueprint's Zone
-    input takes."""
-    (device,) = [d for d in dr.async_entries_for_area(dr.async_get(hass), area_id) if d.model == "Zone"]
+def zone_device(hass: HomeAssistant, name: str) -> str:
+    """The device of the zone called `name`, which the blueprint's Zone input
+    takes."""
+    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING]
+    (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == name]
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry.entry_id)
+    assert device is not None, f"zone {name} has no device"
     return device.id
 
 

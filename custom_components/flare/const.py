@@ -11,10 +11,6 @@ CONF_TWO_STEP_MODELS = "two_step_models"
 # Subentry type for a state device (a tracking scope).
 SUBENTRY_TYPE_STATE = "state"
 
-# A state device's target. Only used to place its device in an area; it
-# doesn't decide which lights the scope tracks.
-CONF_TARGET = "target"
-
 # Fired when a tracked light becomes "overridden", with both claims and
 # the live values at that moment (see sensor.py's _refresh_statuses).
 EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"

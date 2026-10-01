@@ -567,10 +567,10 @@ rather than assumed:
   claims-dict scan always finds first, without ever reaching
   `scope_for()`. Confirmed live: a user pointed out that a state
   device's setup form asking for a target implied claim ownership it
-  didn't actually have. A state device's `target` now does exactly one
-  thing - seeds `_assign_scope_area`'s best-effort, blank-only Area
-  placement for the device's own registry entry (sensor.py) - and plays
-  no part in which lights get tracked. **The blueprint never guesses
+  didn't actually have. The `target` field was then kept only to place
+  the zone's device in an area, and removed outright on 2026-10-01 once
+  nothing looked zones up by area: a zone is now just a name. **The
+  blueprint never guesses
   either**: its required **Zone** input (a device selector filtered to
   `integration: flare, model: Zone`) is passed straight through as
   `tracking_device_id`. It used to guess from areas (a named area, else

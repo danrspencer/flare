@@ -53,10 +53,10 @@ rooms to set up:
   the house that should share a rhythm; one for the whole house is fine to start.
 - **FLARE Control** — one zone per room. A zone remembers which lights FLARE is
   currently driving, and its **Tick** tells the room's automation when to update. Every
-  area containing lights is offered, pre-selected, and each one you keep becomes a zone.
-  Trim the list if you like; anything you leave out simply isn't tracked.
+  area containing lights is offered, pre-selected, and each one you keep becomes a zone
+  named after it. Trim the list if you like; you can add more later.
 
-Zones can be added, retargeted or removed at any time from the Control entry.
+Zones can be added, renamed or removed at any time from the Control entry.
 
 {: .note }
 > Adding another schedule sensor or zone later shows a Home Assistant entry
