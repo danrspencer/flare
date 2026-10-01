@@ -16,6 +16,7 @@ from tests.functional.behaviour.harness import (
 
 # Past the blueprint's Wait time check, with no_motion_wait=0.
 PAST_THE_WAIT = 120
+SECOND_SENSOR = "binary_sensor.hall_doorway_occupancy"
 
 
 async def lit_room(hass, add_bulbs, setup_room, tracking_scope, **inputs):
@@ -61,6 +62,57 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
 
     assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}, (
         "the room emptied but the lights stayed on"
+    )
+
+
+async def test_one_sensors_wait_running_out_does_not_empty_a_room_another_saw_motion_in(
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
+) -> None:
+    """Each sensor's Wait time runs out on its own; the room is only empty
+    once they all have."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=tracking_scope)
+    occupancy(hass, HALL_SENSOR, "off")
+    occupancy(hass, SECOND_SENSOR, "off")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR, SECOND_SENSOR], no_motion_wait=300)
+    occupancy(hass, HALL_SENSOR, "on")
+    occupancy(hass, SECOND_SENSOR, "on")
+    await hass.async_block_till_done()
+    lit = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    assert room_brightness(hass, bulbs) == lit
+
+    occupancy(hass, HALL_SENSOR, "off")
+    await let_time_pass(hass, frozen_time, 100)
+    occupancy(hass, SECOND_SENSOR, "off")
+    await let_time_pass(hass, frozen_time, 201)
+
+    assert room_brightness(hass, bulbs) == lit, (
+        "the first sensor's Wait time ran out while the second's hadn't"
+    )
+
+    await let_time_pass(hass, frozen_time, 100)
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}, (
+        "the room stayed lit after every sensor's Wait time ran out"
+    )
+
+
+async def test_a_sensor_left_unavailable_does_not_keep_a_room_lit(
+    hass: HomeAssistant, add_bulbs, setup_room, tracking_scope, frozen_time
+) -> None:
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=tracking_scope)
+    occupancy(hass, HALL_SENSOR, "off")
+    occupancy(hass, SECOND_SENSOR, "unavailable")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR, SECOND_SENSOR], no_motion_wait=0)
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}, (
+        "an unavailable sensor held an empty room on"
     )
 
 
