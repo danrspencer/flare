@@ -35,6 +35,7 @@ permalink: /playground/
   <button type="button" class="alp-btn" data-preset="late-riser">Late riser</button>
   <button type="button" class="alp-btn" data-preset="very-warm-night">Very warm night</button>
   <button type="button" class="alp-btn" id="alp-share">Copy link to these settings</button>
+  <button type="button" class="alp-btn" id="alp-copy-schedule">Copy schedule</button>
 </div>
 
 <p class="alp-status" id="alp-status"></p>
@@ -92,6 +93,22 @@ permalink: /playground/
     Evening's across the entire afternoon.
   </p>
   <div class="alp-grid" id="alp-transitions"></div>
+</div>
+
+<div class="alp-panel">
+  <h3 id="load-a-schedule">Load a schedule</h3>
+  <p class="alp-panel-hint">
+    Paste a schedule copied from Home Assistant (its <strong>Copy</strong> button on
+    the schedule dashboard, or the schedule's <strong>Reconfigure</strong>) to see its
+    curve here. <strong>Copy schedule</strong> above goes the other way: paste the
+    result into Home Assistant to use these settings. Anything a schedule leaves out
+    keeps its value here.
+  </p>
+  <textarea class="alp-yaml" id="alp-yaml" spellcheck="false" placeholder="morning:&#10;  time: &quot;06:30&quot;&#10;  brightness: 255"></textarea>
+  <div class="alp-actions">
+    <button type="button" class="alp-btn alp-btn--primary" id="alp-load-schedule">Load</button>
+  </div>
+  <p class="alp-status" id="alp-load-status"></p>
 </div>
 
 <link rel="stylesheet" href="{{ '/assets/css/playground.css' | relative_url }}" />

@@ -68,6 +68,10 @@ preview what the light will look like: both sliders are painted in the colour th
 sets, and how far the brightness one fills is how bright it will be. It's the same idea as
 Home Assistant's own brightness slider for a light.
 
+**Copy or paste**, at the bottom of each schedule, copies that schedule as text, or applies
+one you paste in, so a schedule can be backed up, shared, or copied onto another. See
+[copying a schedule](../advanced/reference/#copying-a-schedule).
+
 ## Changing it
 
 Both views are generated fresh each time they load, which is what keeps them up to date

@@ -21,6 +21,7 @@ custom_components/flare/
         curve.py         brightness/colour-temperature schedule, Kelvin -> RGB
         coordinator.py   the schedule computation behind the schedule
                          entities - one per sensor added via "Add Sensor"
+        transfer.py      a schedule as YAML, for export and import
     zone/          zones: who owns a light, and when each zone ticks
         override_protection.py
                          classify(): off / untracked / controlled / overridden
@@ -32,7 +33,9 @@ custom_components/flare/
         instance.py      the zone device itself (one per room, usually)
         ticker.py        fires each zone's Tick in turn, a gap apart
     services/      the services, and the planning behind them
-        handlers.py      the eight services, registered against real HA state
+        handlers.py      the eight zone services, registered against real HA state
+        schedules.py     export_schedule / import_schedule, registered for the
+                         domain rather than by either entry
         grouping.py      reachability, multiplier bucketing, tolerance checks,
                          override protection, two-step/combined and
                          RGB-vs-colour-temp routing
