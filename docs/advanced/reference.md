@@ -32,8 +32,7 @@ handling reachability, tolerance, override protection, two-step transitions and
 RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
-schedule sensor's attributes (see [schedule sensors](#schedule-sensors)) is an ordinary
-template on your side.
+[schedule sensor](#optional-day-phasecurve-sensors)'s attributes is an ordinary template on your side.
 
 ```yaml
 action: flare.apply_lighting
@@ -79,8 +78,8 @@ rejects it outright rather than always silently answering "untracked" or recordi
 A `tracking_device_id` that *is* given but isn't one of your zones raises rather than silently
 behaving like it was omitted — a typo'd or stale id is a mistake worth knowing about.
 
-Every entity passed in one call goes into the *same* zone — there's no per-entity resolution any more, so a
-call spanning several rooms needs one call per room's own zone.
+Every entity passed in one call goes into the *same* zone, so a call spanning several rooms needs one call per
+room's own zone.
 
 Because the zone is something you state rather than something resolved from configuration, **two calls naming the
 same zone share its claims and co-operate.** Name different zones to track two automations apart.
@@ -88,15 +87,15 @@ same zone share its claims and co-operate.** Name different zones to track two a
 `force: true` writes through regardless of who holds a light. The write is still recorded against
 `tracking_device_id`, so protection works again on the next non-forced call naming that same zone.
 
-The blueprint resolves this for you from `room_target` — see [One target, two jobs](../../blueprint/#one-target-two-jobs)
-— so you only need to pass `tracking_device_id` by hand when calling these services directly.
+The blueprint passes its [Zone](../../blueprint/#setting-up-a-room) input, so you only need
+`tracking_device_id` when calling these services yourself.
 
 #### The two claims
 
 Each tracked light carries two claims on its zone:
 
-- **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, the
-  pre-write baseline for a first write, or the snapshot taken when a device returns from unavailable.
+- **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, or the
+  pre-write baseline for a first write.
 - **`latest`** — the most recent write sent, not yet re-observed.
 
 Two rather than one because a write is recorded when issued, not when confirmed. With a single record, one
@@ -385,7 +384,7 @@ treatment two ways:
 The match is on the label's *id*, not its display name. A label whose id doesn't line up produces no error and
 no log line — the bulb silently goes back to combined transitions.
 
-The model list is in the integration's options (Settings → Devices & Services → FLARE → **Configure**), one
+The model list is in the integration's options (Settings → Devices & Services → FLARE Zones → **Configure**), one
 case-insensitive glob per line, matched against `"<manufacturer> <model>"` — both `*TRADFRI bulb*` and `IKEA*`
 work. Any light whose device matches a pattern is routed into two-step transitions automatically, immediately,
 with no repair or confirmation step in the way. The box is pre-filled with the shipped defaults, so what you see
@@ -403,7 +402,7 @@ which makes them transition *worse*, two calls where one was fine.
 ## Optional: day-phase/curve sensors
 
 To have the curve running continuously rather than calling `compute_curve` yourself, add a sensor from the
-Schedules entry (Settings → Devices & Services → FLARE Schedules → Add Sensor). It asks only for a name.
+Schedules entry (Settings → Devices & Services → FLARE Schedules → Add schedule sensor). It asks only for a name.
 
 Add as many as you like; each is independent and gets its own device. Renaming the device later updates every
 entity's displayed name, but **entity_ids keep the name you first typed**, so it's worth getting right up front.
@@ -412,7 +411,8 @@ Each sensor's device contains, computed the same way `compute_curve` computes th
 
 | Entity | What it is |
 |---|---|
-| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's Schedule input at this |
+| `sensor.<name>_flare` | The "right now" reading — see the attribute table below |
+| `event.<name>_flare_phase` | Fires with the phase's name each time the phase changes, a manual override included. The blueprint's **Schedule** input picks this device and triggers on it |
 | `select.<name>_flare_phase` | Manual phase override — `Auto` (default) or a specific phase. An override holds until the schedule itself next moves on: pin `Day` during Evening and it still becomes `Night` when Evening would have ended. The sticky switch below changes that |
 | `time.<name>_morning_time` / `day_time` / `evening_earliest_time` / `evening_latest_time` / `night_time` | The five schedule boundaries — start times for Morning, Day, and Night, and Evening's earliest/latest bound. Each starts at a representative default (06:00/08:00/17:00/20:00/22:00) and is adjustable at any time; the change applies within seconds, not on the next 60s poll |
 | `number.<name>_<phase>_brightness` / `_kelvin` | The eight curve values — brightness (0-255) and colour temperature (1000-10000K), one pair per phase. Each starts at the value shown in `compute_curve`'s field list above, and is adjustable at any time |
@@ -435,8 +435,8 @@ there is no configuration form. Removing a schedule means removing its device fr
 | `evening_earliest` / `evening_latest` | the bounds Evening was clamped between |
 | `points` | the full day as 289 `{t, brightness, kelvin}` samples, for the chart |
 
-There are no separate boundary sensors: a phase-change automation needs only a
-`state` trigger with `attribute: phase` on this entity.
+There are no separate boundary sensors: a phase-change automation triggers on
+`event.<name>_flare_phase`.
 
 `points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
 not a right-now value.

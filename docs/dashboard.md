@@ -77,8 +77,3 @@ control** from the dashboard's three-dot menu.
 {: .note }
 > Take control is one-way. Once you've taken control a view stops picking up changes to
 > FLARE's layout, and newly added schedule sensors or zones won't appear on their own.
-
-{: .note }
-> **Changed in 0.14.0** — the schedule view was `custom:flare` before. Change the type to
-> `custom:flare-schedule`; a view still using the old name shows "Custom element doesn't
-> exist".
