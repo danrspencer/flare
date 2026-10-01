@@ -5,12 +5,7 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
 
-from ..tracking.override_protection import (  # noqa: F401 (classify/target_matches_values re-exported for sensor.py)
-    _color_temp_matches,
-    classify,
-    is_blocked,
-    target_matches_values,
-)
+from ..tracking.override_protection import _color_temp_matches, classify, is_blocked
 from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
