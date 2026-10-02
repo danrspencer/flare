@@ -39,6 +39,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **Adding FLARE sets up a first schedule too.** Setup asks for its name (Home by default)
+  alongside the rooms to make zones from, so FLARE is ready for its first room automation
+  straight away. It now finishes with a summary of what it created.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out
   as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
   buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new
