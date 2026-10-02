@@ -53,13 +53,25 @@ views:
 `downstairs` for `sensor.downstairs_flare`. The full entity ID works too. Name one that
 doesn't exist and the view says so, and lists the schedules you do have.
 
+## Just the chart
+
+To put the curve chart on a dashboard of your own: on Home Assistant 2026.6 or newer, add a
+card, open the **By entity** tab and pick your schedule sensor — **FLARE Curve** appears
+under *Community* with a preview. On older versions, add a **Manual** card:
+
+```yaml
+type: custom:flare-curve-card
+sensor: home
+```
+
+`sensor` is the part before `_flare` in the schedule sensor's entity ID.
+
 ## Reading the Lighting view
 
 Twenty-five near-identical controls is a lot to scan, so two things are colour-coded:
 
 - **Colour is the phase** — Morning blue, Day yellow, Evening orange, Night indigo,
-  wherever that phase appears. It follows the colour temperature each phase reaches, so
-  it lines up with the curve above.
+  wherever that phase appears.
 - **Icon is the channel** — brightness, colour temperature, or an hourglass for
   transitions.
 
@@ -74,9 +86,9 @@ one you paste in, so a schedule can be backed up, shared, or copied onto another
 
 ## Changing it
 
-Both views are generated fresh each time they load, which is what keeps them up to date
-when FLARE changes. If you'd rather own the layout and edit it by hand, use **Take
-control** from the dashboard's three-dot menu.
+Both views rebuild themselves each time they load, so they pick up changes to FLARE and new
+schedules or zones on their own. If you'd rather own the layout and edit it by hand, use
+**Take control** from the dashboard's three-dot menu.
 
 {: .note }
 > Take control is one-way. Once you've taken control a view stops picking up changes to

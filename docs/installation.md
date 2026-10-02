@@ -7,14 +7,11 @@ permalink: /installation/
 # Quickstart
 {: .no_toc }
 
-Five minutes to a room running on the curve. This covers the standard setup; the
-[Reference]({{ site.baseurl }}/reference/) covers everything underneath it.
+Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.4.0 or newer (the blueprint uses the native
-> `occupancy.*` triggers), [HACS](https://hacs.xyz) installed, and your lights assigned to
-> areas. Areas aren't strictly required, but FLARE offers to set itself up per room from
-> them, which saves most of the work.
+> **Prerequisites** — Home Assistant 2026.4.0 or newer, [HACS](https://hacs.xyz) installed,
+> and your lights assigned to areas, so FLARE can set itself up room by room.
 
 1. TOC
 {:toc}
@@ -31,43 +28,27 @@ https://github.com/danrspencer/flare
 
 with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
-{: .tip }
-> The dashboard card ships inside the integration and registers itself — no Lovelace
-> resource to add.
-
 {: .note }
-> **Want the beta builds?** FLARE publishes pre-releases between stable versions. You
-> won't be offered them unless you ask: HACS adds a **Pre-release** switch for each
-> repository you've downloaded, and turning FLARE's on starts offering betas as ordinary
-> updates. It ships disabled, so enable the entity first. Leave it alone to stay on
-> stable releases only.
+> **Want the beta builds?** Turn on FLARE's **Pre-release** switch in HACS (it starts
+> disabled, so enable the entity first) and betas arrive as ordinary updates.
 
 ## Step 2 — restart, then add FLARE
 
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
 
-Adding it once creates both of FLARE's entries, ready to use. It asks two things:
+It asks two things:
 
-- **A name for your first schedule** (Home, unless you change it), under **FLARE
-  Schedules**. A schedule is the day's curve: when each phase starts, and how bright and
-  warm the light is. One for the whole house is fine; add more later for parts of the
-  house that should keep a different rhythm.
-- **Which rooms to set up**, each becoming a zone under **FLARE Zones**. A zone remembers
-  which lights FLARE is currently driving, and its **Tick** tells the room's automation
-  when to update. Every area containing lights is offered, pre-selected, and each one you
-  keep becomes a zone named after it. Trim the list if you like.
+- **A name for your first schedule** — Home, unless you change it. The schedule is the
+  day's lighting: when each phase starts, and how bright and warm it is. One for the whole
+  house is fine to start with.
+- **Which rooms to set up** — every area with lights is offered, pre-selected. Each one
+  you keep becomes a zone, named after the room.
 
-Schedules and zones can be added or removed at any time from their entries, and zones renamed.
+You can add more schedules and zones later, from **FLARE Schedules** and **FLARE Zones**.
 
 {: .note }
-> On Home Assistant 2026.9 and earlier, adding another schedule sensor or zone shows
-> an entry picker offering **both FLARE Schedules and FLARE Zones**, whichever one you
-> clicked "Add" from. Pick the one matching what you're adding (Schedules for a schedule
-> sensor, Zones for a zone); the other simply fails. Home Assistant 2026.10 goes
-> straight to the right one.
-
-Each schedule sensor gets its own device, with the phase boundaries, curve values and
-transition durations as ordinary entities you can edit from the device page.
+> On Home Assistant 2026.9 and earlier, adding another schedule or zone first asks you to
+> pick between FLARE Schedules and FLARE Zones. Pick the one matching what you're adding.
 
 ## Step 3 — install the blueprint and create an automation
 
@@ -85,22 +66,10 @@ Create an automation from it and fill in three things:
 That's the minimum. Everything else has a working default.
 
 {: .note }
-> Building your own automations on FLARE's actions instead? Ignore that repair — the
-> blueprint is optional. See the [Reference]({{ site.baseurl }}/reference/).
+> A room with no occupancy sensor still follows the curve, but never turns its lights on or
+> off by itself.
 
-{: .note }
-> **You won't have to remember to update it.** The integration and the blueprint update
-> separately, so when a release changes the blueprint FLARE raises a repair in
-> **Settings → System → Repairs**. Press Fix and it downloads the new one and reloads
-> your automations — they keep their settings. If you've edited your own copy, ignore
-> the repair instead, since updating replaces the file.
-
-{: .note }
-> Occupancy is optional. With no occupancy sensor in the target, FLARE keeps the room's
-> lights on the curve but never turns them on or off by itself.
-
-Repeat per room. Rooms can share a schedule sensor — FLARE only sends a command to a
-light that isn't already where it should be, so sharing one costs very little traffic.
+Repeat for each room.
 
 ## Step 4 — add the dashboard (optional)
 
@@ -117,27 +86,16 @@ views:
       type: custom:flare-zone
 ```
 
-**Lighting** gives you the day's curve and every schedule and curve setting, a section
-per schedule sensor. **Zones** shows which lights FLARE is driving and which ones
-something else has taken over. Nothing to fill in — see the
-[Dashboard]({{ site.baseurl }}/dashboard/) page for the details.
-
-{: .tip }
-> **Just want the chart?** On Home Assistant 2026.6 or newer, add a card, open the
-> **By entity** tab and pick your schedule sensor — **FLARE Curve** appears under
-> *Community* with a live preview. Or add a **Manual** card with
-> `type: custom:flare-curve-card` and `sensor: ground_floor`, the part before `_flare`
-> in the sensor's entity ID.
+**Lighting** shows the day's curve and every setting of your schedules. **Zones** shows
+which lights FLARE is driving and which ones something else has taken over. See
+[Dashboard]({{ site.baseurl }}/dashboard/) for more, including adding just the chart.
 
 ---
 
 ## What now
 
-- Lights not behaving as you expect? Each zone has **Controlled** and
-  **Overridden** counters and a **Clear** button — see
-  [override protection]({{ site.baseurl }}/reference/integration/#override-protection).
-- Want a scene to own the room at certain times?
-  [Scene handoff]({{ site.baseurl }}/reference/scenes/).
-- Want to skip the blueprint entirely?
-  [Building without it]({{ site.baseurl }}/reference/custom-automations/).
 - Every blueprint input, with defaults: [Blueprint]({{ site.baseurl }}/blueprint/).
+- A light not doing what you expect?
+  [Why didn't my light change?]({{ site.baseurl }}/blueprint/#why-didnt-my-light-change)
+- Want it to behave differently — a weekend lie-in, a holiday schedule?
+  [Examples]({{ site.baseurl }}/examples/).

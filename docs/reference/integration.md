@@ -401,8 +401,8 @@ no log line — the bulb silently goes back to combined transitions.
 
 The model list is in the integration's options (Settings → Devices & Services → FLARE Zones → **Configure**), one
 case-insensitive glob per line, matched against `"<manufacturer> <model>"` — both `*TRADFRI bulb*` and `IKEA*`
-work. Any light whose device matches a pattern is routed into two-step transitions automatically, immediately,
-with no repair or confirmation step in the way. The box is pre-filled with the shipped defaults, so what you see
+work. Any light whose device matches a pattern gets two-step transitions from its next update. The box is
+pre-filled with the shipped defaults, so what you see
 is the complete list in use; a pattern you delete is genuinely gone. Clearing the box entirely falls back to the
 defaults, so it can't quietly switch off detection.
 
@@ -457,9 +457,7 @@ There are no separate boundary sensors: a phase-change automation triggers on
 `points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
 not a right-now value.
 
-For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
-schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
-already groups the same entities for free.
+For a dashboard, see [Dashboard](../../dashboard/).
 
 ### Copying a schedule
 
