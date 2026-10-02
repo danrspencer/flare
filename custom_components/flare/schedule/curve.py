@@ -48,6 +48,17 @@ DEFAULT_CURVE_VALUES = {
     "night_kelvin_transition": DEFAULT_NIGHT_KELVIN_TRANSITION,
 }
 
+
+def value_range(key: str) -> tuple[int, int]:
+    """The allowed range of one curve value, keyed like DEFAULT_CURVE_VALUES.
+    A transition can run a whole day; longer than its phase clamps to it."""
+    if key.endswith("_transition"):
+        return 0, 1440
+    if key.endswith("_brightness"):
+        return 0, 255
+    return 1000, 10000
+
+
 # Hours of day, used to seed new time entities and the docs playground.
 DEFAULT_SCHEDULE_HOURS = {
     "morning": 6,

@@ -13,6 +13,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.services.handlers import async_unload_services
+from custom_components.flare.services.schedules import async_setup_schedule_services
 from tests.functional.component.harness import (
     CT,
     apply_lighting,
@@ -169,7 +170,9 @@ async def test_zone_device_id_rejects_a_device_that_isnt_a_zone(setup_integratio
 
 
 async def test_the_services_registered_are_exactly_the_ones_services_yaml_documents(setup_integration: HomeAssistant):
-    """Against what's really registered, not a hand-written list."""
+    """Against what's really registered, not a hand-written list. The
+    schedule services come from async_setup, which this harness skips."""
+    async_setup_schedule_services(setup_integration)
     documented = set(yaml.safe_load((COMPONENT / "services.yaml").read_text()))
     assert set(setup_integration.services.async_services_for_domain(DOMAIN)) == documented
 

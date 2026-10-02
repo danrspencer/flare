@@ -29,6 +29,7 @@ from homeassistant.helpers.start import async_at_started
 from .blueprint_check import async_check as async_check_blueprint
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
+from .services.schedules import async_setup_schedule_services
 from .event import ticks_key
 from .zone.ticker import TickScheduler
 from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
@@ -44,12 +45,14 @@ CARD_JS_PATH = "flare-curve-card.js"
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
 STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
+TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
 # flare-section.js and flare-value-slider.js register nothing; the modules
 # above import them.
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Serve www/ and load the front-end modules on every page.
+    """Serve www/, load the front-end modules on every page, and register
+    the schedule services, which belong to neither entry.
 
     The URL is versioned and cached hard, so each release is a new URL.
     The version is a path segment, not `?v=`: the modules import each
@@ -59,8 +62,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
     )
-    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, STRATEGY_JS_PATH):
+    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
+    async_setup_schedule_services(hass)
     return True
 
 
