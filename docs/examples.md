@@ -66,49 +66,49 @@ weekday.
   passed moves the current phase too: set Morning to 08:00 at 07:00 and the house goes back
   to Night for an hour.
 
-## A winter schedule
+## A holiday schedule
 
-Earlier, dimmer evenings from November to February, and the usual ones the rest of the
-year. Each season is a whole schedule, copied from a schedule's dashboard section and
-pasted in as it is, so switching season sets everything at once.
+Switch the whole house to a holiday schedule, with later mornings and later nights, from a
+toggle, and back again when the holiday's over.
+
+First create a **Toggle** helper called *Holiday mode* (Settings → Devices & Services →
+Helpers → Create helper → Toggle). Then:
 
 ```yaml
-alias: Seasonal schedule
+alias: Holiday schedule
 triggers:
-  - trigger: template
-    value_template: "{{ now().month in [11, 12, 1, 2] }}"
-  - trigger: template
-    value_template: "{{ now().month not in [11, 12, 1, 2] }}"
+  - trigger: state
+    entity_id: input_boolean.holiday_mode
 actions:
-  - if: "{{ now().month in [11, 12, 1, 2] }}"
+  - if: "{{ is_state('input_boolean.holiday_mode', 'on') }}"
     then:
       - action: flare.import_schedule
         data:
           schedule_device_id: "{{ device_id('sensor.home_flare') }}"
           schedule: |
             morning:
-              time: "06:00"
+              time: "08:30"
               brightness: 255
               kelvin: 6667
               brightness_transition: 60
               kelvin_transition: 60
             day:
-              time: "08:00"
+              time: "10:00"
               brightness: 255
               kelvin: 6667
               brightness_transition: 65
               kelvin_transition: 1440
             evening:
-              earliest: "16:30"
+              earliest: "17:00"
               latest: "20:00"
-              brightness: 150
+              brightness: 180
               kelvin: 3200
               brightness_transition: 60
               kelvin_transition: 60
             night:
-              time: "21:30"
+              time: "23:30"
               brightness: 80
-              kelvin: 2000
+              kelvin: 2700
               brightness_transition: 30
               kelvin_transition: 30
     else:
@@ -143,13 +143,13 @@ actions:
               kelvin_transition: 30
 ```
 
-To make your own, set a schedule up the way you want it for one season, press **Copy** in its
-dashboard section, and paste the result in place of one of the schedules above. Then do the
-same for the other season. Each trigger fires once, on the day its season starts, and the
-actions work out the season from the date, so running the automation by hand puts the
-right one in place too.
+Each schedule is a whole export, so switching sets every setting at once and switching
+back puts everything as it was. To make your own, set the schedule up the way you want it,
+press **Copy** in its dashboard section, and paste the result in place of one of the
+schedules above; then do the same for the other.
 
-A schedule can also leave settings out: anything it doesn't mention keeps its current value.
+A schedule can also leave settings out: anything it doesn't mention keeps its current
+value.
 
 ## Movie night
 

@@ -86,7 +86,7 @@ A few things that need no change to FLARE at all:
 
 - **A weekend lie-in**, by an automation that moves Morning later on Friday and Saturday
   evenings.
-- **A winter schedule**, swapped in each November.
+- **A holiday schedule**, switched on and off with a toggle.
 - **A room lit by the front door opening**, not just by occupancy.
 - **Blinds that close when Night starts.**
 
