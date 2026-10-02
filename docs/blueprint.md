@@ -73,9 +73,9 @@ see the [Quickstart](../installation/); for the services underneath, the
 | Input | Default | What it does |
 |---|---|---|
 | **Wait time** | 120s | How long after occupancy clears before the lights go off. |
-| **Motion On Transition** | | How quickly lights change when someone walks in, or you run the automation by hand. |
-| **Motion Off Transition** | | How quickly lights fade when the room empties. |
-| **Background Transition** | | How quickly lights change on the regular update — nobody is waiting on these, so they can be slow and smooth. |
+| **Motion On Transition** | 1s | How quickly lights change when someone walks in, or you run the automation by hand. |
+| **Motion Off Transition** | 15s | How quickly lights fade when the room empties. |
+| **Background Transition** | 5s | How quickly lights change on the regular update — nobody is waiting on these, so they can be slow and smooth. |
 
 ## Setting up a room
 
@@ -110,10 +110,9 @@ zone.
 
 Straight away on a phase change, on motion, on an Additional Trigger,
 and when a light comes back online. Between those, it updates whenever
-its zone's **Tick** fires. FLARE ticks each zone in turn, a moment
-apart, so a house full of rooms doesn't send every command at once. The
-interval and the gap between zones are set under **Settings → Devices &
-Services → FLARE Zones → Configure**.
+its zone's **Tick** fires: every minute by default, set under
+**Settings → Devices & Services → FLARE Zones → Configure**. See
+[when zones tick](../reference/integration/#when-zones-tick).
 
 {: .note }
 > Don't hide a zone's Tick entity. Home Assistant leaves hidden entities
@@ -251,12 +250,10 @@ template from the sun instead:
 and the one template covers dusk, the small hours and dark winter
 mornings without naming a phase at all.
 
-The sun changing state is picked up by the next scheduled update rather
-than instantly, so the hall can take up to the update interval to dim
-in at dusk. Adding `sun.sun` to **Additional Triggers** would make it
-immediate, but it is deliberately not suggested here: at sunrise the idle
-level disappears while the lights are still on, and an additional trigger
-reaches the curve rather than the self-heal that switches them off.
+The hall dims in at the next update after sunset, up to a minute later.
+Don't add `sun.sun` to **Additional Triggers** to make it immediate: at
+sunrise that would bring the lights up to the curve instead of switching
+them off.
 
 The template wins over the phase setting for any light it names; the
 phase setting fills in the rest.
@@ -328,16 +325,21 @@ Most often, one of these:
 - **It's dim rather than off on purpose** — check whether that phase
   has an [idle brightness](#leaving-a-room-dimly-lit) set.
 
-To take a light back without switching it off first, call
-`flare.apply_lighting` with `force: true`. Running the automation by
-hand does the same for the whole room.
+To take the room's lights back without switching them off first, run
+the automation by hand.
+
+## Updating the blueprint
+
+When a FLARE update comes with a new blueprint, it shows up in **Settings → System →
+Repairs**. Press **Fix** to download it; your automations keep their settings. If you've
+edited your own copy of the blueprint, ignore the repair instead, since updating replaces
+the file.
 
 ## Other behaviour worth knowing
 
 **Two-step transitions.** Some bulbs can't change brightness and colour
-in one command. FLARE sends two commands instead automatically for any
-bulb matching its configured model patterns - nothing to set in the
-blueprint. For a bulb a pattern doesn't cover, label the light or its
+in one command. FLARE sends those bulbs two commands instead, recognising
+them by make and model. For a bulb it doesn't recognise, label the light or its
 device `no_combined_transition` by hand. See
 [two-step transition bulbs](../reference/integration/#two-step-transition-bulbs).
 

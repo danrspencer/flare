@@ -79,6 +79,31 @@ onto their screen; anything else breaks that.
 **7. Show, then explain.** A worked YAML example beats three paragraphs
 describing one. If both are needed, the example comes first.
 
+**8. Describe behaviour as the default, not as what FLARE does.** Almost
+everything is a setting. "By default it's bright and cool in the
+morning", "with the default settings", not "Morning is bright and cool".
+
+**9. No asides about how good it is.** Cut anything whose point is to
+admire the design rather than to tell the reader something they'll use:
+"the same code the card runs", "costs very little traffic", "so you never
+have to remember", "for free", "not a picture of it". A feature is
+described once, plainly, where someone would look for it.
+
+**10. Each thing in one place.** If two pages explain the same thing, one
+of them links to the other instead. Pick the page where a reader would go
+looking, not the first page the thing comes up on.
+
+**11. On the introductory pages, FLARE is one thing.** The README, the
+homepage and the Quickstart talk about FLARE, not "the integration" and
+"the blueprint" as separate products. The split, the services and
+building your own automations belong to Reference; the most an
+introductory page says is one line pointing at Examples.
+
+**12. The Quickstart is only the steps.** Every line is something the
+reader does to get a room working, or needs to know to do it. Notes about
+things that happen on their own, alternatives to the standard setup and
+explanations of how it works all live elsewhere.
+
 ## Lexicon
 
 **External** terms are what users see and say; they may appear anywhere.
