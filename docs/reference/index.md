@@ -9,12 +9,14 @@ redirect_from: /advanced/
 # Reference
 {: .no_toc }
 
-Technical documentation for the blueprint and the integration.
+The technical documentation: the blueprint's inputs, and every entity and service FLARE
+creates.
 
-- **[Blueprint]({{ site.baseurl }}/reference/blueprint/)**: the room automation's inputs, and
-  when it turns lights on and off.
-- **[Schedules]({{ site.baseurl }}/reference/schedules/)**: a schedule's entities, transitions,
-  and copying a schedule.
-- **[Zones]({{ site.baseurl }}/reference/zones/)**: a zone's entities, override protection, and
-  zone ticks.
-- **[Services]({{ site.baseurl }}/reference/services/)**: each service and its fields.
+- **[Blueprint]({{ site.baseurl }}/reference/blueprint/)** — every input to the room
+  automation, and how a room behaves.
+- **[Schedules]({{ site.baseurl }}/reference/schedules/)** — a schedule's entities, the curve's
+  transitions, and copying a schedule.
+- **[Zones]({{ site.baseurl }}/reference/zones/)** — a zone's entities, override protection,
+  and when zones tick.
+- **[Services]({{ site.baseurl }}/reference/services/)** — each service, its fields and what it
+  returns.

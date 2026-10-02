@@ -18,59 +18,63 @@ Five minutes to a room running on the curve.
 
 ---
 
-## Step 1: install with HACS
+## Step 1 — install via HACS
 
-In HACS, open the three-dot menu, choose **Custom repositories**, and add this repository with
-the type **Integration**:
+HACS → three-dot menu → **Custom repositories**. Add:
 
 ```
 https://github.com/danrspencer/flare
 ```
 
-Then find **FLARE** in HACS and download it.
+with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
-## Step 2: add FLARE
+## Step 2 — restart, then add FLARE
 
-Restart Home Assistant, then go to **Settings → Devices & Services → Add Integration → FLARE**.
+Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
+
 It asks two things:
 
-- **A name for your first schedule.** The default is Home. A
-  [schedule]({{ site.baseurl }}/reference/schedules/) sets when each phase starts and how bright
-  and warm the light is. One is enough for most homes. The name becomes part of the schedule's
-  entity IDs, so pick one you're happy to keep.
-- **Which rooms to set up.** Every area with lights is listed and selected. Each one you keep
-  becomes a [zone]({{ site.baseurl }}/reference/zones/), named after the room. A zone records
-  which lights FLARE is setting, so it can leave alone a light you've changed yourself.
+- **A name for your first schedule** — Home, unless you change it. A
+  [schedule]({{ site.baseurl }}/reference/schedules/) is the day's lighting: when each phase
+  starts, and how bright and warm it is. One for the whole house is fine to start with. Pick
+  a name you're happy to keep: it becomes part of the schedule's entity IDs.
+- **Which rooms to set up** — every area with lights is offered, pre-selected, and each one
+  you keep becomes a [zone]({{ site.baseurl }}/reference/zones/), named after the room. A zone
+  keeps track of which lights FLARE is driving in that room, which is how it knows to leave
+  alone a light you've changed yourself.
 
-You can add more schedules and zones later under **FLARE Schedules** and **FLARE Zones**.
+You can add more schedules and zones later, from **FLARE Schedules** and **FLARE Zones**.
 
 {: .note }
-> A bug in Home Assistant 2026.9 and earlier asks you to choose between FLARE Schedules and
-> FLARE Zones when you add another schedule or zone. Choose the one you're adding. Home
-> Assistant 2026.10 fixes it.
+> A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
+> to pick between FLARE Schedules and FLARE Zones first. Pick the one matching what you're
+> adding. Home Assistant 2026.10 fixes it.
 
-## Step 3: create a room automation
+## Step 3 — install the blueprint and create an automation
 
-FLARE offers to install its blueprint under **Settings → System → Repairs**. Press **Fix**.
+FLARE will spot that its blueprint isn't installed and offer it in
+**Settings → System → Repairs**. Press **Fix** and it downloads it.
 
-Then create an automation from the blueprint and fill in:
+Create an automation from it and fill in three things:
 
-| Input | What to choose |
+| Input | What to put |
 |---|---|
-| **Schedule** | The schedule from step 2. |
-| **Zone** | The room's zone, named after the room. |
-| **Lights & Occupancy** | The room's area. FLARE controls the lights in it and uses its occupancy sensors to turn them on and off. |
+| **Schedule** | The schedule from step 2 — Home, unless you named it something else. |
+| **Zone** | The room's zone from step 2 — usually the one named after the room. |
+| **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
 
-Everything else has a default. Repeat for each room.
+That's the minimum. Everything else has a working default.
 
 {: .note }
-> A room with no occupancy sensor still follows the schedule, but doesn't turn its lights on or
-> off.
+> A room with no occupancy sensor still follows the curve, but never turns its lights on or
+> off by itself.
 
-## Step 4: add the dashboard (optional)
+Repeat for each room.
 
-Open a dashboard, choose **Edit dashboard**, then **Raw configuration editor** from the
-three-dot menu, and add:
+## Step 4 — add the dashboard (optional)
+
+FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
+configuration editor**, and add:
 
 ```yaml
 views:
@@ -82,16 +86,16 @@ views:
       type: custom:flare-zone
 ```
 
-**Lighting** shows each schedule's curve and settings. **Zones** shows which lights FLARE is
-setting and which ones something else has changed. See [Dashboard]({{ site.baseurl }}/dashboard/)
-for more.
+**Lighting** shows the day's curve and every setting of your schedules. **Zones** shows
+which lights FLARE is driving and which ones something else has taken over. See
+[Dashboard]({{ site.baseurl }}/dashboard/) for more, including adding just the chart.
 
 ---
 
-## Next steps
+## What now
 
-- Every blueprint input and its default: [Blueprint]({{ site.baseurl }}/reference/blueprint/).
-- A light not doing what you expect:
+- Every blueprint input, with defaults: [Blueprint]({{ site.baseurl }}/reference/blueprint/).
+- A light not doing what you expect?
   [Why didn't my light change?]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
-- Changing how FLARE behaves, such as a weekend lie-in or a holiday schedule:
+- Want it to behave differently — a weekend lie-in, a holiday schedule?
   [Examples]({{ site.baseurl }}/guides/examples/).
