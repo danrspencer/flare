@@ -61,12 +61,12 @@ Create an automation from it and fill in three things:
 |---|---|
 | **Schedule** | The schedule from step 2 — Home, unless you named it something else. |
 | **Zone** | The room's zone from step 2 — usually the one named after the room. |
-| **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
+| **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy and motion sensors inside it decide when. |
 
 That's the minimum. Everything else has a working default.
 
 {: .note }
-> A room with no occupancy sensor still follows the curve, but never turns its lights on or
+> A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
 > off by itself.
 
 Repeat for each room.

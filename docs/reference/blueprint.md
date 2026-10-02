@@ -32,23 +32,15 @@ template inputs, see [Templates](../../guides/templates/).
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Zone** | required | The FLARE zone the room belongs to. |
-| **Lights & Occupancy** | required | The room's lights, and the occupancy sensors that turn them on and off. |
+| **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
 
-Only `binary_sensor` entities with `device_class: occupancy` count as occupancy sensors. To use a
-motion sensor, create a template occupancy sensor that follows it:
+Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
+other binary sensors in the target are ignored. A room can mix both kinds.
 
-```yaml
-template:
-  - binary_sensor:
-      - name: "Hall occupancy"
-        device_class: occupancy
-        state: "{{ is_state('binary_sensor.hall_motion', 'on') }}"
-```
-
-A room with no occupancy sensor follows the schedule but never turns its lights on or off.
+A room with no sensor follows the schedule but never turns its lights on or off.
 
 If a room has two automations, for example one for a lamp and one for the ceiling light, give
 both the same **Zone**.
@@ -112,7 +104,7 @@ and other variations.
 
 | Input | Default | Description |
 |---|---|---|
-| **Wait time** | 120s | How long every occupancy sensor must be clear before the room is empty. |
+| **Wait time** | 120s | How long every sensor must be clear before the room is empty. |
 | **Motion On Transition** | 1s | Transition when someone comes in, or when you run the automation by hand. |
 | **Motion Off Transition** | 15s | Transition when the room empties. |
 | **Background Transition** | 5s | Transition for every other update. |
@@ -132,7 +124,7 @@ on from something else, see
 
 ### When the room updates
 
-When the phase changes, occupancy is detected, an Additional Trigger changes, or one of its
+When the phase changes, a sensor detects someone, an Additional Trigger changes, or one of its
 lights comes back online. Otherwise on its zone's [tick](../zones/#when-zones-tick), every minute
 by default.
 
@@ -141,11 +133,11 @@ out of a device, so hiding a zone's Tick entity stops the room updating.
 
 ### When lights turn on and off
 
-Lights turn on when occupancy is detected, and turn off once every occupancy sensor in the room
-has been clear for the **Wait time**.
+Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
+been clear for the **Wait time**.
 
-While every light in **Lights & Occupancy** is off, only occupancy being detected or running the
-automation by hand turns any of them on. Idle brightness is the exception. While at least one
+While every light in **Lights & Occupancy** is off, only a sensor detecting someone or running
+the automation by hand turns any of them on. Idle brightness is the exception. While at least one
 light is on, an update can turn on the others. So a phase change doesn't light an empty room,
 and a bulb that comes back online stays off if the rest of the room is off.
 
