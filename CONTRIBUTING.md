@@ -97,8 +97,9 @@ docs/
     dashboard.md      how to add the view strategy, and what it builds
     playground.html   the interactive curve, running the real card
     blueprint.md      full feature/input reference for the blueprint
-    advanced/         power-user reference: services, scene handoff,
-                      building without the blueprint
+    examples.md       automations that change or build on FLARE
+    reference/        the integration: services and entities, scene
+                      handoff, building without the blueprint
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call

@@ -70,7 +70,7 @@ Home Assistant's own brightness slider for a light.
 
 **Copy or paste**, at the bottom of each schedule, copies that schedule as text, or applies
 one you paste in, so a schedule can be backed up, shared, or copied onto another. See
-[copying a schedule](../advanced/reference/#copying-a-schedule).
+[copying a schedule](../reference/integration/#copying-a-schedule).
 
 ## Changing it
 

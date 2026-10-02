@@ -1,8 +1,7 @@
 ---
 title: Examples
-parent: Power users
-nav_order: 4
-permalink: /advanced/examples/
+nav_order: 6
+permalink: /examples/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
@@ -70,7 +69,8 @@ weekday.
 ## A winter schedule
 
 Earlier, dimmer evenings from November to February, and the usual ones the rest of the
-year.
+year. Each season is a whole schedule, copied from a schedule's dashboard section and
+pasted in as it is, so switching season sets everything at once.
 
 ```yaml
 alias: Seasonal schedule
@@ -80,28 +80,76 @@ triggers:
   - trigger: template
     value_template: "{{ now().month not in [11, 12, 1, 2] }}"
 actions:
-  - variables:
-      winter: "{{ now().month in [11, 12, 1, 2] }}"
-  - action: time.set_value
-    target:
-      entity_id: time.home_evening_earliest_time
-    data:
-      time: "{{ '16:30:00' if winter else '17:00:00' }}"
-  - action: number.set_value
-    target:
-      entity_id: number.home_evening_brightness
-    data:
-      value: "{{ 150 if winter else 180 }}"
-  - action: time.set_value
-    target:
-      entity_id: time.home_night_time
-    data:
-      time: "{{ '21:30:00' if winter else '22:00:00' }}"
+  - if: "{{ now().month in [11, 12, 1, 2] }}"
+    then:
+      - action: flare.import_schedule
+        data:
+          schedule_device_id: "{{ device_id('sensor.home_flare') }}"
+          schedule: |
+            morning:
+              time: "06:00"
+              brightness: 255
+              kelvin: 6667
+              brightness_transition: 60
+              kelvin_transition: 60
+            day:
+              time: "08:00"
+              brightness: 255
+              kelvin: 6667
+              brightness_transition: 65
+              kelvin_transition: 1440
+            evening:
+              earliest: "16:30"
+              latest: "20:00"
+              brightness: 150
+              kelvin: 3200
+              brightness_transition: 60
+              kelvin_transition: 60
+            night:
+              time: "21:30"
+              brightness: 80
+              kelvin: 2000
+              brightness_transition: 30
+              kelvin_transition: 30
+    else:
+      - action: flare.import_schedule
+        data:
+          schedule_device_id: "{{ device_id('sensor.home_flare') }}"
+          schedule: |
+            morning:
+              time: "06:00"
+              brightness: 255
+              kelvin: 6667
+              brightness_transition: 60
+              kelvin_transition: 60
+            day:
+              time: "08:00"
+              brightness: 255
+              kelvin: 6667
+              brightness_transition: 65
+              kelvin_transition: 1440
+            evening:
+              earliest: "17:00"
+              latest: "20:00"
+              brightness: 180
+              kelvin: 3200
+              brightness_transition: 60
+              kelvin_transition: 60
+            night:
+              time: "22:00"
+              brightness: 80
+              kelvin: 2700
+              brightness_transition: 30
+              kelvin_transition: 30
 ```
 
-Each trigger fires once, on the day its season starts, and the actions work out which
-season it is from the date, so running the automation by hand puts the right one in place
-too.
+To make your own, set a schedule up the way you want it for one season, press **Copy** in its
+dashboard section, and paste the result in place of one of the schedules above. Then do the
+same for the other season. Each trigger fires once, on the day its season starts, and the
+actions work out the season from the date, so running the automation by hand puts the
+right one in place too.
+
+A schedule can also leave settings out: anything it doesn't mention keeps its current value.
 
 ## Movie night
 
@@ -129,7 +177,7 @@ actions:
 
 The phase override applies to **every room on that schedule**. To dim one room only, give
 it a schedule of its own, or use the blueprint's
-[Brightness Template](../../blueprint/#brightness--exclusions) instead.
+[Brightness Template](../blueprint/#brightness--exclusions) instead.
 
 ## Lighting a room from something other than occupancy
 
@@ -192,4 +240,4 @@ actions:
 ```
 
 The event also carries what FLARE last asked for and what the light was actually showing —
-see [the hand-over event](../reference/#the-hand-over-event).
+see [the hand-over event](../reference/integration/#the-hand-over-event).

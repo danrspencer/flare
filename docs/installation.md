@@ -7,8 +7,8 @@ permalink: /installation/
 # Quickstart
 {: .no_toc }
 
-Five minutes to a room running on the curve. This covers the standard setup; anything
-unusual is in [Power users]({{ site.baseurl }}/advanced/).
+Five minutes to a room running on the curve. This covers the standard setup; the
+[Reference]({{ site.baseurl }}/reference/) covers everything underneath it.
 
 {: .note }
 > **Prerequisites** — Home Assistant 2026.4.0 or newer (the blueprint uses the native
@@ -86,7 +86,7 @@ That's the minimum. Everything else has a working default.
 
 {: .note }
 > Building your own automations on FLARE's actions instead? Ignore that repair — the
-> blueprint is optional. See [Power users]({{ site.baseurl }}/advanced/).
+> blueprint is optional. See the [Reference]({{ site.baseurl }}/reference/).
 
 {: .note }
 > **You won't have to remember to update it.** The integration and the blueprint update
@@ -135,9 +135,9 @@ something else has taken over. Nothing to fill in — see the
 
 - Lights not behaving as you expect? Each zone has **Controlled** and
   **Overridden** counters and a **Clear** button — see
-  [the integration reference]({{ site.baseurl }}/advanced/reference/#override-protection).
+  [override protection]({{ site.baseurl }}/reference/integration/#override-protection).
 - Want a scene to own the room at certain times?
-  [Scene handoff]({{ site.baseurl }}/advanced/scenes/).
+  [Scene handoff]({{ site.baseurl }}/reference/scenes/).
 - Want to skip the blueprint entirely?
-  [Building without it]({{ site.baseurl }}/advanced/custom-automations/).
-- Every blueprint input, with defaults: [Blueprint reference]({{ site.baseurl }}/blueprint/).
+  [Building without it]({{ site.baseurl }}/reference/custom-automations/).
+- Every blueprint input, with defaults: [Blueprint]({{ site.baseurl }}/blueprint/).

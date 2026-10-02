@@ -90,8 +90,8 @@ A few things that need no change to FLARE at all:
 - **A room lit by the front door opening**, not just by occupancy.
 - **Blinds that close when Night starts.**
 
-[See the examples →]({{ site.baseurl }}/advanced/examples/){: .btn .btn-outline .mr-2 }
-[See every entity and action →]({{ site.baseurl }}/advanced/reference/){: .btn .btn-outline }
+[See the examples →]({{ site.baseurl }}/examples/){: .btn .btn-outline .mr-2 }
+[See every entity and action →]({{ site.baseurl }}/reference/integration/){: .btn .btn-outline }
 
 ---
 
@@ -107,11 +107,11 @@ somebody else has taken it.
 
 [Start here →]({{ site.baseurl }}/installation/){: .btn .btn-outline }
 
-### Power users & builders
+### Your own automations
 {: .no_toc }
 
 The blueprint is a worked example, not the product. Every piece of it is a plain Home
 Assistant action you can call yourself from YAML, scripts, Node-RED or AppDaemon — and the
 override-protection machinery is available standalone, whether or not you use the rest.
 
-[Go deeper →]({{ site.baseurl }}/advanced/){: .btn .btn-outline }
+[Read the reference →]({{ site.baseurl }}/reference/){: .btn .btn-outline }
