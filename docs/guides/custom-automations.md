@@ -15,9 +15,8 @@ render_with_liquid: false
 # Building without the blueprint
 {: .no_toc }
 
-The blueprint is one way to use FLARE's [services](../../reference/services/). Anything that
-can call a Home Assistant action — an automation, a script, Node-RED, AppDaemon — can use them
-directly.
+The blueprint uses FLARE's [services](../../reference/services/), and so can your own
+automations, scripts, Node-RED flows or AppDaemon apps.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -28,9 +27,9 @@ directly.
 
 ## The smallest automation
 
-You need a [schedule](../../reference/schedules/) for the values and, if you want FLARE to
-leave hand-set lights alone, a [zone](../../reference/zones/) for the lights. This keeps the
-kitchen on the curve:
+You need a [schedule](../../reference/schedules/) for the values and, for override
+protection, a [zone](../../reference/zones/). This automation keeps the kitchen's lights on the
+schedule:
 
 ```yaml
 alias: Kitchen lighting
@@ -53,20 +52,50 @@ actions:
       zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-It runs on the kitchen zone's tick and only passes lights that are on, since `apply_lighting`
-turns on everything it's given. Turning the room on and off is left to you.
+It runs on the kitchen zone's tick. It only passes lights that are on, because `apply_lighting`
+turns on every light it's given. It doesn't turn the room on or off.
 
 ## Sending the commands yourself
 
-To send `light.turn_on` yourself — for an effect, a colour mode FLARE doesn't handle, or a
-device that isn't a light — and still have FLARE leave hand-set lights alone:
+To send `light.turn_on` yourself and still use FLARE's override protection:
 
-1. Call `flare.claims_check` to find which lights to leave alone.
-2. Call `flare.claims_record` for the rest, with `targets`, just before you send.
-3. Send your commands.
+1. Call `flare.claims_check` to find out whether FLARE would leave the light alone.
+2. If it wouldn't, call `flare.claims_record` with the values you're about to send.
+3. Send your command.
 
-To turn lights off, use `flare.turn_off` rather than `light.turn_off`: it records the
-turn-off, so it isn't mistaken for someone switching the lights off by hand.
+This script sets the porch light to a warm 60%, unless someone else has changed it since the
+script last set it:
 
-`flare.compute_lighting_groups` gives you what `apply_lighting` would send, grouped, without
-sending it — an easy starting point for sending it yourself.
+```yaml
+alias: Porch light warm
+sequence:
+  - action: flare.claims_check
+    data:
+      entities: [light.porch]
+      zone_device_id: "{{ device_id('sensor.porch_flare_claims') }}"
+    response_variable: check
+  - condition: template
+    value_template: "{{ not check.results['light.porch'].blocked }}"
+  - action: flare.claims_record
+    data:
+      entities: [light.porch]
+      zone_device_id: "{{ device_id('sensor.porch_flare_claims') }}"
+      targets:
+        light.porch: { brightness: 153, color_temp_kelvin: 2200 }
+  - action: light.turn_on
+    target:
+      entity_id: light.porch
+    data:
+      brightness: 153
+      color_temp_kelvin: 2200
+```
+
+`targets` must have the brightness and either `color_temp_kelvin` or `rgb_color` you're about
+to send. FLARE compares the light with them later to recognise the change as its own. An effect
+that keeps changing the light's colour can't be recognised this way.
+
+To turn lights off, use `flare.turn_off` rather than `light.turn_off`. It records the turn-off,
+so it isn't mistaken for someone turning the lights off by hand.
+
+`flare.compute_lighting_groups` returns what `apply_lighting` would send, grouped by brightness,
+without sending it. Use it as a starting point for sending the commands yourself.

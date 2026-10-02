@@ -12,10 +12,9 @@ render_with_liquid: false
 # Templates
 {: .no_toc }
 
-The blueprint's three template inputs cover what its other settings can't: a light that
-depends on something other than the phase, or a single light treated differently from the
-rest of the room. This page covers how each one works, with examples. The
-[Blueprint](../../blueprint/#inputs) page lists what each one accepts.
+The blueprint has three template inputs for cases its other settings don't cover, such as a
+light that depends on something other than the phase. This page explains each one, with
+examples. The [Blueprint](../../reference/blueprint/#inputs) reference lists what each accepts.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -26,30 +25,25 @@ rest of the room. This page covers how each one works, with examples. The
 
 ## Brightness Template
 
-Returns the brightness each light should sit at, as a mapping from entity ID to a level:
+Returns a mapping of entity ID to brightness:
 
 | Value | Effect |
 |---|---|
-| `1`–`255` | The light sits at this brightness, on the same scale as the phase brightnesses |
-| `0` | The light is turned off |
-| `null` or `false` | FLARE leaves the light alone entirely, on or off |
+| `1`–`255` | The light is set to this brightness, on the same scale as the phase brightnesses. |
+| `0` | The light is turned off. |
+| `null` or `false` | FLARE doesn't touch the light. |
 
-A light the template doesn't mention follows the curve as usual. Return `{}` when you have
-nothing to say.
+Lights the template doesn't include follow the schedule. Return `{}` to leave every light on
+the schedule.
 
 ### Dimming a light while the TV is on
 
 ```yaml
-{% if is_state('media_player.tv', 'playing') %}
-  {{ {'light.lounge_ceiling': 40, 'light.lounge_lamp': none} }}
-{% else %}
-  {{ {} }}
-{% endif %}
+{{ {'light.lounge_ceiling': 40} if is_state('media_player.tv', 'playing') else {} }}
 ```
 
-While the TV plays, the ceiling light sits at 40 and the lamp is left to whatever else
-controls it. Add `media_player.tv` to **Additional Triggers** so the room changes as soon as
-the TV starts or stops, rather than at the next update.
+While the TV is playing, the ceiling light is set to 40. Add `media_player.tv` to **Additional
+Triggers** so the light changes as soon as the TV starts or stops.
 
 ### Dimming some lights in the evening
 
@@ -64,9 +58,20 @@ the TV starts or stops, rather than at the next update.
 {% endif %}
 ```
 
-The rest of the kitchen follows the curve; these two sit lower once Evening starts.
+The other kitchen lights follow the schedule. These two are set to 20 during Evening and 5
+during Night.
 
-### One level for the whole room
+### Leaving a light to another automation
+
+```yaml
+{{ {'light.kitchen_strip': none} if states('sensor.home_flare') in ['Evening', 'Night'] else {} }}
+```
+
+In the evening a separate automation runs a colour gradient on the kitchen strip, so FLARE
+leaves the strip alone during Evening and Night. It doesn't turn the strip off when the room
+empties either; the other automation has to do that.
+
+### One brightness for the whole room
 
 A single number applies to every light in the room:
 
@@ -74,30 +79,24 @@ A single number applies to every light in the room:
 {{ 40 if is_state('media_player.tv', 'playing') else none }}
 ```
 
-`none` here means "no opinion", so the room follows the curve when the TV is off.
+`none` means no value, so the room follows the schedule while the TV is off.
 
-### A level that follows the curve
+### A brightness relative to the schedule
 
-A level is fixed: the light stays at it for as long as the template returns it, whatever the
-time of day. To keep a light at, say, half the room's brightness, read the curve and scale it:
+A brightness from the template is fixed: the light stays at it for as long as the template
+returns it. To keep a light at half the schedule's brightness, read the schedule sensor:
 
 ```yaml
 {{ {'light.lounge_ceiling': state_attr('sensor.home_flare', 'brightness') | int * 0.5} }}
 ```
 
-### `0` or `null`?
-
-`0` keeps the light FLARE's: it's off for now, and comes back with the room. `null` hands the
-light over: FLARE doesn't touch it at all, so it isn't turned off when the room empties
-either. Whatever owns it has to do that.
-
-The template wins over the **Lights Off During** lists for any light it names.
+The template overrides the **Lights Off During** lists for the lights it includes.
 
 ## Idle Brightness Template
 
-Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template, and wins over the per-phase **Idle Brightness** settings
-for any light it names.
+Returns the brightness each light dims to when the room is empty, instead of turning off. It
+takes the same values as Brightness Template, and overrides the per-phase **Idle Brightness**
+settings for the lights it includes.
 
 ### One lamp as the nightlight
 
@@ -105,14 +104,13 @@ for any light it names.
 {{ {'light.landing_lamp': 20} }}
 ```
 
-With the phase settings at `0`, this lamp stays at 20 when the landing empties and every other
-light goes out.
+With the phase settings at `0`, the lamp dims to 20 when the landing is empty and the other
+lights turn off.
 
 {: .note }
-> With a phase setting at `0`, the template *is* the whole idle set. A template naming one
-> lamp makes that lamp the room's only nightlight, even if you only meant to give it a
-> different level from the rest. To keep the rest dim too, set the phase's Idle Brightness as
-> well, and use the template for the one light.
+> If a phase's Idle Brightness is `0`, only the lights in the template stay on. To dim the rest
+> of the room as well, set the phase's Idle Brightness, and use the template for the lights that
+> need a different level.
 
 ### A whole-room nightlight
 
@@ -122,27 +120,27 @@ A single number applies to every light in the room:
 {{ 20 }}
 ```
 
-### A nightlight that follows the sun
+### A nightlight while it's dark outside
 
-The Night phase starts at a fixed time, not at dark. For a hall that stays dimly lit
-whenever it's dark outside, leave the four phase settings at `0` and use the sun:
+Night starts at a fixed time, not at dark. For a hall that stays dimly lit whenever the sun is
+down, leave the four phase settings at `0` and use:
 
 ```yaml
 {{ 10 if is_state('sun.sun', 'below_horizon') else {} }}
 ```
 
-`{}` means "no opinion", so the hall goes fully dark while the sun is up. It picks up the
-change at the next update after sunset, up to a minute later. Don't add `sun.sun` to
-**Additional Triggers** to make it immediate: at sunrise that would bring the lights up to
-the curve instead of turning them off.
+`{}` means no value, so the hall turns off when empty while the sun is up. The change happens at
+the next update after sunset or sunrise, up to a minute later. Don't add `sun.sun` to
+**Additional Triggers**: at sunrise, that would set the lights to the schedule instead of
+turning them off.
 
 ## Scene Template
 
-Returns a scene's entity ID, to hand the room to that scene instead of the curve. It wins over
-the per-phase scene pickers whenever it returns a scene that exists.
+Returns a scene's entity ID. The room uses that scene instead of the schedule. It overrides the
+per-phase scenes whenever it returns a scene that exists.
 
 ```yaml
 {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }}
 ```
 
-Return `''` for no scene. See [Scenes](../scenes/) for how a room shares itself with a scene.
+Return `''` for no scene. See [Scenes](../scenes/).

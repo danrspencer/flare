@@ -7,17 +7,17 @@ permalink: /playground/
 <h1>Curve playground</h1>
 
 <p>
-  Move any setting and the chart shows the day it makes, exactly as it appears on
-  your dashboard. <a href="{{ '/#four-phases-not-one-curve' | relative_url }}">Four
-  phases, not one curve</a> explains what each phase is for.
+  Change any setting to see the day it gives, drawn as it appears on your dashboard.
+  <a href="{{ '/#four-phases' | relative_url }}">Four phases</a> explains what each phase
+  is for.
 </p>
 
 <div class="alp-card-host" id="alp-card-host"></div>
 
 <p class="alp-note">
   The chart's <strong>height</strong> is brightness and its <strong>colour</strong> is the
-  colour temperature at that moment. The vertical line is "now" — drag
-  <strong>Time of day</strong> to move it.
+  colour temperature at that time. The vertical line is the current time; move it with
+  <strong>Time of day</strong>.
 </p>
 
 <div class="alp-actions">
@@ -35,8 +35,7 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="time-of-day">Time of day</h3>
   <p class="alp-panel-hint">
-    Moves the "now" marker. Nothing about the schedule changes — this is just
-    where you're standing in the day.
+    Moves the current-time line. It doesn't change the schedule.
   </p>
   <div class="alp-control">
     <label for="alp-now">Time of day</label>
@@ -48,9 +47,8 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="schedule">Schedule</h3>
   <p class="alp-panel-hint">
-    When each phase begins. Every one of these is a <code>time</code> entity on the
-    schedule you add in Home Assistant — except sunset, which comes from
-    <code>sun.sun</code>.
+    When each phase starts. In Home Assistant each is a <code>time</code> entity on the
+    schedule, apart from sunset, which comes from <code>sun.sun</code>.
   </p>
   <div class="alp-grid" id="alp-times"></div>
   <p class="alp-derived" id="alp-derived"></p>
@@ -59,8 +57,8 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="brightness">Brightness</h3>
   <p class="alp-panel-hint">
-    Each phase's brightness. Evening's is a starting point rather than a hold: it
-    fades toward Night's value over the run-up to Night Start.
+    Each phase's brightness. Evening's brightness fades towards Night's in the time
+    before Night starts.
   </p>
   <div class="alp-grid" id="alp-brightness"></div>
 </div>
@@ -68,8 +66,8 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="colour-temperature">Colour temperature</h3>
   <p class="alp-panel-hint">
-    Each phase holds its own colour and eases to the next one over that
-    phase's transition, below.
+    Each phase's colour temperature. It changes to the next phase's over that phase's
+    transition, below.
   </p>
   <div class="alp-grid" id="alp-kelvin"></div>
 </div>
@@ -77,12 +75,10 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="transitions">Transitions</h3>
   <p class="alp-panel-hint">
-    How long <em>before</em> each phase ends to start easing toward the next
-    one — so the new phase's values have arrived exactly as it begins. Set one
-    to zero for a deliberate, visible change at that boundary. Anything longer
-    than the phase it runs in simply covers the whole phase, which is why Day's
-    colour transition defaults to a full day: it slides from Morning's colour to
-    Evening's across the entire afternoon.
+    How long before each phase ends to start changing to the next one, so the next
+    phase's values are reached as it starts. Zero switches at the boundary. A
+    transition longer than its phase covers the whole phase: Day's colour transition
+    defaults to a full day, so Day's colour changes all afternoon.
   </p>
   <div class="alp-grid" id="alp-transitions"></div>
 </div>
@@ -90,11 +86,10 @@ permalink: /playground/
 <div class="alp-panel">
   <h3 id="load-a-schedule">Load a schedule</h3>
   <p class="alp-panel-hint">
-    Paste a schedule copied from Home Assistant (its <strong>Copy</strong> button on
-    the schedule dashboard, or the schedule's <strong>Reconfigure</strong>) to see its
-    curve here. <strong>Copy schedule</strong> above goes the other way: paste the
-    result into Home Assistant to use these settings. Anything a schedule leaves out
-    keeps its value here.
+    Paste a schedule copied from Home Assistant, with <strong>Copy</strong> on the
+    dashboard or the schedule's <strong>Reconfigure</strong>, to see its curve here.
+    <strong>Copy schedule</strong>, above, copies these settings to paste into Home
+    Assistant. Settings a pasted schedule leaves out keep their values here.
   </p>
   <textarea class="alp-yaml" id="alp-yaml" spellcheck="false" placeholder="morning:&#10;  time: &quot;06:30&quot;&#10;  brightness: 255"></textarea>
   <div class="alp-actions">
