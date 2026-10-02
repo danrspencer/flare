@@ -99,12 +99,10 @@ template:
 
 A room with no occupancy sensor follows the schedule, but doesn't turn its lights on or off.
 
-**Schedule** is one of your FLARE schedules: Home, unless you've added others under **FLARE
-Schedules**. Rooms that need different timing, such as the bedrooms, can use a schedule of their
-own.
+Rooms that need different timing, such as the bedrooms, can use a schedule of their own.
 
-**Zone** is the room's zone, under **FLARE Zones**. If a room has two automations, for example
-one for a lamp and one for the ceiling light, give both the same zone.
+If a room has two automations, for example one for a lamp and one for the ceiling light, give
+both the same **Zone**.
 
 ## When does the room update?
 
@@ -132,10 +130,8 @@ the rest of the room is off.
 
 ## Turning lights off during a phase
 
-Add them to **Lights Off During Night**, or whichever phase.
-
-For a dim level instead of off, a light that depends on something other than the phase, or a
-light FLARE should leave alone, use **Brightness Template**. See
+Use **Lights Off During** the phase. For a dim level instead of off, a condition other than the
+phase, or a light FLARE should leave alone, use **Brightness Template**; see
 [Templates](../../guides/templates/#brightness-template).
 
 ## Handing a room to a scene

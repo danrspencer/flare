@@ -104,7 +104,13 @@ reader does to get a room working, or needs to know to do it. Notes about
 things that happen on their own, alternatives to the standard setup and
 explanations of how it works all live elsewhere.
 
-**13. Write plain technical documentation.** Short declarative sentences
+**13. Match the tone to the section.** The README and homepage are the
+pitch, and can have some personality. Guides are in between: plain, but
+written for someone following along. Reference is short technical
+sentences only, explaining only what isn't obvious from the setting's
+name.
+
+**14. Write plain technical documentation.** Short declarative sentences
 that say what happens. Each of these has been flagged in review as
 sounding like AI prose rather than documentation; don't write them:
 
@@ -121,7 +127,7 @@ sounding like AI prose rather than documentation; don't write them:
 - Explaining why something matters when the reader only needs to know
   what it does, or repeating something another page already covers.
 
-**14. Reference is the contract; Guides are how to use it.** A Reference
+**15. Reference is the contract; Guides are how to use it.** A Reference
 page says what an input accepts, what an entity holds, what a service
 takes and returns, and what happens as a result. Worked examples, recipes
 and "how to get X" live in Guides and link back.

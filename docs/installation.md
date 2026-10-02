@@ -7,11 +7,11 @@ permalink: /installation/
 # Quickstart
 {: .no_toc }
 
-Set up FLARE and your first room.
+Five minutes to a room running on the curve.
 
 {: .note }
-> **You need** Home Assistant 2026.4.0 or newer, [HACS](https://hacs.xyz), and your lights
-> assigned to areas. FLARE uses the areas to set itself up room by room.
+> **Prerequisites** — Home Assistant 2026.4.0 or newer, [HACS](https://hacs.xyz) installed,
+> and your lights assigned to areas, so FLARE can set itself up room by room.
 
 1. TOC
 {:toc}
