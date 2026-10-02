@@ -136,9 +136,9 @@ phase, or a light FLARE should leave alone, use **Brightness Template**; see
 
 ## Handing a room to a scene
 
-Choose a scene in **Night Scene**, or whichever phase, and the room uses it instead of the
-schedule during that phase. **Scene Template** chooses a scene with a template. A scene is only
-used if every entity it sets is in the room. See [Scenes](../../guides/scenes/).
+Assign a scene to a phase and the room uses it instead of the schedule during that phase, or use
+**Scene Template** to choose a scene based on anything else. A scene is only used if every
+entity it sets is in the room. See [Scenes](../../guides/scenes/).
 
 ## Leaving a room dimly lit
 

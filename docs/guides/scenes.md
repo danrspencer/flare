@@ -28,10 +28,10 @@ the room back when the scene no longer applies.
 
 ## Handing a room to a scene
 
-Pick a scene in the blueprint's **Night Scene** (or whichever phase) and, during that phase,
-the room uses it instead of the curve. For anything a phase can't express — a different scene
-while the TV is on — use [Scene Template](../templates/#scene-template), which wins over the
-per-phase pickers whenever it returns a scene.
+Assign a scene to a phase in the blueprint and the room uses it instead of the curve during
+that phase. To pick a scene based on anything else, such as the TV being on, use
+[Scene Template](../templates/#scene-template), which wins over the per-phase scenes whenever it
+returns one.
 
 A scene is only used if every entity it touches is in the room. A scene that reaches into
 another room, or doesn't exist, is ignored and the room follows the curve.
