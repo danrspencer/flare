@@ -19,8 +19,8 @@ real dashboard card, and you can drag the schedule and curve settings around and
 
 - **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
 - **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
-- **[Power users](https://danrspencer.github.io/flare/advanced/)** — every service and entity, scene handoff, and building without the blueprint
-- **[Blueprint reference](https://danrspencer.github.io/flare/blueprint/)** — every input, feature by feature
+- **[Reference](https://danrspencer.github.io/flare/reference/)** — every service and entity, scene handoff, and building without the blueprint
+- **[Blueprint](https://danrspencer.github.io/flare/blueprint/)** — every input, feature by feature
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
 
 ## Why four phases, not a continuous curve
@@ -61,6 +61,9 @@ follow the phase schedule, motion controls on/off, scenes can take over partiall
 are respected, and lights that don't reach their target get corrected automatically. And because it's a
 blueprint it isn't a black box: take it, change it, or rip it apart to build something different on the same
 services.
+
+Every schedule setting is an entity too, and so is everything FLARE is doing, so if a default doesn't suit you,
+you change that piece with ordinary Home Assistant tools rather than wait for an option.
 
 ## Acknowledgements
 

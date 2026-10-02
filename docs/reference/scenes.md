@@ -1,8 +1,9 @@
 ---
 title: Scene handoff
-parent: Power users
+parent: Reference
 nav_order: 2
-permalink: /advanced/scenes/
+permalink: /reference/scenes/
+redirect_from: /advanced/scenes/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
@@ -58,7 +59,7 @@ response_variable: coverage
 
 Nothing special happens. The light stops matching FLARE's recorded claim, so it
 classifies as `overridden` and is excluded from the next tick — see
-[override protection](../reference/#override-protection).
+[override protection](../integration/#override-protection).
 
 Switching it **off** by hand counts too: that's a choice like any other, so FLARE leaves it
 off rather than relighting it on the next tick. It comes back under FLARE's control once

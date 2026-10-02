@@ -17,7 +17,8 @@ you're in:
 | `docs/index.md` | the same person, one click later | what it does |
 | `docs/installation.md` | someone installing it | how do I start |
 | `docs/blueprint.md`, `docs/dashboard.md` | someone using it | what does this input do |
-| `docs/advanced/` | someone building on the services | what does this service take and return |
+| `docs/examples.md` | someone using it who wants it to behave differently | what automation do I write |
+| `docs/reference/` | someone building on the services | what does this service take and return |
 | `CONTRIBUTING.md`, `CLAUDE.md` | someone changing the code | how it works, and why it's shaped this way |
 
 ## The rules
@@ -104,14 +105,14 @@ describing one. If both are needed, the example comes first.
 |---|---|---|
 | override | external | A light changed by anything that isn't FLARE. The user's word for it. |
 | override protection | external | Leaving an overridden light alone. |
-| claim | both | A recorded write. Fine in `docs/advanced/` (the `claims_*` services are public); avoid on mainstream pages, where "what FLARE is driving" reads better. |
+| claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public); avoid on mainstream pages, where "what FLARE is driving" reads better. |
 | scene handoff | external | Letting a scene own part or all of a room. |
 | self-healing | external | Retrying a command that didn't land. |
 | two-step transition | both | Sending brightness and colour separately. Users meet it via the label and the repair. |
 | brightness multiplier | external | The per-light scaling factor. |
 | ~~adaptive tick~~ | internal | Say *the regular update* or *the next update*. |
 | ~~adaptive step~~ | internal | Say *when FLARE next sets the lights*. |
-| ~~dispatch~~ | internal | As a noun for FLARE's own sending step. The ordinary verb (*issue the calls yourself*) is fine in `docs/advanced/`. |
+| ~~dispatch~~ | internal | As a noun for FLARE's own sending step. The ordinary verb (*issue the calls yourself*) is fine in `docs/reference/`. |
 | ~~bucket~~ / ~~bucketing~~ | internal | Grouping lights by multiplier. Never in `docs/`. |
 | ~~the recovered trigger~~ | internal | Say *when a light comes back online*. |
 | ~~grouping~~ | internal | The module. Users see its effects, never its name. |

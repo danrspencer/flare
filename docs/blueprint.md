@@ -1,5 +1,5 @@
 ---
-title: Blueprint reference
+title: Blueprint
 nav_order: 5
 permalink: /blueprint/
 render_with_liquid: false
@@ -23,7 +23,7 @@ render_with_liquid: false
 One automation per room, following the
 [four phases of your day](../#four-phases-not-one-curve). To install it,
 see the [Quickstart](../installation/); for the services underneath, the
-[integration reference](../advanced/reference/).
+[integration reference](../reference/integration/).
 
 ## Inputs
 
@@ -309,7 +309,7 @@ Most often, one of these:
   app, a voice assistant or another automation is left alone until the
   whole room goes dark. Switching a light off by hand counts too — FLARE
   won't turn it back on. See
-  [override protection](../advanced/reference/#override-protection).
+  [override protection](../reference/integration/#override-protection).
 - **The room is empty and the light was off.** Only occupancy, a manual
   run, or the room already being in use can switch a light on.
 - **It's already close enough.** A change smaller than 5% of the
@@ -334,7 +334,7 @@ in one command. FLARE sends two commands instead automatically for any
 bulb matching its configured model patterns - nothing to set in the
 blueprint. For a bulb a pattern doesn't cover, label the light or its
 device `no_combined_transition` by hand. See
-[two-step transition bulbs](../advanced/reference/#two-step-transition-bulbs).
+[two-step transition bulbs](../reference/integration/#two-step-transition-bulbs).
 
 **Self-healing.** If the room has been empty for the full **Wait time**
 but a light is still on, the off command is sent again — recovering from

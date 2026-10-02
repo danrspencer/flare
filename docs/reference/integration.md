@@ -1,19 +1,36 @@
 ---
-title: Integration reference
-parent: Power users
+title: Integration
+parent: Reference
 nav_order: 1
-permalink: /advanced/reference/
+permalink: /reference/integration/
+redirect_from: /advanced/reference/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
 # as empty strings and nothing errors - see tests/checks/test_docs_site.py.
 ---
 
-# Integration reference
+# Integration
 {: .no_toc }
 
-The services FLARE registers, the override-protection machinery behind them, and the
-schedule sensors.
+The services FLARE registers, the entities it creates, and the override protection behind
+them. Each service is a plain Home Assistant action, callable from any automation or script
+with or without the blueprint; every field is also listed in Developer Tools → Actions.
+
+| Service | What it does |
+|---|---|
+| [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour temperature, leaving alone any someone else has taken |
+| [`flare.turn_off`](#flareturn_off) | Turns lights off and records that FLARE did it |
+| [`flare.compute_lighting_groups`](#flarecompute_lighting_groups) | Plans what `apply_lighting` would send, without sending it |
+| [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
+| [`flare.claims_check`, `claims_record`, `claims_clear`](../custom-automations/#using-override-protection-standalone) | Override protection on its own, for lights you set yourself |
+| [`flare.compute_scene_coverage`](../scenes/#flarecompute_scene_coverage) | Which of a room's lights a scene covers |
+| [`flare.export_schedule`, `import_schedule`](#copying-a-schedule) | A schedule's settings as YAML, out and in |
+
+| Device | Entities |
+|---|---|
+| A [schedule](#schedule-sensors) | The schedule sensor, its Phase event, the phase override, and every time and curve setting |
+| A [zone](#a-zones-entities) | Its claims, the controlled and overridden counts, the Clear button and the Tick |
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -21,9 +38,6 @@ schedule sensors.
 1. TOC
 {:toc}
 </details>
-
-Ten services, callable from your own automations or scripts with no blueprint involved.
-Each field is documented in full in Developer Tools → Actions.
 
 ## `flare.apply_lighting`
 
@@ -439,6 +453,13 @@ there is no configuration form. Removing a schedule means removing its device fr
 There are no separate boundary sensors: a phase-change automation triggers on
 `event.<name>_flare_phase`.
 
+`points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
+not a right-now value.
+
+For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
+schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
+already groups the same entities for free.
+
 ### Copying a schedule
 
 A schedule's times and curve values travel as one block of YAML, keyed by phase:
@@ -479,10 +500,3 @@ There are four ways to move one:
 A schedule with a mistake in it — an unknown phase or setting, a time that isn't a time,
 a value out of range — is refused with a message saying which, and nothing is changed.
 Times don't have to be in order, just as the time entities don't.
-
-`points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
-not a right-now value.
-
-For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
-schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
-already groups the same entities for free.

@@ -64,6 +64,37 @@ hours.
 
 ---
 
+## Made of ordinary Home Assistant parts
+
+Nothing FLARE does happens out of sight. Every piece is something Home Assistant already
+understands, so when the default isn't what you want, you change that piece rather than
+work around it:
+
+- **Every schedule setting is an entity.** Phase start times, brightness, colour
+  temperature and transitions are `time` and `number` entities on the schedule's device.
+  Set them from a dashboard, keep them in history, or change them from an automation.
+- **What FLARE is doing is an entity too.** The schedule sensor carries the current phase,
+  brightness and colour; each schedule fires a Phase event when the phase changes; each
+  zone has a Tick, counts of the lights it's driving and the ones someone else has taken,
+  and a Clear button.
+- **Everything it does is an action** you can call yourself — set lights to the curve,
+  turn them off, check or clear who owns a light, copy a schedule.
+- **The blueprint is just an automation** built from those parts. Take it, change it, or
+  write your own.
+
+A few things that need no change to FLARE at all:
+
+- **A weekend lie-in**, by an automation that moves Morning later on Friday and Saturday
+  evenings.
+- **A holiday schedule**, switched on and off with a toggle.
+- **A room lit by the front door opening**, not just by occupancy.
+- **Blinds that close when Night starts.**
+
+[See the examples →]({{ site.baseurl }}/examples/){: .btn .btn-outline .mr-2 }
+[See every entity and action →]({{ site.baseurl }}/reference/integration/){: .btn .btn-outline }
+
+---
+
 ## Two ways in
 
 ### Standard setup — plug and play
@@ -76,11 +107,11 @@ somebody else has taken it.
 
 [Start here →]({{ site.baseurl }}/installation/){: .btn .btn-outline }
 
-### Power users & builders
+### Your own automations
 {: .no_toc }
 
 The blueprint is a worked example, not the product. Every piece of it is a plain Home
 Assistant action you can call yourself from YAML, scripts, Node-RED or AppDaemon — and the
 override-protection machinery is available standalone, whether or not you use the rest.
 
-[Go deeper →]({{ site.baseurl }}/advanced/){: .btn .btn-outline }
+[Read the reference →]({{ site.baseurl }}/reference/){: .btn .btn-outline }

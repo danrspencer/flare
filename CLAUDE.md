@@ -68,11 +68,15 @@ links onward. Everything else lives in `docs/` and is published to
 <https://danrspencer.github.io/flare/>: `installation.md` (quickstart),
 the `playground.html` interactive curve, `dashboard.md` (how to add the
 view strategy), `blueprint.md` (full per-feature/input breakdown),
-and a `docs/advanced/` "Power users" section (`has_children: true`):
-`reference.md` (the full service/entity reference - this is what
-`helpers.md` was renamed to when the docs site was restructured, see
-below), `scenes.md` (scene handoff), and
-`custom-automations.md` (building without the blueprint). Contributing
+and a `docs/reference/` "Reference" section (`has_children: true`):
+`integration.md` (every service and entity), `scenes.md` (scene
+handoff) and `custom-automations.md` (building without the blueprint).
+It was "Power users" at `/advanced/`, renamed at the user's direction as
+exclusionary; `jekyll-redirect-from` keeps the old URLs working, so
+don't drop the `redirect_from` lines. The
+top-level `examples.md` holds automations that change or build on FLARE
+using only ordinary Home Assistant actions; each one was run against a
+real schedule before it went in. Contributing
 lives at the repo root as `CONTRIBUTING.md` (repo layout, tests, how to
 build the site) - it is for people working on the code, who are already
 on GitHub, so it is not a site page.
@@ -189,6 +193,17 @@ HACS integration - see Current status for the services):**
 All services are deliberately written and documented as standalone
 tools, useful to anyone building their own automation, not just to the
 blueprint in this repo. Keep them that way.
+
+**Everything is an entity or an action, so a default can be replaced
+rather than configured.** Schedule settings are `time`/`number` entities,
+FLARE's live state is sensors and events (phase, Tick, counts, the override
+event), and everything it does is a service. That is the answer to most
+"can it do X differently?" requests: an automation changing an entity, or
+calling a service, needs no new option. Keep new behaviour in that shape -
+an entity or a service before a config field - and the docs homepage's
+"Made of ordinary Home Assistant parts" section is the user-facing promise
+of it. (Zone options - tick interval and gap, minimum change, two-step
+models - are the exception: entry-wide plumbing, not schedule settings.)
 
 ## Hard-won lessons (don't repeat these)
 
@@ -451,7 +466,7 @@ Logger names follow the module path (e.g.
 ### Services (`custom_components/flare/services/handlers.py`)
 
 Eight, all unit tested and confirmed working live. Full field contracts
-in `docs/advanced/reference.md` and `services.yaml` - not repeated here.
+in `docs/reference/integration.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
   - pure planners, no side effects.
@@ -489,7 +504,7 @@ Each tracked entity carries two claims - `confirmed` (a write an earlier
 call observed landing) and `pending` (the most recent attempt). The full
 model, and why two rather than one, lives in `claims.py`'s module
 docstring; the decision table lives in `override_protection.classify()`;
-the user-facing contract lives in `docs/advanced/reference.md`. Three consumers
+the user-facing contract lives in `docs/reference/integration.md`. Three consumers
 share that one table - `grouping.py`'s `externally_set()`, `sensor.py`'s
 diagnostic status, and `claims_check` - deliberately, because they
 previously drifted.

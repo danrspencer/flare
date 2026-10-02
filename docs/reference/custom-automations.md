@@ -1,8 +1,9 @@
 ---
 title: Building without the blueprint
-parent: Power users
+parent: Reference
 nav_order: 3
-permalink: /advanced/custom-automations/
+permalink: /reference/custom-automations/
+redirect_from: /advanced/custom-automations/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
