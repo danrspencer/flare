@@ -44,6 +44,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
@@ -58,6 +59,11 @@ PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
 # Fired whenever any scope's claims change, so the count sensors refresh.
 SIGNAL_WRITE_TRACKING_UPDATED = "flare_claims_updated"
+
+# Raised, per light, when a write lands in one scope while another holds a
+# claim on the same light. Each scope then reads the other's writes as
+# overrides, so the light quietly stops following either.
+ISSUE_LIGHT_IN_TWO_ZONES = "light_in_two_zones"
 
 
 class ClaimStore(Protocol):
@@ -240,6 +246,31 @@ class ClaimRegistry:
                 "last_seen": dt_util.utcnow().isoformat(),
             }
         self._notify([store])
+        for entity_id in entity_ids:
+            others = [sid for sid, other in self._stores.items() if sid != subentry_id and entity_id in other.claims]
+            if others:
+                self._raise_light_in_two_zones(entity_id, [subentry_id, *others])
+
+    @callback
+    def _raise_light_in_two_zones(self, entity_id: str, subentry_ids: list[str]) -> None:
+        """Not persistent: it lasts until a restart and comes back if the
+        conflict does, so it can't outlive a fixed setup."""
+        state = self._hass.states.get(entity_id)
+        zones = sorted(self.title_for_scope(sid) or sid for sid in subentry_ids)
+        ir.async_create_issue(
+            self._hass,
+            DOMAIN,
+            f"{ISSUE_LIGHT_IN_TWO_ZONES}_{entity_id}",
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_LIGHT_IN_TWO_ZONES,
+            translation_placeholders={
+                "light": state.name if state is not None else entity_id,
+                "entity_id": entity_id,
+                "zones": ", ".join(zones[:-1]) + " and " + zones[-1],
+            },
+        )
 
     async def async_prune_stale(self) -> None:
         """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only

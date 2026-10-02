@@ -34,6 +34,9 @@ CI — see `.github/workflows/release.yml`.
   `entities`, an optional `transition` and an optional `tracking_device_id`, and does
   no override protection: it turns off exactly what it is given, including lights
   someone set by hand. The blueprint uses it for its own turn-offs.
+- **A repair when a light is in two zones.** Two zones driving the same light each read
+  the other's changes as an override, so the light stops following either. FLARE now
+  raises a repair naming the light and the zones when it happens.
 - **Each schedule has a Phase event** (`event.<name>_flare_phase`), fired with the phase
   name whenever the phase changes, a manual override included.
 - **Rooms take turns updating.** Every zone now has a **Tick**
