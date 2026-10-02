@@ -70,46 +70,38 @@ weekday.
 ## A winter schedule
 
 Earlier, dimmer evenings from November to February, and the usual ones the rest of the
-year. [`flare.import_schedule`](../reference/#copying-a-schedule) changes only the settings
-it's given.
+year.
 
 ```yaml
 alias: Seasonal schedule
 triggers:
   - trigger: template
-    id: winter
     value_template: "{{ now().month in [11, 12, 1, 2] }}"
   - trigger: template
-    id: summer
     value_template: "{{ now().month not in [11, 12, 1, 2] }}"
 actions:
-  - choose:
-      - conditions: "{{ trigger.id == 'winter' }}"
-        sequence:
-          - action: flare.import_schedule
-            data:
-              schedule_device_id: "{{ device_id('sensor.home_flare') }}"
-              schedule:
-                evening:
-                  earliest: "16:30"
-                  brightness: 150
-                night:
-                  time: "21:30"
-    default:
-      - action: flare.import_schedule
-        data:
-          schedule_device_id: "{{ device_id('sensor.home_flare') }}"
-          schedule:
-            evening:
-              earliest: "17:00"
-              brightness: 180
-            night:
-              time: "22:00"
+  - variables:
+      winter: "{{ now().month in [11, 12, 1, 2] }}"
+  - action: time.set_value
+    target:
+      entity_id: time.home_evening_earliest_time
+    data:
+      time: "{{ '16:30:00' if winter else '17:00:00' }}"
+  - action: number.set_value
+    target:
+      entity_id: number.home_evening_brightness
+    data:
+      value: "{{ 150 if winter else 180 }}"
+  - action: time.set_value
+    target:
+      entity_id: time.home_night_time
+    data:
+      time: "{{ '21:30:00' if winter else '22:00:00' }}"
 ```
 
-Each template trigger fires once, on the day its season starts. The easiest way to get the
-values is to set a schedule up the way you want it and **Copy** it from the schedule's
-dashboard section.
+Each trigger fires once, on the day its season starts, and the actions work out which
+season it is from the date, so running the automation by hand puts the right one in place
+too.
 
 ## Movie night
 
@@ -159,35 +151,6 @@ The room's automation can't be turned on by **Additional Triggers** — they onl
 lights that are already on — but running it from another automation counts as running it
 by hand, which can. Running it by hand also brings back to the curve any light in the room
 someone set themselves.
-
-## A light with no room automation
-
-Keep a lamp on the curve whenever it's on, without setting up a room for it.
-
-```yaml
-alias: Porch lamp follows the curve
-triggers:
-  - trigger: time_pattern
-    minutes: /5
-  - trigger: state
-    entity_id: light.porch
-    to: "on"
-conditions:
-  - condition: state
-    entity_id: light.porch
-    state: "on"
-actions:
-  - action: flare.apply_lighting
-    data:
-      entities: [light.porch]
-      brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
-      color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
-      transition: 2
-```
-
-`apply_lighting` turns on whatever it's given, which is why the condition is there. Add a
-`zone_device_id` to have FLARE leave the lamp alone once someone else sets it — see
-[override protection](../reference/#override-protection).
 
 ## Something else at a phase change
 
