@@ -14,20 +14,20 @@ compute_lighting_groups:
         entity:
           multiple: true
           domain: light
-    brightness_multipliers:
-      name: Brightness multipliers
+    brightness_levels:
+      name: Brightness levels
       description: >-
-        Map of entity ID to multiplier. A number scales the brightness,
-        limited to 1-255; 0 turns the light off, and null or false leaves the
-        light alone. A light that isn't listed uses 1.
-      example: '{"light.lamp": 0.5, "light.strip": 0}'
+        Map of entity ID to the brightness (0-255) for that light, in place of
+        Target brightness. 0 turns the light off, and null or false leaves the
+        light alone.
+      example: '{"light.lamp": 120, "light.strip": 0}'
       selector:
         object:
     brightness:
       name: Target brightness
       description: >-
-        Brightness (0-255) before multipliers.
-      required: true
+        Brightness (0-255) for every light that isn't in Brightness levels.
+        Required unless every light has a level.
       selector:
         number:
           min: 0
@@ -157,20 +157,20 @@ apply_lighting:
         entity:
           multiple: true
           domain: light
-    brightness_multipliers:
-      name: Brightness multipliers
+    brightness_levels:
+      name: Brightness levels
       description: >-
-        Map of entity ID to multiplier. A number scales the brightness,
-        limited to 1-255; 0 turns the light off, and null or false leaves the
-        light alone. A light that isn't listed uses 1.
-      example: '{"light.lamp": 0.5, "light.strip": 0}'
+        Map of entity ID to the brightness (0-255) for that light, in place of
+        Target brightness. 0 turns the light off, and null or false leaves the
+        light alone.
+      example: '{"light.lamp": 120, "light.strip": 0}'
       selector:
         object:
     brightness:
       name: Target brightness
       description: >-
-        Brightness (0-255) before multipliers.
-      required: true
+        Brightness (0-255) for every light that isn't in Brightness levels.
+        Required unless every light has a level.
       selector:
         number:
           min: 0

@@ -177,7 +177,7 @@ Blueprint input mechanics worth knowing:
 
 **Lives in `custom_components/flare/` (a standalone
 HACS integration - see Current status for the services):**
-- Reachability filtering, multiplier bucketing, the tolerance-based
+- Reachability filtering, brightness bucketing, the tolerance-based
   "already at target" check, override protection, and
   two-step-vs-combined / RGB-vs-colour-temp label routing
   (`grouping.py`). This was the genuinely gnarly part - nested namespace
@@ -996,7 +996,7 @@ question per-entity is exactly what let the scene path miss it.
 
 **Idle Brightness** lets a room's "off" be dim rather than dark - the
 nightlight feature. Four per-phase `*_idle_brightness` inputs plus
-`idle_brightness_template`, same precedence idiom as the multipliers
+`idle_brightness_template`, same precedence idiom as Brightness Template
 (`dict(phase_base, **template_result)`).
 
 **This is the one thing in the blueprint that can switch a light on
@@ -1053,8 +1053,8 @@ which is *narrower*, so the curve still cannot light an empty room.
   pins it.
 - A `null` level outranks an idle level - "something else owns this"
   wins over "stay dimly lit".
-- **Levels travel as multipliers** - see "Brightness levels" below,
-  which both paths now share.
+- **Levels travel to the service as levels** - see "Brightness levels"
+  below, which both paths share.
 
 **Inbound doc links are now tested.** `docs/reference/blueprint.md`'s headings are
 deep-linked from the blueprint's own input descriptions and from every
@@ -1091,29 +1091,27 @@ the brightness a light sits at, on the same scale as the per-phase
 brightness `number` entities. Chosen at the user's direction: a
 multiplier of the curve made pinning a light at a fixed level awkward.
 
-**The service contract did NOT change.** `apply_lighting` still takes one
-`brightness` plus per-entity *multipliers*, which is a fine primitive for
-a caller wiring it up themselves. The blueprint converts: it sends
-`brightness: 255` and a multiplier of `level/255` on both the adaptive
-and idle paths, so `round(255 * multiplier)` lands back on the level.
-Two consequences worth knowing:
+**The services take levels too** (`brightness_levels`, since 1.0.0). They
+used to take per-entity *multipliers* of `brightness`, and the blueprint
+converted every level to `level/255` against a brightness of 255. Changed
+at the user's direction so the service and the blueprint speak the same
+units; the blueprint now passes its levels straight through. Rules,
+all in `grouping.target_brightness()`, which the blueprint test harness
+also calls so its expectations can't drift from the service:
 
-- **Every resolved entity needs an entry**, because `_bucket_by_multiplier`
-  defaults a missing one to `1` - against a brightness of 255 that is
-  full blast, not the curve. So the untemplated majority carry an
-  explicit `curve/255`.
-- **The curve is floored at 1 before dividing.** A schedule brightness of
-  0 is legal (the `number`'s minimum) and has always meant "as dim as
-  this goes", since `grouping.py` clamps into 1-255. Unfloored it would
-  divide to a multiplier of 0, which is the turn-it-off sentinel, and the
-  room would go dark instead. `test_a_schedule_at_zero_brightness_still_reaches_one_not_off`
-  pins it - mutation testing found nothing covered this.
+- **A light without a level gets `brightness`**, which is why the service
+  only requires `brightness` when some light lacks a level - the idle
+  calls send levels alone.
+- **Only an exact `0` is off.** Everything else clamps into 1-255, so a
+  schedule brightness of 0 (the `number`'s legal minimum) means "as dim
+  as this goes", and a fractional level like 0.4 lands on 1.
+  `test_a_schedule_at_zero_brightness_still_reaches_one_not_off` pins the
+  first - mutation testing once found nothing covering it.
 
 **`0` and `null` levels are not the same thing.** `0` means "turn this
 light off"; `null`/`false` means "hands off, something else owns it" -
 excluded from the turn-off paths too, not just the adaptive step. Both
-are sentinels `grouping.py` matches on identity, so both pass through the
-percentage conversion untouched rather than being divided. In Jinja as in
+are sentinels `grouping.py` matches on identity. In Jinja as in
 Python `0 == false`, so membership tests like `in [none, false]` silently
 swallow every `0`; the identity form `level is none or level is sameas
 false` is required, mirroring `grouping.py`'s own bucketing.
@@ -1122,8 +1120,7 @@ false` is required, mirroring `grouping.py`'s own bucketing.
 those above it, and failures are silent (`x | length` on an undefined
 name returns `0` with no log and no trace entry). The brightness-level
 chain sits near the top specifically because the turn-off lists depend on
-it - though `brightness_multipliers` itself is derived later, after
-`resolved_entities`, since it now needs the full entity list.
+it.
 
 **Sensor reads are guarded before dispatch.** `brightness`/
 `color_temp_kelvin` are plain `state_attr()` reads and `apply_lighting`

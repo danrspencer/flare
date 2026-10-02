@@ -36,7 +36,7 @@ custom_components/flare/
         handlers.py      the eight zone services, registered against real HA state
         schedules.py     export_schedule / import_schedule, registered for the
                          domain rather than by either entry
-        grouping.py      reachability, multiplier bucketing, tolerance checks,
+        grouping.py      reachability, brightness bucketing, tolerance checks,
                          override protection, two-step/combined and
                          RGB-vs-colour-temp routing
         scenes.py        scene-coverage gap filling (apply a scene, then a
@@ -103,7 +103,7 @@ docs/
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call
-a service, so anything a condition depends on has to remain template-based. Multiplier bucketing, tolerance
+a service, so anything a condition depends on has to remain template-based. Brightness bucketing, tolerance
 checks, and transition routing are implemented in the integration and unit tested. See `CLAUDE.md` for further
 implementation notes.
 

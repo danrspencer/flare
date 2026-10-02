@@ -492,25 +492,6 @@ variables:
   color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
   # None while the sensor is unavailable.
   rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
-  # Levels are absolute brightness, sent as brightness 255 with a
-  # multiplier of level/255. Every light needs an entry, since a missing
-  # one defaults to multiplier 1 (full). The curve is floored at 1 so a
-  # schedule brightness of 0 isn't "off". 0 and null/false pass through as
-  # the off and hands-off sentinels.
-  brightness_multipliers: >
-    {% set curve = ([brightness | float(0), 1] | max) / 255 %}
-    {% set ns = namespace(m={}) %}
-    {% for e in resolved_entities %}
-      {% set ns.m = dict(ns.m, **{e: curve}) %}
-    {% endfor %}
-    {% for entity_id, level in brightness_levels.items() %}
-      {% if level is none or level is sameas false %}
-        {% set ns.m = dict(ns.m, **{entity_id: level}) %}
-      {% else %}
-        {% set ns.m = dict(ns.m, **{entity_id: (level | float) / 255}) %}
-      {% endif %}
-    {% endfor %}
-    {{ ns.m }}
   # Up here because the turn-off lists below exclude idle lights. Empty
   # means dark.
   template_idle_brightness: !input idle_brightness_template
@@ -560,11 +541,11 @@ variables:
        | reject('in', hands_off_entities) | list }}
   turn_off_entities: >
     {{ reachable_entities | reject('in', idle_entities) | list }}
-  # Same shape as brightness_multipliers.
-  idle_multipliers: >
+  # Every idle light has a level, so the idle calls need no brightness.
+  idle_levels: >
     {% set ns = namespace(m={}) %}
     {% for e in idle_entities %}
-      {% set ns.m = dict(ns.m, **{e: (idle_brightness[e] | float) / 255}) %}
+      {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}
     {% endfor %}
     {{ ns.m }}
   # The room's occupancy and motion sensors.
@@ -695,8 +676,7 @@ action:
               - action: flare.apply_lighting
                 data:
                   entities: "{{ idle_entities }}"
-                  brightness_multipliers: "{{ idle_multipliers }}"
-                  brightness: 255
+                  brightness_levels: "{{ idle_levels }}"
                   color_temp_kelvin: "{{ color_temp_kelvin }}"
                   rgb_color: "{{ rgb_color }}"
                   transition: !input motion_off_transition
@@ -746,8 +726,7 @@ action:
             action: flare.apply_lighting
             data:
               entities: "{{ idle_entities }}"
-              brightness_multipliers: "{{ idle_multipliers }}"
-              brightness: 255
+              brightness_levels: "{{ idle_levels }}"
               color_temp_kelvin: "{{ color_temp_kelvin }}"
               rgb_color: "{{ rgb_color }}"
               transition: "{{ script_transition }}"
@@ -784,8 +763,8 @@ action:
                 action: flare.apply_lighting
                 data:
                   entities: "{{ target_entities }}"
-                  brightness_multipliers: "{{ brightness_multipliers }}"
-                  brightness: 255
+                  brightness_levels: "{{ brightness_levels }}"
+                  brightness: "{{ brightness }}"
                   color_temp_kelvin: "{{ color_temp_kelvin }}"
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"

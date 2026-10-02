@@ -43,7 +43,7 @@ PHASE_STARTS = {"Night": time(22, 0, 2)}
 HALL_SENSOR = "binary_sensor.hall_occupancy"
 # The `zone` fixture's zone, and the name of the area it's placed in.
 ZONE = "behaviour_test_room"
-# Several fittings, so they share one multiplier bucket as a real room's do.
+# Several fittings, so they share one brightness group as a real room's do.
 HALL_BULBS = ("hall_pendant", "hall_spot_1", "hall_spot_2", "hall_spot_3", "hall_spot_4", "hall_lamp")
 
 

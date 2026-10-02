@@ -60,20 +60,38 @@ async def test_compute_lighting_groups_is_read_only(setup_integration: HomeAssis
     assert calls == []
 
 
-async def test_apply_lighting_missing_brightness_raises(setup_integration: HomeAssistant):
-    """Required, so a missing sensor attribute fails loudly rather than
-    dimming everything."""
+@pytest.mark.parametrize("brightness", [{}, {"brightness": None}], ids=["omitted", "null"])
+async def test_apply_lighting_missing_brightness_raises(setup_integration: HomeAssistant, brightness):
+    """Needed by any light without a level, so a missing sensor attribute
+    fails loudly rather than dimming everything."""
     hass = setup_integration
     set_light(hass, "light.a", "off", supported_color_modes=CT)
+    set_light(hass, "light.b", "off", supported_color_modes=CT)
 
-    with pytest.raises(vol.Invalid):
+    with pytest.raises(ServiceValidationError, match="light.b"):
         # Raw call: the helper would supply brightness.
         await hass.services.async_call(
             DOMAIN,
             "apply_lighting",
-            {"entities": ["light.a"], "color_temp_kelvin": 3200, "transition": 2},
+            {"entities": ["light.a", "light.b"], "brightness_levels": {"light.a": 50},
+             "color_temp_kelvin": 3200, "transition": 2, **brightness},
             blocking=True,
         )
+
+
+async def test_apply_lighting_needs_no_brightness_when_every_light_has_a_level(setup_integration: HomeAssistant):
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    await hass.services.async_call(
+        DOMAIN,
+        "apply_lighting",
+        {"entities": ["light.a"], "brightness_levels": {"light.a": 50}, "color_temp_kelvin": 3200, "transition": 2},
+        blocking=True,
+    )
+
+    assert turn_on[-1].data["brightness"] == 50
 
 
 async def test_apply_lighting_non_numeric_color_temp_kelvin_raises(setup_integration: HomeAssistant):

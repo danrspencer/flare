@@ -46,7 +46,7 @@ async def test_a_turn_off_records_an_off_target(setup_integration: HomeAssistant
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
     set_light(hass, "light.b", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
 
-    await apply_lighting(hass, ["light.a", "light.b"], brightness_multipliers={"light.a": 0})
+    await apply_lighting(hass, ["light.a", "light.b"], brightness_levels={"light.a": 0})
 
     assert turn_off[-1].data["entity_id"] == ["light.a"]
     assert claim_registry(hass).all_records()["light.a"]["latest"]["target"] == {"state": "off"}
