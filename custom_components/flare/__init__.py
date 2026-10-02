@@ -12,6 +12,7 @@ from homeassistant.loader import async_get_integration
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -39,6 +40,7 @@ from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
 ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 CARD_URL_BASE = "/flare_static"
 CARD_JS_PATH = "flare-curve-card.js"
