@@ -71,8 +71,13 @@ data:
 
 Each tracked light has two claims:
 
-- **`observed`**: a state FLARE has seen the light report after one of its own changes.
-- **`latest`**: the last change FLARE sent, which it hasn't seen the light report yet.
+- **`latest`**: the last change FLARE sent to the light.
+- **`observed`**: a change FLARE has seen the light report. On its next update, if the light
+  reports `latest`'s context, FLARE promotes `latest` to `observed`.
+
+A light matching either claim is FLARE's. So a change that never reaches the light, such as a
+dropped Zigbee command, doesn't make FLARE treat the light as changed by someone else; the light
+still matches `observed`.
 
 A light matches a claim if it reports the context of that claim's change, or the values in it.
 Values are needed because Home Assistant drops a change's context after five seconds, and some
