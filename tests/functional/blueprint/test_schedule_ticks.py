@@ -18,7 +18,7 @@ from tests.support import load_blueprint
 
 
 class TestAdaptiveScheduleAndTransitions:
-    """docs/blueprint.md#timing"""
+    """docs/reference/blueprint.md#timing"""
 
     async def test_an_unavailable_sensor_skips_the_tick_instead_of_erroring(self, hass, apply_lighting_calls):
         """apply_lighting requires both values, so an unavailable sensor would
@@ -189,7 +189,7 @@ class TestAdaptiveScheduleAndTransitions:
 
 
 class TestRgbColour:
-    """docs/blueprint.md#colour"""
+    """docs/reference/blueprint.md#colour"""
 
     async def test_prefer_rgb_color_is_true_only_during_a_configured_phase(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")
@@ -217,7 +217,7 @@ class TestRgbColour:
 
 
 class TestAdditionalTriggers:
-    """docs/blueprint.md#additional-triggers"""
+    """docs/reference/blueprint.md#additional-triggers"""
 
     async def test_extra_trigger_entity_change_causes_immediate_reevaluation(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)

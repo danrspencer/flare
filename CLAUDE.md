@@ -66,17 +66,17 @@ project exists, why the day is divided into four named phases
 sun-elevation curve the way most adaptive-lighting tools work - plus
 links onward. Everything else lives in `docs/` and is published to
 <https://danrspencer.github.io/flare/>: `installation.md` (quickstart),
-the `playground.html` interactive curve, `dashboard.md` (how to add the
-view strategy), `blueprint.md` (full per-feature/input breakdown),
-and a `docs/reference/` "Reference" section (`has_children: true`):
-`integration.md` (every service and entity), `scenes.md` (scene
-handoff) and `custom-automations.md` (building without the blueprint).
-It was "Power users" at `/advanced/`, renamed at the user's direction as
-exclusionary; `jekyll-redirect-from` keeps the old URLs working, so
-don't drop the `redirect_from` lines. The
-top-level `examples.md` holds automations that change or build on FLARE
-using only ordinary Home Assistant actions; each one was run against a
-real schedule before it went in. Contributing
+the `playground.html` interactive curve, `dashboard.md`, then two
+sections. `docs/guides/` ("Guides") is how to do more: `examples.md`
+(automations using only ordinary HA actions, each run against a real
+schedule before it went in), `templates.md` (the blueprint's template
+inputs with worked examples), `scenes.md` and `custom-automations.md`.
+`docs/reference/` ("Reference") is the technical docs: `blueprint.md`
+(the inputs and how a room behaves - the contract only, worked examples
+go in Guides), `schedules.md`, `zones.md` and `services.md`. The section
+was "Power users" at `/advanced/`, renamed as exclusionary, and the
+blueprint page lived at `/blueprint/`; `jekyll-redirect-from` keeps old
+URLs working, so don't drop the `redirect_from` lines. Contributing
 lives at the repo root as `CONTRIBUTING.md` (repo layout, tests, how to
 build the site) - it is for people working on the code, who are already
 on GitHub, so it is not a site page.
@@ -1053,7 +1053,7 @@ which is *narrower*, so the curve still cannot light an empty room.
 - **Levels travel as multipliers** - see "Brightness levels" below,
   which both paths now share.
 
-**Inbound doc links are now tested.** `docs/blueprint.md`'s headings are
+**Inbound doc links are now tested.** `docs/reference/blueprint.md`'s headings are
 deep-linked from the blueprint's own input descriptions and from every
 test class docstring, and the #172 restructure silently broke six of
 them. `tests/checks/test_docs_site.py::test_every_referenced_blueprint_anchor_exists`
@@ -1684,7 +1684,7 @@ Shared helpers live in `tests/support/` and each functional directory's
   bug in the blueprint's own trigger/condition/action wiring -
   syntactically fine, wrong only at runtime. It mocks FLARE's services
   and asserts on what the blueprint calls; its classes mirror
-  `docs/blueprint.md`'s headings. `tests/functional/behaviour/` runs the
+  `docs/reference/blueprint.md`'s headings. `tests/functional/behaviour/` runs the
   real blueprint, schedule and services with only the bulbs faked, and
   asserts on the bulbs' final state. The day is pinned (sunset 18:00,
   clock from 19:00), and a phase change means moving the clock.

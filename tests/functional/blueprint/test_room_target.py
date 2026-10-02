@@ -21,7 +21,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestRoomTargetResolution:
-    """docs/blueprint.md#setting-up-a-room"""
+    """docs/reference/blueprint.md#setting-up-a-room"""
 
     async def test_device_id_room_target_resolves_both_lights_and_occupancy_sensors(self, hass, apply_lighting_calls):
         dev_reg = dr.async_get(hass)
@@ -174,7 +174,7 @@ class TestRoomTargetResolution:
         ]
 
 class TestOverrideDetection:
-    """docs/blueprint.md#why-didnt-my-light-change"""
+    """docs/reference/blueprint.md#why-didnt-my-light-change"""
 
     async def test_apply_lighting_names_the_picked_zone_whatever_area_the_lights_are_in(
         self, hass, apply_lighting_calls
