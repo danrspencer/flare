@@ -16,8 +16,7 @@ render_with_liquid: false
 {: .no_toc }
 
 The blueprint is the automation each room runs. This page covers every input and how a room
-behaves. To set up a room, see the [Quickstart](../../installation/); for worked examples of the
-template inputs, see [Templates](../../guides/templates/).
+behaves.
 
 <details open markdown="block">
   <summary>On this page</summary>
