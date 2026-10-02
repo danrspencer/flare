@@ -15,9 +15,8 @@ render_with_liquid: false
 # Scenes
 {: .no_toc }
 
-A room can follow a scene of yours instead of the curve: one per phase, or one chosen by a
-template. FLARE applies the scene, lights anything it doesn't cover from the curve, and takes
-the room back when the scene no longer applies.
+A room can use one of your scenes instead of the schedule, either for a whole phase or when a
+template chooses one.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -26,41 +25,25 @@ the room back when the scene no longer applies.
 {:toc}
 </details>
 
-## Handing a room to a scene
+## Using a scene in a room
 
-Pick a scene in the blueprint's **Night Scene** (or whichever phase) and, during that phase,
-the room uses it instead of the curve. For anything a phase can't express — a different scene
-while the TV is on — use [Scene Template](../templates/#scene-template), which wins over the
-per-phase pickers whenever it returns a scene.
+Choose a scene in the blueprint's **Night Scene**, or whichever phase, and the room uses it
+during that phase. To choose a scene based on something else, such as the TV being on, use
+[Scene Template](../templates/#scene-template). It overrides the per-phase scenes whenever it
+returns one.
 
-A scene is only used if every entity it touches is in the room. A scene that reaches into
-another room, or doesn't exist, is ignored and the room follows the curve.
+A scene is only used if every entity it sets is in the room. If a scene sets anything outside
+the room, or doesn't exist, the room follows the schedule.
 
-Lights in the room that the scene doesn't cover carry on following the curve, so a scene
-naming half the room leaves the other half to FLARE.
+Lights in the room that the scene doesn't set follow the schedule as usual.
 
 ## When the scene is applied
 
-The scene is applied when the room's automation runs for a phase change, for motion, for an
-Additional Trigger, when you run it by hand, or when a light comes back online — but not on
-the regular update. Re-applying it every minute would undo anything you changed by hand while
-it was on.
+The scene is applied when the room's automation runs because the phase changed, occupancy was
+detected, an Additional Trigger changed, a light came back online, or you ran it by hand. It
+isn't applied on the regular tick, so changes you make while the scene is on aren't undone.
 
-Like the curve, a scene never lights an empty room. If the phase changes while nobody's there,
-the scene is applied when someone next walks in.
+A scene doesn't turn on the lights in an empty room. If the phase changes while the room is
+empty, the scene is applied when someone next comes in.
 
-## How FLARE lets go of a scene's lights
-
-When FLARE applies a scene, it releases its claims on the lights the scene covers.
-
-That matters because of [override protection](../../reference/zones/#override-protection). If
-FLARE kept its claims, it would see the scene's colours on those lights and decide someone else
-had changed them. It would then leave them alone until the room went dark — so when the scene's
-phase ended, those lights would stay as the scene left them instead of going back to the
-curve. With the claims released, FLARE takes the lights back at the first update after the
-scene stops applying.
-
-## When someone takes a light by hand
-
-A light changed by a wall switch, an app or another automation is left alone, scene or not,
-until the room goes dark. See [override protection](../../reference/zones/#override-protection).
+When the scene's phase ends, the room goes back to the schedule.

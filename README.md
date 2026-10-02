@@ -4,52 +4,46 @@
 
 **F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine.
 
-Lighting for Home Assistant that follows the shape of your day. By default it's bright and cool to help you wake
-up, warms through the afternoon, dims as evening comes, and sits low and warm once the house is asleep — and
-every one of those is yours to change.
+Lighting for Home Assistant that changes through the day. By default it's bright and cool in the morning to
+help you wake up, warms through the afternoon, dims in the evening, and stays low and warm overnight. You can
+change all of it.
 
-Rooms light up as people come in and go dark once they've left, or dim to a nightlight instead of going out.
-Hand a room to a scene and FLARE fills in whatever the scene doesn't cover, and a light you change yourself is
-left alone until the room next goes dark.
+Rooms turn their lights on when someone comes in and off once they're empty, or dim to a nightlight. A room can
+be handed to one of your scenes, and a light you change yourself is left alone until the room is next dark.
 
 [![The FLARE Lighting dashboard view: the day's curve, a phase override, the schedule times, and the curve and transition values for each phase](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/dashboard-section.png)](https://danrspencer.github.io/flare/dashboard/)
 
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
 
-The quickest way to see what this actually does is the
-**[interactive curve playground](https://danrspencer.github.io/flare/playground/)**: move the schedule and
-curve settings around and watch the day's lighting change.
+To see how the settings shape the day, try the
+**[curve playground](https://danrspencer.github.io/flare/playground/)**.
 
-- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
-- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
-- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, scenes, and building your own automations
-- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and zone entity, and service
-- **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
+- **[Quickstart](https://danrspencer.github.io/flare/installation/)**: HACS, the blueprint, and the dashboard
+- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)**: the two ready-made views, added with a few lines of config
+- **[Guides](https://danrspencer.github.io/flare/guides/)**: examples, templates, scenes, and building your own automations
+- **[Reference](https://danrspencer.github.io/flare/reference/)**: every blueprint input, schedule and zone entity, and service
+- **[Contributing](CONTRIBUTING.md)**: repository layout and the test suite
 
-## Why four phases, not a continuous curve
+## Why four phases
 
-Most adaptive lighting follows the sun's position. That means evening lighting at 4pm in winter, and bright
-light until 9pm in summer, whatever time you actually get up and go to bed.
-FLARE works from your schedule instead, using four named phases. With the default settings they work like this:
+Most adaptive lighting follows the sun's position. In winter that means evening lighting from 4pm; in summer,
+bright light until 9pm. FLARE follows your day instead, in four phases. With the default settings:
 
-- **Morning** is there to help you wake up. It starts at a fixed time, not at sunrise, because work and school
-  don't start at sunrise either. Bright, cool-white light in the morning
-  wakes you up better, and there is [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up.
-  Mostly, though, very cool light is just enough eyeball caffeine to get you as far as the coffee machine.
-- **Day** is the long middle stretch, gradually warming as it runs toward evening so the eventual transition
-  doesn't feel abrupt.
-- **Evening** is when relaxed, warm lighting takes over. It's the one phase that follows the sun, starting at
-  sunset, but no earlier and no later than limits you set: a 4pm winter sunset doesn't start the evening while
-  you're still at work, and a 10pm midsummer sunset doesn't mean evening never arrives.
-- **Night** isn't tied to any solar event at all — it's just what the house should look like once everyone's
-  asleep: dim and warm, the lighting you want on at 3am without waking yourself up further.
+- **Morning** helps you wake up. It starts at a fixed time rather than at sunrise, because work and school
+  don't start at sunrise either. Bright, cool light wakes you up better, and there is
+  [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up. Mostly, though, very cool light
+  is just enough eyeball caffeine to get you as far as the coffee machine.
+- **Day** stays bright and warms slowly towards evening, so the change to Evening isn't sudden.
+- **Evening** is warmer and dimmer. It's the one phase that follows the sun: it starts at sunset, but no
+  earlier and no later than two times you set. A 4pm winter sunset doesn't start the evening while you're
+  still at work, and a 10pm summer sunset doesn't delay it until bedtime.
+- **Night** is low and warm, for when everyone's asleep: the light you want at 3am.
 
 ## How it fits together
 
-Install FLARE from HACS, add it, and create an automation for each room from its blueprint. The blueprint covers
-what most rooms want; if it doesn't do what you need, everything it uses is an ordinary Home Assistant entity or
-action, so you can change it or write your own — see the
-[examples](https://danrspencer.github.io/flare/guides/examples/).
+Install FLARE from HACS, add it, and create an automation for each room from its blueprint. If the blueprint
+doesn't do what you need, everything it uses is a Home Assistant entity or action, so you can change it with
+your own automations; see the [examples](https://danrspencer.github.io/flare/guides/examples/).
 
 ## Acknowledgements
 

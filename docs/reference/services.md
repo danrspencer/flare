@@ -15,10 +15,10 @@ render_with_liquid: false
 # Services
 {: .no_toc }
 
-FLARE's services are ordinary Home Assistant actions, callable from any automation or script.
-The blueprint uses the same ones. Every field is also listed in **Developer Tools → Actions**.
+FLARE's services are Home Assistant actions that any automation or script can call. The
+blueprint uses them too. **Developer Tools → Actions** lists every field.
 
-| Service | |
+| Service | Description |
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
 | [`flare.turn_off`](#flareturn_off) | Turns lights off, recording that FLARE did it |
@@ -38,9 +38,9 @@ The blueprint uses the same ones. Every field is also listed in **Developer Tool
 ## `flare.apply_lighting`
 
 Sets lights to a brightness and colour temperature. It skips lights that are unavailable or
-already close enough, leaves alone lights someone else has changed (see
-[override protection](../zones/#override-protection)), and sends two commands to bulbs that
-need them (see [two-step bulbs](#two-step-bulbs)).
+already close to the target, and lights something else has changed (see
+[override protection](../zones/#override-protection)). It sends two commands to bulbs that need
+them (see [two-step bulbs](#two-step-bulbs)).
 
 ```yaml
 action: flare.apply_lighting
@@ -55,7 +55,7 @@ data:
   force: false                                    # optional
 ```
 
-It takes values, not a sensor. To follow a schedule, template them from the
+It takes values rather than a sensor. To follow a schedule, read the values from the
 [schedule sensor](../schedules/#the-schedule-sensor):
 
 ```yaml
@@ -68,28 +68,27 @@ color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
 ### RGB colour
 
 With `prefer_rgb_color` on, lights that support RGB are sent `rgb_color` instead of
-`color_temp_kelvin`; other lights are unaffected. Pass the colour as `rgb_color` — the schedule
-sensor's `rgb_color` attribute, or `compute_curve`'s, is the colour temperature as RGB. Without
-`prefer_rgb_color`, `rgb_color` is ignored, and it can be `null`.
+`color_temp_kelvin`. Other lights are unaffected. The schedule sensor and `compute_curve` both
+provide `rgb_color`, the colour temperature as RGB. Without `prefer_rgb_color`, `rgb_color` is
+ignored and can be `null`.
 
 ### Leaving small changes alone
 
 A light already close to its target isn't sent anything. Close means within the tolerances
-(`brightness_tolerance`, `color_temp_tolerance`, `rgb_color_tolerance`), or within the
-smallest change worth sending:
+(`brightness_tolerance`, `color_temp_tolerance`, `rgb_color_tolerance`), or within these
+minimum changes:
 
 | Field | Default | |
 |---|---|---|
 | `min_brightness_change` | 5 | Percent of the target brightness |
 | `min_color_temp_change` | 5 | Mireds of colour temperature |
 
-Leave them out and they come from **FLARE Zones → Configure**, which is where these defaults
-are set.
+If you leave them out, the values from **FLARE Zones → Configure** are used.
 
 ## `flare.turn_off`
 
-Turns lights off and records that FLARE did it, so the turn-off isn't mistaken for someone
-switching them off by hand.
+Turns lights off and records a claim, so the turn-off isn't mistaken for someone turning
+them off by hand.
 
 ```yaml
 action: flare.turn_off
@@ -99,14 +98,14 @@ data:
   zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"  # optional
 ```
 
-It turns off everything it's given, including lights someone set by hand. To turn lights off
-only if FLARE is still driving them, ask `claims_check` first.
+It turns off every light it's given, including lights someone else has changed. To turn off
+only the lights FLARE is still setting, call `claims_check` first.
 
 ## `flare.compute_lighting_groups`
 
-Works out what `apply_lighting` would send, without sending anything: which lights need a
-command, grouped by brightness, with the ones needing two commands separated out. It takes the
-same fields as `apply_lighting` apart from `transition`. Use it to send the commands yourself.
+Returns what `apply_lighting` would send, without sending it: the lights that need a command,
+grouped by brightness, with two-step bulbs listed separately. It takes the same fields as
+`apply_lighting` except `transition`.
 
 ```yaml
 action: flare.compute_lighting_groups
@@ -121,9 +120,9 @@ response_variable: plan
 
 ## `flare.compute_curve`
 
-The curve's phase, brightness, colour temperature and RGB colour at a given moment (or now),
-from phase start times you supply. The curve settings are optional and default to a new
-schedule's.
+Returns the phase, brightness, colour temperature and RGB colour at a given time, or now, for
+phase start times you supply. The curve settings are optional; they default to a new
+schedule's values.
 
 ```yaml
 action: flare.compute_curve
@@ -140,8 +139,8 @@ response_variable: now
 
 ## `flare.claims_check`, `claims_record` and `claims_clear`
 
-[Override protection](../zones/#override-protection) on its own, for lights you set yourself.
-Each needs a `zone_device_id`.
+These give you [override protection](../zones/#override-protection) for lights you set
+yourself. Each requires `zone_device_id`.
 
 `claims_check` reports whether FLARE would leave each light alone:
 
@@ -158,8 +157,8 @@ response_variable: control
 `status` and `matched_via` are described under
 [inspecting tracked state](../zones/#inspecting-tracked-state).
 
-`claims_record` records a claim, so a later check recognises your write as FLARE's. Call it
-just **before** you write the light, with what you're about to send:
+`claims_record` records a claim, so a later `claims_check` treats your change as FLARE's. Call
+it just **before** you change the light, with the values you're about to send:
 
 ```yaml
 action: flare.claims_record
@@ -170,11 +169,12 @@ data:
     light.kitchen_1: { brightness: 200, color_temp_kelvin: 3000 }
 ```
 
-Without `targets`, a bulb that's slow to report back is read as changed by someone else.
+Each target needs a brightness and either `color_temp_kelvin` or `rgb_color`. Without
+`targets`, a bulb that's slow to report back is treated as changed by someone else.
 
-`claims_clear` discards lights' claims, so FLARE treats them as new. It's the way back for a
-light stuck as overridden in a room that never goes dark; each zone's **Clear** button does
-the same for every light in the zone.
+`claims_clear` discards claims, so FLARE treats the lights as new. Use it for a light that's
+overridden in a room that's never fully dark. A zone's **Clear** button does the same for every
+light in the zone.
 
 ```yaml
 action: flare.claims_clear
@@ -185,9 +185,9 @@ data:
 
 ## `flare.compute_scene_coverage`
 
-Given a scene and a set of lights, says which of the lights the scene covers, so you can hand
-those to the scene and set the rest yourself. A scene that doesn't exist, or that also covers
-entities outside `scope_entities`, counts as no scene.
+Returns which of a set of lights a scene covers, so you can apply the scene and set the other
+lights yourself. A scene that doesn't exist, or that sets entities outside `scope_entities`,
+counts as no scene.
 
 ```yaml
 action: flare.compute_scene_coverage
@@ -199,13 +199,12 @@ response_variable: coverage
 # coverage.scene_active / scene_valid / covered_entities / uncovered_entities
 ```
 
-`scope_entities` is everything the scene may touch; `target_entities` is the lights you want
-an answer for. See [scenes](../../guides/scenes/) for how the blueprint uses it.
+`scope_entities` is every entity the scene may set. `target_entities` is the lights to check.
 
 ## `flare.export_schedule` and `flare.import_schedule`
 
-A schedule's settings, as the YAML described under
-[copying a schedule](../schedules/#copying-a-schedule). Both name the schedule by its device.
+Export or apply a schedule's settings, in the YAML format described under
+[copying a schedule](../schedules/#copying-a-schedule). Both identify the schedule by its device.
 
 ```yaml
 action: flare.export_schedule
@@ -224,14 +223,14 @@ data:
       time: "23:00"
 ```
 
-`schedule` can be YAML text or written out as above. Anything it leaves out keeps its current
-value, and a schedule with a mistake in it changes nothing.
+`schedule` can be YAML text, or YAML written directly in the call as above. Settings it leaves
+out keep their current values. A schedule with an error in it isn't applied.
 
 ## Two-step bulbs
 
-Some bulbs can't change brightness and colour temperature in one command: sent together, they
-jump or ignore one of the two. FLARE sends those bulbs two commands instead, each taking half
-the transition. It recognises them two ways:
+Some bulbs can't change brightness and colour temperature in one command: they jump to the new
+value, or ignore one of the two. FLARE sends these bulbs two commands, each taking half the
+transition. It recognises them in two ways:
 
 - **By make and model**, from a list of patterns under **FLARE Zones → Configure**, one per
   line, matched against `"<manufacturer> <model>"`. Patterns are case-insensitive and take
@@ -241,5 +240,5 @@ the transition. It recognises them two ways:
   `no_combined_transition`. FLARE matches the label's ID, which comes from the name it was
   created with, so renaming another label to this won't work.
 
-Once you've saved your own pattern list, later FLARE updates won't add to it. Keep patterns
-narrow: a bulb that didn't need two commands transitions worse with them.
+Once you've saved your own pattern list, FLARE updates don't add to it. Keep patterns specific:
+a bulb that doesn't need two commands transitions less smoothly with them.

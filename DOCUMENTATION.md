@@ -104,11 +104,22 @@ reader does to get a room working, or needs to know to do it. Notes about
 things that happen on their own, alternatives to the standard setup and
 explanations of how it works all live elsewhere.
 
-**13. Say the concrete thing.** A sentence that sounds knowledgeable but
-gives the reader nothing to act on goes: "it re-checks as it goes",
-"it bends to fit the room", "shifts in step with what's happening
-outside". Replace it with what actually happens — "every minute it checks
-each light" — or cut it.
+**13. Write plain technical documentation.** Short declarative sentences
+that say what happens. Each of these has been flagged in review as
+sounding like AI prose rather than documentation; don't write them:
+
+- A sentence that sounds knowledgeable but gives the reader nothing to
+  act on: "it re-checks as it goes", "it bends to fit the room", "shifts
+  in step with what's happening outside". Say what actually happens
+  ("every minute it checks each light"), or cut it.
+- Em-dash asides — like this one — in running prose. Use a full stop or
+  a comma. A dash between a list item's label and its description is fine.
+- "X, not Y" contrasts and rhetorical turns ("that's the trick", "that's
+  what makes…", "whatever the time of day", "the one thing that…").
+- A bold lead-in on every bullet. Bold a term only when the bullet
+  defines it.
+- Explaining why something matters when the reader only needs to know
+  what it does, or repeating something another page already covers.
 
 **14. Reference is the contract; Guides are how to use it.** A Reference
 page says what an input accepts, what an entity holds, what a service

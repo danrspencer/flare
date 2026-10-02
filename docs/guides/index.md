@@ -8,13 +8,12 @@ permalink: /guides/
 # Guides
 {: .no_toc }
 
-How to do more with FLARE once a room is running.
+Guides for doing more with FLARE once a room is set up.
 
-- **[Examples]({{ site.baseurl }}/guides/examples/)** — automations that change or build on
-  FLARE: a weekend lie-in, a holiday schedule, movie night, and more.
-- **[Templates]({{ site.baseurl }}/guides/templates/)** — the blueprint's Brightness, Idle
-  Brightness and Scene templates, with worked examples.
-- **[Scenes]({{ site.baseurl }}/guides/scenes/)** — handing a room to a scene, and getting it
-  back.
-- **[Building without the blueprint]({{ site.baseurl }}/guides/custom-automations/)** —
-  driving FLARE from your own automations instead.
+- **[Examples]({{ site.baseurl }}/guides/examples/)**: automations that change how FLARE
+  behaves, such as a weekend lie-in or a holiday schedule.
+- **[Templates]({{ site.baseurl }}/guides/templates/)**: the blueprint's Brightness, Idle
+  Brightness and Scene templates, with examples.
+- **[Scenes]({{ site.baseurl }}/guides/scenes/)**: using your own scenes in a room.
+- **[Building without the blueprint]({{ site.baseurl }}/guides/custom-automations/)**: using
+  FLARE's services in your own automations and scripts.
