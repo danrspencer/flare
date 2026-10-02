@@ -439,6 +439,13 @@ there is no configuration form. Removing a schedule means removing its device fr
 There are no separate boundary sensors: a phase-change automation triggers on
 `event.<name>_flare_phase`.
 
+`points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
+not a right-now value.
+
+For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
+schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
+already groups the same entities for free.
+
 ### Copying a schedule
 
 A schedule's times and curve values travel as one block of YAML, keyed by phase:
@@ -479,10 +486,3 @@ There are four ways to move one:
 A schedule with a mistake in it — an unknown phase or setting, a time that isn't a time,
 a value out of range — is refused with a message saying which, and nothing is changed.
 Times don't have to be in order, just as the time entities don't.
-
-`points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
-not a right-now value.
-
-For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
-schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
-already groups the same entities for free.

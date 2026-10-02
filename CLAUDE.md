@@ -71,8 +71,10 @@ view strategy), `blueprint.md` (full per-feature/input breakdown),
 and a `docs/advanced/` "Power users" section (`has_children: true`):
 `reference.md` (the full service/entity reference - this is what
 `helpers.md` was renamed to when the docs site was restructured, see
-below), `scenes.md` (scene handoff), and
-`custom-automations.md` (building without the blueprint). Contributing
+below), `scenes.md` (scene handoff),
+`custom-automations.md` (building without the blueprint), and
+`examples.md` (automations that change or build on FLARE; each one was
+run against a real schedule before it went in). Contributing
 lives at the repo root as `CONTRIBUTING.md` (repo layout, tests, how to
 build the site) - it is for people working on the code, who are already
 on GitHub, so it is not a site page.

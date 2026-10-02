@@ -22,3 +22,5 @@ yourself.
   scenes and with someone reaching for a switch.
 - **[Building without the blueprint]({{ site.baseurl }}/advanced/custom-automations/)** — calling
   the services directly from your own YAML, scripts, Node-RED or AppDaemon.
+- **[Examples]({{ site.baseurl }}/advanced/examples/)** — automations that change how FLARE
+  behaves or build on it: a weekend lie-in, a winter schedule, movie night, and more.

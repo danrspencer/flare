@@ -84,16 +84,13 @@ work around it:
 
 A few things that need no change to FLARE at all:
 
-- **A weekend lie-in** — an automation that moves `time.home_morning_time` to 08:00 on Friday
-  night and back on Sunday.
-- **A room lit by something other than occupancy** — your own automation runs the room's
-  automation when your trigger fires, and the room comes on at the right level for the
-  time of day. That counts as running it by hand, so lights someone set themselves are
-  brought back to the curve too. See
-  [additional triggers]({{ site.baseurl }}/blueprint/#additional-triggers).
-- **Something else following the curve** — read the schedule sensor's `brightness` and
-  `color_temp` in your own automation, or trigger on its Phase event.
+- **A weekend lie-in**, by an automation that moves Morning later on Friday and Saturday
+  evenings.
+- **A winter schedule**, swapped in each November.
+- **A room lit by the front door opening**, not just by occupancy.
+- **Blinds that close when Night starts.**
 
+[See the examples →]({{ site.baseurl }}/advanced/examples/){: .btn .btn-outline .mr-2 }
 [See every entity and action →]({{ site.baseurl }}/advanced/reference/){: .btn .btn-outline }
 
 ---
