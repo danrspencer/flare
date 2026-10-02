@@ -1,13 +1,10 @@
 compute_lighting_groups:
   name: Compute lighting groups
   description: >-
-    Works out the minimal set of light.turn_on/light.turn_off calls
-    needed to reach a target brightness/colour temperature: filters out
-    unreachable lights, groups by multiplier, skips anything already
-    within tolerance, leaves overridden lights alone, and
-    separates out lights needing a two-step transition. Read-only - it
-    reports what it would do without touching anything.
-    Standalone; doesn't require this repo's blueprint.
+    Returns the commands apply_lighting would send, without sending them.
+    Lights are grouped by brightness, with two-step and RGB lights listed
+    separately. Unavailable lights, lights already close to the target and
+    overridden lights are left out.
   fields:
     entities:
       name: Entities
@@ -20,17 +17,16 @@ compute_lighting_groups:
     brightness_multipliers:
       name: Brightness multipliers
       description: >-
-        Map of entity_id to multiplier. 0 turns that light off; other
-        numbers scale brightness, clamped to 1-255 (so a value above 1
-        just means "as bright as it goes"); null/false skips the light
-        entirely (excluded from every group). Entities not listed
-        default to a multiplier of 1.
+        Map of entity ID to multiplier. A number scales the brightness,
+        limited to 1-255. 0 turns the light off. null or false leaves the
+        light alone. Lights not listed use 1.
       example: '{"light.lamp": 0.5, "light.strip": 0}'
       selector:
         object:
     brightness:
       name: Target brightness
-      description: Base brightness (0-255) before multipliers are applied.
+      description: >-
+        Brightness (0-255) before multipliers.
       required: true
       selector:
         number:
@@ -48,8 +44,8 @@ compute_lighting_groups:
     brightness_tolerance:
       name: Brightness tolerance
       description: >-
-        A light already within this many brightness points of the target
-        is left alone instead of being recommanded.
+        A light within this much of the target brightness (0-255) isn't sent
+        anything.
       default: 2
       selector:
         number:
@@ -58,11 +54,8 @@ compute_lighting_groups:
     color_temp_tolerance:
       name: Colour temperature tolerance
       description: >-
-        A light already within this many Kelvin of the target is left
-        alone instead of being recommanded. A colour temperature that's
-        identical once converted to mireds (the unit real devices
-        actually use) always counts as a match regardless of this
-        setting, even if the Kelvin gap exceeds it.
+        A light within this many Kelvin of the target isn't sent anything.
+        Values that convert to the same mired always count as a match.
       default: 10
       selector:
         number:
@@ -72,46 +65,34 @@ compute_lighting_groups:
     two_step_label:
       name: Two-step label
       description: >-
-        Entities or devices carrying this label are returned separately
-        (as "two_step") so you can send brightness and colour temperature
-        as two sequential calls instead of one combined call - for bulbs
-        that can't transition both together. Entities are also routed
-        this way automatically if their device's manufacturer/model
-        matches FLARE's configured two-step model patterns, even
-        without this label.
+        Lights or devices with this label are listed under two_step, for bulbs
+        that can't change brightness and colour temperature in one command.
+        Lights matching the two-step models under FLARE Zones → Configure are
+        listed there too.
       default: no_combined_transition
       selector:
         text:
     prefer_rgb_color:
       name: Prefer RGB colour
       description: >-
-        When true (and rgb_color is given), entities whose
-        supported_color_modes indicates RGB support are returned
-        separately (as "combined_rgb"/"two_step_rgb") targeting rgb_color
-        instead of "combined"/"two_step" targeting
-        color_temp_kelvin. Entities without RGB support are
-        unaffected either way. Off by default - behaviour is identical to
-        before this field existed.
+        Lights that support RGB are listed under combined_rgb or two_step_rgb,
+        targeting rgb_color instead of color_temp_kelvin. Needs rgb_color.
       default: false
       selector:
         boolean:
     rgb_color:
       name: Target RGB colour
       description: >-
-        The RGB colour to use for RGB-capable entities when
-        prefer_rgb_color is true. Typically the Kelvin -> RGB conversion
-        of the same target colour temperature (see compute_curve's own
-        rgb_color output). Leave unset (or pass null explicitly - useful
-        when templating this from a source that may not always have one)
-        if you're not using prefer_rgb_color.
+        The colour for RGB lights when Prefer RGB colour is on, usually the
+        colour temperature as RGB (the rgb_color from the schedule sensor or
+        compute_curve). Can be null.
       selector:
         color_rgb:
     rgb_color_tolerance:
       name: RGB colour tolerance
       description: >-
-        A light already within this many points (0-255 scale, per
-        channel) of the target rgb_color is left alone instead of being
-        recommanded.
+        A light within this much of rgb_color on each channel (0-255) isn't
+        sent anything.
       default: 10
       selector:
         number:
@@ -120,10 +101,9 @@ compute_lighting_groups:
     min_brightness_change:
       name: Minimum brightness change
       description: >-
-        A light already within this percentage of the target brightness
-        is left alone, since a change that small isn't worth the radio
-        traffic. Never tighter than Brightness tolerance. Leave unset to
-        use the integration's setting (Configure on FLARE's entry).
+        A light within this percentage of the target brightness isn't sent
+        anything. Never smaller than Brightness tolerance. Leave unset to use
+        the setting under FLARE Zones → Configure.
       selector:
         number:
           min: 0
@@ -133,10 +113,9 @@ compute_lighting_groups:
     min_color_temp_change:
       name: Minimum colour temperature change
       description: >-
-        A light already within this many mireds of the target colour
-        temperature is left alone. Mireds, not Kelvin, because a step of
-        one looks about the same anywhere in the range. Leave unset to use
-        the integration's setting.
+        A light within this many mireds of the target colour temperature isn't
+        sent anything. Leave unset to use the setting under FLARE Zones →
+        Configure.
       selector:
         number:
           min: 0
@@ -146,20 +125,16 @@ compute_lighting_groups:
     force:
       name: Force
       description: >-
-        Bypasses override protection for this call, writing every
-        entity even if something else currently holds it. The write is
-        still recorded, so a later non-forced call recognises it and
-        protection works again afterward. Off by default.
+        Sets every light, including overridden ones. The change is still
+        recorded, so later calls treat it as FLARE's.
       default: false
       selector:
         boolean:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) whose claims decide what's already externally-set.
-        Leave unset and nothing is treated as externally-set - every
-        entity is planned as though free to manage.
+        The zone whose claims decide which lights are overridden. Leave unset
+        to treat no light as overridden.
       selector:
         device:
           filter:
@@ -169,17 +144,10 @@ compute_lighting_groups:
 apply_lighting:
   name: Apply lighting
   description: >-
-    Given a target brightness/colour-temperature (and optionally RGB
-    colour), actually turns entities on/off via light.turn_on/
-    light.turn_off - the same reachability/tolerance/override-protection/
-    two-step/RGB-vs-colour-temp logic compute_lighting_groups exposes as
-    data, but dispatched for you. Takes the same brightness/
-    color_temp_kelvin/rgb_color fields compute_lighting_groups does - if
-    you're feeding these from a sensor entity's attributes yourself (e.g.
-    the FLARE blueprint in this repo, reading its own Schedule
-    input), that's just an ordinary template on the caller's side; this
-    service itself doesn't read any entity. Standalone - call this from
-    your own automation, it doesn't require the FLARE blueprint.
+    Sets lights to a brightness and colour temperature, turning on any that
+    are off. Skips lights that are unavailable, already close to the target,
+    or overridden. Bulbs that need it are sent brightness and colour
+    temperature as two commands.
   fields:
     entities:
       name: Entities
@@ -192,17 +160,16 @@ apply_lighting:
     brightness_multipliers:
       name: Brightness multipliers
       description: >-
-        Map of entity_id to multiplier. 0 turns that light off; other
-        numbers scale brightness, clamped to 1-255 (so a value above 1
-        just means "as bright as it goes"); null/false skips the light
-        entirely (excluded from every group). Entities not listed
-        default to a multiplier of 1.
+        Map of entity ID to multiplier. A number scales the brightness,
+        limited to 1-255. 0 turns the light off. null or false leaves the
+        light alone. Lights not listed use 1.
       example: '{"light.lamp": 0.5, "light.strip": 0}'
       selector:
         object:
     brightness:
       name: Target brightness
-      description: Base brightness (0-255) before multipliers are applied.
+      description: >-
+        Brightness (0-255) before multipliers.
       required: true
       selector:
         number:
@@ -220,8 +187,8 @@ apply_lighting:
     transition:
       name: Transition
       description: >-
-        Transition duration in seconds. Two-step entities get this
-        halved, applied twice (brightness, then colour).
+        Transition in seconds. Two-step bulbs take half for brightness, then
+        half for colour temperature.
       required: true
       selector:
         number:
@@ -231,8 +198,8 @@ apply_lighting:
     brightness_tolerance:
       name: Brightness tolerance
       description: >-
-        A light already within this many brightness points of the target
-        is left alone instead of being recommanded.
+        A light within this much of the target brightness (0-255) isn't sent
+        anything.
       default: 2
       selector:
         number:
@@ -241,11 +208,8 @@ apply_lighting:
     color_temp_tolerance:
       name: Colour temperature tolerance
       description: >-
-        A light already within this many Kelvin of the target is left
-        alone instead of being recommanded. A colour temperature that's
-        identical once converted to mireds (the unit real devices
-        actually use) always counts as a match regardless of this
-        setting, even if the Kelvin gap exceeds it.
+        A light within this many Kelvin of the target isn't sent anything.
+        Values that convert to the same mired always count as a match.
       default: 10
       selector:
         number:
@@ -255,42 +219,34 @@ apply_lighting:
     two_step_label:
       name: Two-step label
       description: >-
-        Entities or devices carrying this label get brightness and
-        colour temperature sent as two sequential calls instead of one
-        combined call - for bulbs that can't transition both together.
-        Entities are also routed this way automatically if their
-        device's manufacturer/model matches FLARE's configured
-        two-step model patterns, even without this label.
+        Lights or devices with this label are sent brightness and colour
+        temperature as two commands, for bulbs that can't change both in one.
+        So are lights matching the two-step models under FLARE Zones →
+        Configure.
       default: no_combined_transition
       selector:
         text:
     prefer_rgb_color:
       name: Prefer RGB colour
       description: >-
-        When true (and rgb_color is given), entities whose
-        supported_color_modes indicates RGB support get rgb_color
-        instead of color_temp_kelvin. Entities without RGB support are
-        unaffected either way. Off by default.
+        Lights that support RGB are sent rgb_color instead of
+        color_temp_kelvin. Needs rgb_color.
       default: false
       selector:
         boolean:
     rgb_color:
       name: Target RGB colour
       description: >-
-        The RGB colour to use for RGB-capable entities when
-        prefer_rgb_color is true. Typically the Kelvin -> RGB conversion
-        of the same target colour temperature (see compute_curve's own
-        rgb_color output). Leave unset (or pass null explicitly - useful
-        when templating this from a source that may not always have one)
-        if you're not using prefer_rgb_color.
+        The colour for RGB lights when Prefer RGB colour is on, usually the
+        colour temperature as RGB (the rgb_color from the schedule sensor or
+        compute_curve). Can be null.
       selector:
         color_rgb:
     rgb_color_tolerance:
       name: RGB colour tolerance
       description: >-
-        A light already within this many points (0-255 scale, per
-        channel) of the target rgb_color is left alone instead of being
-        recommanded.
+        A light within this much of rgb_color on each channel (0-255) isn't
+        sent anything.
       default: 10
       selector:
         number:
@@ -299,10 +255,9 @@ apply_lighting:
     min_brightness_change:
       name: Minimum brightness change
       description: >-
-        A light already within this percentage of the target brightness
-        is left alone, since a change that small isn't worth the radio
-        traffic. Never tighter than Brightness tolerance. Leave unset to
-        use the integration's setting (Configure on FLARE's entry).
+        A light within this percentage of the target brightness isn't sent
+        anything. Never smaller than Brightness tolerance. Leave unset to use
+        the setting under FLARE Zones → Configure.
       selector:
         number:
           min: 0
@@ -312,10 +267,9 @@ apply_lighting:
     min_color_temp_change:
       name: Minimum colour temperature change
       description: >-
-        A light already within this many mireds of the target colour
-        temperature is left alone. Mireds, not Kelvin, because a step of
-        one looks about the same anywhere in the range. Leave unset to use
-        the integration's setting.
+        A light within this many mireds of the target colour temperature isn't
+        sent anything. Leave unset to use the setting under FLARE Zones →
+        Configure.
       selector:
         number:
           min: 0
@@ -325,20 +279,16 @@ apply_lighting:
     force:
       name: Force
       description: >-
-        Bypasses override protection for this call, writing every
-        entity even if something else currently holds it. The write is
-        still recorded, so a later non-forced call recognises it and
-        protection works again afterward. Off by default.
+        Sets every light, including overridden ones. The change is still
+        recorded, so later calls treat it as FLARE's.
       default: false
       selector:
         boolean:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) this write belongs to. Leave unset to write the
-        light(s) without tracking them at all - no claim is recorded,
-        so nothing is protected on a later call.
+        The zone to record this change in. Leave unset to set the lights
+        without recording anything, so no light is treated as overridden.
       selector:
         device:
           filter:
@@ -348,18 +298,8 @@ apply_lighting:
 turn_off:
   name: Turn off lights
   description: >-
-    Turns lights off and records that as your own doing, so a later
-    override check recognises it instead of reading it as somebody else
-    switching the light off. The turn-off counterpart of apply_lighting,
-    for when there is no brightness or colour to apply.
-
-    Unlike apply_lighting this does no override protection - it turns off
-    exactly what it is given, including lights someone set by hand. Use it
-    when you have already decided the room should go dark.
-
-    The claim is recorded before the lights are switched off, so a run that
-    is cancelled or fails part-way doesn't leave a light that did go off
-    looking as if someone else switched it.
+    Turns lights off and records it, so FLARE doesn't treat them as
+    overridden. Turns off every light it's given, including overridden ones.
   fields:
     entities:
       name: Entities
@@ -371,7 +311,8 @@ turn_off:
           multiple: true
     transition:
       name: Transition
-      description: Transition duration in seconds.
+      description: >-
+        Transition in seconds.
       default: 0
       selector:
         number:
@@ -381,9 +322,8 @@ turn_off:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) this turn-off belongs to. Leave unset to turn the
-        light(s) off without tracking them at all - no claim is recorded.
+        The zone to record this in. Leave unset to turn the lights off without
+        recording anything.
       selector:
         device:
           filter:
@@ -391,13 +331,11 @@ turn_off:
               model: Zone
 
 compute_curve:
-  name: Compute adaptive curve point
+  name: Compute curve
   description: >-
-    Given today's morning/day/evening/night phase-boundary timestamps,
-    returns the target brightness, colour temperature, RGB colour, and
-    phase name for a given instant (or now, if not specified). Standalone
-    - useful for building your own day-phase sensor or automation without
-    the FLARE blueprint.
+    Returns the phase, brightness, colour temperature and RGB colour at a
+    moment, for the phase start times given. Curve settings left out use a new
+    schedule's defaults.
   fields:
     morning:
       name: Morning boundary
@@ -425,12 +363,14 @@ compute_curve:
         number:
     at:
       name: At
-      description: Instant to evaluate, as a unix timestamp. Defaults to now.
+      description: >-
+        The moment to evaluate, as a Unix timestamp. Defaults to now.
       selector:
         number:
     morning_brightness:
       name: Morning brightness
-      description: Brightness (0-255) for Morning.
+      description: >-
+        Brightness (0-255) for Morning.
       default: 255
       selector:
         number:
@@ -438,7 +378,8 @@ compute_curve:
           max: 255
     morning_kelvin:
       name: Morning colour temperature
-      description: Colour temperature (Kelvin) for Morning, and where Day's ramp starts from.
+      description: >-
+        Colour temperature (Kelvin) for Morning.
       default: 6667
       selector:
         number:
@@ -447,7 +388,8 @@ compute_curve:
           unit_of_measurement: K
     day_brightness:
       name: Day brightness
-      description: Brightness (0-255) for Day.
+      description: >-
+        Brightness (0-255) for Day.
       default: 255
       selector:
         number:
@@ -456,9 +398,8 @@ compute_curve:
     day_kelvin:
       name: Day colour temperature
       description: >-
-        Colour temperature (Kelvin) for Day. Defaults to Morning's, since
-        Day's default transition covers the whole phase - so Day starts at
-        Morning's colour and eases to Evening's across the afternoon.
+        Colour temperature (Kelvin) for Day. With the default transition, Day
+        eases from this to Evening's across the whole phase.
       default: 6667
       selector:
         number:
@@ -467,7 +408,8 @@ compute_curve:
           unit_of_measurement: K
     evening_brightness:
       name: Evening brightness
-      description: Brightness (0-255) Evening holds at before its fade into Night.
+      description: >-
+        Brightness (0-255) for Evening.
       default: 180
       selector:
         number:
@@ -475,7 +417,8 @@ compute_curve:
           max: 255
     evening_kelvin:
       name: Evening colour temperature
-      description: Colour temperature (Kelvin) Evening holds at before its final-hour fade.
+      description: >-
+        Colour temperature (Kelvin) for Evening.
       default: 3200
       selector:
         number:
@@ -484,7 +427,8 @@ compute_curve:
           unit_of_measurement: K
     night_brightness:
       name: Night brightness
-      description: Brightness (0-255) for Night, and what Evening's final hour fades toward.
+      description: >-
+        Brightness (0-255) for Night.
       default: 80
       selector:
         number:
@@ -492,7 +436,8 @@ compute_curve:
           max: 255
     night_kelvin:
       name: Night colour temperature
-      description: Colour temperature (Kelvin) for Night, and what Evening's final hour fades toward.
+      description: >-
+        Colour temperature (Kelvin) for Night.
       default: 2700
       selector:
         number:
@@ -502,10 +447,9 @@ compute_curve:
     morning_brightness_transition:
       name: Morning brightness transition
       description: >-
-        Minutes before Morning ends to begin easing
-        brightness toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Morning lasts covers the whole phase.
+        Minutes before Morning ends to start easing brightness to the next
+        phase's. 0 changes at the boundary. A value longer than Morning eases
+        across the whole phase.
       default: 60
       selector:
         number:
@@ -515,10 +459,9 @@ compute_curve:
     morning_kelvin_transition:
       name: Morning colour transition
       description: >-
-        Minutes before Morning ends to begin easing
-        colour temperature toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Morning lasts covers the whole phase.
+        Minutes before Morning ends to start easing colour temperature to the
+        next phase's. 0 changes at the boundary. A value longer than Morning
+        eases across the whole phase.
       default: 60
       selector:
         number:
@@ -528,10 +471,9 @@ compute_curve:
     day_brightness_transition:
       name: Day brightness transition
       description: >-
-        Minutes before Day ends to begin easing
-        brightness toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Day lasts covers the whole phase.
+        Minutes before Day ends to start easing brightness to the next
+        phase's. 0 changes at the boundary. A value longer than Day eases
+        across the whole phase.
       default: 65
       selector:
         number:
@@ -541,10 +483,9 @@ compute_curve:
     day_kelvin_transition:
       name: Day colour transition
       description: >-
-        Minutes before Day ends to begin easing
-        colour temperature toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Day lasts covers the whole phase.
+        Minutes before Day ends to start easing colour temperature to the next
+        phase's. 0 changes at the boundary. A value longer than Day eases
+        across the whole phase.
       default: 1440
       selector:
         number:
@@ -554,10 +495,9 @@ compute_curve:
     evening_brightness_transition:
       name: Evening brightness transition
       description: >-
-        Minutes before Evening ends to begin easing
-        brightness toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Evening lasts covers the whole phase.
+        Minutes before Evening ends to start easing brightness to the next
+        phase's. 0 changes at the boundary. A value longer than Evening eases
+        across the whole phase.
       default: 60
       selector:
         number:
@@ -567,10 +507,9 @@ compute_curve:
     evening_kelvin_transition:
       name: Evening colour transition
       description: >-
-        Minutes before Evening ends to begin easing
-        colour temperature toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Evening lasts covers the whole phase.
+        Minutes before Evening ends to start easing colour temperature to the
+        next phase's. 0 changes at the boundary. A value longer than Evening
+        eases across the whole phase.
       default: 60
       selector:
         number:
@@ -580,10 +519,9 @@ compute_curve:
     night_brightness_transition:
       name: Night brightness transition
       description: >-
-        Minutes before Night ends to begin easing
-        brightness toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Night lasts covers the whole phase.
+        Minutes before Night ends to start easing brightness to the next
+        phase's. 0 changes at the boundary. A value longer than Night eases
+        across the whole phase.
       default: 30
       selector:
         number:
@@ -593,10 +531,9 @@ compute_curve:
     night_kelvin_transition:
       name: Night colour transition
       description: >-
-        Minutes before Night ends to begin easing
-        colour temperature toward the next
-        phase's, so it arrives exactly as that phase begins. 0 is a hard
-        cut. A value longer than Night lasts covers the whole phase.
+        Minutes before Night ends to start easing colour temperature to the
+        next phase's. 0 changes at the boundary. A value longer than Night
+        eases across the whole phase.
       default: 30
       selector:
         number:
@@ -607,23 +544,15 @@ compute_curve:
 compute_scene_coverage:
   name: Compute scene coverage
   description: >-
-    Given a candidate scene and the entities you want a "default"
-    behaviour applied to, works out which of those entities the scene
-    actually covers - hand covered ones to the scene and apply your
-    default (FLARE's curve, or anything else) only to what's left.
-    A scene only counts if it exists and everything it covers is within
-    scope_entities; a scene reaching outside that scope, or one that
-    doesn't exist (a typo, a renamed scene), is treated the same as no
-    scene at all. Standalone - nothing here is specific to adaptive
-    lighting, or even to lighting.
+    Returns which of target_entities a scene sets (covered_entities) and which
+    it doesn't (uncovered_entities). If the scene doesn't exist, or sets an
+    entity outside scope_entities, scene_valid is false and every target
+    entity is uncovered.
   fields:
     scene_entity_id:
       name: Scene
       description: >-
-        The scene to check. If you don't have a candidate scene this
-        tick (no scene template, no per-phase scene for the current
-        phase), skip calling this service entirely - every target
-        entity is uncovered either way, so there's nothing to ask.
+        The scene to check.
       required: true
       selector:
         entity:
@@ -631,10 +560,8 @@ compute_scene_coverage:
     scope_entities:
       name: Scope entities
       description: >-
-        Every entity the scene is allowed to touch - typically the
-        entities you're controlling, plus sibling entities on the same
-        devices (e.g. a light strip's effect selector). A scene
-        covering anything outside this list is treated as invalid.
+        Every entity the scene may set, usually the lights you control plus
+        other entities on the same devices.
       required: true
       selector:
         entity:
@@ -642,9 +569,7 @@ compute_scene_coverage:
     target_entities:
       name: Target entities
       description: >-
-        The entities you want a default behaviour applied to - the
-        response's uncovered_entities is this list minus whatever the
-        scene covers.
+        The entities to check.
       required: true
       selector:
         entity:
@@ -653,23 +578,14 @@ compute_scene_coverage:
 claims_check:
   name: Check claims
   description: >-
-    For each entity, reports whether FLARE is currently in
-    control of it, and whether a write should be blocked - the exact
-    override-protection mechanism apply_lighting/compute_lighting_groups
-    use internally, exposed standalone so any automation can ask "should
-    I write this" without any of this integration's brightness/curve
-    logic at all. Read-only - call claims_record before you write the
-    entity, so a later check recognises that write.
-
-    Checks against zone_device_id's own claims. This service exists
-    only to answer questions about claims, so unlike apply_lighting
-    there's nothing useful to do without one - it's required. The
-    response's "zone" field simply echoes zone_device_id's own title
-    back.
+    Reports whether FLARE would leave each entity alone, using the zone's
+    claims. Changes nothing. Call claims_record before you change an entity,
+    so a later check treats the change as FLARE's.
   fields:
     entities:
       name: Entities
-      description: Entities to check. Any domain - this mechanism isn't light-specific.
+      description: >-
+        Entities to check, of any domain.
       required: true
       selector:
         entity:
@@ -677,8 +593,7 @@ claims_check:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) to check these entities' claims against.
+        The zone whose claims to check.
       required: true
       selector:
         device:
@@ -688,10 +603,7 @@ claims_check:
     brightness_tolerance:
       name: Brightness tolerance
       description: >-
-        Used only for the delayed-echo rescue: a light whose current
-        brightness is within this many points of what a still-unconfirmed
-        write asked for is treated as that write's own echo, not an
-        external change.
+        A light within this much (0-255) of a recorded brightness matches it.
       default: 2
       selector:
         number:
@@ -700,10 +612,8 @@ claims_check:
     color_temp_tolerance:
       name: Colour temperature tolerance
       description: >-
-        Same rescue, for colour temperature (Kelvin) - plus, always, a
-        colour temperature that's identical once converted to mireds
-        (the unit real devices actually use), regardless of this
-        setting.
+        A light within this many Kelvin of a recorded colour temperature
+        matches it. Values that convert to the same mired always match.
       default: 10
       selector:
         number:
@@ -712,7 +622,9 @@ claims_check:
           unit_of_measurement: K
     rgb_color_tolerance:
       name: RGB colour tolerance
-      description: Same rescue, for RGB colour (0-255 scale, per channel).
+      description: >-
+        A light within this much of a recorded RGB colour on each channel
+        (0-255) matches it.
       default: 10
       selector:
         number:
@@ -722,22 +634,13 @@ claims_check:
 claims_record:
   name: Record claims
   description: >-
-    Records that this call's own context is about to write entities - call
-    it immediately BEFORE issuing whatever write claims_check said was
-    allowed, so a later check recognises that write rather than reading it
-    as an external change. Recording first is safe: a claim for a write
-    that never lands is harmless, whereas a write whose claim was never
-    recorded (the run was cancelled or failed in between) reads as
-    somebody else's. A thin wrapper around the same bookkeeping
-    apply_lighting uses internally.
-
-    This service exists only to write claims, so unlike
-    apply_lighting there's nothing useful to do without a zone - it's
-    required.
+    Records a claim, so a later claims_check treats your change as FLARE's.
+    Call it just before you change the entities.
   fields:
     entities:
       name: Entities
-      description: Entities you are about to write.
+      description: >-
+        Entities you're about to change.
       required: true
       selector:
         entity:
@@ -745,8 +648,7 @@ claims_record:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) to record this write into.
+        The zone to record the claim in.
       required: true
       selector:
         device:
@@ -756,12 +658,10 @@ claims_record:
     targets:
       name: Targets
       description: >-
-        Map of entity_id to what that write actually asked for -
-        {"brightness": ..., "color_temp_kelvin": ...} or {"brightness":
-        ..., "rgb_color": [...]}. Optional, but needed for
-        claims_check's delayed-echo rescue to work for these entities
-        later - without it, a context.id mismatch alone is always treated
-        as external.
+        Map of entity ID to the values you're about to send: {"brightness":
+        ..., "color_temp_kelvin": ...} or {"brightness": ..., "rgb_color":
+        [...]}. Without it, a light that's slow to report back is treated as
+        overridden.
       example: '{"light.lamp": {"brightness": 200, "color_temp_kelvin": 3000}}'
       selector:
         object:
@@ -769,22 +669,13 @@ claims_record:
 claims_clear:
   name: Clear claims
   description: >-
-    Discards entities' tracked observed/latest claims within
-    zone_device_id - the manual escape hatch for an entity stuck
-    reporting as overridden with no other way back (a claim can go
-    permanently stale for an entity that's excluded from every future
-    write once overridden, since nothing ever gets the chance to record
-    a fresh one - see the integration reference's "Override protection"
-    section). The next write to a cleared entity, from anyone, is
-    treated exactly like a brand-new entity's first write.
-
-    This service exists only to discard claims, so unlike
-    apply_lighting there's nothing useful to do without a zone - it's
-    required.
+    Discards claims, so FLARE sets the entities again on its next update. For
+    a light stuck as overridden in a room that's never fully dark.
   fields:
     entities:
       name: Entities
-      description: Entities to clear tracked claims for. Any domain.
+      description: >-
+        Entities to clear, of any domain.
       required: true
       selector:
         entity:
@@ -792,8 +683,7 @@ claims_clear:
     zone_device_id:
       name: Zone
       description: >-
-        The FLARE zone (Settings -> Devices & Services -> FLARE
-        Zones) to clear these entities' claims from.
+        The zone to clear them from.
       required: true
       selector:
         device:
@@ -804,10 +694,8 @@ claims_clear:
 export_schedule:
   name: Export schedule
   description: >-
-    Returns a FLARE schedule's times, brightness, colour temperature and
-    transitions as YAML, keyed by phase, to keep as a backup or paste into
-    another schedule or the docs site's playground. The response's
-    `schedule` field holds the text.
+    Returns a schedule's settings as YAML, keyed by phase, in the response's
+    schedule field.
   fields:
     schedule_device_id:
       name: Schedule
@@ -822,9 +710,9 @@ export_schedule:
 import_schedule:
   name: Import schedule
   description: >-
-    Sets a FLARE schedule from YAML in the format export_schedule returns.
-    Anything left out keeps its current value. Everything is checked
-    first, so a schedule with a mistake changes nothing.
+    Sets a schedule from YAML in the format export_schedule returns. Settings
+    left out keep their current values. A schedule with an error in it changes
+    nothing.
   fields:
     schedule_device_id:
       name: Schedule
