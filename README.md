@@ -12,6 +12,8 @@ Rooms light up as people come in and go dark once they've left, or dim to a nigh
 Hand a room to a scene and FLARE fills in whatever the scene doesn't cover, and a light you change yourself is
 left alone until the room next goes dark.
 
+[![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
+
 [![The FLARE Lighting dashboard view: the day's curve, a phase override, the schedule times, and the curve and transition values for each phase](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/dashboard-section.png)](https://danrspencer.github.io/flare/dashboard/)
 
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
