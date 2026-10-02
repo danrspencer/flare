@@ -1,13 +1,13 @@
 # Changelog
 
-Notable changes per release. Versions follow [semantic versioning](https://semver.org),
-with the 0.x caveat that a **minor** bump is where breaking changes land until 1.0.
+Notable changes per release. Versions follow [semantic versioning](https://semver.org):
+from 1.0.0, breaking changes bump the major version. Before 1.0, they landed in minor bumps.
 
 The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
-## [0.18.0] - Unreleased
+## [1.0.0] - Unreleased
 
 ### Breaking
 
