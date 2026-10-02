@@ -62,6 +62,9 @@ are respected, and lights that don't reach their target get corrected automatica
 blueprint it isn't a black box: take it, change it, or rip it apart to build something different on the same
 services.
 
+Every schedule setting is an entity too, and so is everything FLARE is doing, so if a default doesn't suit you,
+you change that piece with ordinary Home Assistant tools rather than wait for an option.
+
 ## Acknowledgements
 
 | | |

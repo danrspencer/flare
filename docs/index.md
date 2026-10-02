@@ -64,6 +64,40 @@ hours.
 
 ---
 
+## Made of ordinary Home Assistant parts
+
+Nothing FLARE does happens out of sight. Every piece is something Home Assistant already
+understands, so when the default isn't what you want, you change that piece rather than
+work around it:
+
+- **Every schedule setting is an entity.** Phase start times, brightness, colour
+  temperature and transitions are `time` and `number` entities on the schedule's device.
+  Set them from a dashboard, keep them in history, or change them from an automation.
+- **What FLARE is doing is an entity too.** The schedule sensor carries the current phase,
+  brightness and colour; each schedule fires a Phase event when the phase changes; each
+  zone has a Tick, counts of the lights it's driving and the ones someone else has taken,
+  and a Clear button.
+- **Everything it does is an action** you can call yourself — set lights to the curve,
+  turn them off, check or clear who owns a light, copy a schedule.
+- **The blueprint is just an automation** built from those parts. Take it, change it, or
+  write your own.
+
+A few things that need no change to FLARE at all:
+
+- **A weekend lie-in** — an automation that moves `time.home_morning_time` to 08:00 on Friday
+  night and back on Sunday.
+- **A room lit by something other than occupancy** — your own automation runs the room's
+  automation when your trigger fires, and the room comes on at the right level for the
+  time of day. That counts as running it by hand, so lights someone set themselves are
+  brought back to the curve too. See
+  [additional triggers]({{ site.baseurl }}/blueprint/#additional-triggers).
+- **Something else following the curve** — read the schedule sensor's `brightness` and
+  `color_temp` in your own automation, or trigger on its Phase event.
+
+[See every entity and action →]({{ site.baseurl }}/advanced/reference/){: .btn .btn-outline }
+
+---
+
 ## Two ways in
 
 ### Standard setup — plug and play

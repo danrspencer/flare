@@ -190,6 +190,17 @@ All services are deliberately written and documented as standalone
 tools, useful to anyone building their own automation, not just to the
 blueprint in this repo. Keep them that way.
 
+**Everything is an entity or an action, so a default can be replaced
+rather than configured.** Schedule settings are `time`/`number` entities,
+FLARE's live state is sensors and events (phase, Tick, counts, the override
+event), and everything it does is a service. That is the answer to most
+"can it do X differently?" requests: an automation changing an entity, or
+calling a service, needs no new option. Keep new behaviour in that shape -
+an entity or a service before a config field - and the docs homepage's
+"Made of ordinary Home Assistant parts" section is the user-facing promise
+of it. (Zone options - tick interval and gap, minimum change, two-step
+models - are the exception: entry-wide plumbing, not schedule settings.)
+
 ## Hard-won lessons (don't repeat these)
 
 1. **Jinja macros can only return rendered text, never a native Python
