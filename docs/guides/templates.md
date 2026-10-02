@@ -34,8 +34,8 @@ Returns the brightness each light should sit at, as a mapping from entity ID to 
 | `0` | The light is turned off |
 | `null` or `false` | FLARE leaves the light alone entirely, on or off |
 
-A light the template doesn't mention follows the curve as usual. Return `{}` when you have
-nothing to say.
+A light the template doesn't mention follows the curve as usual, so return `{}` when the
+template has nothing to change.
 
 ### Dimming a light while the TV is on
 
@@ -93,9 +93,9 @@ time of day. To keep a light at, say, half the room's brightness, read the curve
 
 ### `0` or `null`?
 
-`0` keeps the light FLARE's: it's off for now, and comes back with the room. `null` hands the
-light over: FLARE doesn't touch it at all, so it isn't turned off when the room empties
-either. Whatever owns it has to do that.
+`0` turns the light off but keeps it FLARE's, so it comes back on with the rest of the room.
+`null` hands the light over completely: FLARE doesn't touch it at all, so it isn't turned off
+when the room empties either, and whatever controls it has to do that instead.
 
 The template wins over the **Lights Off During** lists for any light it names.
 
@@ -115,10 +115,10 @@ With the phase settings at `0`, this lamp stays at 20 when the landing empties a
 light goes out.
 
 {: .note }
-> With a phase setting at `0`, the template *is* the whole idle set. A template naming one
-> lamp makes that lamp the room's only nightlight, even if you only meant to give it a
-> different level from the rest. To keep the rest dim too, set the phase's Idle Brightness as
-> well, and use the template for the one light.
+> When a phase's setting is `0`, only the lights the template names have an idle brightness in
+> that phase. So a template naming one lamp makes that lamp the room's only nightlight, even if
+> you only meant to give it a different level from the rest. To keep the rest dim too, set the
+> phase's Idle Brightness as well, and use the template for the one light.
 
 ### A whole-room nightlight
 
@@ -137,8 +137,8 @@ whenever it's dark outside, leave the four phase settings at `0` and use the sun
 {{ 10 if is_state('sun.sun', 'below_horizon') else {} }}
 ```
 
-`{}` means "no opinion", so the hall goes fully dark while the sun is up. It picks up the
-change at the next update after sunset, up to a minute later. Don't add `sun.sun` to
+`{}` means "no opinion", so the hall goes fully dark while the sun is up. The hall picks up the
+change at the next update after sunset, which can be up to a minute later. Don't add `sun.sun` to
 **Additional Triggers** to make it immediate: at sunrise that would bring the lights up to
 the curve instead of turning them off.
 

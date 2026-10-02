@@ -6,7 +6,7 @@ permalink: /dashboard/
 
 # Dashboard
 
-FLARE ships two ready-made dashboard views. Add them once and they build themselves.
+FLARE comes with two ready-made dashboard views, which build themselves once you've added them.
 
 Open the dashboard you want them on, then **Edit dashboard** → the three-dot menu →
 **Raw configuration editor**, and add:
@@ -26,8 +26,8 @@ views:
 - **Zones** — which lights FLARE is driving, which ones something else has taken
   over, and a Clear button to hand them back.
 
-There's nothing to fill in. Both find their own entities, and a schedule sensor or zone you
-add later appears without you touching the dashboard again.
+There's nothing to fill in: both views find their own entities, and a schedule sensor or zone
+you add later appears without you touching the dashboard again.
 
 ![The FLARE Lighting view: the day's curve, a phase override, the schedule times, and
 the curve and transition values for each phase]({{ '/assets/img/dashboard-section.png' | relative_url }})
@@ -49,9 +49,9 @@ views:
       sensor: upstairs
 ```
 
-`sensor` is the part before `_flare` in the schedule sensor's entity ID —
-`downstairs` for `sensor.downstairs_flare`. The full entity ID works too. Name one that
-doesn't exist and the view says so, and lists the schedules you do have.
+`sensor` is the part before `_flare` in the schedule sensor's entity ID, such as
+`downstairs` for `sensor.downstairs_flare`, though the full entity ID works too. If you name
+one that doesn't exist, the view says so and lists the schedules you do have.
 
 ## Just the chart
 

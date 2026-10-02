@@ -152,9 +152,9 @@ template:
 ```
 
 This goes in `configuration.yaml`. Then add `binary_sensor.landing_kept_lit` to the landing
-automation's **Lights & Occupancy**. To the blueprint it's one more occupancy sensor, and a
-room only counts as empty once all of its sensors are clear, so while the toggle is on the
-room stays lit.
+automation's **Lights & Occupancy**, where the blueprint treats it as one more occupancy sensor.
+A room only counts as empty once all of its sensors are clear, so the room stays lit while the
+toggle is on.
 
 ## Lighting a room from a remote
 
@@ -174,9 +174,10 @@ actions:
       entity_id: automation.hallway_lights
 ```
 
-**Additional Triggers** can't do this: they only adjust lights that are already on. Running
-the room's automation from another automation counts as running it by hand, which can switch
-lights on. It also brings back to the curve any light in the room that someone set themselves.
+**Additional Triggers** can't do this, because they only adjust lights that are already on.
+Running the room's automation from another automation counts as running it by hand, which can
+switch lights on, but it also brings back to the curve any light in the room that someone set
+themselves.
 
 ## Something else at a phase change
 
@@ -196,7 +197,7 @@ actions:
       area_id: living_room
 ```
 
-The Phase event fires each time the phase changes, a manual override included, with the
+The Phase event fires each time the phase changes, including a manual override, with the
 new phase as its `event_type`.
 
 ## Being told when a light is taken over

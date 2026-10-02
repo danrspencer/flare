@@ -13,9 +13,9 @@ render_with_liquid: false
 {: .no_toc }
 
 A schedule sets when each of the four phases starts, and the brightness and colour temperature
-in each phase. Adding FLARE creates one. To add another, for example for rooms that need
-different timing, go to **Settings → Devices & Services → FLARE Schedules → Add schedule
-sensor**.
+in each phase. Adding FLARE creates your first schedule. You can add more, for example for rooms
+that need different timing, under **Settings → Devices & Services → FLARE Schedules → Add
+schedule sensor**.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -38,7 +38,8 @@ sensor**.
 | `number.<name>_<phase>_kelvin` | The phase's colour temperature, 1000–10000 K. |
 | `number.<name>_<phase>_brightness_transition`, `_kelvin_transition` | The phase's transitions, in minutes. See [transitions](#transitions). |
 
-Changes take effect within a few seconds. To remove a schedule, delete its device.
+A change to any of these takes effect within a few seconds. To remove a schedule, delete its
+device.
 
 ## The schedule sensor
 
@@ -52,7 +53,8 @@ Changes take effect within a few seconds. To remove a schedule, delete its devic
 | `evening_earliest`, `evening_latest` | Today's earliest and latest Evening start, as timestamps. |
 | `points` | The whole day as 289 `{t, brightness, kelvin}` samples, used by the chart. |
 
-The sensor updates every minute. A phase override changes every attribute except `points`.
+The sensor updates every minute. While the phase is overridden, every attribute except `points`
+follows the overridden phase.
 
 ## Transitions
 
@@ -62,11 +64,11 @@ the lights reach Morning's values at 06:00. For example, `day_kelvin_transition`
 before the end of Day the colour starts changing to Evening's.
 
 - A transition of `0` switches at the boundary.
-- A transition longer than its phase covers the whole phase. Day's colour transition defaults to
-  1440 minutes, so Day's colour changes all afternoon.
+- A transition longer than its phase covers the whole phase.
 
-Brightness and colour have separate transitions. By default Day's colour changes all afternoon,
-and its brightness changes in roughly the last hour.
+Brightness and colour have separate transitions. By default, Day's colour transition is 1440
+minutes, so its colour changes across the whole of Day, while its brightness changes only in
+roughly the last hour.
 
 Night runs past midnight, so its transition is in the minutes before Morning starts.
 
@@ -96,9 +98,9 @@ schedule, settings it leaves out keep their current values.
 To copy or apply a schedule, use any of:
 
 - **Copy** and **Paste** at the bottom of each schedule on the [dashboard](../../dashboard/).
-- **Reconfigure** in the schedule's three-dot menu under **FLARE Schedules**. It shows the
-  schedule as text; replace it and submit to apply.
-- The services [`flare.export_schedule` and `flare.import_schedule`](../services/#flareexport_schedule-and-flareimport_schedule).
+- **Reconfigure** in the schedule's three-dot menu under **FLARE Schedules**, which shows the
+  schedule as text that you can replace and submit.
+- The services [`flare.export_schedule` and `flare.import_schedule`](../services/#flareexport_schedule).
 - **Copy schedule** and **Load** in the [curve playground](../../playground/).
 
 A schedule with an error in it, such as an unknown setting, an invalid time or a value out of
