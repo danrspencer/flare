@@ -96,10 +96,10 @@ docs/
     installation.md   quickstart: HACS, blueprint, dashboard card
     dashboard.md      how to add the view strategy, and what it builds
     playground.html   the interactive curve, running the real card
-    blueprint.md      full feature/input reference for the blueprint
-    examples.md       automations that change or build on FLARE
-    reference/        the integration: services and entities, scene
-                      handoff, building without the blueprint
+    guides/           how to do more: examples, the blueprint's template
+                      inputs, scenes, building without the blueprint
+    reference/        the technical docs: the blueprint's inputs,
+                      schedules, zones and services
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call

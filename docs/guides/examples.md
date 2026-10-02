@@ -1,7 +1,9 @@
 ---
 title: Examples
-nav_order: 6
-permalink: /examples/
+parent: Guides
+nav_order: 1
+permalink: /guides/examples/
+redirect_from: /examples/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
@@ -11,10 +13,9 @@ render_with_liquid: false
 # Examples
 {: .no_toc }
 
-Every schedule setting is an entity, everything FLARE is doing shows up as an entity or
-an event, and everything it does is an action. So most changes to how it behaves are an
-ordinary automation, with nothing in FLARE to configure. These are starting points: each
-one is a complete automation to paste in and adjust.
+Almost everything in FLARE is an ordinary Home Assistant entity or event. That means you can
+trigger your own automations from it, or use automations to change it. These are starting
+points: each one is a complete automation to paste in and adjust.
 
 They use a schedule called **Home**, so its entities are `time.home_…`, `number.home_…`
 and `sensor.home_flare`. Swap in your own schedule's name, and your own rooms, lights and
@@ -34,11 +35,14 @@ Morning starts later on Saturday and Sunday.
 ```yaml
 alias: Weekend lie-in
 triggers:
-  - trigger: time
-    at: "21:00:00"
+  - trigger: state
+    entity_id: event.home_flare_phase
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.event_type == 'Night' }}"
 actions:
-  # Friday and Saturday evenings set up a lie-in for the next morning;
-  # every other evening sets the weekday times back.
+  # Friday and Saturday nights set up a lie-in for the next morning;
+  # every other night sets the weekday times back.
   - variables:
       lie_in: "{{ now().weekday() in [4, 5] }}"
   - action: time.set_value
@@ -53,18 +57,15 @@ actions:
       time: "{{ '09:30:00' if lie_in else '08:00:00' }}"
 ```
 
-The part that takes some thinking about is *when* it runs. The schedule reads
-`morning_time` afresh each time, so all that matters is what it says when the morning
-comes round. Set it the evening **before** a lie-in, and set it back the evening before a
-weekday.
+The schedule only checks Morning's start time when the morning comes round, so the trick is
+to change it the night **before**. This runs when Night starts: after today's morning, and
+before tomorrow's.
 
-- **It runs every evening**, not just at the weekend. The weekday times come back on Sunday
-  evening without a second automation, and a missed run is put right the next evening.
-- **Day moves with Morning.** Morning runs until Day starts, so pushing Morning to 08:00
+- **It runs every night**, not just at the weekend, so the weekday times come back on Sunday
+  night without a second automation.
+- **Day moves with Morning.** Morning lasts until Day starts, so moving Morning to 08:00
   while Day still starts at 08:00 would leave no Morning at all.
-- **Run it well clear of the boundaries it moves.** Changing a start time that has just
-  passed moves the current phase too: set Morning to 08:00 at 07:00 and the house goes back
-  to Night for an hour.
+- **If your Night starts after midnight**, use `[5, 6]`: by then it's already Saturday.
 
 ## A holiday schedule
 
@@ -88,29 +89,10 @@ actions:
           schedule: |
             morning:
               time: "08:30"
-              brightness: 255
-              kelvin: 6667
-              brightness_transition: 60
-              kelvin_transition: 60
             day:
               time: "10:00"
-              brightness: 255
-              kelvin: 6667
-              brightness_transition: 65
-              kelvin_transition: 1440
-            evening:
-              earliest: "17:00"
-              latest: "20:00"
-              brightness: 180
-              kelvin: 3200
-              brightness_transition: 60
-              kelvin_transition: 60
             night:
               time: "23:30"
-              brightness: 80
-              kelvin: 2700
-              brightness_transition: 30
-              kelvin_transition: 30
     else:
       - action: flare.import_schedule
         data:
@@ -118,38 +100,15 @@ actions:
           schedule: |
             morning:
               time: "06:00"
-              brightness: 255
-              kelvin: 6667
-              brightness_transition: 60
-              kelvin_transition: 60
             day:
               time: "08:00"
-              brightness: 255
-              kelvin: 6667
-              brightness_transition: 65
-              kelvin_transition: 1440
-            evening:
-              earliest: "17:00"
-              latest: "20:00"
-              brightness: 180
-              kelvin: 3200
-              brightness_transition: 60
-              kelvin_transition: 60
             night:
               time: "22:00"
-              brightness: 80
-              kelvin: 2700
-              brightness_transition: 30
-              kelvin_transition: 30
 ```
 
-Each schedule is a whole export, so switching sets every setting at once and switching
-back puts everything as it was. To make your own, set the schedule up the way you want it,
-press **Copy** in its dashboard section, and paste the result in place of one of the
-schedules above; then do the same for the other.
-
-A schedule can also leave settings out: anything it doesn't mention keeps its current
-value.
+Each schedule lists only what changes; everything else stays as it is. A schedule can hold
+any of its settings, so for bigger changes, set your schedule up the way you want it, press
+**Copy** in its dashboard section, and paste the result in.
 
 ## Movie night
 
@@ -177,7 +136,25 @@ actions:
 
 The phase override applies to **every room on that schedule**. To dim one room only, give
 it a schedule of its own, or use the blueprint's
-[Brightness Template](../blueprint/#brightness--exclusions) instead.
+[Brightness Template](../templates/#brightness-template) instead.
+
+## Keeping a room lit regardless of motion
+
+Keep the landing lit at the full curve for as long as a toggle is on, whatever the motion
+sensor says.
+
+```yaml
+template:
+  - binary_sensor:
+      - name: "Landing kept lit"
+        device_class: occupancy
+        state: "{{ is_state('input_boolean.keep_landing_lit', 'on') }}"
+```
+
+This goes in `configuration.yaml`. Then add `binary_sensor.landing_kept_lit` to the landing
+automation's **Lights & Occupancy**. To the blueprint it's one more occupancy sensor, and a
+room only counts as empty once all of its sensors are clear, so while the toggle is on the
+room stays lit.
 
 ## Lighting a room from something other than occupancy
 
@@ -195,10 +172,9 @@ actions:
       entity_id: automation.hallway_lights
 ```
 
-The room's automation can't be turned on by **Additional Triggers** — they only update
-lights that are already on — but running it from another automation counts as running it
-by hand, which can. Running it by hand also brings back to the curve any light in the room
-someone set themselves.
+**Additional Triggers** can't do this: they only adjust lights that are already on. Running
+the room's automation from another automation counts as running it by hand, which can switch
+lights on. It also brings back to the curve any light in the room that someone set themselves.
 
 ## Something else at a phase change
 
@@ -240,4 +216,4 @@ actions:
 ```
 
 The event also carries what FLARE last asked for and what the light was actually showing —
-see [the hand-over event](../reference/integration/#the-hand-over-event).
+see [the hand-over event](../../reference/zones/#the-hand-over-event).

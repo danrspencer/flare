@@ -16,9 +16,9 @@ you're in:
 | `README.md` | someone deciding whether to try it | why this exists |
 | `docs/index.md` | the same person, one click later | what it does |
 | `docs/installation.md` | someone installing it | how do I start |
-| `docs/blueprint.md`, `docs/dashboard.md` | someone using it | what does this input do |
-| `docs/examples.md` | someone using it who wants it to behave differently | what automation do I write |
-| `docs/reference/` | someone building on the services | what does this service take and return |
+| `docs/dashboard.md` | someone using it | how do I see it |
+| `docs/guides/` | someone using it who wants more from it | what do I write to make it do this |
+| `docs/reference/` | someone looking something up | what does this input, entity or service do |
 | `CONTRIBUTING.md`, `CLAUDE.md` | someone changing the code | how it works, and why it's shaped this way |
 
 ## The rules
@@ -103,6 +103,17 @@ introductory page says is one line pointing at Examples.
 reader does to get a room working, or needs to know to do it. Notes about
 things that happen on their own, alternatives to the standard setup and
 explanations of how it works all live elsewhere.
+
+**13. Say the concrete thing.** A sentence that sounds knowledgeable but
+gives the reader nothing to act on goes: "it re-checks as it goes",
+"it bends to fit the room", "shifts in step with what's happening
+outside". Replace it with what actually happens — "every minute it checks
+each light" — or cut it.
+
+**14. Reference is the contract; Guides are how to use it.** A Reference
+page says what an input accepts, what an entity holds, what a service
+takes and returns, and what happens as a result. Worked examples, recipes
+and "how to get X" live in Guides and link back.
 
 ## Lexicon
 

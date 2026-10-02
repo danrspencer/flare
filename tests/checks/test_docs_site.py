@@ -150,9 +150,9 @@ def test_every_link_between_pages_lands_on_a_heading_that_exists():
 
 def test_every_referenced_blueprint_anchor_exists():
     """The blueprint's input descriptions and the blueprint test classes
-    deep-link into docs/blueprint.md, so renaming a heading breaks them.
+    deep-link into docs/reference/blueprint.md, so renaming a heading breaks them.
     Anchors are derived the way kramdown does it."""
-    page = (DOCS / "blueprint.md").read_text()
+    page = (DOCS / "reference" / "blueprint.md").read_text()
 
     def slug(heading: str) -> str:
         # kramdown: drop non-word characters, spaces to hyphens, runs kept.
@@ -163,4 +163,4 @@ def test_every_referenced_blueprint_anchor_exists():
     referenced = {a for path in sources for a in re.findall(r"blueprint(?:/|\.md)#([a-z0-9-]+)", path.read_text())}
 
     assert referenced, "found no inbound links at all - has the link shape changed?"
-    assert referenced <= have, f"dead anchors in docs/blueprint.md: {sorted(referenced - have)}"
+    assert referenced <= have, f"dead anchors in docs/reference/blueprint.md: {sorted(referenced - have)}"

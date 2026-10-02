@@ -19,28 +19,27 @@ built in.
 
 ## What it does
 
-FLARE runs your lighting through the day so you don't have to think about it, and stops
-the moment you want something else.
+FLARE sets your lights through the day, and leaves alone any light you change yourself.
 
-- **It keeps every light where it should be** — not just at the moment a phase changes.
-  It re-checks as it goes, and fixes anything that has drifted or never arrived.
+- **It keeps every light on the curve.** Every minute it checks each light, and corrects
+  any that have drifted or missed a command.
 - **It works with lights on a physical wall switch.** Cut the power to a room and
-  restore it, and FLARE catches each bulb as it reappears, putting it straight onto the
-  current phase instead of leaving it at whatever it powered up as.
-- **It bends to fit the room.** A brightness of your own per light, a scene per phase,
-  and templates for either when a fixed value isn't enough.
+  restore it, and as soon as each bulb shows up in Home Assistant again, FLARE puts it on
+  the current phase instead of leaving it at whatever it powered up as.
+- **Each room can be different.** Give a light its own brightness, hand the room to a
+  scene in any phase, or use a template when a fixed value isn't enough.
 - **It can leave a nightlight on.** When a room empties it can dim to a low level instead
   of going dark.
-- **It gets out of your way.** Change a bulb yourself — app, wall switch, another
-  automation — and FLARE stops driving that one until the room next goes dark.
+- **It leaves your changes alone.** Change a light yourself — from an app, a wall switch or
+  another automation — and FLARE stops setting it until the room next goes dark.
 
 ---
 
 ## Four phases, not one curve
 
-Adaptive lighting usually maps brightness and colour onto the sun's position. That tracks
-the daylight closely, but the daylight isn't your schedule — and the two drift furthest
-apart in the months you spend most of the day indoors.
+Most adaptive lighting follows the sun's position. That means evening lighting at 4pm in
+winter, and bright light until 9pm in summer, whatever time you actually get up and go to
+bed.
 
 FLARE works from your schedule instead, dividing the day into four named phases. With the
 default settings:
@@ -66,7 +65,7 @@ hours.
 
 ---
 
-## Made of ordinary Home Assistant parts
+## Home Assistant native
 
 Every schedule setting is an ordinary Home Assistant entity, and the room automation is an ordinary
 automation, so when a default isn't what you want, you change it with the tools you already
@@ -78,4 +77,4 @@ use. For example:
 - **A room lit by the front door opening**, not just by occupancy.
 - **Blinds that close when Night starts.**
 
-[See the examples →]({{ site.baseurl }}/examples/){: .btn .btn-outline }
+[See the examples →]({{ site.baseurl }}/guides/examples/){: .btn .btn-outline }

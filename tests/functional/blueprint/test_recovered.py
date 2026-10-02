@@ -13,7 +13,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestRecoveredTrigger:
-    """docs/blueprint.md's "A device regaining power after an outage".
+    """docs/reference/blueprint.md's "A device regaining power after an outage".
 
     `recovered` only makes an ordinary tick run promptly. Freeing the light
     from its claim is claims.py's listener, tested in

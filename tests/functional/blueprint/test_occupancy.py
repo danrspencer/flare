@@ -17,7 +17,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestOccupancyDrivenOnOff:
-    """docs/blueprint.md#when-lights-turn-on-and-off"""
+    """docs/reference/blueprint.md#when-lights-turn-on-and-off"""
 
     async def test_occupancy_detected_turns_on_off_lights_in_the_room(self, hass, apply_lighting_calls):
         occupancy(hass, "binary_sensor.occ", "off")
@@ -218,7 +218,7 @@ class TestAllowTurnOn:
 
 
 class TestSelfHealing:
-    """docs/blueprint.md#other-behaviour-worth-knowing"""
+    """docs/reference/blueprint.md#other-behaviour-worth-knowing"""
 
     async def test_reconcile_retries_turning_off_a_light_left_on_with_no_occupancy(
         self, hass, turn_off_calls, apply_lighting_calls, frozen_time
