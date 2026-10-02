@@ -96,6 +96,11 @@ Motion-class sensors are not picked up. To drive a room from one, see
 A room with no occupancy sensor works fine — it simply never switches
 anything on by itself.
 
+**Schedule** is one of FLARE's schedules: Home, unless you've added more
+(Settings → Devices & Services → FLARE Schedules). Rooms that should keep
+a different rhythm, a floor of bedrooms say, can follow a schedule of
+their own.
+
 **Zone** is one of FLARE's zones, usually the one named after the room
 (Settings → Devices & Services → FLARE Zones). Two automations sharing
 a room — a lamp and a pendant driven separately, say — pick the same
