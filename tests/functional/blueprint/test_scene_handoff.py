@@ -18,7 +18,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestSceneHandoff:
-    """docs/reference/blueprint.md#handing-a-room-to-a-scene"""
+    """docs/reference/blueprint.md#scenes"""
 
     async def test_valid_scene_activates_via_a_phase_change_and_flare_only_covers_uncovered_entities(
         self, hass, apply_lighting_calls, scene_turn_on_calls

@@ -22,7 +22,7 @@ blueprint:
       description: >
         The FLARE schedule the room follows: the brightness and colour
         temperature it applies.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         device:
           filter:
@@ -33,7 +33,7 @@ blueprint:
       description: >
         The FLARE zone this room belongs to. It records which lights FLARE
         is driving, so a light someone else changes is left alone.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         device:
           filter:
@@ -44,7 +44,7 @@ blueprint:
       description: >
         Entity, device, area, floor, or label - lights within it are
         controlled, occupancy-class sensors within it decide when.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
           entity:
@@ -95,7 +95,7 @@ blueprint:
             precedence over the per-phase scenes below whenever it
             returns one - they're the fallback for phases it doesn't
             cover.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#handing-a-room-to-a-scene).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
           selector:
             template: {}
@@ -137,7 +137,7 @@ blueprint:
             Its own per-entity values always win over the per-phase
             exclusions below - those only fill in entities it doesn't
             already mention.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#turning-lights-off-during-a-phase).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
           selector:
             template: {}
@@ -182,7 +182,7 @@ blueprint:
             instead of switching off. Its own per-entity values always
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#leaving-a-room-dimly-lit).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
           selector:
             template: {}

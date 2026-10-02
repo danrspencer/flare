@@ -21,7 +21,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestRoomTargetResolution:
-    """docs/reference/blueprint.md#setting-up-a-room"""
+    """docs/reference/blueprint.md#room"""
 
     async def test_device_id_room_target_resolves_both_lights_and_occupancy_sensors(self, hass, apply_lighting_calls):
         dev_reg = dr.async_get(hass)

@@ -218,7 +218,7 @@ class TestAllowTurnOn:
 
 
 class TestSelfHealing:
-    """docs/reference/blueprint.md#other-behaviour-worth-knowing"""
+    """docs/reference/blueprint.md#when-lights-turn-on-and-off"""
 
     async def test_reconcile_retries_turning_off_a_light_left_on_with_no_occupancy(
         self, hass, turn_off_calls, apply_lighting_calls, frozen_time

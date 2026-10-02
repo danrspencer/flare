@@ -15,7 +15,7 @@ render_with_liquid: false
 The blueprint's three template inputs cover what its other settings can't: a light that
 depends on something other than the phase, or a single light treated differently from the
 rest of the room. This page covers how each one works, with examples. The
-[Blueprint](../../blueprint/#inputs) page lists what each one accepts.
+[Blueprint](../../reference/blueprint/) page lists what each one accepts.
 
 <details open markdown="block">
   <summary>On this page</summary>
