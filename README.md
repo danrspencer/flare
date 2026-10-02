@@ -22,29 +22,25 @@ curve settings around and watch the day's lighting change.
 
 - **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
 - **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
-- **[Blueprint](https://danrspencer.github.io/flare/blueprint/)** — every input, feature by feature
-- **[Examples](https://danrspencer.github.io/flare/examples/)** — automations that change how FLARE behaves
-- **[Reference](https://danrspencer.github.io/flare/reference/)** — every service and entity, scene handoff, and building without the blueprint
+- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, scenes, and building your own automations
+- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and zone entity, and service
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
 
 ## Why four phases, not a continuous curve
 
-Adaptive lighting usually computes one continuous curve from the sun's position — brightness and colour
-temperature interpolated smoothly between sunrise and sunset. That follows the daylight closely, but the
-daylight isn't your schedule, and the two drift furthest apart in the months you spend most of the day indoors.
+Most adaptive lighting follows the sun's position. That means evening lighting at 4pm in winter, and bright
+light until 9pm in summer, whatever time you actually get up and go to bed.
 FLARE works from your schedule instead, using four named phases. With the default settings they work like this:
 
-- **Morning** is there to help you wake up, so it starts at a fixed time before you'd normally be up rather than
-  moving with sunrise — the same wake-up light in December as in June. Bright, cool-white light in the morning
+- **Morning** is there to help you wake up. It starts at a fixed time, not at sunrise, because work and school
+  don't start at sunrise either. Bright, cool-white light in the morning
   wakes you up better, and there is [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up.
-  Mostly, though, it's that very cool light is just enough eyeball caffeine to get me as far as the coffee
-  machine.
+  Mostly, though, very cool light is just enough eyeball caffeine to get you as far as the coffee machine.
 - **Day** is the long middle stretch, gradually warming as it runs toward evening so the eventual transition
   doesn't feel abrupt.
-- **Evening** is when relaxed, warm lighting takes over — the one phase that *does* track the sun (sunset), so
-  your indoor lighting shifts in step with what's actually happening outside. It's clamped between an earliest
-  and latest bound, though, so a 4pm winter sunset doesn't start the evening while you're still at work, and a
-  10pm midsummer sunset doesn't mean evening never really arrives.
+- **Evening** is when relaxed, warm lighting takes over. It's the one phase that follows the sun, starting at
+  sunset, but no earlier and no later than limits you set: a 4pm winter sunset doesn't start the evening while
+  you're still at work, and a 10pm midsummer sunset doesn't mean evening never arrives.
 - **Night** isn't tied to any solar event at all — it's just what the house should look like once everyone's
   asleep: dim and warm, the lighting you want on at 3am without waking yourself up further.
 
@@ -53,7 +49,7 @@ FLARE works from your schedule instead, using four named phases. With the defaul
 Install FLARE from HACS, add it, and create an automation for each room from its blueprint. The blueprint covers
 what most rooms want; if it doesn't do what you need, everything it uses is an ordinary Home Assistant entity or
 action, so you can change it or write your own — see the
-[examples](https://danrspencer.github.io/flare/examples/).
+[examples](https://danrspencer.github.io/flare/guides/examples/).
 
 ## Acknowledgements
 

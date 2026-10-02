@@ -28,27 +28,27 @@ https://github.com/danrspencer/flare
 
 with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
-{: .note }
-> **Want the beta builds?** Turn on FLARE's **Pre-release** switch in HACS (it starts
-> disabled, so enable the entity first) and betas arrive as ordinary updates.
-
 ## Step 2 — restart, then add FLARE
 
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
 
 It asks two things:
 
-- **A name for your first schedule** — Home, unless you change it. The schedule is the
-  day's lighting: when each phase starts, and how bright and warm it is. One for the whole
-  house is fine to start with.
-- **Which rooms to set up** — every area with lights is offered, pre-selected. Each one
-  you keep becomes a zone, named after the room.
+- **A name for your first schedule** — Home, unless you change it. A
+  [schedule]({{ site.baseurl }}/reference/schedules/) is the day's lighting: when each phase
+  starts, and how bright and warm it is. One for the whole house is fine to start with. Pick
+  a name you're happy to keep: it becomes part of the schedule's entity IDs.
+- **Which rooms to set up** — every area with lights is offered, pre-selected, and each one
+  you keep becomes a [zone]({{ site.baseurl }}/reference/zones/), named after the room. A zone
+  keeps track of which lights FLARE is driving in that room, which is how it knows to leave
+  alone a light you've changed yourself.
 
 You can add more schedules and zones later, from **FLARE Schedules** and **FLARE Zones**.
 
 {: .note }
-> On Home Assistant 2026.9 and earlier, adding another schedule or zone first asks you to
-> pick between FLARE Schedules and FLARE Zones. Pick the one matching what you're adding.
+> A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
+> to pick between FLARE Schedules and FLARE Zones first. Pick the one matching what you're
+> adding. Home Assistant 2026.10 fixes it.
 
 ## Step 3 — install the blueprint and create an automation
 
@@ -94,8 +94,8 @@ which lights FLARE is driving and which ones something else has taken over. See
 
 ## What now
 
-- Every blueprint input, with defaults: [Blueprint]({{ site.baseurl }}/blueprint/).
+- Every blueprint input, with defaults: [Blueprint]({{ site.baseurl }}/reference/blueprint/).
 - A light not doing what you expect?
-  [Why didn't my light change?]({{ site.baseurl }}/blueprint/#why-didnt-my-light-change)
+  [Why didn't my light change?]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
 - Want it to behave differently — a weekend lie-in, a holiday schedule?
-  [Examples]({{ site.baseurl }}/examples/).
+  [Examples]({{ site.baseurl }}/guides/examples/).
