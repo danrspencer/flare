@@ -20,7 +20,11 @@ Five minutes to a room running on the curve.
 
 ## Step 1 — install via HACS
 
-HACS → three-dot menu → **Custom repositories**. Add:
+[![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
+
+The button opens FLARE in HACS on your Home Assistant. Download it from there.
+
+Or add it by hand: HACS → three-dot menu → **Custom repositories**. Add:
 
 ```
 https://github.com/danrspencer/flare
