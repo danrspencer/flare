@@ -105,27 +105,25 @@ things that happen on their own, alternatives to the standard setup and
 explanations of how it works all live elsewhere.
 
 **13. Match the tone to the section.** The README and homepage are the
-pitch, and can have some personality. Guides are in between: plain, but
-written for someone following along. Reference is short technical
-sentences only, explaining only what isn't obvious from the setting's
-name.
+pitch, and can have some personality. The Quickstart, Dashboard and
+Guides can be casual: "FLARE will spot that its blueprint isn't installed
+and offer it" reads better there than a clipped instruction. Reference is
+the exception: short technical sentences only, explaining only what isn't
+obvious from the setting's name.
 
-**14. Write plain technical documentation.** Short declarative sentences
-that say what happens. Each of these has been flagged in review as
-sounding like AI prose rather than documentation; don't write them:
+**14. Explain, don't perform.** On every page, a sentence should be there
+to explain something, not to show off its writing. Don't write:
 
-- A sentence that sounds knowledgeable but gives the reader nothing to
-  act on: "it re-checks as it goes", "it bends to fit the room", "shifts
-  in step with what's happening outside". Say what actually happens
-  ("every minute it checks each light"), or cut it.
-- Em-dash asides — like this one — in running prose. Use a full stop or
-  a comma. A dash between a list item's label and its description is fine.
-- "X, not Y" contrasts and rhetorical turns ("that's the trick", "that's
-  what makes…", "whatever the time of day", "the one thing that…").
-- A bold lead-in on every bullet. Bold a term only when the bullet
-  defines it.
+- Compressed or inverted sentences that make the reader work: "You'll see
+  it once per light; dismissed, it stays away until a restart." Write
+  "You'll see it once per light. If you dismiss it, it won't come back
+  until Home Assistant restarts."
+- A sentence that sounds knowledgeable but gives the reader nothing to act
+  on: "it re-checks as it goes", "it bends to fit the room". Say what
+  actually happens ("every minute it checks each light"), or cut it.
+- Rhetorical turns: "that's what makes…", "the one thing that…".
 - Explaining why something matters when the reader only needs to know
-  what it does, or repeating something another page already covers.
+  what it does, or repeating what another page already covers.
 
 **15. Reference is the contract; Guides are how to use it.** A Reference
 page says what an input accepts, what an entity holds, what a service

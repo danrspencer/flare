@@ -13,13 +13,13 @@ render_with_liquid: false
 # Examples
 {: .no_toc }
 
-Most of FLARE is Home Assistant entities and events, so you can trigger your own automations
-from it, or change it with them. Each example below is a complete automation to copy and
-adjust.
+Almost everything in FLARE is an ordinary Home Assistant entity or event. That means you can
+trigger your own automations from it, or use automations to change it. These are starting
+points: each one is a complete automation to paste in and adjust.
 
-The examples use a schedule called **Home**, whose entities are `time.home_…`,
-`number.home_…` and `sensor.home_flare`. Replace these, and the rooms, lights and sensors, with
-your own.
+They use a schedule called **Home**, so its entities are `time.home_…`, `number.home_…`
+and `sensor.home_flare`. Swap in your own schedule's name, and your own rooms, lights and
+sensors.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -57,22 +57,23 @@ actions:
       time: "{{ '09:30:00' if lie_in else '08:00:00' }}"
 ```
 
-The schedule uses Morning's start time when the morning arrives, so the automation changes it
-the night before. It runs when Night starts, which is after today's morning and before
-tomorrow's.
+The schedule only checks Morning's start time when the morning comes round, so the trick is
+to change it the night **before**. This runs when Night starts: after today's morning, and
+before tomorrow's.
 
-- It runs every night, so on Sunday night it sets the weekday times back.
-- It moves Day as well as Morning. Morning ends when Day starts, so moving only Morning to 08:00
-  would leave no Morning at all.
-- If your Night starts after midnight, use `[5, 6]`, because by then it's already Saturday.
+- **It runs every night**, not just at the weekend, so the weekday times come back on Sunday
+  night without a second automation.
+- **Day moves with Morning.** Morning lasts until Day starts, so moving Morning to 08:00
+  while Day still starts at 08:00 would leave no Morning at all.
+- **If your Night starts after midnight**, use `[5, 6]`: by then it's already Saturday.
 
 ## A holiday schedule
 
-Switch the house to later mornings and later nights with a toggle, and back again when you
-turn it off.
+Switch the whole house to a holiday schedule, with later mornings and later nights, from a
+toggle, and back again when the holiday's over.
 
-First create a **Toggle** helper called *Holiday mode* (**Settings → Devices & Services →
-Helpers → Create helper → Toggle**). Then:
+First create a **Toggle** helper called *Holiday mode* (Settings → Devices & Services →
+Helpers → Create helper → Toggle). Then:
 
 ```yaml
 alias: Holiday schedule
@@ -105,14 +106,14 @@ actions:
               time: "22:00"
 ```
 
-Each schedule lists only the settings it changes; the others keep their values. A schedule
-can include any setting. To change more, set the schedule up the way you want it, press
+Each schedule lists only what changes; everything else stays as it is. A schedule can hold
+any of its settings, so for bigger changes, set your schedule up the way you want it, press
 **Copy** in its dashboard section, and paste the result in.
 
 ## Movie night
 
-Hold the schedule at Night while the TV is playing, and go back to the schedule when it
-stops.
+Hold the house at Night while the TV is on, and hand back to the schedule when it goes
+off.
 
 ```yaml
 alias: Movie night
@@ -133,12 +134,14 @@ actions:
       option: "{{ 'Night' if trigger.id == 'start' else 'Auto' }}"
 ```
 
-The phase override applies to every room on the schedule. To dim one room only, use the
-blueprint's [Brightness Template](../templates/#brightness-template) instead.
+The phase override applies to **every room on that schedule**. To dim one room only, give
+it a schedule of its own, or use the blueprint's
+[Brightness Template](../templates/#brightness-template) instead.
 
 ## Keeping a room lit regardless of motion
 
-Keep the landing lit while a toggle is on, even when nobody is there.
+Keep the landing lit at the full curve for as long as a toggle is on, whatever the motion
+sensor says.
 
 ```yaml
 template:
@@ -148,13 +151,14 @@ template:
         state: "{{ is_state('input_boolean.keep_landing_lit', 'on') }}"
 ```
 
-Add this to `configuration.yaml`, then add `binary_sensor.landing_kept_lit` to the landing
-automation's **Lights & Occupancy**. It's an occupancy sensor that's on while the toggle is on,
-and the room isn't empty while any of its occupancy sensors is on.
+This goes in `configuration.yaml`. Then add `binary_sensor.landing_kept_lit` to the landing
+automation's **Lights & Occupancy**. To the blueprint it's one more occupancy sensor, and a
+room only counts as empty once all of its sensors are clear, so while the toggle is on the
+room stays lit.
 
 ## Lighting a room from a remote
 
-Turn the hall lights on from a button on a remote, at the level for the time of day.
+Turn the hall lights on from a button on a remote, at the right level for the time of day.
 
 ```yaml
 alias: Hall lights from the remote
@@ -170,11 +174,11 @@ actions:
       entity_id: automation.hallway_lights
 ```
 
-This runs the room's automation, which counts as running it by hand, so it can turn the lights
-on. It also sets any light someone changed back to the schedule. **Additional Triggers** can't
-do this, because they only adjust lights that are already on.
+**Additional Triggers** can't do this: they only adjust lights that are already on. Running
+the room's automation from another automation counts as running it by hand, which can switch
+lights on. It also brings back to the curve any light in the room that someone set themselves.
 
-## Closing the blinds at Night
+## Something else at a phase change
 
 Close the blinds when Night starts.
 
@@ -192,12 +196,12 @@ actions:
       area_id: living_room
 ```
 
-The Phase event fires each time the phase changes, including a manual override. Its
-`event_type` is the new phase.
+The Phase event fires each time the phase changes, a manual override included, with the
+new phase as its `event_type`.
 
-## A notification when a light is changed
+## Being told when a light is taken over
 
-Send a notification when something else changes a light, so FLARE stops setting it.
+A notification when FLARE stops driving a light because something else changed it.
 
 ```yaml
 alias: Tell me when FLARE lets go of a light
@@ -209,9 +213,9 @@ actions:
     data:
       message: >
         {{ state_attr(trigger.event.data.entity_id, 'friendly_name') }} in
-        {{ trigger.event.data.zone }} was changed by something else. FLARE won't
-        set it again until the room is dark.
+        {{ trigger.event.data.zone }} was changed by something else, so FLARE has
+        stopped driving it until the room goes dark.
 ```
 
-The event also includes what FLARE last set and what the light was showing. See
-[the hand-over event](../../reference/zones/#the-hand-over-event).
+The event also carries what FLARE last asked for and what the light was actually showing —
+see [the hand-over event](../../reference/zones/#the-hand-over-event).

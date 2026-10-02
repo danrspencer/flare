@@ -15,8 +15,9 @@ render_with_liquid: false
 # Building without the blueprint
 {: .no_toc }
 
-The blueprint uses FLARE's [services](../../reference/services/), and so can your own
-automations, scripts, Node-RED flows or AppDaemon apps.
+The blueprint is one way to use FLARE's [services](../../reference/services/). Anything that
+can call a Home Assistant action — an automation, a script, Node-RED, AppDaemon — can use them
+directly.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -27,9 +28,9 @@ automations, scripts, Node-RED flows or AppDaemon apps.
 
 ## The smallest automation
 
-You need a [schedule](../../reference/schedules/) for the values and, for override
-protection, a [zone](../../reference/zones/). This automation keeps the kitchen's lights on the
-schedule:
+You need a [schedule](../../reference/schedules/) for the values and, if you want FLARE to
+leave hand-set lights alone, a [zone](../../reference/zones/) for the lights. This keeps the
+kitchen on the curve:
 
 ```yaml
 alias: Kitchen lighting
@@ -52,19 +53,19 @@ actions:
       zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-It runs on the kitchen zone's tick. It only passes lights that are on, because `apply_lighting`
-turns on every light it's given. It doesn't turn the room on or off.
+It runs on the kitchen zone's tick and only passes lights that are on, since `apply_lighting`
+turns on everything it's given. Turning the room on and off is left to you.
 
 ## Sending the commands yourself
 
-To send `light.turn_on` yourself and still use FLARE's override protection:
+If you want to send `light.turn_on` yourself and still have FLARE leave hand-set lights alone:
 
-1. Call `flare.claims_check` to find out whether FLARE would leave the light alone.
-2. If it wouldn't, call `flare.claims_record` with the values you're about to send.
-3. Send your command.
+1. `flare.claims_check` to find out whether someone else has changed the light.
+2. `flare.claims_record` with what you're about to send, so FLARE recognises it next time.
+3. Your own `light.turn_on`.
 
-This script sets the porch light to a warm 60%, unless someone else has changed it since the
-script last set it:
+For example, this script sets the porch light to a warm 60%, unless someone has changed it
+since the script last set it:
 
 ```yaml
 alias: Porch light warm
@@ -90,12 +91,13 @@ sequence:
       color_temp_kelvin: 2200
 ```
 
-`targets` must have the brightness and either `color_temp_kelvin` or `rgb_color` you're about
-to send. FLARE compares the light with them later to recognise the change as its own. An effect
-that keeps changing the light's colour can't be recognised this way.
+`targets` needs the brightness and either `color_temp_kelvin` or `rgb_color` you're sending.
+FLARE checks the light against it later, so a light running an effect that keeps changing its
+colour won't be recognised. For that, use a scene or hand the light over with a `null`
+brightness in the blueprint instead.
 
-To turn lights off, use `flare.turn_off` rather than `light.turn_off`. It records the turn-off,
-so it isn't mistaken for someone turning the lights off by hand.
+To turn lights off, use `flare.turn_off` rather than `light.turn_off`: it records the turn-off
+too, so it isn't mistaken for someone switching the lights off by hand.
 
-`flare.compute_lighting_groups` returns what `apply_lighting` would send, grouped by brightness,
-without sending it. Use it as a starting point for sending the commands yourself.
+`flare.compute_lighting_groups` gives you what `apply_lighting` would send, grouped, without
+sending it, if you want a starting point for sending it yourself.
