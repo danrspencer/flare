@@ -60,8 +60,9 @@ leaves Morning and Day on colour temperature.
 | **Morning / Day / Evening / Night Scene** | none | A scene the room uses instead of the schedule during that phase. |
 | **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. Overrides the per-phase scenes when it returns a scene that exists. |
 
-A scene is only used if every entity it sets is in the room; otherwise the room follows the
-schedule. Lights the scene doesn't set follow the schedule. See [Scenes](../../guides/scenes/).
+A scene is only used if every entity it sets is in the room; otherwise the whole room follows
+the schedule. When a scene is used, any light in the room that the scene doesn't set still
+follows the schedule. See [Scenes](../../guides/scenes/).
 
 ## Brightness
 
@@ -78,8 +79,8 @@ Brightness Template values:
 | `0` | Turns the light off. |
 | `null` | FLARE leaves the light alone, including when the room empties. |
 
-A single number instead of a mapping applies to every light in the room. Lights the template
-doesn't include follow the schedule. See [Templates](../../guides/templates/#brightness-template).
+A single number instead of a mapping applies to every light in the room, and any light the
+template doesn't include follows the schedule. See [Templates](../../guides/templates/#brightness-template).
 
 ## Idle brightness
 
@@ -123,9 +124,9 @@ on from something else, see
 
 ### When the room updates
 
-When the phase changes, a sensor detects someone, an Additional Trigger changes, or one of its
-lights comes back online. Otherwise on its zone's [tick](../zones/#when-zones-tick), every minute
-by default.
+A room updates straight away when the phase changes, a sensor detects someone, an Additional
+Trigger changes, or one of its lights comes back online. Between those, it updates on its zone's
+[tick](../zones/#when-zones-tick), which is every minute by default.
 
 The automation finds the tick through the zone's device. Home Assistant leaves hidden entities
 out of a device, so hiding a zone's Tick entity stops the room updating.
@@ -135,10 +136,11 @@ out of a device, so hiding a zone's Tick entity stops the room updating.
 Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
 been clear for the **Wait time**.
 
-While every light in **Lights & Occupancy** is off, only a sensor detecting someone or running
-the automation by hand turns any of them on. Idle brightness is the exception. While at least one
-light is on, an update can turn on the others. So a phase change doesn't light an empty room,
-and a bulb that comes back online stays off if the rest of the room is off.
+While every light in **Lights & Occupancy** is off, the only things that turn any of them on are
+a sensor detecting someone, running the automation by hand, and
+[idle brightness](#idle-brightness). Once at least one light is on, any update can turn on the
+others. This means a phase change doesn't light up an empty room, and a bulb that comes back
+online stays off if the rest of the room is off.
 
 If a light is still on after the room has been empty for the **Wait time**, the turn-off is sent
 again.
@@ -154,8 +156,8 @@ changed.
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour
-  temperature aren't sent. Set these under **FLARE Zones → Configure**.
-- **It's unavailable.** It's set when it comes back online.
+  temperature aren't sent. You can change both limits under **FLARE Zones → Configure**.
+- **It's unavailable.** FLARE sets it once it comes back online.
 - **A scene has it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).
 

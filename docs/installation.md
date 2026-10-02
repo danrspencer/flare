@@ -22,7 +22,7 @@ Five minutes to a room running on the curve.
 
 [![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
 
-The button opens FLARE in HACS on your Home Assistant. Download it from there.
+The button opens FLARE in HACS on your Home Assistant, where you can download it.
 
 Or add it by hand: HACS → three-dot menu → **Custom repositories**. Add:
 
@@ -51,8 +51,8 @@ You can add more schedules and zones later, from **FLARE Schedules** and **FLARE
 
 {: .note }
 > A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
-> to pick between FLARE Schedules and FLARE Zones first. Pick the one matching what you're
-> adding. Home Assistant 2026.10 fixes it.
+> to pick between FLARE Schedules and FLARE Zones first. Pick the one that matches what you're
+> adding; Home Assistant 2026.10 fixes this.
 
 ## Step 3 — install the blueprint and create an automation
 
@@ -67,7 +67,7 @@ Create an automation from it and fill in three things:
 | **Zone** | The room's zone from step 2 — usually the one named after the room. |
 | **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy and motion sensors inside it decide when. |
 
-That's the minimum. Everything else has a working default.
+Those three are all a room needs, because every other input has a working default.
 
 {: .note }
 > A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or

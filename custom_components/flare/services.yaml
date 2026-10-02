@@ -18,8 +18,8 @@ compute_lighting_groups:
       name: Brightness multipliers
       description: >-
         Map of entity ID to multiplier. A number scales the brightness,
-        limited to 1-255. 0 turns the light off. null or false leaves the
-        light alone. Lights not listed use 1.
+        limited to 1-255; 0 turns the light off, and null or false leaves the
+        light alone. A light that isn't listed uses 1.
       example: '{"light.lamp": 0.5, "light.strip": 0}'
       selector:
         object:
@@ -102,8 +102,8 @@ compute_lighting_groups:
       name: Minimum brightness change
       description: >-
         A light within this percentage of the target brightness isn't sent
-        anything. Never smaller than Brightness tolerance. Leave unset to use
-        the setting under FLARE Zones → Configure.
+        anything, though the limit is never smaller than Brightness tolerance.
+        Leave unset to use the setting under FLARE Zones → Configure.
       selector:
         number:
           min: 0
@@ -161,8 +161,8 @@ apply_lighting:
       name: Brightness multipliers
       description: >-
         Map of entity ID to multiplier. A number scales the brightness,
-        limited to 1-255. 0 turns the light off. null or false leaves the
-        light alone. Lights not listed use 1.
+        limited to 1-255; 0 turns the light off, and null or false leaves the
+        light alone. A light that isn't listed uses 1.
       example: '{"light.lamp": 0.5, "light.strip": 0}'
       selector:
         object:
@@ -256,8 +256,8 @@ apply_lighting:
       name: Minimum brightness change
       description: >-
         A light within this percentage of the target brightness isn't sent
-        anything. Never smaller than Brightness tolerance. Leave unset to use
-        the setting under FLARE Zones → Configure.
+        anything, though the limit is never smaller than Brightness tolerance.
+        Leave unset to use the setting under FLARE Zones → Configure.
       selector:
         number:
           min: 0
@@ -299,7 +299,8 @@ turn_off:
   name: Turn off lights
   description: >-
     Turns lights off and records it, so FLARE doesn't treat them as
-    overridden. Turns off every light it's given, including overridden ones.
+    overridden. It turns off every light it's given, including overridden
+    ones.
   fields:
     entities:
       name: Entities
@@ -334,8 +335,8 @@ compute_curve:
   name: Compute curve
   description: >-
     Returns the phase, brightness, colour temperature and RGB colour at a
-    moment, for the phase start times given. Curve settings left out use a new
-    schedule's defaults.
+    moment, for the phase start times given. Any curve setting left out takes
+    the value a new schedule starts with.
   fields:
     morning:
       name: Morning boundary
@@ -448,8 +449,8 @@ compute_curve:
       name: Morning brightness transition
       description: >-
         Minutes before Morning ends to start easing brightness to the next
-        phase's. 0 changes at the boundary. A value longer than Morning eases
-        across the whole phase.
+        phase's. 0 changes at the boundary, and a value longer than Morning
+        eases across the whole phase.
       default: 60
       selector:
         number:
@@ -460,8 +461,8 @@ compute_curve:
       name: Morning colour transition
       description: >-
         Minutes before Morning ends to start easing colour temperature to the
-        next phase's. 0 changes at the boundary. A value longer than Morning
-        eases across the whole phase.
+        next phase's. 0 changes at the boundary, and a value longer than
+        Morning eases across the whole phase.
       default: 60
       selector:
         number:
@@ -472,7 +473,7 @@ compute_curve:
       name: Day brightness transition
       description: >-
         Minutes before Day ends to start easing brightness to the next
-        phase's. 0 changes at the boundary. A value longer than Day eases
+        phase's. 0 changes at the boundary, and a value longer than Day eases
         across the whole phase.
       default: 65
       selector:
@@ -484,7 +485,7 @@ compute_curve:
       name: Day colour transition
       description: >-
         Minutes before Day ends to start easing colour temperature to the next
-        phase's. 0 changes at the boundary. A value longer than Day eases
+        phase's. 0 changes at the boundary, and a value longer than Day eases
         across the whole phase.
       default: 1440
       selector:
@@ -496,8 +497,8 @@ compute_curve:
       name: Evening brightness transition
       description: >-
         Minutes before Evening ends to start easing brightness to the next
-        phase's. 0 changes at the boundary. A value longer than Evening eases
-        across the whole phase.
+        phase's. 0 changes at the boundary, and a value longer than Evening
+        eases across the whole phase.
       default: 60
       selector:
         number:
@@ -508,8 +509,8 @@ compute_curve:
       name: Evening colour transition
       description: >-
         Minutes before Evening ends to start easing colour temperature to the
-        next phase's. 0 changes at the boundary. A value longer than Evening
-        eases across the whole phase.
+        next phase's. 0 changes at the boundary, and a value longer than
+        Evening eases across the whole phase.
       default: 60
       selector:
         number:
@@ -520,8 +521,8 @@ compute_curve:
       name: Night brightness transition
       description: >-
         Minutes before Night ends to start easing brightness to the next
-        phase's. 0 changes at the boundary. A value longer than Night eases
-        across the whole phase.
+        phase's. 0 changes at the boundary, and a value longer than Night
+        eases across the whole phase.
       default: 30
       selector:
         number:
@@ -532,7 +533,7 @@ compute_curve:
       name: Night colour transition
       description: >-
         Minutes before Night ends to start easing colour temperature to the
-        next phase's. 0 changes at the boundary. A value longer than Night
+        next phase's. 0 changes at the boundary, and a value longer than Night
         eases across the whole phase.
       default: 30
       selector:

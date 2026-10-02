@@ -33,8 +33,8 @@ under **Settings → Devices & Services → FLARE Zones**.
 | `button.<name>_flare_clear` | Discards every claim in the zone. |
 | `event.<name>_flare_tick` | Fires once per update interval. See [when zones tick](#when-zones-tick). |
 
-The `claims` attribute isn't recorded in history. The two counts are, with long-term
-statistics. A light that's unavailable, or has no claim, isn't in either count.
+The two counts are recorded in history, with long-term statistics, but the `claims` attribute
+isn't. A light that's unavailable or has no claim isn't included in either count.
 
 **Clear** discards every claim in the zone, not only for the overridden lights. FLARE then sets
 all of the zone's lights again on their next update.
@@ -100,14 +100,15 @@ override: once the room is dark, FLARE sets every light in it again.
 - A light that isn't in the zone doesn't count.
 - A light that's unavailable counts as off, so one dead bulb can't keep the zone's claims.
 
-A light also loses its claim when it goes unavailable. The **Clear** button discards a zone's
-claims by hand.
+A light also loses its claim when it goes unavailable, and you can discard a zone's claims by
+hand with its **Clear** button.
 
 ### One zone per light
 
 If two zones set the same light, each treats the other's changes as someone else's, and the light
 stops following either. When this happens, FLARE shows a notification naming the light and the
-zones. It shows it once per light until Home Assistant restarts.
+zones. It shows this once for each light, and doesn't show it again for that light until Home
+Assistant restarts.
 
 ## The hand-over event
 
@@ -145,8 +146,8 @@ triggers:
 | Status | Meaning |
 |---|---|
 | `controlled` | FLARE is setting it: it matches one of its claims. |
-| `overridden` | It matches neither claim. Something else has changed it. |
-| `unavailable` | The light has no state. |
+| `overridden` | It matches neither claim, so something else has changed it. |
+| `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
 | `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
 
 `matched_via` says which claim matched, and how: `latest-context`, `latest-value`,
@@ -160,7 +161,8 @@ deleted from Home Assistant stops being tracked.
 
 Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update
 interval. Zones fire one after another, in name order, a gap apart, so rooms don't all send
-commands at the same time. Set both under **FLARE Zones → Configure**:
+commands at the same time. You can set the interval and the gap under **FLARE Zones →
+Configure**:
 
 | Option | Default | Description |
 |---|---|---|

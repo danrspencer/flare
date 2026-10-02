@@ -108,8 +108,8 @@ explanations of how it works all live elsewhere.
 pitch, and can have some personality. The Quickstart, Dashboard and
 Guides can be casual: "FLARE will spot that its blueprint isn't installed
 and offer it" reads better there than a clipped instruction. Reference is
-the exception: short technical sentences only, explaining only what isn't
-obvious from the setting's name.
+the exception: plain technical sentences, explaining only what isn't
+obvious from the setting's name. Plain doesn't mean clipped - see rule 16.
 
 **14. Explain, don't perform.** On every page, a sentence should be there
 to explain something, not to show off its writing. Don't write:
@@ -129,6 +129,27 @@ to explain something, not to show off its writing. Don't write:
 page says what an input accepts, what an entity holds, what a service
 takes and returns, and what happens as a result. Worked examples, recipes
 and "how to get X" live in Guides and link back.
+
+**16. No staccato prose.** Don't write a run of short, clipped sentences
+and leave the reader to work out how they connect. It comes with two
+other habits, and all three are banned:
+
+- Clipped sentences that each hold a fragment of one idea. Join them with
+  the word that says how they relate: "and", "but", "so", "because",
+  "if".
+- Vague stand-ins for names: "the box", "that list", "both", "it". Use the
+  name the UI shows (rule 6), or say what the thing is.
+- An instruction standing in for a condition: "Clear it and FLARE goes
+  back to…", "Name one that doesn't exist and…". Write "If you…".
+
+Don't write: "The box starts with FLARE's own list. Clear it and FLARE goes
+back to that list." Write: "The field is pre-filled with FLARE's default
+patterns. Your saved list replaces those defaults entirely, so you can
+remove a pattern as well as add one. If you save the field empty, FLARE
+uses the defaults again."
+
+Short sentences are fine. A paragraph made only of them, each one
+starting from scratch, is not.
 
 ## Lexicon
 

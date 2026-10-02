@@ -23,15 +23,15 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
 
 - **It keeps every light on the curve.** Every minute it checks each light, and corrects
   any that have drifted or missed a command.
-- **It works with lights on a physical wall switch.** Cut the power to a room and
-  restore it, and as soon as each bulb shows up in Home Assistant again, FLARE puts it on
-  the current phase instead of leaving it at whatever it powered up as.
+- **It works with lights on a physical wall switch.** If you cut the power to a room and
+  restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home
+  Assistant again, instead of leaving it at whatever it powered up as.
 - **Each room can be different.** Give a light its own brightness, hand the room to a
   scene in any phase, or use a template when a fixed value isn't enough.
 - **It can leave a nightlight on.** When a room empties it can dim to a low level instead
   of going dark.
-- **It leaves your changes alone.** Change a light yourself — from an app, a wall switch or
-  another automation — and FLARE stops setting it until the room next goes dark.
+- **It leaves your changes alone.** If you change a light yourself, from an app, a wall
+  switch or another automation, FLARE stops setting it until the room next goes dark.
 - **It's gentle on your Zigbee network.** Rooms update one after another rather than all
   at once, and changes too small to see aren't sent.
 
@@ -54,12 +54,12 @@ default settings:
 | **Night** | Warm and low, flat until morning. |
 
 Each boundary has its own transition: how long beforehand to start easing into the next
-phase, so the new values land exactly as it begins. Set one to zero for a visible step
-instead.
+phase, so the new values land exactly as it begins. If you set a transition to zero, the
+lights step straight to the new values instead.
 
-Morning, Day and Night are wall-clock times. Only Evening tracks the sun, clamped between
-an earliest and a latest time so it moves with the season without drifting into the small
-hours.
+Morning, Day and Night start at fixed times of day. Only Evening tracks the sun, and it's kept
+between an earliest and a latest time, so it moves with the season without drifting into the
+small hours.
 
 {: .tip }
 > [Play with the curve]({{ site.baseurl }}/playground/) to see how each setting shapes
