@@ -7,15 +7,10 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
-## [0.17.0] - Unreleased
+## [0.18.0] - Unreleased
 
 ### Breaking
 
-- **Update the blueprint together with the integration.** The blueprint now turns
-  lights off with `flare.turn_off`, which earlier versions of the integration do not
-  have, so a new blueprint against an old integration fails with "service not found".
-  The blueprint-update repair fetches the version that matches the integration, so
-  updating through it keeps the two in step.
 - **Every blueprint automation needs a Zone.** The blueprint has a new required
   **Zone** input: the FLARE zone the room belongs to. It decides which lights FLARE
   remembers driving, and the room's regular update follows the zone's Tick, replacing
@@ -50,11 +45,6 @@ CI — see `.github/workflows/release.yml`.
 - **Floors and labels in Lights & Occupancy control lights.** They used to drive
   occupancy only. A floor covers every area on it; a label covers the lights, devices
   and areas carrying it.
-- **`flare.turn_off`.** Turns lights off and records that as FLARE's own doing, so a
-  turn-off is not later mistaken for somebody else switching the light off. It takes
-  `entities`, an optional `transition` and an optional `zone_device_id`, and does
-  no override protection: it turns off exactly what it is given, including lights
-  someone set by hand. The blueprint uses it for its own turn-offs.
 - **A repair when a light is in two zones.** Two zones driving the same light each read
   the other's changes as an override, so the light stops following either. FLARE now
   raises a repair naming the light and the zones when it happens.
@@ -78,14 +68,6 @@ CI — see `.github/workflows/release.yml`.
   one's ran out, even if another had seen motion since. It now turns off only once
   every sensor has been clear for the full Wait time. A sensor that is unavailable
   no longer counts as occupied, so a dead sensor can't keep a room lit.
-- **A light no longer stops following the schedule after an update is cut short.**
-  If a room's automation was restarted part-way through changing its lights - a new
-  motion event arriving while a two-step bulb was between its two steps, or one
-  light's command failing while its neighbours' succeeded - the lights that had
-  already changed were treated as if somebody else had set them, and were left alone
-  until the room next went dark. Nothing was logged; the light simply stopped
-  following the curve. FLARE now records what it is about to send before it sends it,
-  so an interrupted update leaves the lights recognisably its own.
 
 ### Changed
 
@@ -97,6 +79,38 @@ CI — see `.github/workflows/release.yml`.
 - **FLARE Tracking is now FLARE Zones, and tracking scopes are zones**, now that they
   do more than track. An existing entry keeps its title; rename it from the entry's
   menu if you like.
+
+## [0.17.0] - 2026-09-22
+
+### Breaking
+
+- **Update the blueprint together with the integration.** The blueprint now turns
+  lights off with `flare.turn_off`, which earlier versions of the integration do not
+  have, so a new blueprint against an old integration fails with "service not found".
+  The blueprint-update repair fetches the version that matches the integration, so
+  updating through it keeps the two in step.
+
+### Added
+
+- **`flare.turn_off`.** Turns lights off and records that as FLARE's own doing, so a
+  turn-off is not later mistaken for somebody else switching the light off. It takes
+  `entities`, an optional `transition` and an optional `tracking_device_id`, and does
+  no override protection: it turns off exactly what it is given, including lights
+  someone set by hand. The blueprint uses it for its own turn-offs.
+
+### Fixed
+
+- **A light no longer stops following the schedule after an update is cut short.**
+  If a room's automation was restarted part-way through changing its lights - a new
+  motion event arriving while a two-step bulb was between its two steps, or one
+  light's command failing while its neighbours' succeeded - the lights that had
+  already changed were treated as if somebody else had set them, and were left alone
+  until the room next went dark. Nothing was logged; the light simply stopped
+  following the curve. FLARE now records what it is about to send before it sends it,
+  so an interrupted update leaves the lights recognisably its own.
+
+### Changed
+
 - **The blueprint turns lights off with one call.** It used to call `light.turn_off`
   and then `flare.claims_record` as two steps, in an order that had the same problem
   as above. Behaviour is otherwise unchanged.
