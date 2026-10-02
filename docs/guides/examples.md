@@ -156,16 +156,18 @@ automation's **Lights & Occupancy**. To the blueprint it's one more occupancy se
 room only counts as empty once all of its sensors are clear, so while the toggle is on the
 room stays lit.
 
-## Lighting a room from something other than occupancy
+## Lighting a room from a remote
 
-Turn the hall lights on when the front door opens, at the right level for the time of day.
+Turn the hall lights on from a button on a remote, at the right level for the time of day.
 
 ```yaml
-alias: Hall lights for the front door
+alias: Hall lights from the remote
 triggers:
   - trigger: state
-    entity_id: binary_sensor.front_door
-    to: "on"
+    entity_id: event.hall_remote_action
+conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.event_type == 'on' }}"
 actions:
   - action: automation.trigger
     target:

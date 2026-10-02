@@ -48,19 +48,3 @@ it was on.
 
 Like the curve, a scene never lights an empty room. If the phase changes while nobody's there,
 the scene is applied when someone next walks in.
-
-## How FLARE lets go of a scene's lights
-
-When FLARE applies a scene, it releases its claims on the lights the scene covers.
-
-That matters because of [override protection](../../reference/zones/#override-protection). If
-FLARE kept its claims, it would see the scene's colours on those lights and decide someone else
-had changed them. It would then leave them alone until the room went dark — so when the scene's
-phase ended, those lights would stay as the scene left them instead of going back to the
-curve. With the claims released, FLARE takes the lights back at the first update after the
-scene stops applying.
-
-## When someone takes a light by hand
-
-A light changed by a wall switch, an app or another automation is left alone, scene or not,
-until the room goes dark. See [override protection](../../reference/zones/#override-protection).

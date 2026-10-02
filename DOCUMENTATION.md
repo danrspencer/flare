@@ -104,13 +104,28 @@ reader does to get a room working, or needs to know to do it. Notes about
 things that happen on their own, alternatives to the standard setup and
 explanations of how it works all live elsewhere.
 
-**13. Say the concrete thing.** A sentence that sounds knowledgeable but
-gives the reader nothing to act on goes: "it re-checks as it goes",
-"it bends to fit the room", "shifts in step with what's happening
-outside". Replace it with what actually happens — "every minute it checks
-each light" — or cut it.
+**13. Match the tone to the section.** The README and homepage are the
+pitch, and can have some personality. The Quickstart, Dashboard and
+Guides can be casual: "FLARE will spot that its blueprint isn't installed
+and offer it" reads better there than a clipped instruction. Reference is
+the exception: short technical sentences only, explaining only what isn't
+obvious from the setting's name.
 
-**14. Reference is the contract; Guides are how to use it.** A Reference
+**14. Explain, don't perform.** On every page, a sentence should be there
+to explain something, not to show off its writing. Don't write:
+
+- Compressed or inverted sentences that make the reader work: "You'll see
+  it once per light; dismissed, it stays away until a restart." Write
+  "You'll see it once per light. If you dismiss it, it won't come back
+  until Home Assistant restarts."
+- A sentence that sounds knowledgeable but gives the reader nothing to act
+  on: "it re-checks as it goes", "it bends to fit the room". Say what
+  actually happens ("every minute it checks each light"), or cut it.
+- Rhetorical turns: "that's what makes…", "the one thing that…".
+- Explaining why something matters when the reader only needs to know
+  what it does, or repeating what another page already covers.
+
+**15. Reference is the contract; Guides are how to use it.** A Reference
 page says what an input accepts, what an entity holds, what a service
 takes and returns, and what happens as a result. Worked examples, recipes
 and "how to get X" live in Guides and link back.

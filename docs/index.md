@@ -32,6 +32,8 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
   of going dark.
 - **It leaves your changes alone.** Change a light yourself — from an app, a wall switch or
   another automation — and FLARE stops setting it until the room next goes dark.
+- **It's gentle on your Zigbee network.** Rooms update one after another rather than all
+  at once, and changes too small to see aren't sent.
 
 ---
 
@@ -74,7 +76,7 @@ use. For example:
 - **A weekend lie-in**, by an automation that moves Morning later on Friday and Saturday
   evenings.
 - **A holiday schedule**, switched on and off with a toggle.
-- **A room lit by the front door opening**, not just by occupancy.
+- **A room lit by a button on a remote**, not just by occupancy.
 - **Blinds that close when Night starts.**
 
 [See the examples →]({{ site.baseurl }}/guides/examples/){: .btn .btn-outline }

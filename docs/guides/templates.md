@@ -40,16 +40,12 @@ nothing to say.
 ### Dimming a light while the TV is on
 
 ```yaml
-{% if is_state('media_player.tv', 'playing') %}
-  {{ {'light.lounge_ceiling': 40, 'light.lounge_lamp': none} }}
-{% else %}
-  {{ {} }}
-{% endif %}
+{{ {'light.lounge_ceiling': 40} if is_state('media_player.tv', 'playing') else {} }}
 ```
 
-While the TV plays, the ceiling light sits at 40 and the lamp is left to whatever else
-controls it. Add `media_player.tv` to **Additional Triggers** so the room changes as soon as
-the TV starts or stops, rather than at the next update.
+While the TV plays, the ceiling light sits at 40 and the rest of the room follows the curve.
+Add `media_player.tv` to **Additional Triggers** so the room changes as soon as the TV starts
+or stops, rather than at the next update.
 
 ### Dimming some lights in the evening
 
@@ -65,6 +61,16 @@ the TV starts or stops, rather than at the next update.
 ```
 
 The rest of the kitchen follows the curve; these two sit lower once Evening starts.
+
+### Leaving a light to another automation
+
+```yaml
+{{ {'light.kitchen_strip': none} if states('sensor.home_flare') in ['Evening', 'Night'] else {} }}
+```
+
+In the evening another automation runs a gradient on the kitchen strip, so this hands the
+strip over during Evening and Night and FLARE leaves it alone. FLARE won't turn it off when
+the room empties either; the other automation needs to do that.
 
 ### One level for the whole room
 

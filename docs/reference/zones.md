@@ -12,9 +12,9 @@ render_with_liquid: false
 # Zones
 {: .no_toc }
 
-A zone is FLARE's record of which lights it's driving, usually one per room. It's what lets
-FLARE tell its own changes from anyone else's, so a light you change yourself is left alone.
-Each zone is a device under **Settings → Devices & Services → FLARE Zones**.
+A zone records which lights FLARE has set, usually for one room. FLARE uses it to tell its own
+changes from anyone else's, so it can leave alone a light you've changed yourself. Zones are
+under **Settings → Devices & Services → FLARE Zones**.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -25,33 +25,29 @@ Each zone is a device under **Settings → Devices & Services → FLARE Zones**.
 
 ## A zone's entities
 
-| Entity | |
+| Entity | Description |
 |---|---|
-| `sensor.<name>_flare_claims` | The claims themselves. Its state is the number of lights tracked; its `claims` attribute holds each light's records |
-| `sensor.<name>_flare_controlled` | How many of the zone's lights FLARE is driving |
-| `sensor.<name>_flare_overridden` | How many something else has taken over |
-| `button.<name>_flare_clear` | Discards every claim in the zone |
-| `event.<name>_flare_tick` | Fires once per update interval — see [when zones tick](#when-zones-tick) |
+| `sensor.<name>_flare_claims` | Where FLARE stores the zone's claims. The state is the number of lights tracked; the `claims` attribute has each light's claims. Don't disable it: without it the zone can't record anything. |
+| `sensor.<name>_flare_controlled` | The number of the zone's lights FLARE is setting. For information only. |
+| `sensor.<name>_flare_overridden` | The number of the zone's lights something else has changed. For information only. |
+| `button.<name>_flare_clear` | Discards every claim in the zone. |
+| `event.<name>_flare_tick` | Fires once per update interval. See [when zones tick](#when-zones-tick). |
 
-The `claims` attribute isn't recorded, so it has no history. The two counts are ordinary
-numbers with history and long-term statistics.
+The `claims` attribute isn't recorded in history. The two counts are, with long-term
+statistics. A light that's unavailable, or has no claim, isn't in either count.
 
-- **The counts don't add up to the total.** An unavailable light is in neither, and nor is a
-  light with no claim.
-- **Overridden isn't an error.** It means something else took the light and FLARE stepped
-  back.
-- **Clear discards every claim in the zone**, not just the overridden ones. Every light in
-  the zone is then free for FLARE to set again on its next update.
+**Clear** discards every claim in the zone, not only for the overridden lights. FLARE then sets
+all of the zone's lights again on their next update.
 
 ## Override protection
 
-Every time FLARE writes a light, it records a **claim** on that light in the zone named in
-the call. On the next update it compares the light with the claim: if the light still shows
-what FLARE asked for, FLARE carries on; if not, something else has changed it, and FLARE
-leaves it alone.
+When `flare.apply_lighting` or `flare.turn_off` changes a light, it records a **claim** on the
+light in the zone the call names. On the next update, FLARE compares the light with its claim.
+If the light still shows what FLARE set, FLARE carries on setting it. If it doesn't, something
+else has changed it, and FLARE leaves it alone.
 
-The blueprint names its **Zone** input in every call. Calling the services yourself, pass the
-zone as `zone_device_id`:
+The blueprint passes its **Zone** input with every call. If you call the services yourself,
+pass the zone as `zone_device_id`:
 
 ```yaml
 action: flare.apply_lighting
@@ -63,64 +59,59 @@ data:
   zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-- **Leave `zone_device_id` out** of `apply_lighting`, `turn_off` or `compute_lighting_groups`
-  and the light is written but not tracked: no claim is recorded, and nothing is left alone.
-- **It's required** on `claims_check`, `claims_record` and `claims_clear`, which only read or
-  write claims.
-- **An id that isn't one of your zones** is an error, rather than being treated as no zone.
-- **Two calls naming the same zone share its claims.** To keep two automations' lights
-  separate, give them different zones.
-- **`force: true`** writes regardless of who holds the light, and still records the claim.
+- Without `zone_device_id`, `apply_lighting`, `turn_off` and `compute_lighting_groups` set the
+  lights but record nothing, and don't leave any light alone.
+- `claims_check`, `claims_record` and `claims_clear` require `zone_device_id`.
+- A `zone_device_id` that isn't one of your zones is an error.
+- Calls naming the same zone share its claims. To keep two automations' lights separate, give
+  them different zones.
+- `force: true` sets lights even if something else has changed them, and records the claim.
 
 ### The two claims
 
-Each tracked light has two claims in its zone:
+Each tracked light has two claims:
 
-- **`observed`** — a state FLARE has seen the light take after one of its own writes.
-- **`latest`** — the most recent write FLARE sent, not yet seen.
+- **`observed`**: a state FLARE has seen the light report after one of its own changes.
+- **`latest`**: the last change FLARE sent, which it hasn't seen the light report yet.
 
-A light matches if it carries the context of either claim's write, or shows either claim's
-values. Values matter because Home Assistant forgets a write's context after five seconds, so
-a bulb that's slow to report back arrives under a different one.
+A light matches a claim if it reports the context of that claim's change, or the values in it.
+Values are needed because Home Assistant drops a change's context after five seconds, and some
+bulbs take longer than that to report back.
 
-Claims survive a restart. A restart gives every light a new context, so restored claims match
-on values alone: a light still showing what FLARE asked for is FLARE's, anything else is left
-alone.
+Claims are kept across a restart. After a restart every light has a new context, so restored
+claims are matched by values only: a light still showing what FLARE set is FLARE's, and any
+other light is left alone.
 
 ### Turning a light off counts
 
-Switching a light off yourself is a change like any other, so FLARE leaves the light off
-instead of turning it back on at the next update. FLARE's own turn-offs record a claim of
-`{"state": "off"}`, which is how it tells its own turn-off from yours.
+Turning a light off yourself counts as changing it, so FLARE doesn't turn it back on. FLARE's own
+turn-offs record a claim of `{"state": "off"}`, which is how FLARE tells them apart from yours.
 
-### When FLARE takes a light back
+### When FLARE sets a light again
 
-**A zone releases every claim once none of its lights are on.** That's what normally ends an
-override: when the room goes dark, FLARE starts afresh with every light in it.
+**A zone discards all its claims when none of its lights are on.** This is what normally ends an
+override: once the room is dark, FLARE sets every light in it again.
 
-- **The room is the zone.** A light that isn't in the zone doesn't keep it open.
-- **Anything not `on` counts as dark**, unavailable included, so one dead bulb can't keep a
-  zone's claims forever.
+- A light that isn't in the zone doesn't count.
+- A light that's unavailable counts as off, so one dead bulb can't keep the zone's claims.
 
-A light that goes unavailable loses its claim too, and the **Clear** button releases a zone
-by hand.
+A light also loses its claim when it goes unavailable. The **Clear** button discards a zone's
+claims by hand.
 
 ### One zone per light
 
-Two zones driving the same light each see the other's writes as someone else's change, so the
-light stops following either. When FLARE sees a light in two zones, it shows a notification
-naming the light and the zones. You'll see it once per light; dismissed, it stays away until
-Home Assistant restarts, and comes back then only if the light is still in two zones.
+If two zones set the same light, each treats the other's changes as someone else's, and the light
+stops following either. When this happens, FLARE shows a notification naming the light and the
+zones. It shows it once per light until Home Assistant restarts.
 
 ## The hand-over event
 
-When a tracked light passes to someone else, FLARE fires `flare_light_overridden` with what it
-asked for and what the light was showing:
+When something else takes over a tracked light, FLARE fires `flare_light_overridden`:
 
 ```yaml
 entity_id: light.kitchen_1
-zone: Kitchen                        # the zone that lost it
-device_id: ...                        # so it appears in that device's Activity
+zone: Kitchen                        # the zone that lost the light
+device_id: ...                        # the zone's device
 previous_status: controlled
 live_context_id: 01M11...
 live: { state: on, brightness: 12, color_temp_kelvin: 6500, rgb_color: null }
@@ -128,10 +119,13 @@ observed: { context_id: ..., target: {...}, recorded_at: ... }
 latest:   { context_id: ..., target: {...}, recorded_at: ... }
 ```
 
-It fires once when a light changes hands, not again while it stays taken. Lights already taken
-before a restart aren't announced again. It also shows in the light's logbook:
+It fires once when the light changes hands, not again while the light stays overridden, and not
+for lights that were already overridden before a restart. It also appears in the light's
+logbook:
 
 > **Kitchen** released this light to something else (last asked for 255/6667, found 12/6500)
+
+To trigger an automation on it:
 
 ```yaml
 triggers:
@@ -141,34 +135,34 @@ triggers:
 
 ## Inspecting tracked state
 
-`flare.claims_check` reports each light's status, and how it was matched:
+`flare.claims_check` returns each light's status:
 
-| status | meaning |
+| Status | Meaning |
 |---|---|
-| `controlled` | FLARE is driving it: it matches one of its claims, by context or by values |
-| `overridden` | It matches neither claim. Something else has changed it |
-| `unavailable` | There's no state to compare against |
-| `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one somebody else turned off is `overridden` |
+| `controlled` | FLARE is setting it: it matches one of its claims. |
+| `overridden` | It matches neither claim. Something else has changed it. |
+| `unavailable` | The light has no state. |
+| `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
 
-`matched_via` says which claim matched and how: `latest-context`, `latest-value`,
+`matched_via` says which claim matched, and how: `latest-context`, `latest-value`,
 `observed-context` or `observed-value`.
 
-Each claim records `recorded_at` and a `context_id`, which together find the write in Home
-Assistant's logbook. Claims untouched for a day are discarded, which is how a light deleted
-from Home Assistant stops being tracked.
+Each claim has a `recorded_at` time and a `context_id`, which you can use to find the change in
+Home Assistant's logbook. Claims that haven't changed for a day are discarded, so a light
+deleted from Home Assistant stops being tracked.
 
 ## When zones tick
 
 Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update
-interval. The zones fire one after another, in name order, a gap apart, so rooms don't all
-send their commands at the same moment. Both are set under **FLARE Zones → Configure**:
+interval. Zones fire one after another, in name order, a gap apart, so rooms don't all send
+commands at the same time. Set both under **FLARE Zones → Configure**:
 
-| Option | Default | |
+| Option | Default | Description |
 |---|---|---|
-| Update interval | 1 minute | How often each zone ticks, 1–60 minutes |
-| Gap between zones | 1 second | Shrinks when the zones wouldn't otherwise fit in the interval |
+| Update interval | 1 minute | How often each zone ticks, from 1 to 60 minutes. |
+| Gap between zones | 1 second | Reduced automatically when the zones wouldn't otherwise fit in the interval. |
 
-To run your own automation on a zone's tick:
+To run an automation on a zone's tick:
 
 ```yaml
 triggers:
@@ -179,5 +173,6 @@ triggers:
       event_type: [flare_tick]
 ```
 
-Targeting the zone's device works too, as the blueprint does. Don't hide the Tick entity:
-Home Assistant leaves hidden entities out when it looks inside a device or area.
+The blueprint targets the zone's device instead of the entity. Home Assistant leaves hidden
+entities out when it expands a device, so if you hide the Tick entity, the blueprint stops
+receiving it.

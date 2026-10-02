@@ -58,15 +58,46 @@ turns on everything it's given. Turning the room on and off is left to you.
 
 ## Sending the commands yourself
 
-To send `light.turn_on` yourself — for an effect, a colour mode FLARE doesn't handle, or a
-device that isn't a light — and still have FLARE leave hand-set lights alone:
+If you want to send `light.turn_on` yourself and still have FLARE leave hand-set lights alone:
 
-1. Call `flare.claims_check` to find which lights to leave alone.
-2. Call `flare.claims_record` for the rest, with `targets`, just before you send.
-3. Send your commands.
+1. `flare.claims_check` to find out whether someone else has changed the light.
+2. `flare.claims_record` with what you're about to send, so FLARE recognises it next time.
+3. Your own `light.turn_on`.
 
-To turn lights off, use `flare.turn_off` rather than `light.turn_off`: it records the
-turn-off, so it isn't mistaken for someone switching the lights off by hand.
+For example, this script sets the porch light to a warm 60%, unless someone has changed it
+since the script last set it:
+
+```yaml
+alias: Porch light warm
+sequence:
+  - action: flare.claims_check
+    data:
+      entities: [light.porch]
+      zone_device_id: "{{ device_id('sensor.porch_flare_claims') }}"
+    response_variable: check
+  - condition: template
+    value_template: "{{ not check.results['light.porch'].blocked }}"
+  - action: flare.claims_record
+    data:
+      entities: [light.porch]
+      zone_device_id: "{{ device_id('sensor.porch_flare_claims') }}"
+      targets:
+        light.porch: { brightness: 153, color_temp_kelvin: 2200 }
+  - action: light.turn_on
+    target:
+      entity_id: light.porch
+    data:
+      brightness: 153
+      color_temp_kelvin: 2200
+```
+
+`targets` needs the brightness and either `color_temp_kelvin` or `rgb_color` you're sending.
+FLARE checks the light against it later, so a light running an effect that keeps changing its
+colour won't be recognised. For that, use a scene or hand the light over with a `null`
+brightness in the blueprint instead.
+
+To turn lights off, use `flare.turn_off` rather than `light.turn_off`: it records the turn-off
+too, so it isn't mistaken for someone switching the lights off by hand.
 
 `flare.compute_lighting_groups` gives you what `apply_lighting` would send, grouped, without
-sending it — an easy starting point for sending it yourself.
+sending it, if you want a starting point for sending it yourself.
