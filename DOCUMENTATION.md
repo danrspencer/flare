@@ -125,19 +125,19 @@ describing one. If both are needed, the example comes first.
 
 Never paraphrase these. They are what the user types or clicks.
 
-- **Blueprint inputs** — the UI labels, verbatim: FLARE Sensor,
+- **Blueprint inputs** — the UI labels, verbatim: Schedule, Zone,
   Lights & Occupancy, Additional Triggers, Prefer RGB During,
   Scene Template, Morning/Day/Evening/Night Scene,
   Brightness Template, Lights Off During Morning/Day/Evening/Night,
   Idle Brightness Template, Morning/Day/Evening/Night Idle Brightness,
-  Wait time, Update Interval,
+  Wait time,
   Motion On / Motion Off / Background Transition.
   Several carry a literal "(Optional)" in the label — keep it when
   quoting the label, drop it in running prose.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
-- **Config entries** — FLARE Schedules, FLARE Control.
+- **Config entries** — FLARE Schedules, FLARE Zones.
 - **Dashboard views** — `custom:flare-schedule`, `custom:flare-tracking`.
 
 ## Keeping this honest

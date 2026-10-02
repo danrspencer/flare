@@ -12,7 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.util import slugify
 
-from ..const import CONF_TARGET, DOMAIN, SUBENTRY_TYPE_STATE
+from ..const import DOMAIN, SUBENTRY_TYPE_STATE
 
 
 @dataclass
@@ -23,7 +23,6 @@ class StateInstance:
     subentry_id: str
     prefix: str  # "<slug>_" - entity_id prefix, derived from the (required) name
     title: str
-    target: dict  # area_id/device_id/entity_id lists, as a target selector returns
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -49,7 +48,6 @@ def state_instances(entry: ConfigEntry) -> list[StateInstance]:
                 subentry_id=subentry_id,
                 prefix=f"{slug}_" if slug else "",
                 title=subentry.title,
-                target=dict(subentry.data.get(CONF_TARGET) or {}),
             )
         )
     return sorted(instances, key=lambda i: i.title)

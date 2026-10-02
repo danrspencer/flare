@@ -19,7 +19,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.flare import async_setup_entry
-from custom_components.flare.const import CONF_ENTRY_TYPE, CONF_TARGET, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.scope import state_instances
 from custom_components.flare.tracking.write_tracking import ClaimRegistry
@@ -48,7 +48,7 @@ async def setup_tracking_entry(hass: HomeAssistant, options: dict | None = None)
                 subentry_type=SUBENTRY_TYPE_STATE,
                 title="Test Scope",
                 unique_id="test_scope",
-                data={CONF_TARGET: {"area_id": [test_area(hass).id]}},
+                data={},
             )
         ],
     )
@@ -144,5 +144,5 @@ async def add_device_light(hass: HomeAssistant, entity_id: str, *, manufacturer:
     device = dr.async_get(hass).async_get_or_create(
         config_entry_id=owner.entry_id, identifiers={("test", object_id)}, manufacturer=manufacturer, model=model, name=object_id
     )
+    dr.async_get(hass).async_update_device(device.id, area_id=test_area(hass).id)
     er.async_get(hass).async_get_or_create(domain, "test", object_id, suggested_object_id=object_id, device_id=device.id)
-    er.async_get(hass).async_update_entity(entity_id, area_id=test_area(hass).id)

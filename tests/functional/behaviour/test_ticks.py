@@ -1,5 +1,5 @@
-"""When a room re-checks its lights: on its zone's Tick, spaced from every
-other zone's, or on the minute for a room that doesn't reach a Tick.
+"""When a room re-checks its lights: on the Tick of the zone it picks,
+spaced a gap from every other zone's.
 
 A light left on in an empty room is the probe: self-heal turns it off on
 a tick and at no other time, so the moment it goes off is the moment the
@@ -7,10 +7,16 @@ room ticked. The clock starts at 19:00:02, and zones are spaced 10s apart
 so every check sits well clear of a tick."""
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
-from tests.functional.behaviour.harness import SCHEDULE_SENSOR, at, occupancy, room_brightness, setup_zones
+from tests.functional.behaviour.harness import (
+    at,
+    occupancy,
+    room_brightness,
+    schedule_device,
+    setup_zones,
+    zone_device,
+)
 from tests.support import BLUEPRINT_PATH
 
 ROOM_SENSOR = "binary_sensor.tick_room_occupancy"
@@ -30,8 +36,9 @@ def is_off(hass: HomeAssistant, bulbs) -> bool:
     return all(v == "off" for v in room_brightness(hass, bulbs).values())
 
 
-async def rooms(hass: HomeAssistant, targets: dict[str, dict]) -> None:
-    """One automation per room from the blueprint, keyed by name."""
+async def rooms(hass: HomeAssistant, rooms_by_name: dict[str, tuple[list, str]]) -> None:
+    """One automation per room, {name: (bulbs, zone device)}, each naming its
+    bulbs and the room's sensor."""
     assert await async_setup_component(
         hass,
         "automation",
@@ -42,83 +49,79 @@ async def rooms(hass: HomeAssistant, targets: dict[str, dict]) -> None:
                     "alias": name,
                     "use_blueprint": {
                         "path": BLUEPRINT_PATH,
-                        "input": {"adaptive_sensor": SCHEDULE_SENSOR, "room_target": target, "no_motion_wait": 0},
+                        "input": {
+                            "schedule": schedule_device(hass),
+                            "room_target": {"entity_id": [b.entity_id for b in bulbs] + [ROOM_SENSOR]},
+                            "zone": zone,
+                            "no_motion_wait": 0,
+                        },
                     },
                 }
-                for name, target in targets.items()
+                for name, (bulbs, zone) in rooms_by_name.items()
             ]
         },
     )
     await hass.async_block_till_done()
 
 
-async def test_a_room_reaching_its_zones_tick_checks_after_the_minute_not_on_it(
-    hass: HomeAssistant, add_bulbs, frozen_time
-) -> None:
+async def test_a_room_updates_on_its_zones_tick(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
+    """A lone zone ticks on the minute."""
     areas = await setup_zones(hass, ["lounge"], options=GAP)
     bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": {"area_id": [areas["lounge"]], "entity_id": [ROOM_SENSOR]}})
+    await rooms(hass, {"lounge": (bulbs, zone_device(hass, "lounge"))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
-    await at(hass, frozen_time, 19, 1, 5)
-    assert not is_off(hass, bulbs), "the minute's time pattern should stand aside for the zone's Tick"
-
-    await at(hass, frozen_time, 19, 1, 15)
-    assert is_off(hass, bulbs), "the zone's Tick, one gap past the minute, never reached the room"
-
-
-async def test_a_room_naming_only_its_lights_still_checks_on_the_minute(
-    hass: HomeAssistant, add_bulbs, frozen_time
-) -> None:
-    """Its target doesn't reach the zone's Tick, so the time pattern stays."""
-    areas = await setup_zones(hass, ["lounge"], options=GAP)
-    bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": {"entity_id": [bulbs[0].entity_id, ROOM_SENSOR]}})
-    await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
+    await at(hass, frozen_time, 19, 0, 55)
+    assert not is_off(hass, bulbs), "nothing should tick the room between Ticks"
 
     await at(hass, frozen_time, 19, 1, 5)
-
-    assert is_off(hass, bulbs)
-
-
-async def test_naming_the_zones_tick_moves_a_room_onto_it(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
-    areas = await setup_zones(hass, ["lounge"], options=GAP)
-    bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": {"entity_id": [bulbs[0].entity_id, ROOM_SENSOR, "event.lounge_flare_tick"]}})
-    await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
-
-    await at(hass, frozen_time, 19, 1, 5)
-    assert not is_off(hass, bulbs)
-
-    await at(hass, frozen_time, 19, 1, 15)
-    assert is_off(hass, bulbs)
+    assert is_off(hass, bulbs), "the zone's Tick never reached the room"
 
 
 async def test_zones_tick_one_gap_apart(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
-    """In title order: attic one gap past the minute, study two."""
-    areas = await setup_zones(hass, ["study", "attic"], options=GAP)
+    """In title order: attic on the minute, study one gap later."""
+    await setup_zones(hass, ["study", "attic"], options=GAP)
     attic_lamp, study_lamp = await add_bulbs("attic_lamp", "study_lamp")
-    registry = er.async_get(hass)
-    registry.async_update_entity(attic_lamp.entity_id, area_id=areas["attic"])
-    registry.async_update_entity(study_lamp.entity_id, area_id=areas["study"])
-    await rooms(hass, {zone: {"area_id": [areas[zone]], "entity_id": [ROOM_SENSOR]} for zone in ("attic", "study")})
+    await rooms(
+        hass,
+        {
+            "attic": ([attic_lamp], zone_device(hass, "attic")),
+            "study": ([study_lamp], zone_device(hass, "study")),
+        },
+    )
     await switched_on_in_an_empty_room(hass, frozen_time, [attic_lamp, study_lamp])
 
-    await at(hass, frozen_time, 19, 1, 15)
+    await at(hass, frozen_time, 19, 1, 5)
     assert (is_off(hass, [attic_lamp]), is_off(hass, [study_lamp])) == (True, False)
 
-    await at(hass, frozen_time, 19, 1, 25)
+    await at(hass, frozen_time, 19, 1, 15)
     assert is_off(hass, [study_lamp])
+
+
+async def test_the_picked_zone_wins_over_the_area_the_lights_are_in(
+    hass: HomeAssistant, add_bulbs, frozen_time
+) -> None:
+    """The lamp sits in the attic, but the room picks the study's zone."""
+    areas = await setup_zones(hass, ["study", "attic"], options=GAP)
+    (lamp,) = await add_bulbs("lamp", area_id=areas["attic"])
+    await rooms(hass, {"lamp": ([lamp], zone_device(hass, "study"))})
+    await switched_on_in_an_empty_room(hass, frozen_time, [lamp])
+
+    await at(hass, frozen_time, 19, 1, 5)
+    assert not is_off(hass, [lamp]), "the attic's Tick shouldn't reach a room in the study's zone"
+
+    await at(hass, frozen_time, 19, 1, 15)
+    assert is_off(hass, [lamp])
 
 
 async def test_the_interval_is_set_on_the_entry(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
     areas = await setup_zones(hass, ["lounge"], options={**GAP, "tick_interval": 2})
     bulbs = await add_bulbs("lounge_lamp", area_id=areas["lounge"])
-    await rooms(hass, {"lounge": {"area_id": [areas["lounge"]], "entity_id": [ROOM_SENSOR]}})
+    await rooms(hass, {"lounge": (bulbs, zone_device(hass, "lounge"))})
     await switched_on_in_an_empty_room(hass, frozen_time, bulbs)
 
-    await at(hass, frozen_time, 19, 1, 15)
+    await at(hass, frozen_time, 19, 1, 5)
     assert not is_off(hass, bulbs), "19:01 isn't on a two-minute boundary"
 
-    await at(hass, frozen_time, 19, 2, 15)
+    await at(hass, frozen_time, 19, 2, 5)
     assert is_off(hass, bulbs)

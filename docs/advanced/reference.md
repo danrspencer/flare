@@ -32,9 +32,8 @@ handling reachability, tolerance, override protection, two-step transitions and
 RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
-sensor's attributes is an ordinary template on your side — see
-[Bring your own sensor](../../blueprint/#bring-your-own-sensor) for the attribute shape the
-blueprint uses.
+schedule sensor's attributes (see [schedule sensors](#schedule-sensors)) is an ordinary
+template on your side.
 
 ```yaml
 action: flare.apply_lighting
@@ -54,7 +53,7 @@ FLARE stops driving a light once something else has taken it — a switch, a sce
 automation — and picks it up again when released.
 
 **You say which zone a call belongs to.** A zone is a named record of which lights FLARE is
-driving, usually one per room, configured at Settings → Devices & Services → **FLARE Control** →
+driving, usually one per room, configured at Settings → Devices & Services → **FLARE Zones** →
 Add zone. Each one is a real HA device. Pass its `tracking_device_id` on any of
 `apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
@@ -300,21 +299,20 @@ sending:
 | `min_color_temp_change` | 5 | mireds of colour temperature |
 
 Both services take these per call. Leave them out and they come from **Settings → Devices & Services → FLARE
-Control → Configure**, which is where the defaults above are set. They only decide what's sent: override
+Zones → Configure**, which is where the defaults above are set. They only decide what's sent: override
 protection still recognises FLARE's own writes by the tolerances.
 
 ## When zones tick
 
 Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update interval. The zones
-fire in turn, in name order, a gap apart, starting one gap after each interval boundary, so that rooms re-checking
-their lights don't all send at the same moment. The boundary itself is left free for automations still using
-a time pattern on the minute.
+fire in turn, in name order, a gap apart, starting on each interval boundary, so that rooms re-checking their
+lights don't all send at the same moment.
 
-Both are set under **FLARE Control → Configure**:
+Both are set under **FLARE Zones → Configure**:
 
 | option | default | |
 |---|---|---|
-| Update interval | 1 minute | how often each zone ticks, 1–60 minutes; boundaries are the minutes of the hour divisible by it, like a `/N` time pattern |
+| Update interval | 1 minute | how often each zone ticks, 1–60 minutes |
 | Gap between zones | 1 second | shrinks automatically when the zones wouldn't otherwise fit in the interval |
 
 To tick your own automation with a zone, listen for its event:
@@ -323,13 +321,13 @@ To tick your own automation with a zone, listen for its event:
 triggers:
   - trigger: event.received
     target:
-      area_id: kitchen
+      entity_id: event.kitchen_flare_tick
     options:
       event_type: [flare_tick]
 ```
 
-Targeting an area finds the Tick of the zone placed in it. Don't hide the Tick entity: Home Assistant leaves
-hidden entities out when it looks inside an area or device.
+Targeting the zone's device works too, as the blueprint does. Don't hide the Tick entity: Home Assistant leaves
+hidden entities out when it looks inside a device or area.
 
 ## `flare.compute_curve`
 
@@ -410,7 +408,7 @@ Each sensor's device contains, computed the same way `compute_curve` computes th
 
 | Entity | What it is |
 |---|---|
-| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's FLARE Sensor input at this |
+| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's Schedule input at this |
 | `select.<name>_flare_phase` | Manual phase override — `Auto` (default) or a specific phase. An override holds until the schedule itself next moves on: pin `Day` during Evening and it still becomes `Night` when Evening would have ended. The sticky switch below changes that |
 | `time.<name>_morning_time` / `day_time` / `evening_earliest_time` / `evening_latest_time` / `night_time` | The five schedule boundaries — start times for Morning, Day, and Night, and Evening's earliest/latest bound. Each starts at a representative default (06:00/08:00/17:00/20:00/22:00) and is adjustable at any time; the change applies within seconds, not on the next 60s poll |
 | `number.<name>_<phase>_brightness` / `_kelvin` | The eight curve values — brightness (0-255) and colour temperature (1000-10000K), one pair per phase. Each starts at the value shown in `compute_curve`'s field list above, and is adjustable at any time |

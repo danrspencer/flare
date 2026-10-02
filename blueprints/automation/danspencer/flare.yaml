@@ -17,32 +17,40 @@ blueprint:
     # Required by the occupancy.* triggers/conditions.
     min_version: 2026.4.0
   input:
-    adaptive_sensor:
-      name: FLARE Sensor
+    schedule:
+      name: Schedule
       description: >
-        Sensor providing brightness and colour temperature to apply -
-        filtered to FLARE's own schedule sensors.
+        The FLARE schedule the room follows: the brightness and colour
+        temperature it applies.
       selector:
-        entity:
+        device:
           filter:
             - integration: flare
-              domain: sensor
+              model: Schedule
+    zone:
+      name: Zone
+      description: >
+        The FLARE zone this room belongs to. It records which lights FLARE
+        is driving, so a light someone else changes is left alone. Zones
+        are added under FLARE Zones.
+        [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Zone
     room_target:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy-class sensors within it decide when, and a
-        FLARE zone's Tick within it sets when the room re-checks.
+        controlled, occupancy-class sensors within it decide when.
         [Details](https://danrspencer.github.io/flare/blueprint/#setting-up-a-room).
-      default: {}
       selector:
         target:
           entity:
             - domain: light
             - domain: binary_sensor
               device_class: occupancy
-            - domain: event
-              integration: flare
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -240,18 +248,6 @@ blueprint:
               min: 0
               max: 3600
               unit_of_measurement: seconds
-        update_interval:
-          name: Update Interval (Optional)
-          description: >
-            How often to check the lights are up to date, for a room whose
-            Lights & Occupancy doesn't reach a FLARE zone's Tick. A room
-            that does follows the zone's timing, set on FLARE's Control
-            entry, and ignores this. Home Assistant's time_pattern syntax,
-            e.g. '/1' for every minute.
-            [Details](https://danrspencer.github.io/flare/blueprint/#timing).
-          default: "/1"
-          selector:
-            text: {}
         motion_on_transition:
           name: Motion On Transition
           description: Transition duration when turning on via motion or a manual run.
@@ -288,29 +284,27 @@ trigger_variables:
   room_target: !input room_target
 
 trigger:
-  # `to:` stops attribute-only updates firing it; `from:` is open so a
-  # restart still fires.
-  - platform: state
-    entity_id: !input adaptive_sensor
-    id: phase_change
-    to:
-      - Morning
-      - Day
-      - Evening
-      - Night
-  # The curve is flat in Morning/Night, so phase_change goes quiet there.
-  # Also runs self-heal. The zone's Tick, spaced from every other zone's;
-  # the time pattern only for a room that doesn't reach one (see
-  # condition:).
+  # The schedule's Phase, which fires on a real phase change (and once at
+  # startup), never on an attribute-only update.
+  - id: phase_change
+    trigger: event.received
+    target:
+      device_id: !input schedule
+    options:
+      event_type:
+        - Morning
+        - Day
+        - Evening
+        - Night
+  # The zone's Tick, spaced from every other zone's. The curve is flat in
+  # Morning/Night, so phase_change goes quiet there. Also runs self-heal.
   - id: tick
     trigger: event.received
-    target: !input room_target
+    target:
+      device_id: !input zone
     options:
       event_type:
         - flare_tick
-  - id: tick
-    platform: time_pattern
-    minutes: !input update_interval
   - id: extra
     platform: state
     entity_id: !input extra_triggers
@@ -359,13 +353,6 @@ trigger:
          | list | length > 0 }}
 
 condition:
-  - alias: "Not the time pattern in a room that has a zone tick"
-    not:
-      - condition: template
-        alias: "The time pattern fired, and a zone tick reaches this room"
-        value_template: >-
-          {{ trigger is defined and trigger.platform is defined
-             and trigger.platform == 'time_pattern' and room_ticks | length > 0 }}
   # Never checks occupancy: an already-on light should follow the curve
   # regardless. allow_turn_on decides whether lights may come on.
   #
@@ -392,7 +379,10 @@ condition:
 
 variables:
   room_target: !input room_target
-  adaptive_sensor: !input adaptive_sensor
+  schedule: !input schedule
+  # The schedule device's one sensor, which carries the curve.
+  adaptive_sensor: >
+    {{ device_entities(schedule) | select('match', '^sensor\\.') | first | default(none) }}
   scene_template: !input scene_template
   background_transition: !input background_transition
   motion_on_transition: !input motion_on_transition
@@ -439,11 +429,6 @@ variables:
     {{ ns.entities | unique | list }}
   all_target_entities: >
     {{ (target_named_entities + target_expanded_entities) | unique | list }}
-  # The zone ticks the event.received trigger reaches, named or through an
-  # area or device.
-  room_ticks: >
-    {% set ticks = integration_entities('flare') | select('match', '^event\\.') | list %}
-    {{ all_target_entities | select('in', ticks) | list }}
   resolved_entities: >
     {{ all_target_entities | select('match', '^light\\.') | list }}
   # Up here because variables: render top to bottom and the turn-off lists
@@ -512,19 +497,6 @@ variables:
       {% endif %}
     {% endfor %}
     {{ ns.m }}
-  # This room's tracking scope: an area named in Room Target, else the
-  # area of the first resolved light that has a scope. Only finds scopes
-  # targeting a single area. None means untracked.
-  tracking_scope_device_id: >
-    {% if room_target is not none and room_target.area_id is defined %}
-      {% set aids = room_target.area_id %}
-      {% set aid = (aids if aids is iterable and aids is not string else [aids]) | first %}
-    {% else %}
-      {% set candidate_areas = resolved_entities | map('area_id') | reject('none') | unique | list %}
-      {% set aid = candidate_areas | first if candidate_areas | length > 0 else none %}
-    {% endif %}
-    {% set tracking_entities = area_entities(aid) | select('search', '^sensor\\..*_flare_tracking$') | list if aid is not none else [] %}
-    {{ device_id(tracking_entities | first) if tracking_entities | length > 0 else none }}
   # Up here because the turn-off lists below exclude idle lights. Empty
   # means dark.
   template_idle_brightness: !input idle_brightness_template
@@ -669,18 +641,9 @@ variables:
   # going stale into "overridden".
   handed_off_entities: >
     {{ ((scene_covered_entities if scene_active else []) + hands_off_entities) | unique | list }}
-  # Re-activating a scene every minute would stomp manual changes, so a
-  # phase_change is skipped unless the phase really changed. The tick has
-  # no from_state/to_state to compare, so it's excluded.
-  scene_recheck_due: >
-    {% if trigger is defined and trigger.id is defined and trigger.id == 'tick' %}
-      false
-    {% else %}
-      {{ not (trigger is defined and trigger.id is defined and trigger.id == 'phase_change')
-         or trigger.from_state is none
-         or trigger.to_state is none
-         or trigger.from_state.state != trigger.to_state.state }}
-    {% endif %}
+  # Re-activating a scene every minute would stomp manual changes, so the
+  # tick never does.
+  scene_recheck_due: "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}"
   # Everything the active scene doesn't cover. No off-light filter: the
   # step using it is already behind allow_turn_on.
   target_entities: >
@@ -705,7 +668,7 @@ action:
             data:
               entities: "{{ turn_off_entities }}"
               transition: !input motion_off_transition
-              tracking_device_id: "{{ tracking_scope_device_id }}"
+              tracking_device_id: !input zone
           # Idle lights are dimmed instead. Does nothing with no idle brightness.
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
@@ -722,7 +685,7 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: !input motion_off_transition
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  tracking_device_id: "{{ tracking_scope_device_id }}"
+                  tracking_device_id: !input zone
       # Self-heal: on a tick, with the room empty, retry turn-offs that didn't
       # land. Exclusive of default:, which would work from the same stale list.
       - alias: "Self-heal: retry an earlier turn-off that didn't land"
@@ -751,7 +714,7 @@ action:
             data:
               entities: "{{ entities_still_on }}"
               transition: !input motion_off_transition
-              tracking_device_id: "{{ tracking_scope_device_id }}"
+              tracking_device_id: !input zone
     default:
       # Everything that can switch a light on is under this gate (see
       # allow_turn_on). An empty room settles to its idle brightness, outside
@@ -773,7 +736,7 @@ action:
               rgb_color: "{{ rgb_color }}"
               transition: "{{ script_transition }}"
               prefer_rgb_color: "{{ prefer_rgb_color }}"
-              tracking_device_id: "{{ tracking_scope_device_id }}"
+              tracking_device_id: !input zone
       - alias: "Only motion, a manual run, or a room already in use may switch a light on"
         if:
           - condition: template
@@ -811,18 +774,18 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  tracking_device_id: "{{ tracking_scope_device_id }}"
+                  tracking_device_id: !input zone
                   # A manual run forces the tick through override protection.
                   force: "{{ manual_run }}"
-      # Bookkeeping only, so outside the gate. claims_clear needs a scope.
+      # Bookkeeping only, so outside the gate.
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template
-            alias: "There are lights to release, and a scope to release them from"
+            alias: "There are lights to release"
             value_template: >-
-              {{ handed_off_entities | length > 0 and tracking_scope_device_id is not none }}
+              {{ handed_off_entities | length > 0 }}
         then:
           - action: flare.claims_clear
             data:
               entities: "{{ handed_off_entities }}"
-              tracking_device_id: "{{ tracking_scope_device_id }}"
+              tracking_device_id: !input zone

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "FLARE",
-        "description": "Installs both halves. Schedules provides the day-phase and colour curve sensors; Control registers FLARE's services and keeps track of which lights FLARE is currently driving.\n\nPick the rooms to set up - each becomes a zone, with its own controlled/overridden counts, a Clear button and a Tick that tells the room's automation when to check its lights. Lights in an area you don't pick simply aren't tracked, which means they're never left alone when something else takes them. You can add, retarget or remove zones at any time, and add schedule sensors from the Schedules entry once it exists.",
+        "description": "Installs both halves. Schedules provides the day-phase and colour curve sensors; Zones registers FLARE's services and keeps track of which lights FLARE is currently driving.\n\nPick the rooms to set up - each becomes a zone named after it, with its own controlled/overridden counts, a Clear button and a Tick that tells the room's automation when to check its lights. A room's automation picks its zone. You can add, rename or remove zones at any time, and add schedule sensors from the Schedules entry once it exists.",
         "data": {
           "areas": "Rooms to set up as zones"
         }
@@ -41,19 +41,17 @@
       "step": {
         "user": {
           "title": "Add zone",
-          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to check them. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices, which is also how a blueprint automation targeting that area finds its Tick.",
+          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to update. A blueprint automation uses the zone picked as its Zone; a service call uses the one it names as tracking_device_id.",
           "data": {
-            "name": "Name",
-            "target": "Lights, devices or areas"
+            "name": "Name"
           }
         },
         "reconfigure": {
           "title": "Edit zone",
           "data": {
-            "name": "Name",
-            "target": "Lights, devices or areas"
+            "name": "Name"
           },
-          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to check them. Which lights it tracks is decided by whichever automation or service call passes its ID as tracking_device_id — not by anything set here. Optionally point it at an area, device, or lights just to place it under that area in Settings → Devices, which is also how a blueprint automation targeting that area finds its Tick."
+          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to update. A blueprint automation uses the zone picked as its Zone; a service call uses the one it names as tracking_device_id."
         }
       },
       "error": {
@@ -95,7 +93,7 @@
     "step": {
       "init": {
         "title": "FLARE options",
-        "description": "Bulb models that need two-step transitions, one pattern per line. Any light whose device matches one of these patterns is routed into two-step transitions automatically, with no label needed — the box starts pre-filled with the models shipped with the integration, and you can add to it or remove from it freely.\n\nPatterns are matched case-insensitively against “manufacturer model”, and * is a wildcard, e.g. *TRADFRI bulb* or IKEA*. Clearing the box entirely falls back to the shipped defaults, so it can't quietly switch off detection.\n\nOnce you save your own list it stays as you left it — a later release adding a newly discovered bulb won't change it.\n\nOn FLARE Control only: each zone's Tick fires once per update interval, a gap apart from the next zone's, so rooms don't all send at the same moment. A change smaller than the minimum brightness or colour temperature change isn't sent at all.",
+        "description": "Bulb models that need two-step transitions, one pattern per line. Any light whose device matches one of these patterns is routed into two-step transitions automatically, with no label needed — the box starts pre-filled with the models shipped with the integration, and you can add to it or remove from it freely.\n\nPatterns are matched case-insensitively against “manufacturer model”, and * is a wildcard, e.g. *TRADFRI bulb* or IKEA*. Clearing the box entirely falls back to the shipped defaults, so it can't quietly switch off detection.\n\nOnce you save your own list it stays as you left it — a later release adding a newly discovered bulb won't change it.\n\nOn FLARE Zones only: each zone's Tick fires once per update interval, a gap apart from the next zone's, so rooms don't all send at the same moment. A change smaller than the minimum brightness or colour temperature change isn't sent at all.",
         "data": {
           "two_step_models": "Two-step bulb models",
           "tick_interval": "Update interval",
@@ -104,7 +102,7 @@
           "min_color_temp_change": "Minimum colour temperature change"
         },
         "data_description": {
-          "tick_interval": "How often each zone ticks, in minutes. A 1-minute interval lines up with a blueprint automation's default Update Interval.",
+          "tick_interval": "How often each zone ticks, in minutes.",
           "tick_gap": "Seconds between one zone's Tick and the next. Shrinks automatically if the zones wouldn't otherwise fit in the interval.",
           "min_brightness_change": "A light within this percentage of its target brightness is left alone.",
           "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone."

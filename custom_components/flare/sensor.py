@@ -70,21 +70,6 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
 
 
 
-@callback
-def _assign_scope_area(hass: HomeAssistant, entity, instance: StateInstance) -> None:
-    """Puts a scope's device in its target area when it targets exactly one.
-    Only fills a blank area, so a hand-set one sticks."""
-    areas = instance.target.get("area_id") or []
-    areas = [areas] if isinstance(areas, str) else list(areas)
-    if len(areas) != 1 or entity.registry_entry is None or entity.registry_entry.device_id is None:
-        return
-    registry = dr.async_get(hass)
-    device = registry.async_get(entity.registry_entry.device_id)
-    if device is None or device.area_id is not None:
-        return
-    registry.async_update_device(device.id, area_id=areas[0])
-
-
 class _StateTrackingSensor(SensorEntity, RestoreEntity):
     """One scope's claims - the storage itself, published as an attribute.
     Kept out of the recorder but restored across a restart."""
@@ -118,7 +103,6 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
         self._registry.register(self._instance.subentry_id, self)
         # The setup-time prune ran before this entity existed.
         await self._registry.async_prune_stale()
-        _assign_scope_area(self.hass, self, self._instance)
 
     @property
     def extra_restore_state_data(self) -> ExtraStoredData:

@@ -1,6 +1,7 @@
 """The config flows: adding the integration, adding schedule sensors and
 tracking scopes, and the options flow."""
 
+import pytest
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
@@ -60,7 +61,6 @@ async def test_setup_offers_one_state_device_per_area_that_has_lights(stub_entry
     assert result["type"] == "create_entry"
     scopes = state_instances(_entry_of_type(hass, ENTRY_TYPE_TRACKING))
     assert [s.title for s in scopes] == ["Kitchen"]
-    assert scopes[0].target == {"area_id": [kitchen.id]}
 
 
 async def test_adding_the_integration_once_creates_both_entries(stub_entry_setup, hass: HomeAssistant):
@@ -104,7 +104,7 @@ async def test_the_missing_half_can_be_added_back_on_its_own(stub_entry_setup, h
     await hass.async_block_till_done()
 
     assert result["type"] == "create_entry"
-    assert result["title"] == "FLARE Control"
+    assert result["title"] == "FLARE Zones"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 2
 
 
@@ -178,22 +178,18 @@ async def test_a_schedule_name_already_in_use_is_refused(stub_entry_setup, hass:
     assert len(entry.subentries) == 1
 
 
-async def test_adding_and_repointing_a_tracking_scope(stub_entry_setup, hass: HomeAssistant):
-    kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-    hall = ar.async_get(hass).async_get_or_create("Hall")
+async def test_adding_and_renaming_a_zone(stub_entry_setup, hass: HomeAssistant):
     entry = _entry(hass, ENTRY_TYPE_TRACKING)
 
-    result = await _add_subentry(hass, entry, SUBENTRY_TYPE_STATE, {"name": "Kitchen", "target": {"area_id": [kitchen.id]}})
+    result = await _add_subentry(hass, entry, SUBENTRY_TYPE_STATE, {"name": "Kitchen"})
     assert result["type"] == "create_entry"
     (subentry_id,) = entry.subentries
 
     result = await entry.start_subentry_reconfigure_flow(hass, subentry_id)
-    result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": "Hall", "target": {"area_id": [hall.id]}}
-    )
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": "Hall"})
 
     assert result["reason"] == "reconfigure_successful"
-    assert [(s.title, s.target) for s in state_instances(entry)] == [("Hall", {"area_id": [hall.id]})]
+    assert [s.title for s in state_instances(entry)] == ["Hall"]
 
 
 async def test_a_scope_name_already_in_use_is_refused(stub_entry_setup, hass: HomeAssistant):
@@ -254,11 +250,12 @@ async def test_the_schedules_options_flow_has_no_minimum_change(stub_entry_setup
     assert CONF_MIN_BRIGHTNESS_CHANGE not in result["data_schema"].schema
 
 
-async def test_an_existing_tracking_entry_is_renamed_to_control(stub_entry_setup, hass: HomeAssistant):
-    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title="FLARE Tracking")
+@pytest.mark.parametrize("old_title", ["FLARE Tracking", "FLARE Control"])
+async def test_an_entry_with_an_earlier_title_is_renamed_to_zones(stub_entry_setup, hass: HomeAssistant, old_title):
+    renamed = _entry(hass, ENTRY_TYPE_TRACKING, title=old_title)
     assert await hass.config_entries.async_setup(renamed.entry_id)
 
-    assert renamed.title == "FLARE Control"
+    assert renamed.title == "FLARE Zones"
 
 
 async def test_a_title_the_user_chose_is_left_alone(stub_entry_setup, hass: HomeAssistant):

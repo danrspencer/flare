@@ -1,16 +1,13 @@
 """Each zone's tick: when its automation re-checks its lights. One
 scheduler spaces the zones across the interval, so their writes don't
-reach the radio all at once.
-
-Interval boundaries are the minutes the blueprint's own time pattern
-fires on, and the boundary itself (slot 0) is left to rooms still ticking
-that way. Zone k fires k gaps after it. The gap shrinks when the zones
-wouldn't otherwise fit in the interval."""
+reach the radio all at once. Zone k fires k gaps after each interval
+boundary; the gap shrinks when the zones wouldn't otherwise fit."""
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_point_in_utc_time
@@ -19,21 +16,20 @@ from homeassistant.util import dt as dt_util
 
 def slot_offsets(count: int, interval_minutes: int, gap_seconds: float) -> list[timedelta]:
     """How far past each boundary the `count` zones fire, in order."""
-    step = min(timedelta(seconds=gap_seconds), timedelta(minutes=interval_minutes) / (count + 1))
-    return [step * (k + 1) for k in range(count)]
+    if not count:
+        return []
+    step = min(timedelta(seconds=gap_seconds), timedelta(minutes=interval_minutes) / count)
+    return [step * k for k in range(count)]
 
 
 def next_tick(now: datetime, interval_minutes: int, offset: timedelta) -> datetime:
     """The first moment after `now` that is `offset` past a boundary.
-    Boundaries match a `/N` time pattern: minutes of the hour divisible by
-    the interval."""
-    hour = now.replace(minute=0, second=0, microsecond=0)
-    return min(
-        candidate
-        for start in (hour - timedelta(hours=1), hour, hour + timedelta(hours=1))
-        for minute in range(0, 60, interval_minutes)
-        if (candidate := start + timedelta(minutes=minute) + offset) > now
-    )
+    Boundaries are every `interval_minutes` from the Unix epoch, so on the
+    clock's minutes."""
+    period = interval_minutes * 60
+    shift = offset.total_seconds()
+    previous = math.floor((now.timestamp() - shift) / period) * period + shift
+    return datetime.fromtimestamp(previous + period, tz=UTC)
 
 
 class TickScheduler:

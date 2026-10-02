@@ -1,6 +1,7 @@
 DOMAIN = "flare"
 
-PHASE_OPTIONS = ["Auto", "Morning", "Day", "Evening", "Night"]
+PHASES = ["Morning", "Day", "Evening", "Night"]
+PHASE_OPTIONS = ["Auto", *PHASES]
 
 # Subentry type for a schedule sensor.
 SUBENTRY_TYPE_SENSOR = "sensor"
@@ -10,10 +11,6 @@ CONF_TWO_STEP_MODELS = "two_step_models"
 
 # Subentry type for a state device (a tracking scope).
 SUBENTRY_TYPE_STATE = "state"
-
-# A state device's target. Only used to place its device in an area; it
-# doesn't decide which lights the scope tracks.
-CONF_TARGET = "target"
 
 # Fired when a tracked light becomes "overridden", with both claims and
 # the live values at that moment (see sensor.py's _refresh_statuses).
@@ -42,6 +39,6 @@ DEFAULT_TICK_GAP = 1
 # The event_type a zone's tick entity fires, which the blueprint listens for.
 EVENT_TYPE_TICK = "flare_tick"
 
-CONTROL_ENTRY_TITLE = "FLARE Control"
-# What the Control entry was called before zones had Ticks, renamed on setup.
-LEGACY_TRACKING_ENTRY_TITLE = "FLARE Tracking"
+ZONES_ENTRY_TITLE = "FLARE Zones"
+# Earlier titles of the Zones entry, retitled on setup.
+LEGACY_ZONES_ENTRY_TITLES = ("FLARE Tracking", "FLARE Control")

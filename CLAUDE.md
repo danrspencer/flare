@@ -158,13 +158,16 @@ Blueprint input mechanics worth knowing:
   in a section does **not** change its name for `!input` purposes.
 - The blueprint declares `homeassistant.min_version: 2026.4.0` - what
   the `occupancy.*` triggers require, not `sections`' lower floor.
-- `adaptive_sensor` uses `entity: filter: [{integration: ..., domain:
-  sensor}]` - the `filter:` list is the only documented shape combining
-  `integration:` with `domain:`; don't mix a bare top-level `domain:`
-  with a sibling `filter:` (same class of trap as lesson 14). Accepted
-  trade-off: this hides a hand-rolled "bring your own sensor" entity
-  from the picker, so `docs/blueprint.md` documents pointing at one via
-  "Edit in YAML".
+- **Schedule and Zone are both device selectors** (`integration: flare`,
+  `model: Schedule` / `model: Zone`). The blueprint finds the schedule
+  device's one `sensor` in `variables:`. A trigger can't do that lookup
+  (trigger templates can't read the registry, and a `state` trigger only
+  takes entity IDs), which is why each schedule has a Phase `event`
+  entity: `phase_change` is `event.received` on the device, like the
+  Tick. "Bring your own sensor" (any entity with the right attributes,
+  set via Edit in YAML) went with the entity selector on 2026-10-01, at
+  the user's direction: anyone wanting something different builds their
+  own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
   automation needs the old key removed outright, not left blank, as
@@ -427,7 +430,7 @@ and the claims are each exposed through BOTH entities and services, so
 `entities` and `services` imported each other in both directions
 (`services` used `coordinator.CURVE_KEYS` and `curve`; `sensor`/`button`
 used `write_tracking` and `override_protection`). Those are two concepts,
-and they match the two config entries, Schedules and Control (`tracking` in code).
+and they match the two config entries, Schedules and Zones (`tracking` in code).
 
 - `schedule/` - what lights should look like: `curve.py`,
   `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`).
@@ -494,9 +497,8 @@ in `docs/helpers.md` and `services.yaml` - not repeated here.
 
 `rgb_color` on both `apply_lighting` and `compute_lighting_groups`
 accepts an explicit `None`, not just an omitted key (`vol.Any(None,
-...)`): the blueprint templates it unconditionally from a sensor
-attribute that a hand-rolled "bring your own sensor" entity is free not
-to publish, so it renders a literal null.
+...)`): a caller templating it from a sensor attribute that may be
+missing renders a literal null rather than omitting the key.
 
 ### Override protection
 
@@ -535,7 +537,7 @@ rather than assumed:
   read as ours. Brightness is a percentage floored at the tolerance so a
   dim target still tracks closely; colour is in mireds because a flat
   Kelvin gap is ~4x coarser at 6500K than at 2700K. Defaults (5 / 5) sit
-  on the Control entry's options; a call can override them.
+  on the Zones entry's options; a call can override them.
 - `force` is the only bypass. There is no caller-supplied owner: a
   light's claims belong to whatever scope the caller names, so any
   caller naming that scope writes through it.
@@ -567,15 +569,18 @@ rather than assumed:
   claims-dict scan always finds first, without ever reaching
   `scope_for()`. Confirmed live: a user pointed out that a state
   device's setup form asking for a target implied claim ownership it
-  didn't actually have. A state device's `target` now does exactly one
-  thing - seeds `_assign_scope_area`'s best-effort, blank-only Area
-  placement for the device's own registry entry (sensor.py) - and plays
-  no part in which lights get tracked. The blueprint resolves
-  `tracking_device_id` itself from `room_target` (its own
-  `tracking_scope_device_id` variable) - area named directly wins
-  outright, entities/a device with no area fall back to the first
-  resolved light's own area - so this is invisible to a room
-  automation; it only surfaces when calling the services directly.
+  didn't actually have. The `target` field was then kept only to place
+  the zone's device in an area, and removed outright on 2026-10-01 once
+  nothing looked zones up by area: a zone is now just a name. **The
+  blueprint never guesses
+  either**: its required **Zone** input (a device selector filtered to
+  `integration: flare, model: Zone`) is passed straight through as
+  `tracking_device_id`. It used to guess from areas (a named area, else
+  the first light's area, then a `sensor.*_flare_tracking` in it), and
+  that was replaced at the user's direction on 2026-10-01 - *"there's
+  just too much weird behaviour if it gets the wrong one"*. A wrong or
+  missing zone used to mean silently untracked; now a deleted zone makes
+  the service reject the call, loudly.
 - **Being switched off is an override.** `classify()` does *not*
   short-circuit on `not is_on`; an off light is judged against its
   claims like any other. A turn-off records `{"state": "off"}` as its
@@ -587,11 +592,7 @@ rather than assumed:
   which record the `{"state": "off"}` claim themselves. A bare
   `light.turn_off` records nothing, so every light in the room would
   read as externally switched off each time the room empties, firing
-  `flare_light_overridden` for each of them. `tracking_device_id` may be
-  `None` (no resolvable scope) and the lights are then turned off
-  untracked; only the `claims_clear` scene-handoff step still needs the
-  `tracking_scope_device_id is not none` guard, since that service
-  requires a scope.
+  `flare_light_overridden` for each of them.
 - **Claims are recorded before the write, never after.** `apply_lighting`
   and `turn_off` call `async_record` before dispatching anything.
   It used to run once the writes had been awaited, so a run that never
@@ -693,17 +694,19 @@ also proves a claim survives HA's JSON encoder.
 ### Two config entries
 
 The integration installs as **two** entries, not one: *FLARE Schedules*
-(day-phase/curve sensors) and *FLARE Control* (the services, the claim
+(day-phase/curve sensors) and *FLARE Zones* (the services, the claim
 registry, the zone scheduler, and the state devices).
 
-**User-facing names: "FLARE Control" and "zone"**, chosen by the user on
-2026-09-27 once scopes started ticking as well as tracking (the entry
-was "FLARE Tracking", scopes "tracking scopes"). Only what users see was
-renamed: code still says tracking/scope/state throughout
-(`ENTRY_TYPE_TRACKING`, `tracking_device_id`, `sensor.*_flare_tracking`,
-`custom:flare-tracking`), since renaming those breaks installs. An
-entry still titled "FLARE Tracking" is retitled on setup; any other
-title is the user's and is left alone. Both use the
+**User-facing names: "FLARE Zones" and "zone"**, the entry named after
+what it holds. Scopes became zones on 2026-09-27 once they ticked as well
+as tracked; the entry was briefly "FLARE Control", which the user found
+confusing next to "zone" ("a control is just a collection of zones?")
+and renamed on 2026-10-01. Before both it was "FLARE Tracking". Only
+what users see was renamed: code still says tracking/scope/state
+throughout (`ENTRY_TYPE_TRACKING`, `tracking_device_id`,
+`sensor.*_flare_tracking`, `custom:flare-tracking`), since renaming those
+breaks installs. An entry still carrying an earlier title is retitled on
+setup; any other title is the user's and is left alone. Both use the
 sensor platform; each platform module branches on
 `entry.data[CONF_ENTRY_TYPE]`.
 
@@ -863,8 +866,7 @@ doing double duty: lights within it are controlled, occupancy-class
 integration (2026.4+). That integration filters strictly by
 `device_class: occupancy` - motion-class sensors are never picked up,
 even targeted directly. Both `occupancy.*` schemas require `target:` to
-be present though every field inside is optional, which is why
-`room_target` defaults to `{}` rather than `null`.
+be present, and `room_target` is a required input with no default.
 
 `room_target` is resolved **once**, into `target_named_entities` +
 `target_expanded_entities`, which the three consumers filter:
@@ -883,9 +885,8 @@ an occupancy sensor at all. That matters because
 would otherwise permanently fail the condition.
 
 **Triggers:** `phase_change` (state on the sensor, filtered `to:` the
-four phase names so attribute-only ticks don't fire), `tick` (twice:
-`event.received` on the zone's Tick through `room_target`, and
-`time_pattern` with `!input update_interval`), `extra`, `motion_on` /
+four phase names so attribute-only ticks don't fire), `tick`
+(`event.received` on the Zone device's Tick), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
 **Zone ticks exist to stop every room writing in the same second.**
@@ -893,37 +894,32 @@ Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
 :00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
 seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
 command timeouts landing at :10 - sent at :00. `tracking/ticker.py`
-fires each zone's `event.<slug>_flare_tick` a gap apart (title order);
-the blueprint's decision still happens fresh at trigger time, so this
-is NOT the jitter that was removed (see Standing decisions).
+fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
+starting on each interval boundary; the blueprint's decision still
+happens fresh at trigger time, so this is NOT the jitter that was
+removed (see Standing decisions). There is no `time_pattern` and no
+Update Interval input: every room has a zone, so nothing needs a
+fallback.
 
-- **Slot 0 is reserved.** Zones start one gap after each boundary,
-  because rooms still on the `time_pattern` fire at the boundary. HA
-  already offsets every `time_pattern` by a random 0.05-0.5s
-  (`RANDOM_MICROSECOND_MIN/MAX` in `helpers/event.py`), so the default 1s
-  gap clears it. Boundaries mirror a `/N` pattern (minutes of the hour
-  divisible by N) so the fallback's slot 0 lines up.
-- **Both triggers share `id: tick`**, so every `trigger.id == 'tick'`
-  check (transition, scene recheck, self-heal) covers both. The top-level
-  `condition:` drops the `time_pattern` one when `room_ticks` is
-  non-empty, which is what makes a room tick once, not twice.
-- **`room_ticks` must match what `event.received` resolves**, or a room
-  ticks twice or never. HA expands an area/device target to entities
-  with no `entity_category` and not hidden (`helpers/target.py`,
-  `_primary_entities_only`; same rule in 2026.4.0, checked). So the Tick
-  entity has no category, and `room_ticks` uses the same named +
-  area/device expansion the rest of the blueprint does. A user hiding the
-  Tick breaks this silently; the docs say not to.
-- A room naming only light entities doesn't reach its zone's Tick (6 of
-  17 of this house's automations, e.g. Jacob's), so the `time_pattern`
-  fallback stays rather than requiring a Tick. `room_target`'s selector
-  accepts FLARE `event` entities so the Tick can be named directly.
+- **The Tick has no `entity_category` and must not be hidden.** The
+  trigger targets the zone's *device*, and HA expands a device target to
+  entities with no category and not hidden (`helpers/target.py`,
+  `_primary_entities_only`; same rule in 2026.4.0, checked). A user
+  hiding the Tick silently stops the room's ticks; the docs say not to.
+- **Lights & Occupancy's selector has no device filter or `event`
+  entry.** It was briefly given both so a zone could be picked inside it;
+  the frontend only lists a device in a target picker if it ALSO has an
+  entity passing the entity filter (`getDevices` in
+  `src/data/device/device_picker.ts`), which forced the Tick to be
+  pickable too. A separate Zone input avoids all of it.
 - The Tick is one recorder row per zone per interval. Accepted: the
   schedule sensor already writes one per minute.
 
-- `phase_change` needs the `to:` filter because a plain `state` trigger
-  with no `from`/`to` fires on attribute-only changes; with any of
-  those keys set HA rejects events where `old_value == new_value`.
+- `phase_change` is the schedule's Phase event, which `event.py` fires
+  only when the phase actually changes (a manual override included) and
+  once on the first refresh after setup, so a restart still repaints
+  rooms. Attribute-only updates never fire it, which is why
+  `scene_recheck_due` no longer compares from/to states.
 - `tick` exists because the curve is **flat** during Morning
   and Night, so the coordinator re-writes identical state and HA emits
   `state_reported`, not `state_changed` - `phase_change` goes silent

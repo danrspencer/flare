@@ -1,4 +1,4 @@
-"""Ticks from the schedule sensor, the time pattern and Additional Triggers."""
+"""Ticks from the schedule sensor, the zone's Tick and Additional Triggers."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from tests.functional.blueprint.harness import (
+    add_schedule,
     effective,
     light,
     occupancy,
@@ -32,11 +33,11 @@ class TestAdaptiveScheduleAndTransitions:
 
         assert apply_lighting_calls == []
 
-    async def test_a_sensor_pointed_at_a_nonexistent_entity_skips_the_tick(self, hass, apply_lighting_calls):
+    async def test_a_schedule_with_no_sensor_skips_the_tick(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         await hass.async_block_till_done()
         await setup_room_automation(
-            hass, room_target={"entity_id": "light.a"}, adaptive_sensor="sensor.does_not_exist"
+            hass, room_target={"entity_id": "light.a"}, schedule=add_schedule(hass, sensor=None, slug="empty")
         )
 
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
@@ -62,16 +63,16 @@ class TestAdaptiveScheduleAndTransitions:
         assert calls[-1].data["color_temp_kelvin"] == 4000
         assert calls[-1].data["rgb_color"] is None
 
-    async def test_a_flat_curve_still_gets_a_tick_from_the_time_pattern(self, hass, apply_lighting_calls):
+    async def test_a_flat_curve_still_gets_a_tick_from_the_zone(self, hass, apply_lighting_calls):
         """On a flat stretch the sensor emits state_reported, not state_changed,
-        so only the time pattern guarantees a tick."""
+        so only the zone's Tick guarantees a tick."""
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
         await hass.async_block_till_done()
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
         apply_lighting_calls.clear()
 
-        # No sensor write: anything that fires is the time pattern.
+        # No sensor write: anything that fires is the Tick.
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=2))
         await hass.async_block_till_done()
 
@@ -170,14 +171,14 @@ class TestAdaptiveScheduleAndTransitions:
 
         assert list(delays(blueprint["action"])) == []
 
-    async def test_first_ever_sensor_value_counts_as_a_real_transition(self, hass, apply_lighting_calls):
-        """A new sensor has no previous state, which must still count."""
+    async def test_a_schedules_first_phase_counts_as_a_phase_change(self, hass, apply_lighting_calls):
+        """A new schedule has no previous phase, which must still count."""
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
         await setup_room_automation(
             hass,
             room_target={"entity_id": "light.a"},
-            adaptive_sensor="sensor.brand_new_adaptive",
+            schedule=add_schedule(hass, sensor="sensor.brand_new_adaptive", slug="brand_new"),
         )
 
         hass.states.async_set("sensor.brand_new_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
@@ -185,36 +186,6 @@ class TestAdaptiveScheduleAndTransitions:
 
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
-
-    async def test_update_interval_actually_changes_cadence(
-        self, hass, apply_lighting_calls, frozen_time
-    ):
-        light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
-        await hass.async_block_till_done()
-        await setup_room_automation(
-            hass, room_target={"entity_id": "light.a"}, update_interval="/2"
-        )
-        apply_lighting_calls.clear()
-
-        # Same-phase attribute tick, only tick can pick it up.
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 220, "color_temp": 4000})
-        await hass.async_block_till_done()
-
-        now = dt_util.utcnow()
-        # Always 1-2 minutes ahead, so 10s before it is still in the future.
-        next_boundary = now.replace(second=0, microsecond=0) + timedelta(
-            minutes=2 - (now.minute % 2), seconds=0
-        )
-
-        frozen_time.move_to(next_boundary - timedelta(seconds=10))
-        async_fire_time_changed(hass, dt_util.utcnow())
-        await hass.async_block_till_done()
-        assert apply_lighting_calls == [], "the /2 interval shouldn't fire off its own boundary"
-
-        frozen_time.move_to(next_boundary + timedelta(seconds=1))
-        async_fire_time_changed(hass, dt_util.utcnow())
-        await hass.async_block_till_done()
-        assert apply_lighting_calls
 
 
 class TestRgbColour:

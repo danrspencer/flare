@@ -51,21 +51,19 @@ rooms to set up:
 
 - **FLARE Schedules** — the day-phase and colour curve. Add a schedule sensor per part of
   the house that should share a rhythm; one for the whole house is fine to start.
-- **FLARE Control** — one zone per room. A zone remembers which lights FLARE is
+- **FLARE Zones** — one zone per room. A zone remembers which lights FLARE is
   currently driving, and its **Tick** tells the room's automation when to update. Every
-  area containing lights is offered, pre-selected, and each one you keep becomes a zone.
-  Trim the list if you like; anything you leave out simply isn't tracked.
+  area containing lights is offered, pre-selected, and each one you keep becomes a zone
+  named after it. Trim the list if you like; you can add more later.
 
-Zones can be added, retargeted or removed at any time from the Control entry.
+Zones can be added, renamed or removed at any time from the Zones entry.
 
 {: .note }
-> Adding another schedule sensor or zone later shows a Home Assistant entry
-> picker offering **both FLARE Schedules and FLARE Control**, regardless of which one
-> you clicked "Add" from — a Home Assistant frontend quirk, not a FLARE bug: the picker
-> lists every entry for the domain before checking which one actually supports what
-> you're adding. Pick the entry matching what you clicked (Schedules for a schedule
-> sensor, Control for a zone) — picking the other one simply fails rather than
-> creating anything in the wrong place.
+> On Home Assistant 2026.9 and earlier, adding another schedule sensor or zone shows
+> an entry picker offering **both FLARE Schedules and FLARE Zones**, whichever one you
+> clicked "Add" from. Pick the one matching what you're adding (Schedules for a schedule
+> sensor, Zones for a zone); the other simply fails. Home Assistant 2026.10 goes
+> straight to the right one.
 
 Each schedule sensor gets its own device, with the phase boundaries, curve values and
 transition durations as ordinary entities you can edit from the device page.
@@ -75,11 +73,12 @@ transition durations as ordinary entities you can edit from the device page.
 FLARE will spot that its blueprint isn't installed and offer it in
 **Settings → System → Repairs**. Press **Fix** and it downloads it.
 
-Create an automation from it and fill in two things:
+Create an automation from it and fill in three things:
 
 | Input | What to put |
 |---|---|
-| **FLARE Sensor** | The schedule sensor from step 2. |
+| **Schedule** | The schedule from step 2. |
+| **Zone** | The room's zone from step 2 — usually the one named after the room. |
 | **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
 
 That's the minimum. Everything else has a working default.
