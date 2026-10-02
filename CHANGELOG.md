@@ -34,6 +34,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **Motion sensors work in Lights & Occupancy.** Binary sensors with `device_class: motion`
+  now turn a room on and off exactly like occupancy sensors, on their own or alongside them.
+  Before, only `device_class: occupancy` sensors were picked up.
 - **Adding FLARE sets up a first schedule too.** Setup asks for its name (Home by default)
   alongside the rooms to make zones from, so FLARE is ready for its first room automation
   straight away. It now finishes with a summary of what it created.

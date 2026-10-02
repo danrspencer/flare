@@ -865,17 +865,20 @@ a real `conditions:` key with no risk to path resolution. No other
 fix, not a pattern to repeat elsewhere.
 
 **`room_target`** is a single entity/device/area/floor/label `target`
-doing double duty: lights within it are controlled, occupancy-class
-`binary_sensor`s within it govern occupancy via HA's native `occupancy`
-integration (2026.4+). That integration filters strictly by
-`device_class: occupancy` - motion-class sensors are never picked up,
-even targeted directly. Both `occupancy.*` schemas require `target:` to
-be present, and `room_target` is a required input with no default.
+doing double duty: lights within it are controlled, and occupancy- and
+motion-class `binary_sensor`s within it govern occupancy via HA's native
+`occupancy` and `motion` integrations (both 2026.4). Each filters
+strictly by its own device class, so the blueprint has a detected and a
+cleared trigger for each, sharing the `motion_on` / `motion_off` ids.
+Motion support was added late: the blueprint only listened to occupancy
+for a long time, on the mistaken belief that motion needed hand-written
+triggers. The schemas require `target:` to be present, and `room_target`
+is a required input with no default.
 
 `room_target` is resolved **once**, into `target_named_entities` +
 `target_expanded_entities`, which the three consumers filter:
 `resolved_entities` (lights), `room_occupancy_entities`
-(occupancy-class binary_sensors), `scope_entities` (scene scope). The
+(occupancy- and motion-class binary_sensors), `scope_entities` (scene scope). The
 halves are kept apart because a *directly named* light also pulls in its
 device's siblings while the device/area halves already return those -
 merging them would silently widen scene scope. Floors resolve to their

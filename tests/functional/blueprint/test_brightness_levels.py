@@ -19,7 +19,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestBrightnessScaling:
-    """docs/reference/blueprint.md#turning-lights-off-during-a-phase"""
+    """docs/reference/blueprint.md#brightness"""
 
     async def test_a_schedule_at_zero_brightness_still_reaches_one_not_off(
         self, hass, apply_lighting_calls
@@ -192,7 +192,7 @@ class TestBrightnessScaling:
 
 
 class TestIdleBrightness:
-    """docs/reference/blueprint.md#leaving-a-room-dimly-lit"""
+    """docs/reference/blueprint.md#idle-brightness"""
 
     async def test_an_empty_room_dims_instead_of_going_off(
         self, hass, turn_off_calls, apply_lighting_calls

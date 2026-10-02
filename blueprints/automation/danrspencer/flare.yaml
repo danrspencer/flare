@@ -22,7 +22,7 @@ blueprint:
       description: >
         The FLARE schedule the room follows: the brightness and colour
         temperature it applies.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         device:
           filter:
@@ -33,7 +33,7 @@ blueprint:
       description: >
         The FLARE zone this room belongs to. It records which lights FLARE
         is driving, so a light someone else changes is left alone.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         device:
           filter:
@@ -43,14 +43,16 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy-class sensors within it decide when.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#setting-up-a-room).
+        controlled, occupancy and motion sensors within it decide when.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
           entity:
             - domain: light
             - domain: binary_sensor
               device_class: occupancy
+            - domain: binary_sensor
+              device_class: motion
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -95,7 +97,7 @@ blueprint:
             precedence over the per-phase scenes below whenever it
             returns one - they're the fallback for phases it doesn't
             cover.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#handing-a-room-to-a-scene).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
           selector:
             template: {}
@@ -137,7 +139,7 @@ blueprint:
             Its own per-entity values always win over the per-phase
             exclusions below - those only fill in entities it doesn't
             already mention.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#turning-lights-off-during-a-phase).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
           selector:
             template: {}
@@ -182,7 +184,7 @@ blueprint:
             instead of switching off. Its own per-entity values always
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#leaving-a-room-dimly-lit).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
           selector:
             template: {}
@@ -308,12 +310,22 @@ trigger:
   - id: extra
     platform: state
     entity_id: !input extra_triggers
-  # Harmless with no occupancy sensor in the room.
+  # Occupancy and motion sensors share the ids. Harmless with no sensor of
+  # either kind in the room.
   - id: motion_on
     trigger: occupancy.detected
     target: !input room_target
+  - id: motion_on
+    trigger: motion.detected
+    target: !input room_target
   - id: motion_off
     trigger: occupancy.cleared
+    target: !input room_target
+    options:
+      for:
+        seconds: !input no_motion_wait
+  - id: motion_off
+    trigger: motion.cleared
     target: !input room_target
     options:
       for:
@@ -555,10 +567,12 @@ variables:
       {% set ns.m = dict(ns.m, **{e: (idle_brightness[e] | float) / 255}) %}
     {% endfor %}
     {{ ns.m }}
-  # Only to know whether the room has an occupancy sensor at all.
+  # The room's occupancy and motion sensors.
   room_occupancy_entities: >
     {{ all_target_entities | select('match', '^binary_sensor\\.')
-       | select('is_state_attr', 'device_class', 'occupancy') | list }}
+       | select('is_state_attr', 'device_class', 'occupancy') | list
+       + all_target_entities | select('match', '^binary_sensor\\.')
+       | select('is_state_attr', 'device_class', 'motion') | list }}
   # No occupancy sensor on, or changed, within the Wait time. Hand-written
   # because occupancy.is_not_detected's `for:` isn't reliable after a
   # restart. Only `on` counts as occupied, so a sensor left unavailable
@@ -652,7 +666,7 @@ variables:
     {{ resolved_entities | reject('in', scene_covered_entities) | list if scene_active else resolved_entities }}
 action:
   - choose:
-      # occupancy.cleared's `for:` is per sensor, so it fires once each
+      # The cleared triggers' `for:` is per sensor, so they fire once each
       # sensor's own Wait time is up, even if another saw motion since.
       - alias: "Motion timed out and the room is confirmed empty"
         conditions:
@@ -720,8 +734,8 @@ action:
     default:
       # Everything that can switch a light on is under this gate (see
       # allow_turn_on). An empty room settles to its idle brightness, outside
-      # the gate. room_occupancy_entities is checked because
-      # occupancy.is_detected is false with no sensors.
+      # the gate. room_occupancy_entities is checked because a room with no
+      # sensors would otherwise always read as empty.
       - alias: "Settle an empty room to its idle brightness"
         if:
           - condition: template
