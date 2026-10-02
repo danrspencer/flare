@@ -1,7 +1,7 @@
 import pytest
 
 from custom_components.flare.schedule.curve import kelvin_to_rgb
-from custom_components.flare.tracking.override_protection import (
+from custom_components.flare.zone.override_protection import (
     _color_temp_matches,
     _context_matches,
     classify,

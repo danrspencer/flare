@@ -16,14 +16,14 @@ views:
   - title: Lighting
     strategy:
       type: custom:flare-schedule
-  - title: Tracking
+  - title: Zones
     strategy:
-      type: custom:flare-tracking
+      type: custom:flare-zone
 ```
 
 - **Lighting** — the day's curve and every schedule and curve setting, one section per
   schedule sensor.
-- **Tracking** — which lights FLARE is driving, which ones something else has taken
+- **Zones** — which lights FLARE is driving, which ones something else has taken
   over, and a Clear button to hand them back.
 
 There's nothing to fill in. Both find their own entities, and a schedule sensor or zone you
@@ -68,6 +68,10 @@ preview what the light will look like: both sliders are painted in the colour th
 sets, and how far the brightness one fills is how bright it will be. It's the same idea as
 Home Assistant's own brightness slider for a light.
 
+**Copy or paste**, at the bottom of each schedule, copies that schedule as text, or applies
+one you paste in, so a schedule can be backed up, shared, or copied onto another. See
+[copying a schedule](../advanced/reference/#copying-a-schedule).
+
 ## Changing it
 
 Both views are generated fresh each time they load, which is what keeps them up to date
@@ -77,8 +81,3 @@ control** from the dashboard's three-dot menu.
 {: .note }
 > Take control is one-way. Once you've taken control a view stops picking up changes to
 > FLARE's layout, and newly added schedule sensors or zones won't appear on their own.
-
-{: .note }
-> **Changed in 0.14.0** — the schedule view was `custom:flare` before. Change the type to
-> `custom:flare-schedule`; a view still using the old name shows "Custom element doesn't
-> exist".

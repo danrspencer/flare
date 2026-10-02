@@ -14,28 +14,28 @@ STATES = {
     "sensor.upstairs_flare": {"attributes": {"points": [], "friendly_name": "Upstairs"}},
     # A schedule sensor with no friendly name - falls back to the slug.
     "sensor.loft_flare": {"attributes": {"points": []}},
-    # The tracking siblings, which must not become sections.
-    "sensor.downstairs_flare_tracking": {"attributes": {}},
+    # The claims sensor's siblings, which must not become sections.
+    "sensor.downstairs_flare_claims": {"attributes": {}},
     "sensor.downstairs_flare_controlled": {"attributes": {}},
     "sensor.downstairs_flare_overridden": {"attributes": {}},
     # Someone else's sensor that happens to end the same way.
     "sensor.solar_flare": {"attributes": {}},
     "light.kitchen": {"attributes": {}},
-    # Tracking scopes: identified by `claims`, named "<Scope> Tracking".
-    "sensor.bedroom_flare_tracking": {
-        "attributes": {"claims": {}, "friendly_name": "Bedroom Tracking"}
+    # Zones: identified by `claims`, named "<Zone> Claims".
+    "sensor.bedroom_flare_claims": {
+        "attributes": {"claims": {}, "friendly_name": "Bedroom Claims"}
     },
-    "sensor.dining_room_flare_tracking": {
-        "attributes": {"claims": {}, "friendly_name": "Dining Room Tracking"}
+    "sensor.dining_room_flare_claims": {
+        "attributes": {"claims": {}, "friendly_name": "Dining Room Claims"}
     },
     # No friendly name - falls back to the title-cased slug.
-    "sensor.utility_flare_tracking": {"attributes": {"claims": {}}},
-    # A scope's count sensors, which aren't scopes themselves.
+    "sensor.utility_flare_claims": {"attributes": {"claims": {}}},
+    # A zone's count sensors, which aren't zones themselves.
     "sensor.bedroom_flare_controlled": {"attributes": {"lights": []}},
     "sensor.bedroom_flare_overridden": {"attributes": {"lights": []}},
-    # Contrived: tracking-shaped but carrying `points`. The only case testing
+    # Contrived: claims-shaped but carrying `points`. The only case testing
     # the `_flare` suffix check independently of the attribute check.
-    "sensor.hallway_flare_tracking": {"attributes": {"points": []}},
+    "sensor.hallway_flare_claims": {"attributes": {"points": []}},
 }
 
 
@@ -50,10 +50,10 @@ def result():
 // Record registrations, which the shim otherwise drops.
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ sectionConfig, scheduleSensors, normaliseSlug, trackingScopes }} = await import({js_path(WWW / "flare-section.js")});
+const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
-const Tracking = defined['ll-strategy-view-flare-tracking'];
+const Zone = defined['ll-strategy-view-flare-zone'];
 const generate = async (states, config = {{}}) => (Strategy ? await Strategy.generate(config, {{ states }}) : null);
 return {{
   section: sectionConfig('ground_floor', 'Ground Floor'),
@@ -66,9 +66,9 @@ return {{
   unknown: await generate(input.states, {{ sensor: 'nosuchroom' }}),
   blankSensor: await generate(input.states, {{ sensor: '   ' }}),
   slugs: input.slugCases.map(normaliseSlug),
-  scopes: trackingScopes({{ states: input.states }}),
-  tracking: Tracking ? await Tracking.generate({{}}, {{ states: input.states }}) : null,
-  emptyTracking: Tracking ? await Tracking.generate({{}}, {{ states: {{}} }}) : null,
+  zones: listZones({{ states: input.states }}),
+  zone: Zone ? await Zone.generate({{}}, {{ states: input.states }}) : null,
+  emptyZones: Zone ? await Zone.generate({{}}, {{ states: {{}} }}) : null,
 }};""",
         {"states": STATES, "slugCases": SLUG_CASES},
     )
@@ -108,7 +108,7 @@ def test_sections_are_named_and_ordered_by_the_sensors_own_name(result):
 
 
 def test_only_schedule_sensors_become_sections(result):
-    """Not the tracking sensors, and not someone else's sensor.solar_flare."""
+    """Not the claims sensors, and not someone else's sensor.solar_flare."""
     slugs = [s["slug"] for s in result["sensors"]]
 
     assert slugs == ["downstairs", "loft", "upstairs"]
@@ -172,6 +172,11 @@ def test_every_schedule_time_and_curve_entity_is_present(result):
 
     assert "select.ground_floor_flare_phase" in entities
     assert "switch.ground_floor_sticky_phase_override" in entities
+
+
+def test_a_schedule_can_be_copied_or_pasted_from_its_section(result):
+    cards = [c for c in _cards(result["section"]) if c.get("type") == "custom:flare-schedule-transfer-card"]
+    assert [c["sensor"] for c in cards] == ["ground_floor"]
 
 
 def test_the_slug_reaches_every_entity(result):
@@ -293,52 +298,52 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
     ]
 
 
-# --- The tracking view -------------------------------------------------
+# --- The zone view -------------------------------------------------
 
 
-def _tracking_section(result, index=0):
-    return result["tracking"]["sections"][index]
+def _zone_section(result, index=0):
+    return result["zone"]["sections"][index]
 
 
-def test_the_tracking_strategy_is_registered_separately(result):
-    assert "ll-strategy-view-flare-tracking" in result["registeredAs"]
+def test_the_zone_strategy_is_registered_separately(result):
+    assert "ll-strategy-view-flare-zone" in result["registeredAs"]
 
 
-def test_a_tracking_view_is_one_section_per_scope(result):
-    headings = [s["cards"][0]["heading"] for s in result["tracking"]["sections"]]
+def test_a_zone_view_is_one_section_per_zone(result):
+    headings = [s["cards"][0]["heading"] for s in result["zone"]["sections"]]
 
     assert headings == ["Bedroom", "Dining Room", "Utility"]
 
 
-def test_the_scope_name_drops_the_entitys_own_trailing_word(result):
-    """"Bedroom Tracking" is the sensor; the scope is "Bedroom"."""
-    titles = [s["title"] for s in result["scopes"]]
+def test_the_zone_name_drops_the_entitys_own_trailing_word(result):
+    """"Bedroom Claims" is the sensor; the zone is "Bedroom"."""
+    titles = [s["title"] for s in result["zones"]]
 
     assert "Bedroom" in titles
-    assert "Bedroom Tracking" not in titles
+    assert "Bedroom Claims" not in titles
 
 
-def test_the_count_sensors_do_not_become_scopes_of_their_own(result):
-    """Every scope also has _flare_controlled and _flare_overridden sensors."""
-    slugs = [s["slug"] for s in result["scopes"]]
+def test_the_count_sensors_do_not_become_zones_of_their_own(result):
+    """Every zone also has _flare_controlled and _flare_overridden sensors."""
+    slugs = [s["slug"] for s in result["zones"]]
 
     assert slugs == ["bedroom", "dining_room", "utility"]
 
 
 def test_the_two_strategies_do_not_claim_each_others_sensors(result):
-    """`sensor.x_flare_tracking` ends with `_flare` plus more, so the schedule
+    """`sensor.x_flare_claims` ends with `_flare` plus more, so the schedule
     check must be endsWith, not includes."""
     schedule_slugs = {s["slug"] for s in result["sensors"]}
-    tracking_slugs = {s["slug"] for s in result["scopes"]}
+    zone_slugs = {s["slug"] for s in result["zones"]}
 
     assert schedule_slugs == {"downstairs", "loft", "upstairs"}
-    assert tracking_slugs == {"bedroom", "dining_room", "utility"}
-    assert not schedule_slugs & tracking_slugs
-    assert not any("hallway" in slug for slug in schedule_slugs | tracking_slugs)
+    assert zone_slugs == {"bedroom", "dining_room", "utility"}
+    assert not schedule_slugs & zone_slugs
+    assert not any("hallway" in slug for slug in schedule_slugs | zone_slugs)
 
 
-def test_a_scope_shows_both_counts_and_a_clear_button(result):
-    entities = [c.get("entity") for c in _tracking_section(result)["cards"]]
+def test_a_zone_shows_both_counts_and_a_clear_button(result):
+    entities = [c.get("entity") for c in _zone_section(result)["cards"]]
 
     assert "sensor.bedroom_flare_controlled" in entities
     assert "sensor.bedroom_flare_overridden" in entities
@@ -348,7 +353,7 @@ def test_a_scope_shows_both_counts_and_a_clear_button(result):
 def test_the_clear_button_presses_rather_than_opening_a_dialog(result):
     """Explicit, so an upstream default can't turn it into a more-info dialog."""
     clear = next(
-        c for c in _tracking_section(result)["cards"] if c.get("entity", "").startswith("button.")
+        c for c in _zone_section(result)["cards"] if c.get("entity", "").startswith("button.")
     )
 
     assert clear["tap_action"] == {
@@ -360,7 +365,7 @@ def test_the_clear_button_presses_rather_than_opening_a_dialog(result):
 
 def test_the_overridden_lights_are_named_only_while_there_are_any(result):
     """Hidden at zero, which is almost always."""
-    card = next(c for c in _tracking_section(result)["cards"] if c.get("type") == "markdown")
+    card = next(c for c in _zone_section(result)["cards"] if c.get("type") == "markdown")
 
     assert card["visibility"] == [
         {"condition": "numeric_state", "entity": "sensor.bedroom_flare_overridden", "above": 0}
@@ -371,8 +376,8 @@ def test_the_overridden_lights_are_named_only_while_there_are_any(result):
     assert "or []" in card["content"]
 
 
-def test_no_scopes_explains_itself_rather_than_rendering_blank(result):
-    content = result["emptyTracking"]["sections"][0]["cards"][1]["content"]
+def test_no_zones_explains_itself_rather_than_rendering_blank(result):
+    content = result["emptyZones"]["sections"][0]["cards"][1]["content"]
 
     assert "No FLARE zones found" in content
     assert "Add zone" in content

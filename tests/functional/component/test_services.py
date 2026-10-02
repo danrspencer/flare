@@ -1,4 +1,4 @@
-"""The services' contracts through a real HA: schemas, responses, scope
+"""The services' contracts through a real HA: schemas, responses, zone
 validation and registration. The planning logic itself is unit tested."""
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.services.handlers import async_unload_services
+from custom_components.flare.services.schedules import async_setup_schedule_services
 from tests.functional.component.harness import (
     CT,
     apply_lighting,
@@ -149,15 +150,15 @@ async def test_compute_scene_coverage_reports_covered_and_uncovered_entities(set
     assert result["uncovered_entities"] == ["light.b"]
 
 
-async def test_tracking_device_id_rejects_a_nonexistent_device(setup_integration: HomeAssistant):
+async def test_zone_device_id_rejects_a_nonexistent_device(setup_integration: HomeAssistant):
     """A bad device_id is a mistake, not "untracked"."""
     hass = setup_integration
     with pytest.raises(ServiceValidationError):
         await claims_check(hass, ["light.a"], device="not_a_real_device_id")
 
 
-async def test_tracking_device_id_rejects_a_device_that_isnt_a_tracking_scope(setup_integration: HomeAssistant):
-    """Nor any device that isn't a tracking scope."""
+async def test_zone_device_id_rejects_a_device_that_isnt_a_zone(setup_integration: HomeAssistant):
+    """Nor any device that isn't a zone."""
     hass = setup_integration
     entry = MockConfigEntry(domain="not_flare")
     entry.add_to_hass(hass)
@@ -169,7 +170,9 @@ async def test_tracking_device_id_rejects_a_device_that_isnt_a_tracking_scope(se
 
 
 async def test_the_services_registered_are_exactly_the_ones_services_yaml_documents(setup_integration: HomeAssistant):
-    """Against what's really registered, not a hand-written list."""
+    """Against what's really registered, not a hand-written list. The
+    schedule services come from async_setup, which this harness skips."""
+    async_setup_schedule_services(setup_integration)
     documented = set(yaml.safe_load((COMPONENT / "services.yaml").read_text()))
     assert set(setup_integration.services.async_services_for_domain(DOMAIN)) == documented
 

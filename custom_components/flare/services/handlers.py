@@ -1,4 +1,4 @@
-"""FLARE's eight services, registered by the Tracking entry: adapters that
+"""FLARE's eight services, registered by the Zones entry: adapters that
 read HA state into the pure planners (grouping.py, scenes.py, curve.py,
 override_protection.py) and dispatch the result. Field contracts are in
 services.yaml."""
@@ -30,10 +30,10 @@ from ..const import (
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
-from ..tracking.override_protection import classify, is_blocked
+from ..zone.override_protection import classify, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
-from ..tracking.write_tracking import ClaimRegistry
+from ..zone.claims import ClaimRegistry
 
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {
@@ -54,7 +54,7 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         # None means "write, but track nothing".
-        vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
+        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
     }
 )
 
@@ -97,7 +97,7 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         # None means "write, but track nothing".
-        vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
+        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
     }
 )
 
@@ -106,16 +106,16 @@ TURN_OFF_SCHEMA = vol.Schema(
         vol.Required("entities"): [cv.entity_id],
         vol.Optional("transition", default=0): vol.Coerce(float),
         # None turns the lights off untracked.
-        vol.Optional("tracking_device_id"): vol.Any(None, cv.string),
+        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
     }
 )
 
-# The claims_* services exist only to read or write claims, so a scope is
+# The claims_* services exist only to read or write claims, so a zone is
 # required.
 CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
-        vol.Required("tracking_device_id"): cv.string,
+        vol.Required("zone_device_id"): cv.string,
         vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
         vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
@@ -125,7 +125,7 @@ CLAIMS_CHECK_SCHEMA = vol.Schema(
 CLAIMS_RECORD_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
-        vol.Required("tracking_device_id"): cv.string,
+        vol.Required("zone_device_id"): cv.string,
         vol.Optional("targets", default=dict): dict,
     }
 )
@@ -133,14 +133,14 @@ CLAIMS_RECORD_SCHEMA = vol.Schema(
 CLAIMS_CLEAR_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
-        vol.Required("tracking_device_id"): cv.string,
+        vol.Required("zone_device_id"): cv.string,
     }
 )
 
 
 def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str | None) -> EntityLookup:
     """Adapts HA state/registries to grouping.py's EntityLookup, with the
-    caller's scope bound into the claim accessors."""
+    caller's zone bound into the claim accessors."""
 
     def is_state(entity_id: str, state: str) -> bool:
         s = hass.states.get(entity_id)
@@ -275,19 +275,19 @@ async def _two_step_turn_on(
     await hass.services.async_call("light", "turn_on", data, blocking=True, context=color_context)
 
 
-def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker: ClaimRegistry) -> None:
-    """Registers the eight services against this tracking entry."""
+def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
+    """Registers the eight services against this Zones entry."""
 
     async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
         """flare.compute_lighting_groups - see services.yaml."""
         rgb_color = call.data.get("rgb_color")
-        scope = write_tracker.resolve_scope_device(call.data.get("tracking_device_id"))
+        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
             entities=call.data["entities"],
             brightness_multipliers=call.data["brightness_multipliers"],
             sensor_brightness=call.data["brightness"],
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
-            lookup=_build_lookup(hass, write_tracker, scope),
+            lookup=_build_lookup(hass, registry, zone),
             brightness_tolerance=call.data["brightness_tolerance"],
             color_temp_tolerance=call.data["color_temp_tolerance"],
             two_step_label=call.data["two_step_label"],
@@ -322,15 +322,15 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
     async def apply_lighting(call: ServiceCall) -> ServiceResponse:
         """flare.apply_lighting - see services.yaml.
 
-        With force, the write still records a claim if a scope is given, so the
+        With force, the write still records a claim if a zone is given, so the
         next non-forced call recognises it as ours."""
         force = call.data["force"]
         brightness = call.data["brightness"]
         color_temp_kelvin = call.data["color_temp_kelvin"]
         rgb_color_raw = call.data.get("rgb_color")
         rgb_color = tuple(rgb_color_raw) if rgb_color_raw else None
-        scope = write_tracker.resolve_scope_device(call.data.get("tracking_device_id"))
-        lookup = _build_lookup(hass, write_tracker, scope)
+        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
+        lookup = _build_lookup(hass, registry, zone)
         groups = build_groups(
             entities=call.data["entities"],
             brightness_multipliers=call.data["brightness_multipliers"],
@@ -461,8 +461,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         # the light still matches its previous claim. No awaits in between, so
         # planning and recording are one step.
         if written_entities:
-            await write_tracker.async_record(
-                scope,
+            await registry.async_record(
+                zone,
                 written_entities,
                 live_context_before_write,
                 call.context.id,
@@ -485,12 +485,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         if not entities:
             return
         transition = call.data["transition"]
-        scope = write_tracker.resolve_scope_device(call.data.get("tracking_device_id"))
+        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         live_context_before_write = {
             e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
         }
-        await write_tracker.async_record(
-            scope,
+        await registry.async_record(
+            zone,
             entities,
             live_context_before_write,
             call.context.id,
@@ -511,27 +511,27 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
         brightness_tolerance = call.data["brightness_tolerance"]
         color_temp_tolerance = call.data["color_temp_tolerance"]
         rgb_color_tolerance = call.data["rgb_color_tolerance"]
-        scope = write_tracker.resolve_scope_device(call.data["tracking_device_id"])
-        scope_title = write_tracker.title_for_scope(scope)
+        zone = registry.resolve_zone_device(call.data["zone_device_id"])
+        zone_title = registry.zone_title(zone)
         results: dict[str, Any] = {}
         for entity_id in call.data["entities"]:
             state = hass.states.get(entity_id)
-            observed_ctx = write_tracker.observed_context_id(scope, entity_id)
+            observed_ctx = registry.observed_context_id(zone, entity_id)
             observed = (
                 {
                     "context_id": observed_ctx,
-                    "secondary_context_id": write_tracker.observed_secondary_context_id(scope, entity_id),
-                    "target": write_tracker.observed_target(scope, entity_id),
+                    "secondary_context_id": registry.observed_secondary_context_id(zone, entity_id),
+                    "target": registry.observed_target(zone, entity_id),
                 }
                 if observed_ctx is not None
                 else None
             )
-            latest_ctx = write_tracker.latest_context_id(scope, entity_id)
+            latest_ctx = registry.latest_context_id(zone, entity_id)
             latest = (
                 {
                     "context_id": latest_ctx,
-                    "secondary_context_id": write_tracker.latest_secondary_context_id(scope, entity_id),
-                    "target": write_tracker.latest_target(scope, entity_id),
+                    "secondary_context_id": registry.latest_secondary_context_id(zone, entity_id),
+                    "target": registry.latest_target(zone, entity_id),
                 }
                 if latest_ctx is not None
                 else None
@@ -554,30 +554,30 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, write_tracker:
                 "blocked": is_blocked(status),
                 "status": status,
                 "matched_via": matched_via,
-                "scope": scope_title,
+                "zone": zone_title,
             }
         return {"results": results}
 
     async def claims_record(call: ServiceCall) -> ServiceResponse:
         """flare.claims_record - call it before your write. Returns only the
-        entities actually recorded, which may be fewer if the scope's tracking
+        entities actually recorded, which may be fewer if the zone's claims
         entity isn't up yet."""
         entities = call.data["entities"]
         targets = call.data.get("targets", {})
-        scope = write_tracker.resolve_scope_device(call.data["tracking_device_id"])
+        zone = registry.resolve_zone_device(call.data["zone_device_id"])
         live_context_before_write = {
             e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
         }
-        await write_tracker.async_record(scope, entities, live_context_before_write, call.context.id, targets=targets)
-        tracked = write_tracker.records_for_scope(scope)
+        await registry.async_record(zone, entities, live_context_before_write, call.context.id, targets=targets)
+        tracked = registry.records_for_zone(zone)
         return {"recorded": [e for e in entities if e in tracked]}
 
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
         stuck "overridden"."""
         entities = call.data["entities"]
-        scope = write_tracker.resolve_scope_device(call.data["tracking_device_id"])
-        await write_tracker.async_clear(scope, entities)
+        zone = registry.resolve_zone_device(call.data["zone_device_id"])
+        await registry.async_clear(zone, entities)
         return {"cleared": entities}
 
     async def compute_scene_coverage_service(call: ServiceCall) -> ServiceResponse:

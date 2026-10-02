@@ -84,19 +84,14 @@ and **Lights & Occupancy** at the room's area. That's it.
 
 One target does both jobs: every light in that area is controlled, and
 every occupancy sensor in it decides when. Lights you add to the area
-later are picked up automatically. Pick individual entities instead if
-you want to mix and match — your lights plus one sensor from elsewhere,
-say.
+later are picked up automatically. A floor, a device or a label works the
+same way, or pick individual entities to mix and match — your lights
+plus one sensor from elsewhere, say.
 
 Occupancy uses Home Assistant's built-in occupancy triggers, which only
 count `binary_sensor` entities with `device_class: occupancy`.
 Motion-class sensors are not picked up. To drive a room from one, see
 [additional triggers](#additional-triggers).
-
-{: .note }
-> Lights are only found through entities, devices and areas. A floor or
-> label works for occupancy but won't control any lights, so name the
-> lights directly if you need one of those.
 
 A room with no occupancy sensor works fine — it simply never switches
 anything on by itself.
@@ -105,11 +100,6 @@ anything on by itself.
 (Settings → Devices & Services → FLARE Zones). Two automations sharing
 a room — a lamp and a pendant driven separately, say — pick the same
 zone.
-
-{: .note }
-> **Changed in 0.17.0** — **Zone** is new and required, and **Update
-> Interval** is gone. An automation from an earlier version stops with
-> "Missing input zone" until you pick one.
 
 ## When does the room update?
 

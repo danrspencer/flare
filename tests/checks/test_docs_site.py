@@ -105,6 +105,46 @@ def test_no_page_links_to_a_markdown_file(page):
     assert not stale, f"{page.name} links to Markdown files that aren't published: {stale[:5]}"
 
 
+# --- Links between pages ------------------------------------------------
+
+
+def _slug(heading: str) -> str:
+    """kramdown's anchor: drop non-word characters, spaces to hyphens."""
+    return re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", heading.strip().lower()).strip())
+
+
+def _url(page: Path) -> str:
+    permalink = _front_matter(page).get("permalink")
+    if permalink:
+        return permalink.rstrip("/") + "/"
+    relative = page.relative_to(DOCS).with_suffix("")
+    parts = [] if relative.name == "index" else [relative.name]
+    return "/" + "/".join([*relative.parent.parts, *parts]) + ("/" if parts or relative.parent.parts else "")
+
+
+def test_every_link_between_pages_lands_on_a_heading_that_exists():
+    """Kramdown builds anchors from headings, so renaming one silently
+    breaks every link to it."""
+    pages = {_url(p): p for p in PAGES if p.suffix == ".md"}
+    anchors = {
+        url: {_slug(h) for h in re.findall(r"^#{1,6} (.+)$", re.sub(r"```.*?```", "", p.read_text(), flags=re.S), re.M)}
+        for url, p in pages.items()
+    }
+    dead = []
+    for url, page in pages.items():
+        for link in re.findall(r"\]\(([^)\s]+)\)", page.read_text()):
+            link = link.replace("{{ site.baseurl }}", "")
+            if link.startswith(("http", "mailto")):
+                continue
+            path, _, anchor = link.partition("#")
+            target = url if not path else str(Path(url, path).resolve()).rstrip("/") + "/"
+            if target not in pages:
+                continue  # assets, the playground and the trace report
+            if anchor and anchor not in anchors[target]:
+                dead.append(f"{page.relative_to(DOCS)}: {link}")
+    assert dead == [], f"links to headings that don't exist: {dead}"
+
+
 # --- Inbound links to the blueprint reference ---------------------------
 
 

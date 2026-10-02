@@ -13,7 +13,7 @@ PLANNER = SERVICES["compute_lighting_groups"]["fields"]
 DISPATCHER = SERVICES["apply_lighting"]["fields"]
 
 # Worded differently on purpose: one plans, the other writes.
-INTENTIONALLY_DIFFERENT = {"prefer_rgb_color", "two_step_label", "tracking_device_id"}
+INTENTIONALLY_DIFFERENT = {"prefer_rgb_color", "two_step_label", "zone_device_id"}
 
 
 def test_every_documented_service_is_registered():
@@ -27,6 +27,8 @@ def test_every_documented_service_is_registered():
         "claims_check",
         "claims_record",
         "claims_clear",
+        "export_schedule",
+        "import_schedule",
     }
 
 

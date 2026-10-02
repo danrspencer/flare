@@ -4,7 +4,7 @@ Schedules: sensor.<name>_flare per schedule. State is the phase; the
 attributes carry the current brightness/color_temp/rgb_color, today's
 boundaries, and the full-day `points` curve.
 
-Tracking: per scope, the sensor holding its claims, plus
+Zones: per zone, the sensor holding its claims, plus
 `controlled`/`overridden` counts."""
 
 from __future__ import annotations
@@ -21,27 +21,27 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, EVENT_LIGHT_OVERRIDDEN
+from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .tracking.override_protection import classify
-from .tracking.scope import StateInstance, state_instances
-from .tracking.write_tracking import SIGNAL_WRITE_TRACKING_UPDATED, ClaimRegistry
+from .zone.override_protection import classify
+from .zone.instance import ZoneInstance, zone_instances
+from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_TRACKING:
+    if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_ZONES:
         for instance in schedule_instances(entry):
             coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
-            async_add_entities([_AdaptiveLightingSensor(coordinator, instance)], config_subentry_id=instance.subentry_id)
+            async_add_entities([_ScheduleSensor(coordinator, instance)], config_subentry_id=instance.subentry_id)
         return
 
     registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
-    for instance in state_instances(entry):
+    for instance in zone_instances(entry):
         async_add_entities(
             [
-                _StateTrackingSensor(hass, registry, instance),
-                _ScopeCountSensor(hass, registry, instance, "controlled"),
-                _ScopeCountSensor(hass, registry, instance, "overridden"),
+                _ZoneClaimsSensor(hass, registry, instance),
+                _ZoneCountSensor(hass, registry, instance, "controlled"),
+                _ZoneCountSensor(hass, registry, instance, "overridden"),
             ],
             config_subentry_id=instance.subentry_id,
         )
@@ -70,12 +70,12 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
 
 
 
-class _StateTrackingSensor(SensorEntity, RestoreEntity):
-    """One scope's claims - the storage itself, published as an attribute.
+class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
+    """One zone's claims - the storage itself, published as an attribute.
     Kept out of the recorder but restored across a restart."""
 
     _attr_has_entity_name = True
-    _attr_name = "Tracking"
+    _attr_name = "Claims"
     _attr_icon = "mdi:text-search"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = "lights"
@@ -83,14 +83,14 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
     # without any claim changing.
     _unrecorded_attributes = frozenset({"claims"})
 
-    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, instance: StateInstance) -> None:
+    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, instance: ZoneInstance) -> None:
         self.hass = hass
         self._registry = registry
         self._instance = instance
         self.claims: dict[str, dict] = {}
         self._last_statuses: dict[str, str] | None = None
-        self._attr_unique_id = f"{instance.subentry_id}_tracking"
-        self.entity_id = f"sensor.{instance.prefix}flare_tracking"
+        self._attr_unique_id = f"{instance.subentry_id}_claims"
+        self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
 
     async def async_added_to_hass(self) -> None:
@@ -119,7 +119,7 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
     async def async_update(self) -> None:
         self._refresh_statuses()
         # Counts depend on live state, not just claims.
-        async_dispatcher_send(self.hass, SIGNAL_WRITE_TRACKING_UPDATED)
+        async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
     def _refresh_statuses(self) -> None:
@@ -155,7 +155,7 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
                 "entity_id": entity_id,
                 # device_id puts the event in the device's Activity; omitted, not None,
                 # if the device isn't registered.
-                "scope": self._instance.title,
+                "zone": self._instance.title,
                 **({"device_id": device.id} if device else {}),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
@@ -179,8 +179,8 @@ class _StateTrackingSensor(SensorEntity, RestoreEntity):
         return {"claims": self.claims}
 
 
-class _ScopeCountSensor(SensorEntity):
-    """How many of a scope's lights are in one status. They needn't sum to
+class _ZoneCountSensor(SensorEntity):
+    """How many of a zone's lights are in one status. They needn't sum to
     the total: an unavailable light is in neither."""
 
     _attr_has_entity_name = True
@@ -190,7 +190,7 @@ class _ScopeCountSensor(SensorEntity):
     _attr_should_poll = False
 
     def __init__(
-        self, hass: HomeAssistant, registry: ClaimRegistry, instance: StateInstance, status: str
+        self, hass: HomeAssistant, registry: ClaimRegistry, instance: ZoneInstance, status: str
     ) -> None:
         self.hass = hass
         self._registry = registry
@@ -204,7 +204,7 @@ class _ScopeCountSensor(SensorEntity):
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_WRITE_TRACKING_UPDATED, self._handle_update)
+            async_dispatcher_connect(self.hass, SIGNAL_CLAIMS_UPDATED, self._handle_update)
         )
 
     @callback
@@ -213,7 +213,7 @@ class _ScopeCountSensor(SensorEntity):
 
     def _matching_lights(self) -> tuple[list[str], int]:
         lights: list[str] = []
-        records = self._registry.records_for_scope(self._instance.subentry_id)
+        records = self._registry.records_for_zone(self._instance.subentry_id)
         for entity_id, record in records.items():
             status, _via, _ctx = _classify_tracked(self.hass, entity_id, record)
             if status == self._status:
@@ -230,24 +230,18 @@ class _ScopeCountSensor(SensorEntity):
         return {"lights": lights, "total_tracked": total}
 
 
-class _ScheduleSensorBase(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
+class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
     _attr_has_entity_name = True
-
-    def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance, unique_id_suffix: str, forced_object_id: str) -> None:
-        super().__init__(coordinator)
-        self._attr_unique_id = f"{instance.subentry_id}_{unique_id_suffix}"
-        self.entity_id = f"sensor.{instance.prefix}{forced_object_id}"
-        self._attr_device_info = instance.device_info
-
-
-class _AdaptiveLightingSensor(_ScheduleSensorBase):
     _attr_icon = "mdi:home-lightbulb"
     _attr_name = None  # the entity that represents the device - displays as just the device's own name
     # Over the recorder's attribute size limit, and only read live.
     _unrecorded_attributes = frozenset({"points"})
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
-        super().__init__(coordinator, instance, "flare", "flare")
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{instance.subentry_id}_flare"
+        self.entity_id = f"sensor.{instance.prefix}flare"
+        self._attr_device_info = instance.device_info
 
     @property
     def native_value(self):

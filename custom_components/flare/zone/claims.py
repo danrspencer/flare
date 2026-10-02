@@ -3,10 +3,10 @@ protection can tell our changes from anyone else's. context.id, not
 user_id: every call in one automation run shares its run's context,
 while another automation's calls don't.
 
-The caller names the scope (a state device) on every call; with none,
-nothing is tracked. Callers naming the same scope share its claims.
+The caller names the zone on every call; with none,
+nothing is tracked. Callers naming the same zone share its claims.
 
-Claims live on each scope's tracking entity, a RestoreEntity, so they
+Claims live on each zone's claims sensor, a RestoreEntity, so they
 survive restarts. A restart gives every light a new context, so
 restored claims are matched by value (see classify()).
 
@@ -44,10 +44,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_STATE
+from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
 from .override_protection import _context_matches, _ContextClaim, _WriteRecord
 
 # Pruning early is harmless: a light with no record is simply free to
@@ -56,12 +57,17 @@ STALE_RECORD_MAX_AGE_DAYS = 1
 
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
-# Fired whenever any scope's claims change, so the count sensors refresh.
-SIGNAL_WRITE_TRACKING_UPDATED = "flare_claims_updated"
+# Fired whenever any zone's claims change, so the count sensors refresh.
+SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
+
+# Raised, per light, when a write lands in one zone while another holds a
+# claim on the same light. Each zone then reads the other's writes as
+# overrides, so the light quietly stops following either.
+ISSUE_LIGHT_IN_TWO_ZONES = "light_in_two_zones"
 
 
 class ClaimStore(Protocol):
-    """A scope's tracking entity, as ClaimRegistry needs it. Structural, to
+    """A zone's claims sensor, as ClaimRegistry needs it. Structural, to
     avoid importing sensor.py circularly."""
 
     claims: dict[str, _WriteRecord]
@@ -71,8 +77,8 @@ class ClaimStore(Protocol):
 
 
 class ClaimRegistry:
-    """Routes each light to the scope that holds its claims. Holds no claims
-    itself; they live on each scope's tracking entity."""
+    """Routes each light to the zone that holds its claims. Holds no claims
+    itself; they live on each zone's claims sensor."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self._hass = hass
@@ -87,9 +93,9 @@ class ClaimRegistry:
     def unregister(self, subentry_id: str) -> None:
         self._stores.pop(subentry_id, None)
 
-    def resolve_scope_device(self, device_id: str | None) -> str | None:
-        """tracking_device_id -> subentry_id. None stays None (untracked); a
-        device that isn't one of this entry's scopes raises."""
+    def resolve_zone_device(self, device_id: str | None) -> str | None:
+        """zone_device_id -> subentry_id. None stays None (untracked); a
+        device that isn't one of this entry's zones raises."""
         if device_id is None:
             return None
         device = dr.async_get(self._hass).async_get(device_id)
@@ -98,18 +104,18 @@ class ClaimRegistry:
             None,
         )
         subentry = self._entry.subentries.get(subentry_id) if subentry_id else None
-        if subentry is None or subentry.subentry_type != SUBENTRY_TYPE_STATE:
-            raise ServiceValidationError(f"{device_id} is not a FLARE tracking scope")
+        if subentry is None or subentry.subentry_type != SUBENTRY_TYPE_ZONE:
+            raise ServiceValidationError(f"{device_id} is not a FLARE zone")
         return subentry_id
 
-    def title_for_scope(self, subentry_id: str | None) -> str | None:
+    def zone_title(self, subentry_id: str | None) -> str | None:
         if subentry_id is None:
             return None
         subentry = self._entry.subentries.get(subentry_id)
         return subentry.title if subentry is not None else None
 
     def _store_for(self, entity_id: str) -> ClaimStore | None:
-        """The tracking entity holding this light's claims, or None."""
+        """The claims sensor holding this light's claims, or None."""
         for store in self._stores.values():
             if entity_id in store.claims:
                 return store
@@ -122,13 +128,13 @@ class ClaimRegistry:
         return store.claims.get(entity_id) if store else None
 
     def all_records(self) -> dict[str, _WriteRecord]:
-        """Every tracked light across every scope."""
+        """Every tracked light across every zone."""
         merged: dict[str, _WriteRecord] = {}
         for store in self._stores.values():
             merged.update(store.claims)
         return merged
 
-    def records_for_scope(self, subentry_id: str) -> dict[str, _WriteRecord]:
+    def records_for_zone(self, subentry_id: str) -> dict[str, _WriteRecord]:
         store = self._stores.get(subentry_id)
         return dict(store.claims) if store else {}
 
@@ -136,7 +142,7 @@ class ClaimRegistry:
     def _notify(self, stores: Iterable[ClaimStore]) -> None:
         for store in stores:
             store.async_claims_changed()
-        async_dispatcher_send(self._hass, SIGNAL_WRITE_TRACKING_UPDATED)
+        async_dispatcher_send(self._hass, SIGNAL_CLAIMS_UPDATED)
 
     def observed_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
         record = self._record(subentry_id, entity_id)
@@ -169,8 +175,8 @@ class ClaimRegistry:
         return claim.get("secondary_context_id") if claim else None
 
     async def async_clear(self, subentry_id: str | None, entity_ids: list[str]) -> None:
-        """Discards claims in one scope - behind claims_clear, the escape hatch for
-        a light stuck "overridden". No-op without a scope or a record."""
+        """Discards claims in one zone - behind claims_clear, the escape hatch for
+        a light stuck "overridden". No-op without a zone or a record."""
         store = self._stores.get(subentry_id)
         if store is None:
             return
@@ -191,7 +197,7 @@ class ClaimRegistry:
     ) -> None:
         """Records a write for entity_ids, before it's dispatched. Promotes
         `latest` to `observed` if it landed (see the module docstring). A None
-        scope records nothing. A light claimed by a different scope keeps that
+        zone records nothing. A light claimed by a different zone keeps that
         claim.
 
         live_context_before_write: each light's context before this call's
@@ -201,7 +207,7 @@ class ClaimRegistry:
         the brightness and colour steps' contexts."""
         if not entity_ids:
             return
-        # Also covers a scope whose tracking entity isn't up yet.
+        # Also covers a zone whose claims sensor isn't up yet.
         store = self._stores.get(subentry_id)
         if store is None:
             return
@@ -240,6 +246,31 @@ class ClaimRegistry:
                 "last_seen": dt_util.utcnow().isoformat(),
             }
         self._notify([store])
+        for entity_id in entity_ids:
+            others = [sid for sid, other in self._stores.items() if sid != subentry_id and entity_id in other.claims]
+            if others:
+                self._raise_light_in_two_zones(entity_id, [subentry_id, *others])
+
+    @callback
+    def _raise_light_in_two_zones(self, entity_id: str, subentry_ids: list[str]) -> None:
+        """Not persistent: it lasts until a restart and comes back if the
+        conflict does, so it can't outlive a fixed setup."""
+        state = self._hass.states.get(entity_id)
+        zones = sorted(self.zone_title(sid) or sid for sid in subentry_ids)
+        ir.async_create_issue(
+            self._hass,
+            DOMAIN,
+            f"{ISSUE_LIGHT_IN_TWO_ZONES}_{entity_id}",
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_LIGHT_IN_TWO_ZONES,
+            translation_placeholders={
+                "light": state.name if state is not None else entity_id,
+                "entity_id": entity_id,
+                "zones": ", ".join(zones[:-1]) + " and " + zones[-1],
+            },
+        )
 
     async def async_prune_stale(self) -> None:
         """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
@@ -271,7 +302,7 @@ class ClaimRegistry:
 
     @callback
     def _release_if_dark(self, store: ClaimStore) -> None:
-        """Discards a scope's claims once none of its lights are on. Switching a
+        """Discards a zone's claims once none of its lights are on. Switching a
         light off is an override, so this is what hands it back. Unavailable
         counts as dark, so one dead entity can't block the release."""
         if not store.claims:
@@ -286,7 +317,7 @@ class ClaimRegistry:
         """One listener for every tracked light:
 
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
-        - Off (on/off -> off): releases the scope if it has gone dark."""
+        - Off (on/off -> off): releases the zone if it has gone dark."""
 
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:

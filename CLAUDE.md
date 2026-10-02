@@ -164,10 +164,8 @@ Blueprint input mechanics worth knowing:
   (trigger templates can't read the registry, and a `state` trigger only
   takes entity IDs), which is why each schedule has a Phase `event`
   entity: `phase_change` is `event.received` on the device, like the
-  Tick. "Bring your own sensor" (any entity with the right attributes,
-  set via Edit in YAML) went with the entity selector on 2026-10-01, at
-  the user's direction: anyone wanting something different builds their
-  own automation on the services.
+  Tick. There is no "bring your own sensor": anyone wanting something
+  different builds their own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
   automation needs the old key removed outright, not left blank, as
@@ -238,7 +236,7 @@ blueprint in this repo. Keep them that way.
    conditions all fall out for free from that. The one piece that
    *does* now need persisted state, contrary to this lesson's original
    framing, is knowing what to compare the current state against -
-   `write_tracking.py`'s in-memory record of what context.id this
+   `claims.py`'s in-memory record of what context.id this
    integration itself last wrote each entity with. The lesson still
    holds where it always mattered: a trigger's one-shot firing is not a
    substitute for a check performed fresh on every tick.
@@ -335,22 +333,14 @@ blueprint in this repo. Keep them that way.
     testing a just-pushed change against a live instance.
 
 13. **`ha_import_blueprint` derives the installed path from the GitHub
-    repo *owner* in the URL, not from this repo's own blueprint folder
-    name.** This repo's blueprint lives at
-    `blueprints/automation/danspencer/flare.yaml` (no 'r'),
-    but the actual GitHub account is `danrspencer` (with an 'r') - a
-    mismatch that predates this file. Importing from this repo's GitHub
-    URL installs to `danrspencer/adaptive_lighting.yaml` on the live
-    instance, a *different* path from the `danspencer/...` one already
-    in use, rather than overwriting it - `overrides_existing: false` in
-    the response is the tell. The same "danspencer" vs "danrspencer"
-    collision lesson 6 warns about, surfacing here through a tool's own
-    path-derivation logic instead of a symlink. `blueprints/` is
-    read-only through every available file-editing tool, so there's no
-    way to fix the orphaned old path directly - repoint the automation's
-    `use_blueprint.path` at the new, correctly-updated file instead, and
-    leave the old one as a harmless (not domain-scanned, unlike lesson
-    9's `.bak-*` incident) orphaned leftover.
+    repo *owner* in the URL, not from the repo's blueprint folder.** So
+    the repo's folder is `blueprints/automation/danrspencer/`, matching
+    the owner: a folder of a different name means an import lands at a
+    second path beside the one in use (`overrides_existing: false` is
+    the tell), the same class of collision as lesson 6. An unused copy
+    at an old path is harmless (not domain-scanned, unlike lesson 9's
+    `.bak-*`); repoint `use_blueprint.path` rather than editing
+    `blueprints/`, which is read-only through every file tool.
 
 14. **A `target:` selector's `entity:` sub-key has a different schema
     from the plain (non-target) `entity:` selector - the multi-filter
@@ -429,14 +419,14 @@ distinction is the whole reason for the shape. The obvious grouping
 and the claims are each exposed through BOTH entities and services, so
 `entities` and `services` imported each other in both directions
 (`services` used `coordinator.CURVE_KEYS` and `curve`; `sensor`/`button`
-used `write_tracking` and `override_protection`). Those are two concepts,
-and they match the two config entries, Schedules and Zones (`tracking` in code).
+used the claims and `override_protection`). Those are two concepts,
+and they match the two config entries, Schedules and Zones.
 
 - `schedule/` - what lights should look like: `curve.py`,
   `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`).
-- `tracking/` - zones: who owns a light (`override_protection.py`,
-  `write_tracking.py`), the zone device itself (`scope.py`,
-  `StateInstance`; it lived in `coordinator.py` next to
+- `zone/` - zones: who owns a light (`override_protection.py`,
+  `claims.py`), the zone device itself (`instance.py`,
+  `ZoneInstance`; it lived in `coordinator.py` next to
   `ScheduleInstance` until the split, one file holding two concepts),
   and when each zone ticks (`ticker.py`).
 - `services/` - `handlers.py` (the eight services) and the planning
@@ -446,39 +436,32 @@ and they match the two config entries, Schedules and Zones (`tracking` in code).
   Platform modules **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`), which is why "entities" is not a
   folder here. `services.yaml` must stay at the root too. `www/` is the
-  dashboard and needed no change.
+  dashboard.
 
-**Dependencies run one way**: `schedule/` and `tracking/` import only
+**Dependencies run one way**: `schedule/` and `zone/` import only
 `const.py`; `services/` may use both; the root may use all three.
 `tests/checks/test_layering.py` enforces it from the source, so it cannot drift
 silently. `services/__init__.py` holds no imports; the root imports
 `.services.handlers` directly.
 
-Logger names follow the module path, so e.g.
-`custom_components.flare.coordinator` is now
-`custom_components.flare.schedule.coordinator`. Configuring
-`custom_components.flare` (the usual way) is unaffected.
-
-The `sys.path` insertion that used to let tests and `brand/generate_icon.py`
-import these as bare modules is gone; everything imports through the
-package.
+Logger names follow the module path (e.g.
+`custom_components.flare.schedule.coordinator`). Everything, tests and
+`brand/generate_icon.py` included, imports through the package.
 
 ### Services (`custom_components/flare/services/handlers.py`)
 
 Eight, all unit tested and confirmed working live. Full field contracts
-in `docs/helpers.md` and `services.yaml` - not repeated here.
+in `docs/advanced/reference.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
   - pure planners, no side effects.
 - `apply_lighting` - the only side-effecting one; wraps the same
   grouping logic and issues `light.turn_on`/`turn_off`. Takes
   `brightness`/`color_temp_kelvin`/`rgb_color` as **plain values**, not
-  a sensor entity_id. It read a sensor internally once; that was
-  reverted deliberately, and the reversal is meant to stick - entity
-  *selection* happens via the blueprint's `adaptive_sensor` regardless
-  of which layer reads the attributes, and voluptuous's own required-
-  field validation gives the same hard failure the internal read was
-  added for.
+  a sensor entity_id, so it stays usable with any source of values.
+  Don't move the sensor read into the service: the blueprint picks the
+  schedule, and voluptuous's required fields already fail hard on a
+  missing value.
 - `turn_off` - the turn-off counterpart of `apply_lighting`:
   records `{"state": "off"}`, THEN calls `light.turn_off`, as one
   operation. Takes no brightness/colour and does **no** override
@@ -504,9 +487,9 @@ missing renders a literal null rather than omitting the key.
 
 Each tracked entity carries two claims - `confirmed` (a write an earlier
 call observed landing) and `pending` (the most recent attempt). The full
-model, and why two rather than one, lives in `write_tracking.py`'s module
+model, and why two rather than one, lives in `claims.py`'s module
 docstring; the decision table lives in `override_protection.classify()`;
-the user-facing contract lives in `docs/helpers.md`. Three consumers
+the user-facing contract lives in `docs/advanced/reference.md`. Three consumers
 share that one table - `grouping.py`'s `externally_set()`, `sensor.py`'s
 diagnostic status, and `claims_check` - deliberately, because they
 previously drifted.
@@ -539,48 +522,31 @@ rather than assumed:
   Kelvin gap is ~4x coarser at 6500K than at 2700K. Defaults (5 / 5) sit
   on the Zones entry's options; a call can override them.
 - `force` is the only bypass. There is no caller-supplied owner: a
-  light's claims belong to whatever scope the caller names, so any
-  caller naming that scope writes through it.
-- **Scope is caller-supplied, not resolved.** Every tracking service
+  light's claims belong to whatever zone the caller names, so any
+  caller naming that zone writes through it.
+- **Zone is caller-supplied, not resolved.** Every claims service
   (`apply_lighting`, `compute_lighting_groups`, `claims_check`,
-  `claims_record`, `claims_clear`) takes `tracking_device_id` - a real HA
-  device, one per state device (`StateInstance.device_info`).
-  `ClaimRegistry.resolve_scope_device()` turns that into a subentry_id.
+  `claims_record`, `claims_clear`) takes `zone_device_id` - a real HA
+  device, one per zone (`ZoneInstance.device_info`).
+  `ClaimRegistry.resolve_zone_device()` turns that into a subentry_id.
   **Optional only on `apply_lighting`/`compute_lighting_groups`** -
-  both do something useful (dispatch/plan lights) with no scope at
+  both do something useful (dispatch/plan lights) with no zone at
   all, so omitting it means "write, but track nothing" (no claim,
   nothing excluded as externally-set). **Required on `claims_check`,
   `claims_record`, `claims_clear`** - each exists only to read or write
-  tracking claims, so a call with nothing to name has nothing useful
+  claims, so a call with nothing to name has nothing useful
   to do; the schema rejects a missing/null value outright (`vol.Required`,
   not `vol.Any(None, ...)`) rather than always silently answering
   "untracked" or recording nothing. A device_id that *is* given but
-  isn't one of this entry's own state devices raises
+  isn't one of this entry's own zones raises
   `ServiceValidationError` on any of the five, rather than behaving
-  like it was omitted. **The old implicit resolver, `scope_for()`
-  (entity → device → area, searched across every configured state
-  device), has been removed entirely.** It was kept alive as an
-  internal-only fallback for the state-changed listener and staleness
-  pruning (the two call sites with no caller to ask), but tracing both
-  showed it never actually had an effect: each only reaches a
-  target-based lookup for an entity with no existing claim anywhere,
-  and each immediately discards that result unless the entity is
-  *already* claimed - which, if true, `_store_for()`'s direct
-  claims-dict scan always finds first, without ever reaching
-  `scope_for()`. Confirmed live: a user pointed out that a state
-  device's setup form asking for a target implied claim ownership it
-  didn't actually have. The `target` field was then kept only to place
-  the zone's device in an area, and removed outright on 2026-10-01 once
-  nothing looked zones up by area: a zone is now just a name. **The
-  blueprint never guesses
-  either**: its required **Zone** input (a device selector filtered to
+  like it was omitted. **Nothing resolves a zone implicitly** - not
+  from areas, not from a light's device. A zone is just a name, and the
+  blueprint's required **Zone** input (a device selector filtered to
   `integration: flare, model: Zone`) is passed straight through as
-  `tracking_device_id`. It used to guess from areas (a named area, else
-  the first light's area, then a `sensor.*_flare_tracking` in it), and
-  that was replaced at the user's direction on 2026-10-01 - *"there's
-  just too much weird behaviour if it gets the wrong one"*. A wrong or
-  missing zone used to mean silently untracked; now a deleted zone makes
-  the service reject the call, loudly.
+  `zone_device_id`. Guessing was removed at the user's direction:
+  *"there's just too much weird behaviour if it gets the wrong one"*. A
+  deleted zone makes the service reject the call, loudly.
 - **Being switched off is an override.** `classify()` does *not*
   short-circuit on `not is_on`; an off light is judged against its
   claims like any other. A turn-off records `{"state": "off"}` as its
@@ -617,12 +583,21 @@ rather than assumed:
   `tests/functional/component/test_interrupted_writes.py`.
 - **`flare.claims_record` is documented as call-BEFORE-your-write** for
   the same reason, for anyone composing their own automation.
-- **A scope releases every claim once none of its lights report `on`**
+- **A light claimed in two zones raises a repair** (`light_in_two_zones_<entity_id>`,
+  from `ClaimRegistry.async_record`). Recording into one zone never
+  touches another's claim, so both keep one: each reads the other's
+  writes as overrides, and the listener only ever consults the first
+  zone it finds. Detected at write time rather than by reading
+  automation configs, so it covers service callers too and needs no
+  copy of the blueprint's target expansion. Deliberately not
+  `is_persistent`: it lasts until a restart and is re-raised while the
+  conflict persists, so a fixed setup never leaves a stale repair.
+- **A zone releases every claim once none of its lights report `on`**
   (`ClaimRegistry._release_if_dark`). Anything not `on` counts as dark,
   unavailable included - requiring an explicit `off` would let one
   permanently unavailable entity veto the release forever, the same
   trap the blueprint's `recovered` trigger avoids. Note "the room" is
-  the *scope*: an untracked light being on holds nothing open. It fires
+  the *zone*: an untracked light being on holds nothing open. It fires
   only on a transition that STARTS from a real on/off state - see
   "Claims survive a restart" below for why `unknown -> off` mustn't.
 
@@ -630,7 +605,7 @@ rather than assumed:
 `overridden`, `build_groups()` excludes the entity from every group, so
 nothing ever records a fresher `latest` for it - and on a ramping curve
 its recorded target only gets staler, so the value-rescue can't recover
-it either. The scope-goes-dark release now clears this automatically
+it either. The zone-goes-dark release now clears this automatically
 whenever the room empties, which covers the ordinary case; `claims_clear`
 (and the Clear button) remains the escape hatch for a room that never
 fully goes dark. The underlying rot is unchanged: an excluded entity
@@ -638,7 +613,7 @@ never gets a refreshed claim.
 
 ### Claims survive a restart
 
-The tracking entity (`_StateTrackingSensor`) is a `RestoreEntity`: its
+The claims sensor (`_ZoneClaimsSensor`) is a `RestoreEntity`: its
 claims are its `extra_restore_state_data`, restored in
 `async_added_to_hass` before it registers. One source of truth, on the
 entity - which is what #99 wanted when it deleted the old `Store`.
@@ -667,10 +642,10 @@ Two listener rules changed with it, both pinned in
   confirmed live on `light.landing_pendant_1`).
 - **`went_off` needs a real starting state.** Lights reconnect one at a
   time; if the first back is `off`, its siblings are still `unknown`,
-  which `_release_if_dark` counts as dark, and the whole scope's restored
+  which `_release_if_dark` counts as dark, and the whole zone's restored
   claims would go. Only a real on/off -> off releases.
 
-The setup-time prune in `__init__.py` runs before any tracking entity
+The setup-time prune in `__init__.py` runs before any claims sensor
 exists, so the restore prunes for itself.
 
 **A restart is no longer an escape hatch** for a light stuck `overridden`
@@ -684,7 +659,7 @@ first-write baseline), reads `overridden`. HA saves restore state every
 which fail open.
 
 **Testing it needs a real entity add.** The other harnesses attach the
-tracking entity with a capturing `async_add_entities`, so
+claims sensor with a capturing `async_add_entities`, so
 `async_added_to_hass` never runs and nothing is ever saved or restored.
 `test_claim_persistence.py` adds it through the plugin's
 `MockEntityPlatform` and seeds `mock_restore_cache_with_extra_data`; the
@@ -695,53 +670,47 @@ also proves a claim survives HA's JSON encoder.
 
 The integration installs as **two** entries, not one: *FLARE Schedules*
 (day-phase/curve sensors) and *FLARE Zones* (the services, the claim
-registry, the zone scheduler, and the state devices).
+registry, the zone scheduler, and the zones).
 
 **User-facing names: "FLARE Zones" and "zone"**, the entry named after
-what it holds. Scopes became zones on 2026-09-27 once they ticked as well
-as tracked; the entry was briefly "FLARE Control", which the user found
-confusing next to "zone" ("a control is just a collection of zones?")
-and renamed on 2026-10-01. Before both it was "FLARE Tracking". Only
-what users see was renamed: code still says tracking/scope/state
-throughout (`ENTRY_TYPE_TRACKING`, `tracking_device_id`,
-`sensor.*_flare_tracking`, `custom:flare-tracking`), since renaming those
-breaks installs. An entry still carrying an earlier title is retitled on
-setup; any other title is the user's and is left alone. Both use the
+what it holds, and the code says zone too. The stored values can't
+follow: `ENTRY_TYPE_ZONES` is `"tracking"` in each entry's data and
+`SUBENTRY_TYPE_ZONE` is `"state"`, because HA has no way to retype a
+subentry and recreating zones would give them new device ids. Both use the
 sensor platform; each platform module branches on
 `entry.data[CONF_ENTRY_TYPE]`.
 
 Why: HA's integration page renders **one section per subentry** with no
 hook to group them by type (`subEntries.map(...)` in
 `ha-config-entry-row.ts`), so a single entry flattened schedules and
-scopes into one long list of peers - 19 of them on this house. The entry
+zones into one long list of peers - 19 of them on this house. The entry
 is the only level at which the distinction can be expressed.
 
-The services live with **tracking**, not schedules: every one of them is
+The services live with **zones**, not schedules: every one of them is
 about which lights are being driven and by whom, and they need the claim
 registry that entry owns.
 
-**One "Add Integration" creates both.** Two entries is a grouping
-decision, never an argument for two trips through the flow -
-`async_step_user` asks the single question there is to ask (which rooms
-to track) and raises the other entry itself via `SOURCE_IMPORT`. Each
-half is still creatable alone, so deleting one and adding it back
-works. The entry the flow *visibly* completes on is always **Schedules**,
-because Schedules creates no devices and Tracking seeds one per room -
-see the device-dialog constraint below, which is what makes this
-ordering load-bearing rather than arbitrary.
+**One "Add Integration" sets FLARE up ready to use.** Two entries is a
+grouping decision, never an argument for two trips through the flow.
+`async_step_user` asks for a first schedule's name (default Home) and
+which rooms become zones, creates each missing entry through
+`SOURCE_IMPORT` - Schedules with that schedule as its subentry, Zones
+with a zone per room - and ends on an abort, `setup_complete`, carrying
+a summary. Each half is still creatable alone, so deleting one and
+adding it back works.
+
+**The flow ends on an abort, never on an entry,** because of HA's
+"integration added" dialog (`step-flow-create-entry.ts`). It shows a
+device-rename + area-picker form for every device on the entry the flow
+completes on, with no way to suppress it. Both entries now have devices
+from the start, so completing on either would put the schedule or every
+zone through that form. An abort has no entry, so no dialog; HA's own
+`reconfigure_successful` is the same pattern.
 
 ### Multi-sensor schedule architecture
 
 The schedules entry registers no services and carries no schedule of its
-own.
-"Add Integration" creates **zero devices and zero entities** - that's
-deliberate: HA's "integration added" dialog
-(`step-flow-create-entry.ts`) shows a device-rename + area-picker form
-whenever the completing flow has devices, with no way to suppress it,
-and that dialog is also the only place HA ever auto-renames entity_ids
-to match a device name. Auto-seeding a device therefore popped a rename
-prompt for something the user hadn't asked for, and a later rename via
-Settings → Devices silently didn't propagate to entity_ids.
+own; each schedule is a subentry.
 
 **That constraint is narrower than it was once written up here**, and
 the overstated version caused a wrong call once - re-verified against
@@ -757,9 +726,8 @@ home-assistant/frontend rather than recalled:
   device anywhere.
 
 Net: only the **main config flow, at entry creation** is affected, which
-is exactly what the zero-devices rule above protects. Devices created
-later are fine - and every schedule subentry already creates one, so the
-entry is never device-free in practice.
+is what ending setup on an abort avoids. Devices created later, by a
+subentry flow, are fine.
 
 Every schedule is a named "sensor" subentry (Settings → Devices &
 Services → Add Sensor). `schedule_instances(entry)` in `coordinator.py`
@@ -783,6 +751,25 @@ Per sensor:
   timer.
 - Five `time.*` boundaries and eight `number.*` curve values, as live
   `entity_category: config` entities.
+
+**A schedule exports and imports as YAML** (`schedule/transfer.py`),
+keyed by phase, through `flare.export_schedule` / `flare.import_schedule`,
+the schedule's Reconfigure step, the schedule view's transfer card and the
+docs playground. Things worth knowing:
+
+- Parsed with PyYAML's `BaseLoader`, which reads every scalar as a string:
+  YAML 1.1 reads an unquoted `06:30` as the base-60 number 390.
+- `dump()` writes the text by hand so every time is quoted;
+  `yaml.safe_dump` quotes a time only when it looks like a 1.1 number.
+  `docs/assets/js/schedule-yaml.js` is the playground's copy of both
+  halves, held to it by `test_schedule_yaml_parity.py`.
+- Import sets the entities through `time.set_value` / `number.set_value`,
+  so Reconfigure aborts rather than updating the subentry (no reload).
+  Everything is parsed before anything is set.
+- Times aren't required to be in order, because the entities aren't
+  (`phase_marks` handles it).
+- The two services are registered in `async_setup`, not by an entry:
+  they need only a schedule's entities, and the Zones entry may not exist.
 
 **Config lives in entity state, not `subentry.data`** - `coordinator.py`
 reads `hass.states.get(...)` for each. Writing back into `subentry.data`
@@ -834,7 +821,7 @@ facts:
 deliberately at the user's direction. RGB is just the Kelvin→RGB
 conversion of `kelvin`; there is no separate RGB curve.
 
-### Blueprint (`blueprints/automation/danspencer/flare.yaml`)
+### Blueprint (`blueprints/automation/danrspencer/flare.yaml`)
 
 **Every `condition:` (leaf and composite - `and`/`or`/`not`/`trigger`/
 `template`/`occupancy.is_detected`) and every `choose:` branch carries
@@ -874,9 +861,11 @@ be present, and `room_target` is a required input with no default.
 (occupancy-class binary_sensors), `scope_entities` (scene scope). The
 halves are kept apart because a *directly named* light also pulls in its
 device's siblings while the device/area halves already return those -
-merging them would silently widen scene scope. Entity/device/area only;
-floor/label aren't resolvable in hand-rolled Jinja, a pre-existing gap
-shared with the native trigger path.
+merging them would silently widen scene scope. Floors resolve to their
+areas (`floor_areas`), and labels to their labelled entities (named),
+devices and areas (`label_entities`/`label_devices`/`label_areas`). The
+`recovered` trigger repeats this resolution, since a trigger template
+can't read `variables:`.
 
 `room_occupancy_entities` exists only to decide *whether* the room has
 an occupancy sensor at all. That matters because
@@ -884,8 +873,8 @@ an occupancy sensor at all. That matters because
 **false** over a target matching zero entities - so a light-only room
 would otherwise permanently fail the condition.
 
-**Triggers:** `phase_change` (state on the sensor, filtered `to:` the
-four phase names so attribute-only ticks don't fire), `tick`
+**Triggers:** `phase_change` (`event.received` on the Schedule device's
+Phase), `tick`
 (`event.received` on the Zone device's Tick), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
@@ -893,13 +882,12 @@ four phase names so attribute-only ticks don't fire), `tick`
 Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
 :00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
 seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
-command timeouts landing at :10 - sent at :00. `tracking/ticker.py`
+command timeouts landing at :10 - sent at :00. `zone/ticker.py`
 fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
 starting on each interval boundary; the blueprint's decision still
 happens fresh at trigger time, so this is NOT the jitter that was
-removed (see Standing decisions). There is no `time_pattern` and no
-Update Interval input: every room has a zone, so nothing needs a
-fallback.
+removed (see Standing decisions). Every room has a zone, so there is no
+`time_pattern` fallback.
 
 - **The Tick has no `entity_category` and must not be hidden.** The
   trigger targets the zone's *device*, and HA expands a device target to
@@ -907,23 +895,20 @@ fallback.
   `_primary_entities_only`; same rule in 2026.4.0, checked). A user
   hiding the Tick silently stops the room's ticks; the docs say not to.
 - **Lights & Occupancy's selector has no device filter or `event`
-  entry.** It was briefly given both so a zone could be picked inside it;
-  the frontend only lists a device in a target picker if it ALSO has an
-  entity passing the entity filter (`getDevices` in
-  `src/data/device/device_picker.ts`), which forced the Tick to be
-  pickable too. A separate Zone input avoids all of it.
+  entry**, so the zone can't be picked there: the frontend only lists a
+  device in a target picker if it ALSO has an entity passing the entity
+  filter (`getDevices` in `src/data/device/device_picker.ts`), which
+  would make the Tick pickable too. Hence the separate Zone input.
 - The Tick is one recorder row per zone per interval. Accepted: the
   schedule sensor already writes one per minute.
 
 - `phase_change` is the schedule's Phase event, which `event.py` fires
   only when the phase actually changes (a manual override included) and
   once on the first refresh after setup, so a restart still repaints
-  rooms. Attribute-only updates never fire it, which is why
-  `scene_recheck_due` no longer compares from/to states.
-- `tick` exists because the curve is **flat** during Morning
-  and Night, so the coordinator re-writes identical state and HA emits
-  `state_reported`, not `state_changed` - `phase_change` goes silent
-  entirely in those phases.
+  rooms. Attribute-only updates never fire it.
+- `tick` exists because `phase_change` fires only at a phase boundary,
+  while the curve ramps within Evening and lights drift between
+  boundaries.
 - `recovered` arms on "at least one of our lights is reachable", firing
   as the first bulb returns. The inverse ("none unavailable") is wrong:
   one permanently-unavailable orphan holds it false forever and disables
@@ -932,8 +917,8 @@ fallback.
   `tick` mops that up.
 - `recovered`'s `value_template` **cannot reference `trigger.*`** - HA
   renders it with only `trigger_variables` in scope, injecting `trigger`
-  afterwards for the fired action only. An earlier version referenced
-  `trigger.entity_id` there and could never fire at all.
+  afterwards for the fired action only; a reference there means it never
+  fires.
 
 **There is no delay anywhere in `action:`, and there must not be.**
 `variables:` render once, at trigger time, so anything reached after a
@@ -944,7 +929,7 @@ window was relit by a run that had already decided the room was in use.
 `test_nothing_delays_the_action_before_it_decides` pins this.
 
 Note what could NOT save it, because it is the obvious wrong answer:
-override protection. Turning off the last light in a scope releases every
+override protection. Turning off the last light in a zone releases every
 claim it holds (`_release_if_dark`, from the state_changed listener),
 which is correct - it is what stops a room being locked out forever - so
 there is no claim left to judge the hand turn-off against. The only thing
@@ -1074,21 +1059,17 @@ watching, which isn't reliable right after a restart.
 per-phase scene pickers, and the four per-phase exclude lists. A
 deliberate exception to "the blueprint doesn't know phase names",
 explicitly chosen. All phase-keyed dict lookups use `.get(key, default)`,
-never direct indexing: `states(adaptive_sensor)` can legitimately be
+never direct indexing: the schedule sensor can legitimately be
 `unknown`/`unavailable`, and direct indexing would crash the whole tick.
 `scene_template` wins over the per-phase pick whenever it returns a valid
 scene; `brightness_template`'s per-entity values likewise win over the
 phase exclude lists (`dict(phase_base, **template_result)`).
 
 **Brightness levels are ABSOLUTE 0-255, not multipliers of the curve.**
-`brightness_template` (renamed from `brightness_multiplier_template` in
-0.16.0) and the four `*_idle_brightness` inputs all name the brightness a
-light sits at, on the same scale as the per-phase brightness `number`
-entities. Changed at the user's direction: the multiplier form was the
-one place you had to think in multiples of the curve, and the
-workarounds were visible in his own live configs - dividing by
-`state_attr(sensor, 'brightness')` to pin a light at 10, and passing a
-multiplier of 255 purely to land on `MAX_BRIGHTNESS`.
+`brightness_template` and the four `*_idle_brightness` inputs all name
+the brightness a light sits at, on the same scale as the per-phase
+brightness `number` entities. Chosen at the user's direction: a
+multiplier of the curve made pinning a light at a fixed level awkward.
 
 **The service contract did NOT change.** `apply_lighting` still takes one
 `brightness` plus per-entity *multipliers*, which is a fine primitive for
@@ -1343,11 +1324,8 @@ raising, so a house moving between the two states leaves nothing behind.
   why the wording carries the "the blueprint is optional" line rather
   than the severity carrying it.
 - **The install path is `danrspencer/flare.yaml`** (`INSTALL_PATH`), the
-  owner spelling HA derives from a GitHub import, NOT this repo's
-  `danspencer/` folder. The docs no longer carry an import badge, so
-  nothing routine collides with it - but anyone importing by URL by hand
-  lands on that same path, and matching it means they overwrite rather
-  than collecting two copies. See lesson 13.
+  path HA derives from a GitHub import, so anyone importing by URL by
+  hand overwrites it rather than collecting two copies. See lesson 13.
 - **The quickstart's import badge is gone**, replaced by this repair -
   at the user's direction. Don't reintroduce it: it went through
   `my.home-assistant.io` to a `main` raw URL, which is lessons 12 and 13
@@ -1368,7 +1346,7 @@ raising, so a house moving between the two states leaves nothing behind.
 - **The check runs via `async_at_started`, not during setup** -
   automations decide whether a blueprint is in use, and during setup
   they may not have loaded, so checking early finds every blueprint
-  orphaned and reports nothing. Tracking entry only, so a house with
+  orphaned and reports nothing. Zones entry only, so a house with
   both entries doesn't run it twice.
 - A blueprint that fails to load comes back from
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
@@ -1479,8 +1457,8 @@ caught. Don't "simplify" it back to the shared fixture.
   matches the merge with `ha_read_file` before restarting (see lesson
   12), then restart.
 - **Blueprint**: `ha_import_blueprint` with `overwrite=true`, pinned to
-  a commit SHA rather than a branch (lesson 12). Note lesson 13 - it
-  installs under `danrspencer/`, not `danspencer/`.
+  a commit SHA rather than a branch (lesson 12). It installs under
+  `danrspencer/` (lesson 13).
 - The two halves deploy separately, so a brief window where a restarted
   integration meets a not-yet-reimported blueprint is expected and
   self-resolves.
@@ -1611,18 +1589,16 @@ caught. Don't "simplify" it back to the shared fixture.
   the generator's last output and was byte-identical - worth repeating
   if this is ever restructured again.
 - **Two view strategies, not one**: `custom:flare-schedule` and
-  `custom:flare-tracking`, registered as
+  `custom:flare-zone`, registered as
   `ll-strategy-view-flare-schedule` and
-  `ll-strategy-view-flare-tracking`. The schedule one was plain
-  `custom:flare` in 0.12.x, while it was the only one; renamed in 0.14.0
-  because the bare name gives no hint which of the two you get. Kept
-  apart because a house has one scope per room against a handful of
+  `ll-strategy-view-flare-zone`. Kept
+  apart because a house has one zone per room against a handful of
   schedules, so merging would bury the schedules, and they answer
   different questions - what a light should be doing versus who
-  currently owns it. **The suffix test matters**: a scope's sensor is
-  `sensor.<slug>_flare_tracking`, which ends with `_flare` *plus more*,
+  currently owns it. **The suffix test matters**: a zone's sensor is
+  `sensor.<slug>_flare_claims`, which ends with `_flare` *plus more*,
   so `endsWith('_flare')` is load-bearing - `includes('_flare')` would
-  put every scope in the schedule view. Both enumerators also require a
+  put every zone in the schedule view. Both enumerators also require a
   distinguishing attribute (`points` / `claims`) so a name alone is
   never enough.
 - **The chart is one filled path, not a bar per sample.** It used to

@@ -22,23 +22,22 @@ from .const import (
     DEFAULT_TICK_GAP,
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
-    ENTRY_TYPE_TRACKING,
-    LEGACY_ZONES_ENTRY_TITLES,
-    ZONES_ENTRY_TITLE,
+    ENTRY_TYPE_ZONES,
 )
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
+from .services.schedules import async_setup_schedule_services
 from .event import ticks_key
-from .tracking.ticker import TickScheduler
-from .tracking.write_tracking import PRUNE_CHECK_INTERVAL, ClaimRegistry
+from .zone.ticker import TickScheduler
+from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
-TRACKING_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
+ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
 
 
 CARD_URL_BASE = "/flare_static"
@@ -46,12 +45,14 @@ CARD_JS_PATH = "flare-curve-card.js"
 FEATURE_JS_PATH = "flare-kelvin-feature.js"
 STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
+TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
 # flare-section.js and flare-value-slider.js register nothing; the modules
 # above import them.
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Serve www/ and load the front-end modules on every page.
+    """Serve www/, load the front-end modules on every page, and register
+    the schedule services, which belong to neither entry.
 
     The URL is versioned and cached hard, so each release is a new URL.
     The version is a path segment, not `?v=`: the modules import each
@@ -61,47 +62,46 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
     )
-    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, STRATEGY_JS_PATH):
+    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
+    async_setup_schedule_services(hass)
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
-    if is_tracking and entry.title in LEGACY_ZONES_ENTRY_TITLES:
-        hass.config_entries.async_update_entry(entry, title=ZONES_ENTRY_TITLE)
+    is_zones = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES
 
-    write_tracker = ClaimRegistry(hass, entry)
+    registry = ClaimRegistry(hass, entry)
     # Pruning catches entities deleted outright, which the listener never
     # sees go unavailable.
-    if is_tracking:
-        await write_tracker.async_prune_stale()
+    if is_zones:
+        await registry.async_prune_stale()
 
         async def _periodic_prune(now) -> None:
-            await write_tracker.async_prune_stale()
+            await registry.async_prune_stale()
 
         entry.async_on_unload(
             async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
         )
-        entry.async_on_unload(write_tracker.async_start_listening(hass))
+        entry.async_on_unload(registry.async_start_listening(hass))
 
     # After startup, since automations (which decide whether a blueprint
     # is in use) may not have loaded yet during setup.
-    if is_tracking:
+    if is_zones:
         async def _check_blueprint(_event=None) -> None:
             await async_check_blueprint(hass)
 
         entry.async_on_unload(async_at_started(hass, _check_blueprint))
 
-    if is_tracking:
-        async_setup_services(hass, entry, write_tracker)
+    if is_zones:
+        async_setup_services(hass, entry, registry)
 
     # Subentry changes don't reload on their own. This is the only reload,
     # which is why config_flow.py uses async_update_and_abort.
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
-    if is_tracking:
-        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = write_tracker
+    if is_zones:
+        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
         scheduler = TickScheduler(
             hass,
             int(entry.options.get(CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL)),
@@ -109,7 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         hass.data[DOMAIN][ticks_key(entry)] = scheduler
         entry.async_on_unload(scheduler.stop)
-        await hass.config_entries.async_forward_entry_setups(entry, TRACKING_PLATFORMS)
+        await hass.config_entries.async_forward_entry_setups(entry, ZONE_PLATFORMS)
         return True
 
     instances = schedule_instances(entry)
@@ -145,9 +145,9 @@ async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING:
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
         async_unload_services(hass)
-        unloaded = await hass.config_entries.async_unload_platforms(entry, TRACKING_PLATFORMS)
+        unloaded = await hass.config_entries.async_unload_platforms(entry, ZONE_PLATFORMS)
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
         hass.data.get(DOMAIN, {}).pop(ticks_key(entry), None)
         return unloaded

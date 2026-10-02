@@ -22,7 +22,7 @@ schedule sensors.
 {:toc}
 </details>
 
-Eight services, callable from your own automations or scripts with no blueprint involved.
+Ten services, callable from your own automations or scripts with no blueprint involved.
 Each field is documented in full in Developer Tools → Actions.
 
 ## `flare.apply_lighting`
@@ -32,8 +32,7 @@ handling reachability, tolerance, override protection, two-step transitions and
 RGB-vs-colour-temp routing.
 
 Neither this nor `compute_lighting_groups` reads a sensor entity. Feeding them from a
-schedule sensor's attributes (see [schedule sensors](#schedule-sensors)) is an ordinary
-template on your side.
+[schedule sensor](#schedule-sensors)'s attributes is an ordinary template on your side.
 
 ```yaml
 action: flare.apply_lighting
@@ -54,7 +53,7 @@ automation — and picks it up again when released.
 
 **You say which zone a call belongs to.** A zone is a named record of which lights FLARE is
 driving, usually one per room, configured at Settings → Devices & Services → **FLARE Zones** →
-Add zone. Each one is a real HA device. Pass its `tracking_device_id` on any of
+Add zone. Each one is a real HA device. Pass its `zone_device_id` on any of
 `apply_lighting`, `turn_off`, `compute_lighting_groups`, `claims_check`, `claims_record` or `claims_clear`:
 
 ```yaml
@@ -64,39 +63,39 @@ data:
   brightness: 200
   color_temp_kelvin: 3200
   transition: 2
-  tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-**`tracking_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
+**`zone_device_id` is optional on `apply_lighting`, `turn_off` and `compute_lighting_groups`** — all
 three do something useful (set, turn off or plan lights) with no zone at all. **Omitting it writes the light but
 tracks nothing** — no claim is recorded, and nothing is excluded as already externally-set. Tracking
 is opt-in per call, not something the integration goes looking for on your behalf.
 
 **It's required on `claims_check`, `claims_record` and `claims_clear`** — each of those exists only
-to read or write tracking claims, so a call with nothing to name has nothing useful to do; the schema
+to read or write claims, so a call with nothing to name has nothing useful to do; the schema
 rejects it outright rather than always silently answering "untracked" or recording nothing.
 
-A `tracking_device_id` that *is* given but isn't one of your zones raises rather than silently
+A `zone_device_id` that *is* given but isn't one of your zones raises rather than silently
 behaving like it was omitted — a typo'd or stale id is a mistake worth knowing about.
 
-Every entity passed in one call goes into the *same* zone — there's no per-entity resolution any more, so a
-call spanning several rooms needs one call per room's own zone.
+Every entity passed in one call goes into the *same* zone, so a call spanning several rooms needs one call per
+room's own zone.
 
 Because the zone is something you state rather than something resolved from configuration, **two calls naming the
 same zone share its claims and co-operate.** Name different zones to track two automations apart.
 
 `force: true` writes through regardless of who holds a light. The write is still recorded against
-`tracking_device_id`, so protection works again on the next non-forced call naming that same zone.
+`zone_device_id`, so protection works again on the next non-forced call naming that same zone.
 
-The blueprint resolves this for you from `room_target` — see [One target, two jobs](../../blueprint/#one-target-two-jobs)
-— so you only need to pass `tracking_device_id` by hand when calling these services directly.
+The blueprint passes its [Zone](../../blueprint/#setting-up-a-room) input, so you only need
+`zone_device_id` when calling these services yourself.
 
 #### The two claims
 
 Each tracked light carries two claims on its zone:
 
-- **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, the
-  pre-write baseline for a first write, or the snapshot taken when a device returns from unavailable.
+- **`observed`** — a state known to be safe to write over: one an earlier call saw the bulb adopt, or the
+  pre-write baseline for a first write.
 - **`latest`** — the most recent write sent, not yet re-observed.
 
 Two rather than one because a write is recorded when issued, not when confirmed. With a single record, one
@@ -128,6 +127,10 @@ it back overrides nobody's choice — and it is what ends a hand turn-off. Two t
 
 This is also the automatic way out of `overridden`.
 
+**Give each light one zone.** Two zones driving the same light each read the other's writes as an override, so
+the light stops following either. When FLARE sees it, it raises a repair naming the light and the zones. It
+clears when Home Assistant restarts, and comes back if it happens again.
+
 ### The hand-over event
 
 Every time a tracked light passes into someone else's hands, this fires
@@ -135,7 +138,7 @@ Every time a tracked light passes into someone else's hands, this fires
 
 ```yaml
 entity_id: light.kitchen_1
-scope: Kitchen                        # the zone that lost it
+zone: Kitchen                        # the zone that lost it
 device_id: ...                        # so the row lands in that device's Activity
 previous_status: controlled
 live_context_id: 01M11...
@@ -169,7 +172,7 @@ Each zone carries five entities, all on its own device so they're renamed and de
 
 | entity | |
 |---|---|
-| `sensor.<name>_flare_tracking` | **the claims themselves.** State is the number of lights tracked; the `claims` attribute holds the per-light `observed`/`latest` records |
+| `sensor.<name>_flare_claims` | **the claims themselves.** State is the number of lights tracked; the `claims` attribute holds the per-light `observed`/`latest` records |
 | `sensor.<name>_flare_controlled` | how many of its lights it is currently driving |
 | `sensor.<name>_flare_overridden` | how many are currently held by something else |
 | `button.<name>_flare_clear` | press to discard this zone's tracked state |
@@ -213,7 +216,7 @@ whole afternoon while its brightness eases over the last hour.
 
 ### Inspecting tracked state
 
-`sensor.<name>_flare_tracking`'s `claims` attribute holds the raw `observed`/`latest` records per light.
+`sensor.<name>_flare_claims`'s `claims` attribute holds the raw `observed`/`latest` records per light.
 `claims_check` turns those into a `status` plus a `matched_via` — `"latest-context"`, `"latest-value"`,
 `"observed-context"` or `"observed-value"` — telling you *how* a light was matched, not just that it was.
 
@@ -224,7 +227,7 @@ whole afternoon while its brightness eases over the last hour.
 | `unavailable` | no live state to compare against |
 | `off` | the light is off and holds no claim at all. A light FLARE turned off is `controlled`; one somebody else turned off is `overridden` |
 
-The tracking sensor updates on every write and clear, and also polls, since a light's live state can change
+The claims sensor updates on every write and clear, and also polls, since a light's live state can change
 without FLARE doing anything.
 
 Each claim carries `recorded_at` (ISO 8601, or `null` for the first-write baseline). With the claim's
@@ -244,14 +247,14 @@ action: flare.turn_off
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   transition: 15
-  tracking_device_id: "{{ device_id('sensor.kitchen_flare_tracking') }}"
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
 | Field | |
 |---|---|
 | `entities` | The lights to turn off. |
 | `transition` | Seconds. Defaults to 0. |
-| `tracking_device_id` | The [zone](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
+| `zone_device_id` | The [zone](#override-protection) this turn-off belongs to. Leave it out to turn the lights off without recording anything. |
 
 **It does no override protection.** It turns off exactly what it is given, including lights someone set by hand —
 use it once you have decided the room should go dark. To turn lights off only if FLARE is still driving them, ask
@@ -381,7 +384,7 @@ treatment two ways:
 The match is on the label's *id*, not its display name. A label whose id doesn't line up produces no error and
 no log line — the bulb silently goes back to combined transitions.
 
-The model list is in the integration's options (Settings → Devices & Services → FLARE → **Configure**), one
+The model list is in the integration's options (Settings → Devices & Services → FLARE Zones → **Configure**), one
 case-insensitive glob per line, matched against `"<manufacturer> <model>"` — both `*TRADFRI bulb*` and `IKEA*`
 work. Any light whose device matches a pattern is routed into two-step transitions automatically, immediately,
 with no repair or confirmation step in the way. The box is pre-filled with the shipped defaults, so what you see
@@ -396,10 +399,11 @@ defaults, so it can't quietly switch off detection.
 Keep patterns narrow. Too broad is worse than missing — it routes those bulbs into two-step transitions live,
 which makes them transition *worse*, two calls where one was fine.
 
-## Optional: day-phase/curve sensors
+## Schedule sensors
 
-To have the curve running continuously rather than calling `compute_curve` yourself, add a sensor from the
-Schedules entry (Settings → Devices & Services → FLARE Schedules → Add Sensor). It asks only for a name.
+The curve runs continuously in a schedule sensor, rather than by calling `compute_curve` yourself. Adding FLARE
+creates the first one; add more from the Schedules entry (Settings → Devices & Services → FLARE Schedules → Add
+schedule sensor). It asks only for a name.
 
 Add as many as you like; each is independent and gets its own device. Renaming the device later updates every
 entity's displayed name, but **entity_ids keep the name you first typed**, so it's worth getting right up front.
@@ -408,7 +412,8 @@ Each sensor's device contains, computed the same way `compute_curve` computes th
 
 | Entity | What it is |
 |---|---|
-| `sensor.<name>_flare` | The "right now" reading — see the attribute table below. Point the blueprint's Schedule input at this |
+| `sensor.<name>_flare` | The "right now" reading — see the attribute table below |
+| `event.<name>_flare_phase` | Fires with the phase's name each time the phase changes, a manual override included. The blueprint's **Schedule** input picks this device and triggers on it |
 | `select.<name>_flare_phase` | Manual phase override — `Auto` (default) or a specific phase. An override holds until the schedule itself next moves on: pin `Day` during Evening and it still becomes `Night` when Evening would have ended. The sticky switch below changes that |
 | `time.<name>_morning_time` / `day_time` / `evening_earliest_time` / `evening_latest_time` / `night_time` | The five schedule boundaries — start times for Morning, Day, and Night, and Evening's earliest/latest bound. Each starts at a representative default (06:00/08:00/17:00/20:00/22:00) and is adjustable at any time; the change applies within seconds, not on the next 60s poll |
 | `number.<name>_<phase>_brightness` / `_kelvin` | The eight curve values — brightness (0-255) and colour temperature (1000-10000K), one pair per phase. Each starts at the value shown in `compute_curve`'s field list above, and is adjustable at any time |
@@ -431,12 +436,53 @@ there is no configuration form. Removing a schedule means removing its device fr
 | `evening_earliest` / `evening_latest` | the bounds Evening was clamped between |
 | `points` | the full day as 289 `{t, brightness, kelvin}` samples, for the chart |
 
-There are no separate boundary sensors: a phase-change automation needs only a
-`state` trigger with `attribute: phase` on this entity.
+There are no separate boundary sensors: a phase-change automation triggers on
+`event.<name>_flare_phase`.
+
+### Copying a schedule
+
+A schedule's times and curve values travel as one block of YAML, keyed by phase:
+
+```yaml
+morning:
+  time: "06:00"
+  brightness: 255
+  kelvin: 6667
+  brightness_transition: 30
+  kelvin_transition: 30
+evening:
+  earliest: "17:00"
+  latest: "20:00"
+  brightness: 180
+night:
+  kelvin: 2000
+```
+
+Each phase takes `brightness`, `kelvin`, `brightness_transition` and `kelvin_transition`,
+plus its start `time` — or, for Evening, the `earliest` and `latest` times around sunset.
+Anything left out keeps its current value, so a paste can change just one thing. Quote
+the times; an unquoted one works too.
+
+There are four ways to move one:
+
+- **The schedule view's Copy and Paste buttons**, at the bottom of each schedule's section.
+- **The schedule's Reconfigure** (Settings → Devices & Services → FLARE Schedules → the
+  schedule's three-dot menu), which shows the schedule in a text box: copy it out, or paste
+  one in and submit.
+- **`flare.export_schedule`**, which returns the text as `schedule` in its response, and
+  **`flare.import_schedule`**, which takes it as `schedule`. Both name the schedule by its
+  device, as `schedule_device_id`. `import_schedule` also accepts the same structure written
+  straight into an automation's YAML.
+- **The [curve playground](../../playground/)** has a Copy schedule button and a Load
+  panel, so a schedule can be tried out there before it goes into Home Assistant.
+
+A schedule with a mistake in it — an unknown phase or setting, a time that isn't a time,
+a value out of range — is refused with a message saying which, and nothing is changed.
+Times don't have to be in order, just as the time entities don't.
 
 `points` does **not** follow a manual phase override, unlike the other attributes — it's a full-day schedule,
 not a right-now value.
 
 For a dashboard, FLARE's own [dashboard views](../../dashboard/) build these for you — a section per
-schedule sensor, plus a tracking view for what's currently being driven. The sensor's own device page
+schedule sensor, plus a zone view for what's currently being driven. The sensor's own device page
 already groups the same entities for free.

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import floor_registry as fr
 
 from tests.functional.blueprint.harness import (
     light,
@@ -14,7 +16,7 @@ class TestRecoveredTrigger:
     """docs/blueprint.md's "A device regaining power after an outage".
 
     `recovered` only makes an ordinary tick run promptly. Freeing the light
-    from its claim is write_tracking's listener, tested in
+    from its claim is claims.py's listener, tested in
     functional/component."""
 
     async def test_fires_and_resyncs_a_light_that_reconnects_on(self, hass, apply_lighting_calls):
@@ -27,6 +29,22 @@ class TestRecoveredTrigger:
         await hass.async_block_till_done()
 
         assert any(c.data["entities"] == ["light.a"] and c.data["force"] is False for c in apply_lighting_calls)
+
+    async def test_fires_for_a_light_found_through_a_floor(self, hass, apply_lighting_calls):
+        """The trigger resolves the target itself, so floors need covering there too."""
+        floor = fr.async_get(hass).async_create("Upstairs")
+        area = ar.async_get(hass).async_get_or_create("Landing")
+        ar.async_get(hass).async_update(area.id, floor_id=floor.floor_id)
+        er.async_get(hass).async_get_or_create("light", "test", "a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=area.id)
+        light(hass, "light.a", "unavailable")
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"floor_id": floor.floor_id})
+
+        light(hass, "light.a", "on", brightness=255)
+        await hass.async_block_till_done()
+
+        assert any(c.data["entities"] == ["light.a"] for c in apply_lighting_calls)
 
     async def test_does_not_turn_on_a_light_that_reconnects_off_in_a_dark_room(self, hass, apply_lighting_calls):
         """A light reconnecting off in a room with nothing on stays off."""

@@ -1,8 +1,7 @@
-"""Tracking scopes ("state devices" in the code): one per "state" subentry
-of the Tracking entry. Override-protection claims belong to a scope, and
-it's a real device so a service call can name it with
-`tracking_device_id`. Separate from ScheduleInstance so a house can have
-one schedule per floor and one scope per room."""
+"""Zones: one per zone subentry of the Zones entry. Override-protection
+claims belong to a zone, and it's a real device so a service call can
+name it with `zone_device_id`. Separate from ScheduleInstance so a house
+can have one schedule per floor and one zone per room."""
 
 from __future__ import annotations
 
@@ -12,13 +11,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.util import slugify
 
-from ..const import DOMAIN, SUBENTRY_TYPE_STATE
+from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
 
 
 @dataclass
-class StateInstance:
-    """One state device - a named tracking scope, derived from a "state"
-    subentry."""
+class ZoneInstance:
+    """One zone, derived from its subentry."""
 
     subentry_id: str
     prefix: str  # "<slug>_" - entity_id prefix, derived from the (required) name
@@ -28,23 +26,23 @@ class StateInstance:
     def device_info(self) -> DeviceInfo:
         return DeviceInfo(
             identifiers={(DOMAIN, self.subentry_id)},
-            name=self.title or "Adaptive Lighting State",
+            name=self.title,
             entry_type=DeviceEntryType.SERVICE,
-            # Lets services.yaml's device selector tell scopes apart from
+            # Lets services.yaml's device selector tell zones apart from
             # schedule devices.
             model="Zone",
         )
 
 
-def state_instances(entry: ConfigEntry) -> list[StateInstance]:
-    """Every state device on this entry, sorted by title."""
+def zone_instances(entry: ConfigEntry) -> list[ZoneInstance]:
+    """Every zone on this entry, sorted by title."""
     instances = []
     for subentry_id, subentry in entry.subentries.items():
-        if subentry.subentry_type != SUBENTRY_TYPE_STATE:
+        if subentry.subentry_type != SUBENTRY_TYPE_ZONE:
             continue
         slug = slugify(subentry.title)
         instances.append(
-            StateInstance(
+            ZoneInstance(
                 subentry_id=subentry_id,
                 prefix=f"{slug}_" if slug else "",
                 title=subentry.title,

@@ -1,4 +1,4 @@
-"""Claims survive a restart, via the tracking entity's restore state. The
+"""Claims survive a restart, via the claims sensor's restore state. The
 entity is added through a real EntityPlatform, since RestoreEntity only
 saves and restores for an entity that's genuinely added."""
 
@@ -14,11 +14,11 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, SUBENTRY_TYPE_STATE
-from custom_components.flare.tracking.scope import state_instances
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, SUBENTRY_TYPE_ZONE
+from custom_components.flare.zone.instance import zone_instances
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.tracking.write_tracking import ClaimRegistry
+from custom_components.flare.zone.claims import ClaimRegistry
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -34,14 +34,14 @@ def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
 
 
 async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
-    """One scope, its tracking entity added for real, with claims in the
+    """One zone, its claims sensor added for real, with claims in the
     restore cache if given."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
         subentries_data=[
             ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_STATE,
+                subentry_type=SUBENTRY_TYPE_ZONE,
                 title="Kitchen",
                 unique_id="kitchen",
                 data={},
@@ -62,7 +62,7 @@ async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
 
     platform = MockEntityPlatform(hass, domain="sensor", platform_name=DOMAIN)
     platform.config_entry = entry
-    await platform.async_add_entities([tracker], config_subentry_id=state_instances(entry)[0].subentry_id)
+    await platform.async_add_entities([tracker], config_subentry_id=zone_instances(entry)[0].subentry_id)
     await hass.async_block_till_done()
     return registry, tracker
 
@@ -138,7 +138,7 @@ async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: H
 
 async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: HomeAssistant):
     """The first light back being off, with siblings still unknown, must not
-    release the scope's restored claims."""
+    release the zone's restored claims."""
     registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     unsub = registry.async_start_listening(hass)
 

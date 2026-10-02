@@ -20,6 +20,10 @@ import {
   phaseAt,
   targetsForPhase,
 } from './curve.js';
+import { scheduleValues, scheduleYaml } from './schedule-yaml.js';
+
+// Loaded only when a schedule is pasted in.
+const JS_YAML_URL = 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm';
 
 // Resolved relative to THIS module (both files sit in assets/js/), not
 // to the page - which is what a dynamic import() does, and what keeps
@@ -181,7 +185,7 @@ function buildHass() {
           next_setting: new Date((midnight + state.sunset * 60) * 1000).toISOString(),
         },
       },
-      // Matches sensor.py's _AdaptiveLightingSensor exactly: state is the
+      // Matches sensor.py's _ScheduleSensor exactly: state is the
       // phase name, everything else is an attribute.
       'sensor.default_flare': {
         state: phase,
@@ -369,9 +373,78 @@ function mountControls() {
   }
 }
 
+/* ---------------------- schedule copy / load ---------------------- */
+
+// The playground keeps boundaries in minutes; the schedule's time entities
+// are "<key>_time" holding "HH:MM:SS".
+const TIME_STATE_KEYS = ['morning', 'day', 'evening_earliest', 'evening_latest', 'night'];
+const CURVE_STATE_KEYS = Object.keys(DEFAULT_CURVE_VALUES);
+
+function scheduleFromState() {
+  const values = {};
+  for (const key of TIME_STATE_KEYS) {
+    const h = String(Math.floor(state[key] / 60)).padStart(2, '0');
+    const m = String(state[key] % 60).padStart(2, '0');
+    values[`${key}_time`] = `${h}:${m}:00`;
+  }
+  for (const key of CURVE_STATE_KEYS) values[key] = state[key];
+  return values;
+}
+
+function applySchedule(values) {
+  for (const key of TIME_STATE_KEYS) {
+    const t = values[`${key}_time`];
+    if (t) {
+      const [h, m] = t.split(':').map(Number);
+      state[key] = h * 60 + m;
+    }
+  }
+  for (const key of CURVE_STATE_KEYS) {
+    if (key in values) state[key] = values[key];
+  }
+  controlEls.forEach((el) => el._sync());
+  refresh();
+}
+
+function mountScheduleTransfer() {
+  const copyBtn = document.getElementById('alp-copy-schedule');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const status = document.getElementById('alp-status');
+      const text = scheduleYaml(scheduleFromState());
+      try {
+        await navigator.clipboard.writeText(text);
+        if (status) status.textContent = 'Schedule copied. Paste it into a schedule\'s Reconfigure or the dashboard\'s Paste.';
+      } catch (err) {
+        const box = document.getElementById('alp-yaml');
+        if (box) {
+          box.value = text;
+          box.select();
+        }
+        if (status) status.textContent = 'Copy failed; the schedule is in the box under "Load a schedule".';
+      }
+    });
+  }
+
+  const loadBtn = document.getElementById('alp-load-schedule');
+  const box = document.getElementById('alp-yaml');
+  const status = document.getElementById('alp-load-status');
+  if (!loadBtn || !box) return;
+  loadBtn.addEventListener('click', async () => {
+    try {
+      const { load } = await import(JS_YAML_URL);
+      applySchedule(scheduleValues(load(box.value)));
+      if (status) status.textContent = 'Loaded.';
+    } catch (err) {
+      if (status) status.textContent = err.message || String(err);
+    }
+  });
+}
+
 async function main() {
   readHash();
   mountControls();
+  mountScheduleTransfer();
 
   const host = document.getElementById('alp-card-host');
   if (!host) return;
@@ -389,7 +462,7 @@ async function main() {
 
   // A minimal <ha-card> stand-in. The real one is part of Home
   // Assistant's frontend, which this repo neither ships nor should
-  // depend on - same approach as dashboard/preview.html.
+  // depend on.
   if (!customElements.get('ha-card')) {
     customElements.define(
       'ha-card',
@@ -418,7 +491,7 @@ async function main() {
   }
 
   card = document.createElement('flare-curve-card');
-  card.setConfig({ title: 'Lighting graph' });
+  card.setConfig({ title: 'Lighting graph', sensor: 'default' });
   host.appendChild(card);
   refresh();
 }

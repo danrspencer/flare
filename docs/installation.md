@@ -46,17 +46,18 @@ with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
 
-Adding it once creates both of FLARE's entries. The only thing it asks for is which
-rooms to set up:
+Adding it once creates both of FLARE's entries, ready to use. It asks two things:
 
-- **FLARE Schedules** — the day-phase and colour curve. Add a schedule sensor per part of
-  the house that should share a rhythm; one for the whole house is fine to start.
-- **FLARE Zones** — one zone per room. A zone remembers which lights FLARE is
-  currently driving, and its **Tick** tells the room's automation when to update. Every
-  area containing lights is offered, pre-selected, and each one you keep becomes a zone
-  named after it. Trim the list if you like; you can add more later.
+- **A name for your first schedule** (Home, unless you change it), under **FLARE
+  Schedules**. A schedule is the day's curve: when each phase starts, and how bright and
+  warm the light is. One for the whole house is fine; add more later for parts of the
+  house that should keep a different rhythm.
+- **Which rooms to set up**, each becoming a zone under **FLARE Zones**. A zone remembers
+  which lights FLARE is currently driving, and its **Tick** tells the room's automation
+  when to update. Every area containing lights is offered, pre-selected, and each one you
+  keep becomes a zone named after it. Trim the list if you like.
 
-Zones can be added, renamed or removed at any time from the Zones entry.
+Schedules and zones can be added or removed at any time from their entries, and zones renamed.
 
 {: .note }
 > On Home Assistant 2026.9 and earlier, adding another schedule sensor or zone shows
@@ -77,7 +78,7 @@ Create an automation from it and fill in three things:
 
 | Input | What to put |
 |---|---|
-| **Schedule** | The schedule from step 2. |
+| **Schedule** | The schedule from step 2 — Home, unless you named it something else. |
 | **Zone** | The room's zone from step 2 — usually the one named after the room. |
 | **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy-class binary sensors inside it decide when. |
 
@@ -111,13 +112,13 @@ views:
   - title: Lighting
     strategy:
       type: custom:flare-schedule
-  - title: Tracking
+  - title: Zones
     strategy:
-      type: custom:flare-tracking
+      type: custom:flare-zone
 ```
 
 **Lighting** gives you the day's curve and every schedule and curve setting, a section
-per schedule sensor. **Tracking** shows which lights FLARE is driving and which ones
+per schedule sensor. **Zones** shows which lights FLARE is driving and which ones
 something else has taken over. Nothing to fill in — see the
 [Dashboard]({{ site.baseurl }}/dashboard/) page for the details.
 

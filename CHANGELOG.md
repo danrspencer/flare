@@ -26,14 +26,38 @@ CI — see `.github/workflows/release.yml`.
   **Schedule** input (the `schedule` key, was `adaptive_sensor`) picks a FLARE schedule's
   device rather than its sensor, the same way **Zone** does. A sensor from elsewhere can
   no longer be used; build your own automation on FLARE's services for that.
+- **`tracking_device_id` is now `zone_device_id`** on every service that takes it, and
+  `flare.claims_check`'s response and the `flare_light_overridden` event name the zone
+  in `zone`, not `scope`. Only affects automations of your own; the blueprint is updated.
+- **Each zone's claims sensor is now `sensor.<name>_flare_claims`** (was
+  `sensor.<name>_flare_tracking`). A new entity is created; delete the old one, which
+  shows as unavailable.
+- **The zone dashboard view is `custom:flare-zone`** (was `custom:flare-tracking`). Change
+  `type:` in your dashboard's YAML.
+- **The blueprint now lives at `blueprints/automation/danrspencer/flare.yaml`**, the path
+  Home Assistant already installs it to, so nothing changes for an imported copy.
 
 ### Added
 
+- **Adding FLARE sets up a first schedule too.** Setup asks for its name (Home by default)
+  alongside the rooms to make zones from, so FLARE is ready for its first room automation
+  straight away. It now finishes with a summary of what it created.
+- **Copy and paste a schedule.** A schedule's times and curve values can be copied out
+  as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
+  buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new
+  `flare.export_schedule` and `flare.import_schedule` services. A pasted schedule with a
+  mistake changes nothing and says what's wrong.
+- **Floors and labels in Lights & Occupancy control lights.** They used to drive
+  occupancy only. A floor covers every area on it; a label covers the lights, devices
+  and areas carrying it.
 - **`flare.turn_off`.** Turns lights off and records that as FLARE's own doing, so a
   turn-off is not later mistaken for somebody else switching the light off. It takes
-  `entities`, an optional `transition` and an optional `tracking_device_id`, and does
+  `entities`, an optional `transition` and an optional `zone_device_id`, and does
   no override protection: it turns off exactly what it is given, including lights
   someone set by hand. The blueprint uses it for its own turn-offs.
+- **A repair when a light is in two zones.** Two zones driving the same light each read
+  the other's changes as an override, so the light stops following either. FLARE now
+  raises a repair naming the light and the zones when it happens.
 - **Each schedule has a Phase event** (`event.<name>_flare_phase`), fired with the phase
   name whenever the phase changes, a manual override included.
 - **Rooms take turns updating.** Every zone now has a **Tick**
@@ -71,8 +95,8 @@ CI — see `.github/workflows/release.yml`.
   device in an area, and nothing uses that now. Existing zones keep whatever area their
   device is in; set one on the device page if you want it.
 - **FLARE Tracking is now FLARE Zones, and tracking scopes are zones**, now that they
-  do more than track. Existing installs are renamed on the next restart; entity IDs,
-  `tracking_device_id` and the `custom:flare-tracking` dashboard view are unchanged.
+  do more than track. An existing entry keeps its title; rename it from the entry's
+  menu if you like.
 - **The blueprint turns lights off with one call.** It used to call `light.turn_off`
   and then `flare.claims_record` as two steps, in an order that had the same problem
   as above. Behaviour is otherwise unchanged.

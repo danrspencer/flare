@@ -48,7 +48,7 @@ class TestOccupancyDrivenOnOff:
         await hass.async_block_till_done()
 
         assert turn_off_calls, "precondition: the room should have been turned off"
-        assert turn_off_calls[-1].data["tracking_device_id"] == zone
+        assert turn_off_calls[-1].data["zone_device_id"] == zone
 
     async def test_occupancy_cleared_turns_lights_off_after_the_wait(self, hass, turn_off_calls):
         occupancy(hass, "binary_sensor.occ", "on")

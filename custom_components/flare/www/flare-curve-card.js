@@ -5,14 +5,6 @@
  * override; the curve doesn't.
  */
 
-const DEFAULT_ENTITIES = {
-  // Fallback when a card has neither `sensor` nor `entities`.
-  phase: 'sensor.default_flare',
-  brightness_now: 'sensor.default_flare',
-  kelvin_now: 'sensor.default_flare',
-  sun: 'sun.sun',
-};
-
 // Re-render interval, and the granularity of "now" in the render cache.
 const RENDER_INTERVAL_MS = 30000;
 
@@ -147,12 +139,6 @@ function cardHeader(config, stateObj) {
 }
 
 // Reads the attribute, or .state for a separate plain-value sensor.
-function numFromAttrOrState(stateObj, attrName) {
-  if (!stateObj) return undefined;
-  const attrVal = stateObj.attributes && stateObj.attributes[attrName];
-  return attrVal !== undefined ? Number(attrVal) : Number(stateObj.state);
-}
-
 function fmtTime(tSec) {
   const d = new Date(tSec * 1000);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -174,7 +160,7 @@ const SCHEDULE_SUFFIX = '_flare';
 /**
  * The slug of a FLARE schedule sensor, or null. The `points` attribute is
  * what identifies one; the exact `_flare` suffix makes the slug slice
- * correct (`_flare_tracking` must not match).
+ * correct (`_flare_claims` must not match).
  */
 export function scheduleSensorSlug(hass, entityId) {
   if (typeof entityId !== 'string') return null;
@@ -302,16 +288,8 @@ class FlareCurveCard extends HTMLElement {
       _instanceCount += 1;
       this._instanceId = _instanceCount;
     }
-    // `sensor: living_room` points every entity at that schedule sensor's.
-    // `entities` overrides individual ids.
-    const fromSensor = {};
-    if (this._config.sensor) {
-      const base = `sensor.${this._config.sensor}_flare`;
-      fromSensor.phase = base;
-      fromSensor.brightness_now = base;
-      fromSensor.kelvin_now = base;
-    }
-    this._entities = { ...DEFAULT_ENTITIES, ...fromSensor, ...(this._config.entities || {}) };
+    // `sensor: living_room` names sensor.living_room_flare.
+    this._sensorId = `sensor.${this._config.sensor}_flare`;
     this._cacheKey = null;
     this._samples = [];
     if (!this.shadowRoot) {
@@ -339,18 +317,13 @@ class FlareCurveCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    const e = this._entities;
-    const get = (id) => hass.states[id];
-
-    const phase = get(e.phase);
+    const phase = hass.states[this._sensorId];
     if (!phase) {
-      this._renderError(`Missing entity: ${e.phase}`);
+      this._renderError(`Missing entity: ${this._sensorId}`);
       return;
     }
 
-    const sun = get(e.sun);
-    const brightnessNow = get(e.brightness_now);
-    const kelvinNow = get(e.kelvin_now);
+    const sun = hass.states['sun.sun'];
 
     const boundaries = {
       morning: Number(phase.attributes.morning_start),
@@ -363,8 +336,8 @@ class FlareCurveCard extends HTMLElement {
     };
 
     const pointsRaw = phase.attributes.points;
-    const brightnessNowValue = numFromAttrOrState(brightnessNow, 'brightness');
-    const kelvinNowValue = numFromAttrOrState(kelvinNow, 'color_temp');
+    const brightnessNowValue = Number(phase.attributes.brightness);
+    const kelvinNowValue = Number(phase.attributes.color_temp);
 
     // "now" is in the key because the card reads the clock itself; without it
     // a flat stretch of curve would freeze the marker. Bucketed to the render
@@ -443,7 +416,7 @@ class FlareCurveCard extends HTMLElement {
   }
 
   _header() {
-    return cardHeader(this._config, this._hass && this._hass.states[this._entities.phase]);
+    return cardHeader(this._config, this._hass && this._hass.states[this._sensorId]);
   }
 
   _renderError(message) {

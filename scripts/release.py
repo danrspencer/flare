@@ -48,7 +48,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 MANIFEST = "custom_components/flare/manifest.json"
 BLUEPRINT_VERSION_PY = "custom_components/flare/blueprint_version.py"
-BLUEPRINT = "blueprints/automation/danspencer/flare.yaml"
+BLUEPRINT = "blueprints/automation/danrspencer/flare.yaml"
 CHANGELOG = "CHANGELOG.md"
 
 # How long a version's newest beta must sit before it is promoted.
