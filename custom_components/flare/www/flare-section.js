@@ -185,7 +185,7 @@ export function sectionConfig(slug, title) {
 const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
 // Also ends with SCHEDULE_SUFFIX plus more, hence the exact suffix test.
-const TRACKING_SUFFIX = '_flare_tracking';
+const CLAIMS_SUFFIX = '_flare_claims';
 
 // Only when a sensor has no friendly_name.
 function titleCase(slug) {
@@ -229,10 +229,10 @@ export function scheduleSensors(hass) {
 
 
 /**
- * The tracking section for one zone, sized to flow several to a row.
+ * The section for one zone, sized to flow several to a row.
  * `controlled` + `overridden` needn't equal the total tracked.
  */
-export function trackingSectionConfig(slug, title) {
+export function zoneSectionConfig(slug, title) {
   const controlled = `sensor.${slug}_flare_controlled`;
   const overridden = `sensor.${slug}_flare_overridden`;
   const clear = `button.${slug}_flare_clear`;
@@ -257,7 +257,7 @@ export function trackingSectionConfig(slug, title) {
       {
         type: 'tile',
         entity: clear,
-        name: 'Clear tracking',
+        name: 'Clear claims',
         icon: 'mdi:backup-restore',
         grid_options: { columns: 'full' },
         tap_action: {
@@ -272,17 +272,17 @@ export function trackingSectionConfig(slug, title) {
 
 /**
  * Every zone as {slug, title}, identified by the `claims`
- * attribute. The title drops the trailing "Tracking".
+ * attribute. The title drops the trailing "Claims".
  */
-export function trackingScopes(hass) {
+export function listZones(hass) {
   const states = (hass && hass.states) || {};
   return Object.keys(states)
-    .filter((id) => id.startsWith(SENSOR_PREFIX) && id.endsWith(TRACKING_SUFFIX))
+    .filter((id) => id.startsWith(SENSOR_PREFIX) && id.endsWith(CLAIMS_SUFFIX))
     .filter((id) => states[id] && states[id].attributes && 'claims' in states[id].attributes)
     .map((id) => {
-      const slug = id.slice(SENSOR_PREFIX.length, -TRACKING_SUFFIX.length);
+      const slug = id.slice(SENSOR_PREFIX.length, -CLAIMS_SUFFIX.length);
       const friendly = states[id].attributes.friendly_name || '';
-      const title = friendly.replace(/\s*Tracking$/, '') || titleCase(slug);
+      const title = friendly.replace(/\s*Claims$/, '') || titleCase(slug);
       return { slug, title };
     })
     .filter((s) => s.slug)

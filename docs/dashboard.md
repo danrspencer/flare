@@ -16,14 +16,14 @@ views:
   - title: Lighting
     strategy:
       type: custom:flare-schedule
-  - title: Tracking
+  - title: Zones
     strategy:
-      type: custom:flare-tracking
+      type: custom:flare-zone
 ```
 
 - **Lighting** — the day's curve and every schedule and curve setting, one section per
   schedule sensor.
-- **Tracking** — which lights FLARE is driving, which ones something else has taken
+- **Zones** — which lights FLARE is driving, which ones something else has taken
   over, and a Clear button to hand them back.
 
 There's nothing to fill in. Both find their own entities, and a schedule sensor or zone you

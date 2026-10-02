@@ -1,6 +1,6 @@
 """Config flow for FLARE.
 
-Adding the integration creates both the Schedules and Tracking entries.
+Adding the integration creates both the Schedules and Zones entries.
 Schedule sensors are "sensor" subentries, added and named by the user;
 their times and curve values are entities on the sensor's device."""
 
@@ -34,9 +34,9 @@ from .const import (
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_TRACKING,
+    ENTRY_TYPE_ZONES,
     SUBENTRY_TYPE_SENSOR,
-    SUBENTRY_TYPE_STATE,
+    SUBENTRY_TYPE_ZONE,
     ZONES_ENTRY_TITLE,
 )
 from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
@@ -52,14 +52,14 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         The flow visibly completes on Schedules because it creates no devices:
         HA's "integration added" dialog prompts to rename every device the
-        completing entry has, with no way to suppress it. Tracking, which seeds
+        completing entry has, with no way to suppress it. Zones, which seeds
         a device per room, is created through SOURCE_IMPORT instead."""
         configured = {entry.data.get(CONF_ENTRY_TYPE) for entry in self._async_current_entries()}
         needs_schedules = ENTRY_TYPE_SCHEDULES not in configured
-        needs_tracking = ENTRY_TYPE_TRACKING not in configured
+        needs_zones = ENTRY_TYPE_ZONES not in configured
 
         # Pre-selects every area with a light. Areas with none are left out.
-        areas = _areas_with_lights(self.hass) if needs_tracking else []
+        areas = _areas_with_lights(self.hass) if needs_zones else []
         if areas and user_input is None:
             return self.async_show_form(
                 step_id="user",
@@ -75,9 +75,9 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # With nothing left to create, _create_schedules_entry's unique_id guard
         # aborts with already_configured.
         chosen = [(a, n) for a, n in areas if a in (user_input or {}).get("areas", [])]
-        if needs_tracking and not needs_schedules:
-            return await self._create_tracking_entry(chosen)
-        if needs_tracking:
+        if needs_zones and not needs_schedules:
+            return await self._create_zones_entry(chosen)
+        if needs_zones:
             await self.hass.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": SOURCE_IMPORT},
@@ -86,10 +86,10 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self._create_schedules_entry()
 
     async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
-        """Creates the tracking entry without a visible flow (see async_step_user)."""
+        """Creates the Zones entry without a visible flow (see async_step_user)."""
         chosen = import_data["areas"]
         areas = [(a, n) for a, n in _areas_with_lights(self.hass) if a in chosen]
-        return await self._create_tracking_entry(areas)
+        return await self._create_zones_entry(areas)
 
     async def _create_schedules_entry(self) -> FlowResult:
         """Nothing to ask; schedule sensors are added afterwards as subentries."""
@@ -99,15 +99,15 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             title="FLARE Schedules", data={CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES}
         )
 
-    async def _create_tracking_entry(self, areas: list[tuple[str, str]]) -> FlowResult:
-        await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_TRACKING}")
+    async def _create_zones_entry(self, areas: list[tuple[str, str]]) -> FlowResult:
+        await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_ZONES}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
             title=ZONES_ENTRY_TITLE,
-            data={CONF_ENTRY_TYPE: ENTRY_TYPE_TRACKING},
+            data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
             subentries=[
                 {
-                    "subentry_type": SUBENTRY_TYPE_STATE,
+                    "subentry_type": SUBENTRY_TYPE_ZONE,
                     "title": name,
                     "unique_id": slugify(name),
                     "data": {},
@@ -119,15 +119,15 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING:
-            return {SUBENTRY_TYPE_STATE: StateSubentryFlow}
+        if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
+            return {SUBENTRY_TYPE_ZONE: ZoneSubentryFlow}
         return {SUBENTRY_TYPE_SENSOR: SensorSubentryFlow}
 
     @classmethod
     @callback
     def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
         """Only the Zones entry has options; nothing reads the Schedules entry's."""
-        return config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
+        return config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES
 
     @staticmethod
     @callback
@@ -226,9 +226,9 @@ def _areas_with_lights(hass) -> list[tuple[str, str]]:
     return sorted(named, key=lambda pair: pair[1])
 
 
-class StateSubentryFlow(ConfigSubentryFlow):
+class ZoneSubentryFlow(ConfigSubentryFlow):
     """Adds one zone (a "state" subentry). Which lights it tracks is decided
-    by callers passing its tracking_device_id."""
+    by callers passing its zone_device_id."""
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         return await self._async_form(user_input)

@@ -143,7 +143,7 @@ def main(argv: list[str]) -> int:
     xml_path = Path(argv[1])
     if not xml_path.exists():
         # pytest can die before writing anything (a collection error, an
-        # import that raises at module scope). Say so in the summary
+        # import that raises at module zone). Say so in the summary
         # rather than failing the step and leaving the run page blank.
         print("## Test results\n\n⚠️ pytest produced no report — it likely failed before collection.\n")
         return 0

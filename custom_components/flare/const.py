@@ -9,18 +9,19 @@ SUBENTRY_TYPE_SENSOR = "sensor"
 # Options key: bulb models needing two-step transitions (see two_step.py).
 CONF_TWO_STEP_MODELS = "two_step_models"
 
-# Subentry type for a state device (a tracking scope).
-SUBENTRY_TYPE_STATE = "state"
+# Subentry type for a zone. The value is stored in every install's zones,
+# and HA can't change a subentry's type, so it stays "state".
+SUBENTRY_TYPE_ZONE = "state"
 
 # Fired when a tracked light becomes "overridden", with both claims and
 # the live values at that moment (see sensor.py's _refresh_statuses).
 EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"
 
 # Two config entries rather than one, because HA's integration page can't
-# group subentries by type.
+# group subentries by type. The values are stored in each entry's data.
 CONF_ENTRY_TYPE = "entry_type"
 ENTRY_TYPE_SCHEDULES = "schedules"
-ENTRY_TYPE_TRACKING = "tracking"
+ENTRY_TYPE_ZONES = "tracking"
 
 # Options keys: the smallest change apply_lighting sends, as a percentage
 # of the target brightness and in mireds of colour temperature.

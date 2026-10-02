@@ -1,9 +1,8 @@
 """Raises a repair when the blueprint is missing or older than this
 release's, and installs or updates it on Fix.
 
-Only blueprints an automation uses count as outdated: a GitHub import
-lands under the repo owner's name (`danrspencer/`), not this repo's
-folder (`danspencer/`), so an orphaned copy can sit at the other path
+Only blueprints an automation uses count as outdated: HA never removes
+an unused copy, so one left at another path would otherwise nag
 forever."""
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 # A tag, not `main`: a branch raw URL can be served stale after a push.
 BLUEPRINT_URL = (
     "https://github.com/danrspencer/flare/blob/v{version}"
-    "/blueprints/automation/danspencer/flare.yaml"
+    "/blueprints/automation/danrspencer/flare.yaml"
 )
 
 _OUR_NAME = "FLARE"

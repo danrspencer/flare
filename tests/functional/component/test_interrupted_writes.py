@@ -21,9 +21,9 @@ from tests.functional.component.harness import (
     apply_lighting,
     claim_registry,
     label_two_step,
-    scope_id,
+    zone_id,
     set_light,
-    tracking_device_id,
+    zone_device_id,
 )
 
 
@@ -31,7 +31,7 @@ async def _status(hass: HomeAssistant, entity_id: str) -> dict:
     result = await hass.services.async_call(
         DOMAIN,
         "claims_check",
-        {"entities": [entity_id], "tracking_device_id": tracking_device_id(hass)},
+        {"entities": [entity_id], "zone_device_id": zone_device_id(hass)},
         blocking=True,
         return_response=True,
     )
@@ -151,7 +151,7 @@ async def test_a_restart_during_a_two_step_write_does_not_lock_the_light_out(set
                         "brightness": 100,
                         "color_temp_kelvin": 4500,
                         "transition": 2,  # two-step: a 1s sleep between the steps
-                        "tracking_device_id": tracking_device_id(hass),
+                        "zone_device_id": zone_device_id(hass),
                     },
                 }
             ]
@@ -186,11 +186,11 @@ async def test_a_restart_during_a_two_step_write_does_not_lock_the_light_out(set
 async def test_the_claim_is_recorded_before_the_first_light_call_goes_out(setup_integration: HomeAssistant):
     hass = setup_integration
     registry = claim_registry(hass)
-    scope = scope_id(hass)
+    zone = zone_id(hass)
     seen: list[tuple[str | None, str]] = []
 
     async def turn_on(call):
-        seen.append((registry.latest_context_id(scope, "light.a"), call.context.id))
+        seen.append((registry.latest_context_id(zone, "light.a"), call.context.id))
 
     hass.services.async_register("light", "turn_on", turn_on)
     set_light(hass, "light.a", "off", supported_color_modes=CT)
@@ -205,7 +205,7 @@ async def test_a_claim_is_only_promoted_once_a_bulb_has_actually_been_seen_in_it
     """`observed` is replaced only by a state seen live."""
     hass = setup_integration
     registry = claim_registry(hass)
-    scope = scope_id(hass)
+    zone = zone_id(hass)
 
     async def turn_on(call):
         pass
@@ -217,31 +217,31 @@ async def test_a_claim_is_only_promoted_once_a_bulb_has_actually_been_seen_in_it
     # Tick 1 goes out but is never seen on the bulb.
     c1 = Context()
     await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200, context=c1)
-    assert registry.observed_context_id(scope, "light.a") == baseline
-    assert registry.latest_context_id(scope, "light.a") == c1.id
+    assert registry.observed_context_id(zone, "light.a") == baseline
+    assert registry.latest_context_id(zone, "light.a") == c1.id
 
     # Tick 2: tick 1 was never seen, so it must NOT be promoted.
     c2 = Context()
     await apply_lighting(hass, ["light.a"], brightness=150, color_temp_kelvin=3000, context=c2)
-    assert registry.observed_context_id(scope, "light.a") == baseline
-    assert registry.latest_context_id(scope, "light.a") == c2.id
+    assert registry.observed_context_id(zone, "light.a") == baseline
+    assert registry.latest_context_id(zone, "light.a") == c2.id
 
     # Tick 2 lands and is seen; the next write promotes it.
     _land(hass, "light.a", context=c2, brightness=150, kelvin=3000)
     c3 = Context()
     await apply_lighting(hass, ["light.a"], brightness=120, color_temp_kelvin=2700, context=c3)
-    assert registry.observed_context_id(scope, "light.a") == c2.id
-    assert registry.latest_context_id(scope, "light.a") == c3.id
+    assert registry.observed_context_id(zone, "light.a") == c2.id
+    assert registry.latest_context_id(zone, "light.a") == c3.id
 
 
 async def test_turn_off_is_recorded_before_the_light_call_goes_out(setup_integration: HomeAssistant):
     hass = setup_integration
     registry = claim_registry(hass)
-    scope = scope_id(hass)
+    zone = zone_id(hass)
     seen: list[tuple[str | None, str]] = []
 
     async def turn_off(call):
-        seen.append((registry.latest_context_id(scope, "light.a"), call.context.id))
+        seen.append((registry.latest_context_id(zone, "light.a"), call.context.id))
 
     hass.services.async_register("light", "turn_off", turn_off)
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=180, color_temp_kelvin=3200)
@@ -249,7 +249,7 @@ async def test_turn_off_is_recorded_before_the_light_call_goes_out(setup_integra
     await hass.services.async_call(
         DOMAIN,
         "turn_off",
-        {"entities": ["light.a"], "tracking_device_id": tracking_device_id(hass)},
+        {"entities": ["light.a"], "zone_device_id": zone_device_id(hass)},
         blocking=True,
         context=Context(),
     )
@@ -282,7 +282,7 @@ async def test_a_turn_off_that_fails_leaves_the_light_matching_its_last_confirme
         await hass.services.async_call(
             DOMAIN,
             "turn_off",
-            {"entities": ["light.a"], "tracking_device_id": tracking_device_id(hass)},
+            {"entities": ["light.a"], "zone_device_id": zone_device_id(hass)},
             blocking=True,
             context=Context(),
         )

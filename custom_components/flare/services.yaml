@@ -153,7 +153,7 @@ compute_lighting_groups:
       default: false
       selector:
         boolean:
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE
@@ -167,7 +167,7 @@ compute_lighting_groups:
               model: Zone
 
 apply_lighting:
-  name: Apply adaptive lighting
+  name: Apply lighting
   description: >-
     Given a target brightness/colour-temperature (and optionally RGB
     colour), actually turns entities on/off via light.turn_on/
@@ -332,7 +332,7 @@ apply_lighting:
       default: false
       selector:
         boolean:
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE
@@ -378,7 +378,7 @@ turn_off:
           min: 0
           max: 300
           unit_of_measurement: s
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE
@@ -610,7 +610,7 @@ compute_scene_coverage:
     Given a candidate scene and the entities you want a "default"
     behaviour applied to, works out which of those entities the scene
     actually covers - hand covered ones to the scene and apply your
-    default (adaptive lighting, or anything else) only to what's left.
+    default (FLARE's curve, or anything else) only to what's left.
     A scene only counts if it exists and everything it covers is within
     scope_entities; a scene reaching outside that scope, or one that
     doesn't exist (a typo, a renamed scene), is treated the same as no
@@ -653,7 +653,7 @@ compute_scene_coverage:
 claims_check:
   name: Check claims
   description: >-
-    For each entity, reports whether adaptive lighting is currently in
+    For each entity, reports whether FLARE is currently in
     control of it, and whether a write should be blocked - the exact
     override-protection mechanism apply_lighting/compute_lighting_groups
     use internally, exposed standalone so any automation can ask "should
@@ -661,10 +661,10 @@ claims_check:
     logic at all. Read-only - call claims_record before you write the
     entity, so a later check recognises that write.
 
-    Checks against tracking_device_id's own claims. This service exists
-    only to answer questions about tracking, so unlike apply_lighting
+    Checks against zone_device_id's own claims. This service exists
+    only to answer questions about claims, so unlike apply_lighting
     there's nothing useful to do without one - it's required. The
-    response's "scope" field simply echoes tracking_device_id's own title
+    response's "zone" field simply echoes zone_device_id's own title
     back.
   fields:
     entities:
@@ -674,7 +674,7 @@ claims_check:
       selector:
         entity:
           multiple: true
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE
@@ -731,7 +731,7 @@ claims_record:
     somebody else's. A thin wrapper around the same bookkeeping
     apply_lighting uses internally.
 
-    This service exists only to write tracking claims, so unlike
+    This service exists only to write claims, so unlike
     apply_lighting there's nothing useful to do without a zone - it's
     required.
   fields:
@@ -742,7 +742,7 @@ claims_record:
       selector:
         entity:
           multiple: true
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE
@@ -770,7 +770,7 @@ claims_clear:
   name: Clear claims
   description: >-
     Discards entities' tracked observed/latest claims within
-    tracking_device_id - the manual escape hatch for an entity stuck
+    zone_device_id - the manual escape hatch for an entity stuck
     reporting as overridden with no other way back (a claim can go
     permanently stale for an entity that's excluded from every future
     write once overridden, since nothing ever gets the chance to record
@@ -778,7 +778,7 @@ claims_clear:
     section). The next write to a cleared entity, from anyone, is
     treated exactly like a brand-new entity's first write.
 
-    This service exists only to discard tracking claims, so unlike
+    This service exists only to discard claims, so unlike
     apply_lighting there's nothing useful to do without a zone - it's
     required.
   fields:
@@ -789,7 +789,7 @@ claims_clear:
       selector:
         entity:
           multiple: true
-    tracking_device_id:
+    zone_device_id:
       name: Zone
       description: >-
         The FLARE zone (Settings -> Devices & Services -> FLARE

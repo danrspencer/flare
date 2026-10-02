@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from custom_components.flare.tracking.ticker import next_tick, slot_offsets
+from custom_components.flare.zone.ticker import next_tick, slot_offsets
 
 
 def _at(hour, minute, second=0):

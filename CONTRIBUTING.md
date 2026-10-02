@@ -21,15 +21,15 @@ custom_components/flare/
         curve.py         brightness/colour-temperature schedule, Kelvin -> RGB
         coordinator.py   the schedule computation behind the schedule
                          entities - one per sensor added via "Add Sensor"
-    tracking/      zones: who owns a light, and when each zone ticks
+    zone/          zones: who owns a light, and when each zone ticks
         override_protection.py
                          classify(): off / untracked / controlled / overridden
-        write_tracking.py
+        claims.py
                          the claims: what context.id and target this
                          integration last wrote each light with. They live
                          on each zone's entity and are restored across a
                          restart
-        scope.py         zones (one per room, usually; "scopes" in code)
+        instance.py      the zone device itself (one per room, usually)
         ticker.py        fires each zone's Tick in turn, a gap apart
     services/      the services, and the planning behind them
         handlers.py      the eight services, registered against real HA state
@@ -55,11 +55,11 @@ custom_components/flare/
 
 The three folders are grouped by concept rather than by how something is exposed, because the
 schedule and the claims are each exposed through both entities and services - so neither could
-live with either. Imports run one way: `schedule/` and `tracking/` import nothing but `const.py`,
+live with either. Imports run one way: `schedule/` and `zone/` import nothing but `const.py`,
 `services/` may use both, and everything at the package root may use all three.
-`tests/test_layering.py` enforces it.
+`tests/checks/test_layering.py` enforces it.
 
-`schedule/`, `tracking/` and most of `services/` are never handed a `hass` - testable with plain
+`schedule/`, `zone/` and most of `services/` are never handed a `hass` - testable with plain
 values or fakes. (`curve.py` and `override_protection.py` each import one colour helper from
 `homeassistant.util.color`.) `services/handlers.py`, the entity platforms and the rest of the
 package root are the Home Assistant side: they take `hass` or an entry, and read or write real state.
@@ -68,26 +68,15 @@ hacs.json
     HACS repository metadata for the integration.
 
 brand/
-    generate_icon.py  renders brand/icon.svg from the real curve module
-                      (same pattern as the dashboard preview generators):
-                      the icon is the day's actual brightness/colour
-                      curve as bars. Design/authoring tooling only - the
-                      PNGs HA actually reads live at
-                      custom_components/flare/brand/
-                      (rendered from icon.svg, not scripted yet)
-    icon.svg          the icon's source of truth, regenerate with
-                      generate_icon.py after changing the curve defaults
+    generate_icon.py  draws the icon from the real curve module (the
+                      day's brightness/colour curve as bars) and writes
+                      icon.svg plus the PNGs HA serves from
+                      custom_components/flare/brand/. Rerun it after
+                      changing the curve defaults
 
-blueprints/automation/danspencer/flare.yaml
+blueprints/automation/danrspencer/flare.yaml
     The automation blueprint: triggers, conditions, target resolution,
     and the action sequence (which service to call, with what target).
-
-dashboard/
-    house-settings-card.yaml   the curve card alone, to drop into a view.
-                               The fuller section is built at runtime by
-                               the view strategy in
-                               custom_components/flare/www/ - see
-                               flare-section.js, not committed as YAML.
 
 tests/
     unit/        no running Home Assistant: the pure modules, the
@@ -112,8 +101,7 @@ docs/
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call
 a service, so anything a condition depends on has to remain template-based. Multiplier bucketing, tolerance
 checks, and transition routing are implemented in the integration and unit tested. See `CLAUDE.md` for further
-implementation notes, including the (fairly involved) history of getting a custom integration to load correctly
-at all.
+implementation notes.
 
 ## Previewing the dashboard card
 
@@ -199,7 +187,7 @@ Three layers under `tests/`:
   static imports and the package layering.
 - `functional/` - a real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `component/` covers the integration (services, claims, scopes, schedules, config flows, repairs);
+  `component/` covers the integration (services, claims, zones, schedules, config flows, repairs);
   `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
   `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
   faked, and asserts on the state the bulbs end up in.

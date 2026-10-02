@@ -1,6 +1,6 @@
 """Event entities, one platform for both entries.
 
-Zones: a "Tick", fired by the zone scheduler (see tracking/ticker.py).
+Zones: a "Tick", fired by the zone scheduler (see zone/ticker.py).
 Schedules: a "Phase", fired with the phase's name whenever it changes.
 
 The blueprint triggers on both through the device it was given, so they
@@ -15,10 +15,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_TRACKING, EVENT_TYPE_TICK, PHASES
+from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_TYPE_TICK, PHASES
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .tracking.scope import StateInstance, state_instances
-from .tracking.ticker import TickScheduler
+from .zone.instance import ZoneInstance, zone_instances
+from .zone.ticker import TickScheduler
 
 
 def ticks_key(entry: ConfigEntry) -> str:
@@ -27,14 +27,14 @@ def ticks_key(entry: ConfigEntry) -> str:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_TRACKING:
+    if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_ZONES:
         for instance in schedule_instances(entry):
             coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
             async_add_entities([_SchedulePhase(coordinator, instance)], config_subentry_id=instance.subentry_id)
         return
 
     scheduler: TickScheduler = hass.data[DOMAIN][ticks_key(entry)]
-    for instance in state_instances(entry):
+    for instance in zone_instances(entry):
         async_add_entities([_ZoneTick(scheduler, instance)], config_subentry_id=instance.subentry_id)
 
 
@@ -45,7 +45,7 @@ class _ZoneTick(EventEntity):
     _attr_event_types = [EVENT_TYPE_TICK]
     _attr_should_poll = False
 
-    def __init__(self, scheduler: TickScheduler, instance: StateInstance) -> None:
+    def __init__(self, scheduler: TickScheduler, instance: ZoneInstance) -> None:
         self._scheduler = scheduler
         self._instance = instance
         self._attr_unique_id = f"{instance.subentry_id}_tick"

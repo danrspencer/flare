@@ -5,7 +5,7 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Optional
 
-from ..tracking.override_protection import _color_temp_matches, classify, is_blocked
+from ..zone.override_protection import _color_temp_matches, classify, is_blocked
 from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
@@ -26,7 +26,7 @@ class EntityLookup:
     # (None, None) for an entity with no device.
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
     context_id: Callable[[str], Optional[str]]
-    # The two claims - see write_tracking.py's module docstring.
+    # The two claims - see claims.py's module docstring.
     observed_context_id: Callable[[str], Optional[str]]
     latest_context_id: Callable[[str], Optional[str]]
     # What each claim asked for, or None if it isn't one of our writes.

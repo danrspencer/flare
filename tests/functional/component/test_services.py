@@ -1,4 +1,4 @@
-"""The services' contracts through a real HA: schemas, responses, scope
+"""The services' contracts through a real HA: schemas, responses, zone
 validation and registration. The planning logic itself is unit tested."""
 
 from __future__ import annotations
@@ -149,15 +149,15 @@ async def test_compute_scene_coverage_reports_covered_and_uncovered_entities(set
     assert result["uncovered_entities"] == ["light.b"]
 
 
-async def test_tracking_device_id_rejects_a_nonexistent_device(setup_integration: HomeAssistant):
+async def test_zone_device_id_rejects_a_nonexistent_device(setup_integration: HomeAssistant):
     """A bad device_id is a mistake, not "untracked"."""
     hass = setup_integration
     with pytest.raises(ServiceValidationError):
         await claims_check(hass, ["light.a"], device="not_a_real_device_id")
 
 
-async def test_tracking_device_id_rejects_a_device_that_isnt_a_tracking_scope(setup_integration: HomeAssistant):
-    """Nor any device that isn't a tracking scope."""
+async def test_zone_device_id_rejects_a_device_that_isnt_a_zone(setup_integration: HomeAssistant):
+    """Nor any device that isn't a zone."""
     hass = setup_integration
     entry = MockConfigEntry(domain="not_flare")
     entry.add_to_hass(hass)
