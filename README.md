@@ -1,0 +1,84 @@
+<img src="https://raw.githubusercontent.com/danrspencer/flare/main/custom_components/flare/brand/icon.png" alt="" width="88">
+
+# FLARE
+
+**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine.
+
+Your lights, matched to the shape of your day — bright and cool to help you wake up, gradually warming through
+the afternoon, dimming to a relaxed glow as evening sets in, and low and warm once the house is asleep. Rooms
+turn their lights on and off as people come and go, manual changes are left alone until you're done with them,
+and anything a scene already has covered is left to the scene.
+
+[![The FLARE Lighting dashboard view: the day's curve, a phase override, the schedule times, and the curve and transition values for each phase](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/dashboard-section.png)](https://danrspencer.github.io/flare/dashboard/)
+
+## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
+
+The quickest way to see what this actually does is the
+**[interactive curve playground](https://danrspencer.github.io/flare/playground/)** — it runs the
+real dashboard card, and you can drag the schedule and curve settings around and watch it redraw.
+
+- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, and the dashboard
+- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
+- **[Reference](https://danrspencer.github.io/flare/reference/)** — every service and entity, scene handoff, and building without the blueprint
+- **[Blueprint](https://danrspencer.github.io/flare/blueprint/)** — every input, feature by feature
+- **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
+
+## Why four phases, not a continuous curve
+
+Adaptive lighting usually computes one continuous curve from the sun's position — brightness and colour
+temperature interpolated smoothly between sunrise and sunset. That follows the daylight closely, but the
+daylight isn't your schedule, and the two drift furthest apart in the months you spend most of the day indoors.
+FLARE works from your schedule instead, using four named phases, each with a job of its own:
+
+- **Morning** is there to help you wake up, so it starts at a fixed time before you'd normally be up rather than
+  moving with sunrise — the same wake-up light in December as in June. Bright, cool-white light in the morning
+  wakes you up better, and there is [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back that up.
+  Mostly, though, it's that very cool light is just enough eyeball caffeine to get me as far as the coffee
+  machine.
+- **Day** is the long middle stretch, gradually warming as it runs toward evening so the eventual transition
+  doesn't feel abrupt.
+- **Evening** is when relaxed, warm lighting takes over — the one phase that *does* track the sun (sunset), so
+  your indoor lighting shifts in step with what's actually happening outside. It's clamped between an earliest
+  and latest bound, though, so a 4pm winter sunset doesn't start the evening while you're still at work, and a
+  10pm midsummer sunset doesn't mean evening never really arrives.
+- **Night** isn't tied to any solar event at all — it's just what the house should look like once everyone's
+  asleep: dim and warm, the lighting you want on at 3am without waking yourself up further.
+
+## The two pieces
+
+Installed separately. The integration stands alone; the blueprint does not.
+
+**FLARE** is a Home Assistant integration. It exposes the phase schedule above, plus
+per-light grouping (reachability, tolerance, override protection, two-step transitions, optional RGB colour) and
+scene-coverage gap filling, as plain Home Assistant services — `compute_lighting_groups`, `compute_curve` and
+`compute_scene_coverage` are pure planners that hand back data; `apply_lighting` wraps the same grouping logic
+and actually turns lights on and off. All usable from your own automations with no blueprint required.
+
+**The blueprint** is a ready-made room automation built on those services. It depends on them entirely and
+does nothing without them — it's a worked example rather than a separate product, wiring the services up the
+way most rooms want them so you can get going without writing anything. Brightness and colour temperature
+follow the phase schedule, motion controls on/off, scenes can take over partially or entirely, manual changes
+are respected, and lights that don't reach their target get corrected automatically. And because it's a
+blueprint it isn't a black box: take it, change it, or rip it apart to build something different on the same
+services.
+
+Every schedule setting is an entity too, and so is everything FLARE is doing, so if a default doesn't suit you,
+you change that piece with ordinary Home Assistant tools rather than wait for an option.
+
+## Acknowledgements
+
+| | |
+|---|---|
+| [Home Assistant](https://www.home-assistant.io) | The whole platform. FLARE has no runtime dependencies beyond it, and uses its colour utilities for the Kelvin→RGB and mired conversions. |
+| [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) | Runs the integration tests against a real Home Assistant. |
+| [just-the-docs](https://just-the-docs.com) | The documentation site's Jekyll theme. |
+| [He et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36058557/) | The morning-light research cited above. |
+
+## AI disclosure
+
+Written with [Claude Code](https://claude.com/claude-code). Commits carry a
+`Co-Authored-By` trailer where Claude wrote them.
+
+## License
+
+[MIT](LICENSE)

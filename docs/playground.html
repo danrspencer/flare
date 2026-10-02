@@ -1,0 +1,115 @@
+---
+title: Curve playground
+nav_order: 3
+permalink: /playground/
+---
+
+<h1>Curve playground</h1>
+
+<p>
+  This is the integration's <em>real</em> dashboard card — the same
+  <code>flare-curve-card.js</code> that ships inside the
+  integration and renders on your own dashboard, not a picture of it.
+  Move any slider and the schedule is recomputed and handed back to the
+  card exactly the way a live Home Assistant would.
+  The four phases are configured separately because each exists for its own
+  reason — <a href="{{ '/#four-phases-not-one-curve' | relative_url }}">four phases,
+  not one curve</a> explains why, and the
+  <a href="{{ '/blueprint/' | relative_url }}">blueprint reference</a> covers every
+  input.
+</p>
+
+<div class="alp-card-host" id="alp-card-host"></div>
+
+<p class="alp-note">
+  Each bar is one five-minute slice of the day: its <strong>height</strong> is
+  brightness and its <strong>colour</strong> is that moment's colour temperature,
+  converted to RGB the same way the lights are told to render it. The vertical
+  line is "now" — drag <strong>Time of day</strong> to move it.
+</p>
+
+<div class="alp-actions">
+  <button type="button" class="alp-btn alp-btn--primary" data-preset="default">Defaults</button>
+  <button type="button" class="alp-btn" data-preset="winter">Winter sunset</button>
+  <button type="button" class="alp-btn" data-preset="midsummer">Midsummer sunset</button>
+  <button type="button" class="alp-btn" data-preset="late-riser">Late riser</button>
+  <button type="button" class="alp-btn" data-preset="very-warm-night">Very warm night</button>
+  <button type="button" class="alp-btn" id="alp-share">Copy link to these settings</button>
+  <button type="button" class="alp-btn" id="alp-copy-schedule">Copy schedule</button>
+</div>
+
+<p class="alp-status" id="alp-status"></p>
+
+<div class="alp-panel">
+  <h3 id="time-of-day">Time of day</h3>
+  <p class="alp-panel-hint">
+    Moves the "now" marker. Nothing about the schedule changes — this is just
+    where you're standing in the day.
+  </p>
+  <div class="alp-control">
+    <label for="alp-now">Time of day</label>
+    <output for="alp-now" id="alp-now-out"></output>
+    <input type="range" id="alp-now" min="0" max="1439" step="5" />
+  </div>
+</div>
+
+<div class="alp-panel">
+  <h3 id="schedule">Schedule</h3>
+  <p class="alp-panel-hint">
+    When each phase begins. Every one of these is a <code>time</code> entity on the
+    schedule you add in Home Assistant — except sunset, which comes from
+    <code>sun.sun</code>.
+  </p>
+  <div class="alp-grid" id="alp-times"></div>
+  <p class="alp-derived" id="alp-derived"></p>
+</div>
+
+<div class="alp-panel">
+  <h3 id="brightness">Brightness</h3>
+  <p class="alp-panel-hint">
+    Each phase's brightness. Evening's is a starting point rather than a hold: it
+    fades toward Night's value over the run-up to Night Start.
+  </p>
+  <div class="alp-grid" id="alp-brightness"></div>
+</div>
+
+<div class="alp-panel">
+  <h3 id="colour-temperature">Colour temperature</h3>
+  <p class="alp-panel-hint">
+    Each phase holds its own colour and eases to the next one over that
+    phase's transition, below.
+  </p>
+  <div class="alp-grid" id="alp-kelvin"></div>
+</div>
+
+<div class="alp-panel">
+  <h3 id="transitions">Transitions</h3>
+  <p class="alp-panel-hint">
+    How long <em>before</em> each phase ends to start easing toward the next
+    one — so the new phase's values have arrived exactly as it begins. Set one
+    to zero for a deliberate, visible change at that boundary. Anything longer
+    than the phase it runs in simply covers the whole phase, which is why Day's
+    colour transition defaults to a full day: it slides from Morning's colour to
+    Evening's across the entire afternoon.
+  </p>
+  <div class="alp-grid" id="alp-transitions"></div>
+</div>
+
+<div class="alp-panel">
+  <h3 id="load-a-schedule">Load a schedule</h3>
+  <p class="alp-panel-hint">
+    Paste a schedule copied from Home Assistant (its <strong>Copy</strong> button on
+    the schedule dashboard, or the schedule's <strong>Reconfigure</strong>) to see its
+    curve here. <strong>Copy schedule</strong> above goes the other way: paste the
+    result into Home Assistant to use these settings. Anything a schedule leaves out
+    keeps its value here.
+  </p>
+  <textarea class="alp-yaml" id="alp-yaml" spellcheck="false" placeholder="morning:&#10;  time: &quot;06:30&quot;&#10;  brightness: 255"></textarea>
+  <div class="alp-actions">
+    <button type="button" class="alp-btn alp-btn--primary" id="alp-load-schedule">Load</button>
+  </div>
+  <p class="alp-status" id="alp-load-status"></p>
+</div>
+
+<link rel="stylesheet" href="{{ '/assets/css/playground.css' | relative_url }}" />
+<script type="module" src="{{ '/assets/js/playground.js' | relative_url }}"></script>

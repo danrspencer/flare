@@ -1,0 +1,117 @@
+---
+title: Home
+nav_order: 1
+---
+
+# FLARE
+{: .no_toc }
+
+**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — phase-based
+circadian lighting for Home Assistant, with scene handoff and override protection
+built in.
+{: .fs-6 .fw-300 }
+
+[Quickstart (5 mins)]({{ site.baseurl }}/installation/){: .btn .btn-primary .mr-2 }
+[Curve playground]({{ site.baseurl }}/playground/){: .btn .mr-2 }
+[GitHub](https://github.com/danrspencer/flare){: .btn }
+
+---
+
+## What it does
+
+FLARE runs your lighting through the day so you don't have to think about it, and stops
+the moment you want something else.
+
+- **It keeps every light where it should be** — not just at the moment a phase changes.
+  It re-checks as it goes, and fixes anything that has drifted or never arrived.
+- **It works with lights on a physical wall switch.** Cut the power to a room and
+  restore it, and FLARE catches each bulb as it reappears, putting it straight onto the
+  current phase instead of leaving it at whatever it powered up as.
+- **It bends to fit the room.** A brightness of your own per light, a scene per phase,
+  and templates for either when a fixed value isn't enough.
+- **It gets out of your way.** Change a bulb yourself — app, wall switch, another
+  automation — and FLARE stops driving that one until the room next goes dark.
+
+---
+
+## Four phases, not one curve
+
+Adaptive lighting usually maps brightness and colour onto the sun's position. That tracks
+the daylight closely, but the daylight isn't your schedule — and the two drift furthest
+apart in the months you spend most of the day indoors.
+
+FLARE works from your schedule instead, dividing the day into four named phases, each with
+its own targets:
+
+| Phase | What it's for |
+|---|---|
+| **Morning** | Bright and cold — enough eyeball caffeine to get you as far as the coffee machine, with [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back it up. |
+| **Day** | Bright, easing steadily from Morning's colour toward Evening's across the whole afternoon. |
+| **Evening** | Dimming and warming, anchored to your actual sunset. |
+| **Night** | Warm and low, flat until morning. |
+
+Each boundary has its own transition: how long beforehand to start easing into the next
+phase, so the new values land exactly as it begins. Set one to zero for a visible step
+instead.
+
+Morning, Day and Night are wall-clock times. Only Evening tracks the sun, clamped between
+an earliest and a latest time so it moves with the season without drifting into the small
+hours.
+
+{: .tip }
+> [Play with the curve]({{ site.baseurl }}/playground/) — every boundary, value and
+> transition is a slider, and the chart is the same code the dashboard card runs.
+
+---
+
+## Made of ordinary Home Assistant parts
+
+Nothing FLARE does happens out of sight. Every piece is something Home Assistant already
+understands, so when the default isn't what you want, you change that piece rather than
+work around it:
+
+- **Every schedule setting is an entity.** Phase start times, brightness, colour
+  temperature and transitions are `time` and `number` entities on the schedule's device.
+  Set them from a dashboard, keep them in history, or change them from an automation.
+- **What FLARE is doing is an entity too.** The schedule sensor carries the current phase,
+  brightness and colour; each schedule fires a Phase event when the phase changes; each
+  zone has a Tick, counts of the lights it's driving and the ones someone else has taken,
+  and a Clear button.
+- **Everything it does is an action** you can call yourself — set lights to the curve,
+  turn them off, check or clear who owns a light, copy a schedule.
+- **The blueprint is just an automation** built from those parts. Take it, change it, or
+  write your own.
+
+A few things that need no change to FLARE at all:
+
+- **A weekend lie-in**, by an automation that moves Morning later on Friday and Saturday
+  evenings.
+- **A holiday schedule**, switched on and off with a toggle.
+- **A room lit by the front door opening**, not just by occupancy.
+- **Blinds that close when Night starts.**
+
+[See the examples →]({{ site.baseurl }}/examples/){: .btn .btn-outline .mr-2 }
+[See every entity and action →]({{ site.baseurl }}/reference/integration/){: .btn .btn-outline }
+
+---
+
+## Two ways in
+
+### Standard setup — plug and play
+{: .no_toc }
+
+Install via HACS, add the integration, import the blueprint, point it at a room. Everything
+below is handled for you: reachability, colour-temperature tolerances, bulbs that can't take
+brightness and colour in one command, occupancy timing, and leaving a light alone once
+somebody else has taken it.
+
+[Start here →]({{ site.baseurl }}/installation/){: .btn .btn-outline }
+
+### Your own automations
+{: .no_toc }
+
+The blueprint is a worked example, not the product. Every piece of it is a plain Home
+Assistant action you can call yourself from YAML, scripts, Node-RED or AppDaemon — and the
+override-protection machinery is available standalone, whether or not you use the rest.
+
+[Read the reference →]({{ site.baseurl }}/reference/){: .btn .btn-outline }

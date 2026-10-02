@@ -1,0 +1,67 @@
+---
+title: Scene handoff
+parent: Reference
+nav_order: 2
+permalink: /reference/scenes/
+redirect_from: /advanced/scenes/
+render_with_liquid: false
+# Liquid is off for this page: it contains Home Assistant Jinja, which
+# shares Liquid's {{ }} delimiters. With Liquid on, those examples render
+# as empty strings and nothing errors - see tests/checks/test_docs_site.py.
+---
+
+# Scene handoff
+{: .no_toc }
+
+FLARE is built to share a room. A scene, a wall switch, or another automation can take a
+light at any time — this is how FLARE notices, steps back, and picks the light up again
+afterwards.
+
+<details open markdown="block">
+  <summary>On this page</summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
+## How a handoff works
+
+When the blueprint hands a room to a scene it activates the scene, then calls
+`flare.claims_clear` for the lights that scene covers. The clear matters: without it FLARE
+would keep its old claim, see the scene's values, and classify them as an override.
+
+Lights the scene doesn't cover keep getting the adaptive values, so a scene naming half a
+room leaves the other half to FLARE.
+
+## `flare.compute_scene_coverage`
+
+Given a candidate scene and the entities you want a default behaviour applied to, works out which of those
+entities the scene actually covers — hand covered ones to the scene, apply your default (adaptive lighting or
+anything else) to whatever's left. A scene only counts if it exists and everything it covers is within
+`scope_entities`; a scene reaching outside that scope, or one that doesn't exist, is treated the same as no scene
+at all. Nothing here is specific to adaptive lighting, or even to lighting.
+
+`scene_entity_id` is required - if you don't have a candidate scene this tick, skip calling the service
+entirely rather than passing nothing. You already know the answer without asking: every target entity is
+uncovered.
+
+```yaml
+action: flare.compute_scene_coverage
+data:
+  scene_entity_id: scene.kitchen_night
+  scope_entities: [light.kitchen_1, light.kitchen_2, light.kitchen_strip_effect]
+  target_entities: [light.kitchen_1, light.kitchen_2]
+response_variable: coverage
+# coverage.scene_active / scene_valid / covered_entities / uncovered_entities
+```
+
+## When someone takes a light by hand
+
+Nothing special happens. The light stops matching FLARE's recorded claim, so it
+classifies as `overridden` and is excluded from the next tick — see
+[override protection](../integration/#override-protection).
+
+Switching it **off** by hand counts too: that's a choice like any other, so FLARE leaves it
+off rather than relighting it on the next tick. It comes back under FLARE's control once
+every light in its zone is off, when the device drops and reconnects, or when
+you press that zone's **Clear** button.
