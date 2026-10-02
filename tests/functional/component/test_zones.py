@@ -2,12 +2,12 @@
 counts, the Clear button, the override event and area placement. A light's
 zone is whichever one a caller names, never resolved from its area."""
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -321,20 +321,35 @@ async def test_each_entry_type_owns_only_its_own_sensors(hass: HomeAssistant):
     assert not any(hasattr(e, "claims") for e in added)
 
 
-class TestALightInTwoZones:
-    """Each zone reads the other's writes as overrides, so it's surfaced."""
+def _notifications(hass: HomeAssistant) -> dict:
+    return persistent_notification._async_get_or_create_notifications(hass)
 
-    async def test_writing_a_light_another_zone_holds_raises_a_repair(self, hass: HomeAssistant):
+
+class TestALightInTwoZones:
+    """Each zone reads the other's writes as overrides, so it's surfaced as a
+    warning notification."""
+
+    async def test_writing_a_light_another_zone_holds_warns(self, hass: HomeAssistant):
         entry, registry, _ = await _setup(hass, _zone("Kitchen"), _zone("Hall"))
         _light(hass, "light.shared")
         await _record(registry, _zone_id(entry, "Kitchen"), "light.shared", "ctx-k", ASKED)
 
         await _record(registry, _zone_id(entry, "Hall"), "light.shared", "ctx-h", ASKED)
 
-        issue = ir.async_get(hass).async_get_issue(DOMAIN, "light_in_two_zones_light.shared")
-        assert issue is not None
-        assert issue.translation_placeholders["zones"] == "Hall and Kitchen"
-        assert issue.is_persistent is False
+        notification = _notifications(hass)["flare_light_in_two_zones_light.shared"]
+        assert "Hall and Kitchen zones" in notification["message"]
+
+    async def test_a_dismissed_warning_stays_dismissed(self, hass: HomeAssistant):
+        """The conflict re-records on every write; the warning comes once."""
+        entry, registry, _ = await _setup(hass, _zone("Kitchen"), _zone("Hall"))
+        _light(hass, "light.shared")
+        await _record(registry, _zone_id(entry, "Kitchen"), "light.shared", "ctx-k", ASKED)
+        await _record(registry, _zone_id(entry, "Hall"), "light.shared", "ctx-h", ASKED)
+        persistent_notification.async_dismiss(hass, "flare_light_in_two_zones_light.shared")
+
+        await _record(registry, _zone_id(entry, "Kitchen"), "light.shared", "ctx-k2", ASKED)
+
+        assert _notifications(hass) == {}
 
     async def test_a_light_in_one_zone_raises_nothing(self, hass: HomeAssistant):
         entry, registry, _ = await _setup(hass, _zone("Kitchen"), _zone("Hall"))
@@ -345,4 +360,4 @@ class TestALightInTwoZones:
         await _record(registry, _zone_id(entry, "Kitchen"), "light.k", "ctx-2", ASKED)
         await _record(registry, _zone_id(entry, "Hall"), "light.h", "ctx-3", ASKED)
 
-        assert [i for (domain, i) in ir.async_get(hass).issues if domain == DOMAIN] == []
+        assert _notifications(hass) == {}

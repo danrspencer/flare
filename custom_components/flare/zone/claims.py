@@ -40,11 +40,11 @@ from collections.abc import Iterable
 from datetime import timedelta
 from typing import Optional, Protocol
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
@@ -60,10 +60,10 @@ PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 # Fired whenever any zone's claims change, so the count sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 
-# Raised, per light, when a write lands in one zone while another holds a
-# claim on the same light. Each zone then reads the other's writes as
-# overrides, so the light quietly stops following either.
-ISSUE_LIGHT_IN_TWO_ZONES = "light_in_two_zones"
+# A notification, per light, when a write lands in one zone while another
+# holds a claim on the same light. Each zone then reads the other's writes
+# as overrides, so the light quietly stops following either.
+NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
 
 
 class ClaimStore(Protocol):
@@ -84,6 +84,9 @@ class ClaimRegistry:
         self._hass = hass
         self._entry = entry
         self._stores: dict[str, ClaimStore] = {}
+        # Lights already warned about this run, so a dismissed warning stays
+        # dismissed rather than returning on the next write.
+        self._warned: set[str] = set()
 
     @callback
     def register(self, subentry_id: str, store: ClaimStore) -> None:
@@ -249,27 +252,27 @@ class ClaimRegistry:
         for entity_id in entity_ids:
             others = [sid for sid, other in self._stores.items() if sid != subentry_id and entity_id in other.claims]
             if others:
-                self._raise_light_in_two_zones(entity_id, [subentry_id, *others])
+                self._warn_light_in_two_zones(entity_id, [subentry_id, *others])
 
     @callback
-    def _raise_light_in_two_zones(self, entity_id: str, subentry_ids: list[str]) -> None:
-        """Not persistent: it lasts until a restart and comes back if the
-        conflict does, so it can't outlive a fixed setup."""
+    def _warn_light_in_two_zones(self, entity_id: str, subentry_ids: list[str]) -> None:
+        """Once per light per run. Notifications don't survive a restart, so
+        a conflict that's been fixed is never warned about again."""
+        if entity_id in self._warned:
+            return
+        self._warned.add(entity_id)
         state = self._hass.states.get(entity_id)
+        light = state.name if state is not None else entity_id
         zones = sorted(self.zone_title(sid) or sid for sid in subentry_ids)
-        ir.async_create_issue(
+        persistent_notification.async_create(
             self._hass,
-            DOMAIN,
-            f"{ISSUE_LIGHT_IN_TWO_ZONES}_{entity_id}",
-            is_fixable=False,
-            is_persistent=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key=ISSUE_LIGHT_IN_TWO_ZONES,
-            translation_placeholders={
-                "light": state.name if state is not None else entity_id,
-                "entity_id": entity_id,
-                "zones": ", ".join(zones[:-1]) + " and " + zones[-1],
-            },
+            f"**{light}** (`{entity_id}`) is being driven in the "
+            f"{', '.join(zones[:-1])} and {zones[-1]} zones. Each zone treats the other's "
+            "changes as someone overriding the light, so it can stop following its schedule.\n\n"
+            "Give each light one zone. If two blueprint automations both include it, pick the "
+            "same Zone in both, or take the light out of one of them.",
+            title=f"FLARE: {light} is in more than one zone",
+            notification_id=f"{NOTIFICATION_LIGHT_IN_TWO_ZONES}_{entity_id}",
         )
 
     async def async_prune_stale(self) -> None:

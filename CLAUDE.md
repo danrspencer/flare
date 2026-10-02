@@ -598,15 +598,17 @@ rather than assumed:
   `tests/functional/component/test_interrupted_writes.py`.
 - **`flare.claims_record` is documented as call-BEFORE-your-write** for
   the same reason, for anyone composing their own automation.
-- **A light claimed in two zones raises a repair** (`light_in_two_zones_<entity_id>`,
-  from `ClaimRegistry.async_record`). Recording into one zone never
+- **A light claimed in two zones raises a persistent notification**
+  (`flare_light_in_two_zones_<entity_id>`, from `ClaimRegistry.async_record`) -
+  a notification, not a repair, at the user's direction. Recording into one zone never
   touches another's claim, so both keep one: each reads the other's
   writes as overrides, and the listener only ever consults the first
   zone it finds. Detected at write time rather than by reading
   automation configs, so it covers service callers too and needs no
-  copy of the blueprint's target expansion. Deliberately not
-  `is_persistent`: it lasts until a restart and is re-raised while the
-  conflict persists, so a fixed setup never leaves a stale repair.
+  copy of the blueprint's target expansion. It's raised once per light
+  per run (`_warned`), since the conflict re-records on every write and a
+  dismissed warning shouldn't reappear a minute later; notifications don't
+  survive a restart, so a fixed setup never leaves a stale one.
 - **A zone releases every claim once none of its lights report `on`**
   (`ClaimRegistry._release_if_dark`). Anything not `on` counts as dark,
   unavailable included - requiring an explicit `off` would let one
