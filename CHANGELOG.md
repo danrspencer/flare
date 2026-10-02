@@ -45,9 +45,10 @@ CI — see `.github/workflows/release.yml`.
 - **Floors and labels in Lights & Occupancy control lights.** They used to drive
   occupancy only. A floor covers every area on it; a label covers the lights, devices
   and areas carrying it.
-- **A repair when a light is in two zones.** Two zones driving the same light each read
+- **A warning when a light is in two zones.** Two zones driving the same light each read
   the other's changes as an override, so the light stops following either. FLARE now
-  raises a repair naming the light and the zones when it happens.
+  shows a notification naming the light and the zones when it happens, once per light
+  until Home Assistant restarts.
 - **Each schedule has a Phase event** (`event.<name>_flare_phase`), fired with the phase
   name whenever the phase changes, a manual override included.
 - **Rooms take turns updating.** Every zone now has a **Tick**
