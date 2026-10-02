@@ -1,45 +1,19 @@
 #!/usr/bin/env python3
 """
-Generates brand/icon.svg - the integration's icon - from the actual
-curve module rather than being drawn by hand: the icon IS the day's
-brightness/colour curve, not an
-artist's impression of it. Bar heights come from brightness_for_phase,
-bar colours from kelvin_for_phase run through kelvin_to_rgb, and the
-schedule is curve.py's own DEFAULT_SCHEDULE_HOURS - change the
-defaults and a regenerated icon follows.
+Generates the integration's icon from the curve module itself: the icon
+IS the day's brightness/colour curve. Bar heights come from
+brightness_for_phase, bar colours from kelvin_for_phase through
+kelvin_to_rgb, and the schedule is curve.py's DEFAULT_SCHEDULE_HOURS, so
+changing the defaults and regenerating keeps them in step.
 
-This file (and icon.svg, its output) is design/authoring tooling only -
-it lives here, not inside the integration package, and is NOT what HA
-actually reads. Since HA 2026.3.0, a custom integration ships its own
-brand icon directly inside its own folder - see
-`custom_components/flare/brand/` (icon.png,
-icon@2x.png), served automatically via HA's local brands API with no
-manifest.json changes and no external submission needed.
-`home-assistant/brands` (the previous mechanism, a central repo custom
-integrations used to submit icons to) has since stopped accepting PRs
-for custom integrations entirely, so that path is no longer viable even
-as a fallback - confirmed live, 2026-08-13: no
-`custom_integrations/flare/` entry and no open PR
-for one exist there.
+Writes brand/icon.svg (authoring only) and the two PNGs Home Assistant
+serves from the integration's own folder,
+`custom_components/flare/brand/{icon.png,icon@2x.png}`.
 
-This script writes BOTH icon.svg and the two PNGs Home Assistant
-actually serves, `custom_components/flare/brand/{icon.png,icon@2x.png}`.
-
-It used to write only the SVG, with a docstring telling you to render
-the PNGs by hand via `qlmanage -t -s 256`, "transparency preserved".
-That was wrong: `qlmanage` composites onto WHITE, so every icon it
-produced had opaque white corners instead of a transparent background -
-which is what shipped, and what showed up as a white square behind the
-icon on Home Assistant's own integrations page. A separate manual step
-that silently produces the wrong file is worse than no step, so the
-rendering lives here now, drawn directly rather than shelling out to a
-thumbnailer.
-
-Drawn with Pillow at 4x and downsampled, which is what keeps the
-rounded corners clean without an SVG rasteriser dependency. The shapes
-are simple enough (one rounded tile, seven rounded bars) that drawing
-them twice - once as SVG, once as pixels - costs less than depending on
-librsvg or cairosvg being installed.
+The PNGs are drawn with Pillow at 4x and downsampled, which keeps the
+rounded corners clean and the background transparent without an SVG
+rasteriser dependency. Don't render them with `qlmanage`: it composites
+onto white.
 
 Needs Pillow: `pip install pillow`.
 

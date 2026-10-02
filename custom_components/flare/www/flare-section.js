@@ -229,7 +229,7 @@ export function scheduleSensors(hass) {
 
 
 /**
- * The tracking section for one scope, sized to flow several to a row.
+ * The tracking section for one zone, sized to flow several to a row.
  * `controlled` + `overridden` needn't equal the total tracked.
  */
 export function trackingSectionConfig(slug, title) {
@@ -271,7 +271,7 @@ export function trackingSectionConfig(slug, title) {
 }
 
 /**
- * Every tracking scope as {slug, title}, identified by the `claims`
+ * Every zone as {slug, title}, identified by the `claims`
  * attribute. The title drops the trailing "Tracking".
  */
 export function trackingScopes(hass) {

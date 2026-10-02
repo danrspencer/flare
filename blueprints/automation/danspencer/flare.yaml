@@ -476,7 +476,7 @@ variables:
     {{ ns.items }}
   brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
   color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
-  # None if the sensor doesn't publish rgb_color.
+  # None while the sensor is unavailable.
   rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
   # Levels are absolute brightness, sent as brightness 255 with a
   # multiplier of level/255. Every light needs an entry, since a missing

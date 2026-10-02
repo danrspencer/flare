@@ -106,11 +106,6 @@ anything on by itself.
 a room — a lamp and a pendant driven separately, say — pick the same
 zone.
 
-{: .note }
-> **Changed in 0.17.0** — **Zone** is new and required, and **Update
-> Interval** is gone. An automation from an earlier version stops with
-> "Missing input zone" until you pick one.
-
 ## When does the room update?
 
 Straight away on a phase change, on motion, on an Additional Trigger,

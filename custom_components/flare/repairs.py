@@ -3,8 +3,6 @@ name."""
 
 from __future__ import annotations
 
-from typing import Any
-
 import voluptuous as vol
 from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
@@ -73,8 +71,6 @@ async def async_create_fix_flow(
     data: dict[str, str | int | float | None] | None,
 ) -> RepairsFlow:
     """Called by Home Assistant when the user presses Fix on our issue."""
-    entries = hass.config_entries.async_entries(DOMAIN)
-    entry_id = entries[0].entry_id if entries else ""
     if issue_id == BLUEPRINT_ISSUE_ID:
         return OutdatedBlueprintRepairFlow()
     if issue_id == BLUEPRINT_MISSING_ISSUE_ID:

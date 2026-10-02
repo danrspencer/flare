@@ -40,5 +40,3 @@ DEFAULT_TICK_GAP = 1
 EVENT_TYPE_TICK = "flare_tick"
 
 ZONES_ENTRY_TITLE = "FLARE Zones"
-# Earlier titles of the Zones entry, retitled on setup.
-LEGACY_ZONES_ENTRY_TITLES = ("FLARE Tracking", "FLARE Control")

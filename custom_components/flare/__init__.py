@@ -23,8 +23,6 @@ from .const import (
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
     ENTRY_TYPE_TRACKING,
-    LEGACY_ZONES_ENTRY_TITLES,
-    ZONES_ENTRY_TITLE,
 )
 from homeassistant.helpers.start import async_at_started
 
@@ -68,8 +66,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     is_tracking = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_TRACKING
-    if is_tracking and entry.title in LEGACY_ZONES_ENTRY_TITLES:
-        hass.config_entries.async_update_entry(entry, title=ZONES_ENTRY_TITLE)
 
     write_tracker = ClaimRegistry(hass, entry)
     # Pruning catches entities deleted outright, which the listener never
