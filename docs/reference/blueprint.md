@@ -156,7 +156,7 @@ changed.
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour
-  temperature aren't sent. You can change both limits under **FLARE Zones → Configure**.
+  temperature aren't sent. You can change both limits under **FLARE → Zones → Configure**.
 - **It's unavailable.** FLARE sets it once it comes back online.
 - **A scene has it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).

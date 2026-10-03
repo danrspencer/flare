@@ -1,7 +1,7 @@
 ---
 title: Services
 parent: Reference
-nav_order: 4
+nav_order: 5
 permalink: /reference/services/
 redirect_from:
   - /reference/integration/
@@ -74,8 +74,8 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of the target isn't sent anything. Two values that convert to the same mired always count as a match. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
-| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
-| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
+| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
+| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
@@ -411,7 +411,7 @@ Some bulbs can't change brightness and colour temperature in one command: they j
 value, or ignore one of the two. FLARE sends these bulbs two commands, brightness first and
 then colour, each taking half the transition. It recognises them in two ways:
 
-- **By make and model**, from the **Two-step bulb models** field under **FLARE Zones →
+- **By make and model**, from the **Two-step bulb models** field under **FLARE → Zones →
   Configure**. It holds one pattern per line, matched case-insensitively against
   `"<manufacturer> <model>"`, and `*` matches anything, so `*TRADFRI bulb*` and `IKEA*` both
   work. The field is pre-filled with FLARE's default patterns. Your saved list replaces those

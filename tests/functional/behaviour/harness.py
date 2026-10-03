@@ -8,7 +8,14 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_RGB_COLOR, ColorMode, LightEntity
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_RGB_COLOR,
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
+)
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
@@ -20,10 +27,13 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
     DOMAIN,
+    ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_ZONES,
+    SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_ZONE,
+    TURN_OFF_FLARE,
 )
 from tests.support import REPO_ROOT
 
@@ -54,12 +64,15 @@ class FakeBulb(LightEntity):
     Colour-temp only by default. Quirks, for test_device_quirks.py:
     supports_rgb; reports_via_rgb (translates Kelvin commands and reports
     rgb_color, like IKEA TRADFRI spots); needs_two_step (a call that
-    changes brightness and sets a colour applies only the brightness).
+    changes brightness and sets a colour applies only the brightness);
+    supports_transition (HA drops `transition` for a light without it).
     """
 
     _attr_should_poll = False
 
-    def __init__(self, name: str, *, supports_rgb=False, reports_via_rgb=False, needs_two_step=False) -> None:
+    def __init__(
+        self, name: str, *, supports_rgb=False, reports_via_rgb=False, needs_two_step=False, supports_transition=False
+    ) -> None:
         self._attr_name = name
         self._attr_unique_id = name
         self._attr_is_on = False
@@ -71,6 +84,8 @@ class FakeBulb(LightEntity):
         if supports_rgb or reports_via_rgb:
             modes.add(ColorMode.RGB)
         self._attr_supported_color_modes = modes
+        if supports_transition:
+            self._attr_supported_features = LightEntityFeature.TRANSITION
         self._attr_color_mode = ColorMode.COLOR_TEMP
         self._reports_via_rgb = reports_via_rgb
         # Gated on brightness *changing*: two-step's second call re-sends
@@ -204,6 +219,51 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return areas
+
+
+async def add_flare(
+    hass: HomeAssistant,
+    automation: str = "automation.room",
+    *,
+    name: str = "Room",
+    turn_off: str = TURN_OFF_FLARE,
+    area_id: str | None = None,
+) -> str:
+    """A flare over a blueprint automation, added through the real flow.
+    Creates the Flares entry first if there isn't one. Returns the flare's
+    entity_id."""
+    entries = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES]
+    if entries:
+        (entry,) = entries
+    else:
+        entry = MockConfigEntry(
+            domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}, unique_id=f"{DOMAIN}_{ENTRY_TYPE_FLARES}", version=3
+        )
+        entry.add_to_hass(hass)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    flows = hass.config_entries.subentries
+    result = await flows.async_init((entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "user"})
+    result = await flows.async_configure(result["flow_id"], {"next_step_id": "blueprint"})
+    result = await flows.async_configure(result["flow_id"], {"automation": automation})
+    assert result["step_id"] == "details", result
+    details = {"name": name, "turn_off": turn_off}
+    if area_id is not None:
+        details["area_id"] = area_id
+    elif (suggested := _suggested(result, "area_id")) is not None:
+        details["area_id"] = suggested
+    result = await flows.async_configure(result["flow_id"], details)
+    assert result["type"] == "create_entry", result
+    await hass.async_block_till_done()
+    return f"light.{name.lower()}_flare"
+
+
+def _suggested(result, key: str):
+    """A form field's suggested value, as the frontend would pre-fill it."""
+    for field in result["data_schema"].schema:
+        if str(field) == key:
+            return (field.description or {}).get("suggested_value")
+    return None
 
 
 def schedule_device(hass: HomeAssistant) -> str:

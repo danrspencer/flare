@@ -12,7 +12,8 @@
     },
     "abort": {
       "already_configured": "Already configured",
-      "setup_complete": "FLARE is set up with {created}. Next, add a room automation from the FLARE blueprint: see the quickstart."
+      "setup_complete": "FLARE is set up with {created}. Next, add a room automation from the FLARE blueprint: see the quickstart.",
+      "flares_entry_created": "FLARE's Flares entry has been added."
     },
     "error": {
       "invalid_name": "Give the schedule a name with at least one letter or number"
@@ -73,6 +74,92 @@
       "error": {
         "already_configured": "A schedule sensor or zone with that name already exists"
       }
+    },
+    "flare": {
+      "entry_type": "Flare",
+      "initiate_flow": {
+        "user": "Add flare",
+        "reconfigure": "Reconfigure flare"
+      },
+      "step": {
+        "user": {
+          "title": "Add flare",
+          "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on with nothing else runs the room's automation, so the room comes on the way it normally would. Turning it on with a brightness or colour sets every light in the room to that. Turning it off turns the room off.",
+          "menu_options": {
+            "blueprint": "A room automation from the FLARE blueprint",
+            "custom": "Another automation"
+          }
+        },
+        "blueprint": {
+          "title": "Pick the room's automation",
+          "data": {
+            "automation": "Automation"
+          },
+          "data_description": {
+            "automation": "The flare's lights and zone are the automation's Lights & Occupancy and Zone, read whenever it's used."
+          }
+        },
+        "custom": {
+          "title": "Pick the automation",
+          "data": {
+            "automation": "Automation"
+          },
+          "data_description": {
+            "automation": "Turning the flare on with nothing else runs this automation."
+          }
+        },
+        "custom_inputs": {
+          "title": "Where are its lights?",
+          "data": {
+            "lights_input": "Lights input",
+            "zone_input": "Zone input"
+          },
+          "data_description": {
+            "lights_input": "The automation's input naming the lights it controls.",
+            "zone_input": "The automation's input naming its FLARE zone, if it has one. The flare's turn-off records in it."
+          }
+        },
+        "custom_target": {
+          "title": "Which lights?",
+          "data": {
+            "lights_target": "Lights"
+          },
+          "data_description": {
+            "lights_target": "The lights this automation controls. It has no inputs to read them from."
+          }
+        },
+        "details": {
+          "title": "Name the flare",
+          "data": {
+            "name": "Name",
+            "turn_off": "Turn off with",
+            "area_id": "Area"
+          },
+          "data_description": {
+            "turn_off": "flare.turn_off lets FLARE tell its own turn-off from anyone else's. Use light.turn_off only for lights FLARE doesn't track.",
+            "area_id": "Where the flare's device starts out, which is how voice assistants and HomeKit know its room. Starts as the automation's area."
+          }
+        },
+        "reconfigure": {
+          "title": "Edit flare",
+          "data": {
+            "name": "Name",
+            "turn_off": "Turn off with",
+            "lights_input": "Lights input",
+            "zone_input": "Zone input",
+            "lights_target": "Lights"
+          }
+        }
+      },
+      "error": {
+        "already_configured": "A flare with that name already exists",
+        "input_not_set": "That automation doesn't set this input"
+      },
+      "abort": {
+        "no_room_automations": "No automation uses the FLARE blueprint yet. Create one first, or add the flare as another automation.",
+        "no_light_inputs": "That automation's blueprint has no input that picks lights, areas or devices.",
+        "reconfigure_successful": "Flare updated"
+      }
     }
   },
   "issues": {
@@ -108,7 +195,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "FLARE Zones options",
+        "title": "Zones options",
         "description": "Bulb models that need two-step transitions, one pattern per line. Any light whose device matches one of these patterns is routed into two-step transitions automatically, with no label needed — the box starts pre-filled with the models shipped with the integration, and you can add to it or remove from it freely.\n\nPatterns are matched case-insensitively against “manufacturer model”, and * is a wildcard, e.g. *TRADFRI bulb* or IKEA*. Clearing the box entirely falls back to the shipped defaults, so it can't quietly switch off detection.\n\nOnce you save your own list it stays as you left it — a later release adding a newly discovered bulb won't change it.\n\nEach zone's Tick fires once per update interval, a gap apart from the next zone's, so rooms don't all send at the same moment. A change smaller than the minimum brightness or colour temperature change isn't sent at all.",
         "data": {
           "two_step_models": "Two-step bulb models",
@@ -123,6 +210,14 @@
           "min_brightness_change": "A light within this percentage of its target brightness is left alone.",
           "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone."
         }
+      }
+    }
+  },
+  "selector": {
+    "turn_off": {
+      "options": {
+        "flare": "flare.turn_off",
+        "light": "light.turn_off"
       }
     }
   }

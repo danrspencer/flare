@@ -47,11 +47,11 @@ It asks two things:
   keeps track of which lights FLARE is driving in that room, which is how it knows to leave
   alone a light you've changed yourself.
 
-You can add more schedules and zones later, from **FLARE Schedules** and **FLARE Zones**.
+You can add more schedules and zones later, from **Schedules** and **Zones** under FLARE.
 
 {: .note }
 > A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
-> to pick between FLARE Schedules and FLARE Zones first. Pick the one that matches what you're
+> to pick between Schedules, Zones and Flares first. Pick the one that matches what you're
 > adding; Home Assistant 2026.10 fixes this.
 
 ## Step 3 — install the blueprint and create an automation

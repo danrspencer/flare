@@ -2,6 +2,7 @@
 
     schedule/  -> const
     zone/  -> const
+    flares/  -> const
     services/  -> schedule/, zone/, const
 
 and none reach back up into the package root. Parsed from the source."""
@@ -13,6 +14,7 @@ from tests.support import COMPONENT as PACKAGE
 ALLOWED = {
     "schedule": {"schedule", "const"},
     "zone": {"zone", "const"},
+    "flares": {"flares", "const"},
     "services": {"services", "schedule", "zone", "const"},
 }
 

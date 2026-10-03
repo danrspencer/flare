@@ -14,7 +14,7 @@ render_with_liquid: false
 
 A zone records which lights FLARE has set, usually for one room. FLARE uses it to tell its own
 changes from anyone else's, so it can leave alone a light you've changed yourself. Zones are
-under **Settings → Devices & Services → FLARE Zones**.
+under **Settings → Devices & Services → FLARE → Zones**.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -161,7 +161,7 @@ deleted from Home Assistant stops being tracked.
 
 Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update
 interval. Zones fire one after another, in name order, a gap apart, so rooms don't all send
-commands at the same time. You can set the interval and the gap under **FLARE Zones →
+commands at the same time. You can set the interval and the gap under **FLARE → Zones →
 Configure**:
 
 | Option | Default | Description |

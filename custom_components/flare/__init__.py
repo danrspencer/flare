@@ -1,4 +1,4 @@
-"""FLARE: sets up the Schedules and Zones config entries, their
+"""FLARE: sets up the Schedules, Zones and Flares config entries, their
 platforms, and the dashboard front-end files. Code layout and the
 dependency rule are in CONTRIBUTING.md."""
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.loader import async_get_integration
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -23,7 +23,9 @@ from .const import (
     DEFAULT_TICK_GAP,
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
+    ENTRY_TYPE_FLARES,
     ENTRY_TYPE_ZONES,
+    LEGACY_ENTRY_TITLES,
 )
 from homeassistant.helpers.start import async_at_started
 
@@ -32,6 +34,7 @@ from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
 from .event import ticks_key
+from .flares.instance import flare_instances
 from .zone.ticker import TickScheduler
 from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
@@ -39,6 +42,7 @@ from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 # the entry type to decide what it adds.
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
 ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
+FLARE_PLATFORMS = [Platform.LIGHT]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -67,10 +71,34 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
     async_setup_schedule_services(hass)
+    _ensure_flares_entry(hass)
     return True
 
 
+@callback
+def _ensure_flares_entry(hass: HomeAssistant) -> None:
+    """Creates the Flares entry for an install set up before it existed."""
+    types = {entry.data.get(CONF_ENTRY_TYPE) for entry in hass.config_entries.async_entries(DOMAIN)}
+    if types and ENTRY_TYPE_FLARES not in types:
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}
+            )
+        )
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if (title := LEGACY_ENTRY_TITLES.get(entry.title)) is not None:
+        hass.config_entries.async_update_entry(entry, title=title)
+
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
+        entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
+        # Only with flares, so an empty entry doesn't load the light platform.
+        if flare_instances(entry):
+            hass.data.setdefault(DOMAIN, {})[_lights_key(entry)] = True
+            await hass.config_entries.async_forward_entry_setups(entry, FLARE_PLATFORMS)
+        return True
+
     is_zones = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES
 
     registry = ClaimRegistry(hass, entry)
@@ -142,11 +170,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+def _lights_key(entry: ConfigEntry) -> str:
+    return f"{entry.entry_id}_lights"
+
+
 async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
+        if not hass.data.get(DOMAIN, {}).pop(_lights_key(entry), False):
+            return True
+        return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
+
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
         async_unload_services(hass)
         unloaded = await hass.config_entries.async_unload_platforms(entry, ZONE_PLATFORMS)

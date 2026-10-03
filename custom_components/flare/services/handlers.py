@@ -234,6 +234,16 @@ def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
     return SceneLookup(exists=exists, covered_entities=covered_entities)
 
 
+def _without_flares(hass: HomeAssistant, entities: list[str]) -> list[str]:
+    """Drops flares' own lights: a flare in its room's area would otherwise
+    be sent the room's values, and pass them on to every light as an override."""
+    registry = er.async_get(hass)
+    return [
+        e for e in entities
+        if not ((entry := registry.async_get(e)) and entry.platform == DOMAIN and entry.domain == "light")
+    ]
+
+
 def _brightness(call: ServiceCall) -> int | None:
     """`brightness`, which is only optional if every light has a level."""
     brightness = call.data.get("brightness")
@@ -301,7 +311,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         rgb_color = call.data.get("rgb_color")
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
-            entities=call.data["entities"],
+            entities=_without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
@@ -350,7 +360,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         lookup = _build_lookup(hass, registry, zone)
         groups = build_groups(
-            entities=call.data["entities"],
+            entities=_without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=brightness,
             sensor_color_temp_kelvin=color_temp_kelvin,
@@ -499,7 +509,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         One operation so callers can't get the order or the encoding wrong.
         No override protection: it turns off everything it's given."""
-        entities = call.data["entities"]
+        entities = _without_flares(hass, call.data["entities"])
         if not entities:
             return
         transition = call.data["transition"]

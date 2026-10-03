@@ -359,7 +359,8 @@ trigger:
       {% endfor %}
       {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %}
       {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %}
-      {% set light_entity_ids = ns.entities | select('match', '^light\\.') | unique | list %}
+      {% set light_entity_ids = ns.entities | select('match', '^light\\.')
+           | reject('in', integration_entities('flare')) | unique | list %}
       {{ light_entity_ids
          | reject('is_state', 'unavailable') | reject('is_state', 'unknown')
          | list | length > 0 }}
@@ -443,8 +444,11 @@ variables:
     {{ ns.entities | unique | list }}
   all_target_entities: >
     {{ (target_named_entities + target_expanded_entities) | unique | list }}
+  # Not a flare's own light, which would pass the room's values on to
+  # every light in it as an override.
   resolved_entities: >
-    {{ all_target_entities | select('match', '^light\\.') | list }}
+    {{ all_target_entities | select('match', '^light\\.')
+       | reject('in', integration_entities('flare')) | list }}
   # Up here because variables: render top to bottom and the turn-off lists
   # below need it.
   template_brightness_levels: !input brightness_template
