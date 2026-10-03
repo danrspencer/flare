@@ -292,3 +292,21 @@ async def test_a_room_flare_is_the_same_however_it_was_added(hass: HomeAssistant
     assert {k: v for k, v in hall.items() if k not in ("automation", "area_id")} == {
         k: v for k, v in landing.items() if k not in ("automation", "area_id")
     }
+
+
+async def test_renaming_a_flare_keeps_its_entity_id(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
+    """So a pattern such as light.*_flare still finds it."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    await setup_room(lights=bulbs)
+    flare = await add_flare(hass, name="Hall")
+    entry = await flares_entry(hass)
+    (subentry_id,) = entry.subentries
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
+    )
+    await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": "Landing", "lights_input": "room_target"})
+    await hass.async_block_till_done()
+
+    assert hass.states.get(flare).name == "Landing"
+    assert flare == "light.room_flare"

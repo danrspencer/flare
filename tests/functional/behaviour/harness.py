@@ -20,6 +20,7 @@ from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import color as color_util
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
@@ -283,7 +284,9 @@ async def add_flare(hass: HomeAssistant, automation: str = "automation.room", *,
     )
     assert result["reason"] == "reconfigure_successful", result
     await hass.async_block_till_done()
-    return f"light.{name.lower()}_flare"
+    entity_id = er.async_get(hass).async_get_entity_id("light", DOMAIN, f"{subentry_id}_light")
+    assert entity_id is not None, "the flare has no light"
+    return entity_id
 
 
 def _default(result, key: str):
