@@ -22,22 +22,21 @@ built in.
 FLARE sets your lights through the day, and leaves alone any light you change yourself.
 
 - **It keeps every light on the curve.** Every minute it checks each light, and corrects
-  any that have drifted or missed a command.
+  any that have drifted or missed a command. [→]({{ site.baseurl }}/reference/blueprint/#when-the-room-updates){: title="How it works" aria-label="How it works"}
 - **It works with lights on a physical wall switch.** If you cut the power to a room and
   restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home
-  Assistant again, instead of leaving it at whatever it powered up as.
+  Assistant again, instead of leaving it at whatever it powered up as. [→]({{ site.baseurl }}/reference/blueprint/#when-the-room-updates){: title="How it works" aria-label="How it works"}
 - **Each room can be different.** Give a light its own brightness, hand the room to a
-  scene in any phase, or use a template when a fixed value isn't enough.
+  scene in any phase, or use a template when a fixed value isn't enough. [→]({{ site.baseurl }}/guides/){: title="How it works" aria-label="How it works"}
 - **It can leave a nightlight on.** When a room empties it can dim to a low level instead
-  of going dark.
+  of going dark. [→]({{ site.baseurl }}/reference/blueprint/#idle-brightness){: title="How it works" aria-label="How it works"}
 - **It leaves your changes alone.** If you change a light yourself, from an app, a wall
-  switch or another automation, FLARE stops setting it until the room next goes dark.
+  switch or another automation, FLARE stops setting it until the room next goes dark. [→]({{ site.baseurl }}/reference/zones/#override-protection){: title="How it works" aria-label="How it works"}
 - **It works with Siri, Alexa and Google.** Each room gets a single light to expose to them,
   so "turn on the kitchen" lights the kitchen the way FLARE would, rather than at whatever the
-  bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone.
-  [See how →]({{ site.baseurl }}/guides/flares/)
+  bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone. [→]({{ site.baseurl }}/guides/flares/){: title="How it works" aria-label="How it works"}
 - **It's gentle on your Zigbee network.** Rooms update one after another rather than all
-  at once, and changes too small to see aren't sent.
+  at once, and changes too small to see aren't sent. [→]({{ site.baseurl }}/reference/zones/#when-zones-tick){: title="How it works" aria-label="How it works"}
 
 ---
 
