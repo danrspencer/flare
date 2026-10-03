@@ -24,8 +24,8 @@ class TestBrightnessScaling:
     async def test_a_schedule_at_zero_brightness_still_reaches_one_not_off(
         self, hass, apply_lighting_calls
     ):
-        """A curve brightness of 0 means "as dim as it goes". Unfloored, it would
-        become multiplier 0, the off sentinel, and the room would go dark."""
+        """A curve brightness of 0 means "as dim as it goes", not off, which only
+        a level of 0 means."""
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
 
@@ -38,7 +38,7 @@ class TestBrightnessScaling:
         assert apply_lighting_calls
         assert effective(apply_lighting_calls[-1], "light.a") == 1
 
-    async def test_phase_exclude_list_sets_a_zero_multiplier_for_that_light(self, hass, apply_lighting_calls):
+    async def test_phase_exclude_list_sets_a_zero_level_for_that_light(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")
         light(hass, "light.excluded", "on")
         await hass.async_block_till_done()
@@ -98,7 +98,7 @@ class TestBrightnessScaling:
         assert effective(call, "light.a") == 40
         assert effective(call, "light.b") == 40
 
-    async def test_a_null_multiplier_light_is_not_turned_off_when_occupancy_clears(
+    async def test_a_null_level_light_is_not_turned_off_when_occupancy_clears(
         self, hass, turn_off_calls
     ):
         """null means "something else owns this" - e.g. a strip on its own
@@ -123,7 +123,7 @@ class TestBrightnessScaling:
         assert "light.a" in turned_off
         assert "light.handed_off" not in turned_off
 
-    async def test_a_null_multiplier_light_is_released_from_override_protection(
+    async def test_a_null_level_light_is_released_from_override_protection(
         self, hass, apply_lighting_calls, claims_clear_calls
     ):
         """And its claim is released, rather than going stale into "overridden"."""
@@ -146,7 +146,7 @@ class TestBrightnessScaling:
         assert claims_clear_calls
         assert claims_clear_calls[-1].data["entities"] == ["light.handed_off"]
 
-    async def test_a_zero_multiplier_light_is_still_turned_off_when_occupancy_clears(
+    async def test_a_zero_level_light_is_still_turned_off_when_occupancy_clears(
         self, hass, turn_off_calls
     ):
         """0 is not null (`0 == false` in Jinja)."""
@@ -170,7 +170,7 @@ class TestBrightnessScaling:
         assert "light.a" in turned_off
         assert "light.dimmed_out" in turned_off
 
-    async def test_reconcile_does_not_retry_turning_off_a_null_multiplier_light(
+    async def test_reconcile_does_not_retry_turning_off_a_null_level_light(
         self, hass, turn_off_calls
     ):
         """Self-heal doesn't retry turning it off either."""

@@ -108,7 +108,6 @@ class EntityLookup:
 
 @dataclass
 class Group:
-    multiplier: float
     brightness: int
     needing_off: list = field(default_factory=list)
     combined: list = field(default_factory=list)
@@ -140,22 +139,37 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
     return target_kelvin
 
 
-def _bucket_by_multiplier(entities: list, brightness_multipliers: dict) -> dict:
-    """Buckets entities by multiplier so each bucket shares one command.
-    null/false ("something else owns this") are left out."""
+def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optional[int]) -> Optional[int]:
+    """The brightness `entity_id` is sent: 0 for off, None for hands off.
+
+    A light without a level gets `brightness`. Only a level of 0 is off;
+    everything else is clamped to 1-MAX_BRIGHTNESS, so a brightness of 0 is
+    as dim as the light goes. null/false ("something else owns this") are matched by
+    identity, because `False == 0`."""
+    if entity_id not in brightness_levels:
+        return min(max(round(float(brightness)), 1), MAX_BRIGHTNESS)
+    level = brightness_levels[entity_id]
+    if level is None or level is False:
+        return None
+    level = float(level)
+    return 0 if level <= 0 else min(max(round(level), 1), MAX_BRIGHTNESS)
+
+
+def _bucket_by_brightness(entities: list, brightness_levels: dict, brightness: Optional[int]) -> dict:
+    """Buckets entities by the brightness they're sent, so each bucket shares
+    one command. Hands-off lights are left out."""
     buckets: dict = {}
     for e in entities:
-        m = brightness_multipliers.get(e, 1)
-        if m is None or m is False:
-            continue
-        buckets.setdefault(m, []).append(e)
+        target = target_brightness(e, brightness_levels, brightness)
+        if target is not None:
+            buckets.setdefault(target, []).append(e)
     return buckets
 
 
 def build_groups(
     entities: list,
-    brightness_multipliers: dict,
-    sensor_brightness: int,
+    brightness_levels: dict,
+    sensor_brightness: Optional[int],
     sensor_color_temp_kelvin: int,
     lookup: EntityLookup,
     brightness_tolerance: int = 2,
@@ -169,9 +183,9 @@ def build_groups(
     min_brightness_change: float = 0,
     min_color_temp_change: float = 0,
 ) -> list:
-    """What needs commanding for `entities`, bucketed by brightness
-    multiplier. Each Group is an off-group (multiplier <= 0, `needing_off`)
-    or an update-group holding whatever isn't already close enough.
+    """What needs commanding for `entities`, bucketed by the brightness each
+    is sent. Each Group is an off-group (brightness 0, `needing_off`) or an
+    update-group holding whatever isn't already close enough.
 
     Close enough is within tolerance, or within the minimum change worth
     sending: `min_brightness_change` percent of the target brightness, and
@@ -183,12 +197,8 @@ def build_groups(
     matches two_step_model_patterns. force bypasses override protection."""
     use_rgb = prefer_rgb_color and rgb_color is not None
     groups = []
-    for multiplier, group_entities in _bucket_by_multiplier(entities, brightness_multipliers).items():
-        m = float(multiplier)
-        # Floored at 1 (0 is the multiplier's way to say off) and capped at
-        # MAX_BRIGHTNESS.
-        brightness = 0 if m == 0 else min(max(round(sensor_brightness * m), 1), MAX_BRIGHTNESS)
-        group = Group(multiplier=multiplier, brightness=brightness)
+    for brightness, group_entities in _bucket_by_brightness(entities, brightness_levels, sensor_brightness).items():
+        group = Group(brightness=brightness)
 
         if brightness <= 0:
             group.needing_off = [

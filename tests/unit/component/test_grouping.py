@@ -20,11 +20,11 @@ def _off(**attributes):
     return {"state": "off", "attributes": attributes}
 
 
-def _groups(states, *, brightness=200, kelvin=3000, multipliers=None, lookup_kwargs=None, **kwargs):
+def _groups(states, *, brightness=200, kelvin=3000, levels=None, lookup_kwargs=None, **kwargs):
     """build_groups over every entity in `states`."""
     return build_groups(
         entities=list(states),
-        brightness_multipliers=multipliers or {},
+        brightness_levels=levels or {},
         sensor_brightness=brightness,
         sensor_color_temp_kelvin=kelvin,
         lookup=make_lookup(states, **(lookup_kwargs or {})),
@@ -143,38 +143,39 @@ def test_colour_target_is_compared_against_the_raw_and_range_clamped_value(
     assert groups[0].combined == expected
 
 
-class TestMultipliers:
+class TestBrightnessLevels:
     def test_zero_turns_off_only_lights_that_are_on(self):
-        groups = _groups(
-            {"light.a": _on(), "light.b": _off()}, multipliers={"light.a": 0, "light.b": 0}
-        )
+        groups = _groups({"light.a": _on(), "light.b": _off()}, levels={"light.a": 0, "light.b": 0})
         assert len(groups) == 1
         assert groups[0].brightness == 0
         assert groups[0].needing_off == ["light.a"]
 
     @pytest.mark.parametrize("hands_off", [None, False])
     def test_null_or_false_leaves_the_light_out_entirely(self, hands_off):
-        assert _groups({"light.a": _off()}, multipliers={"light.a": hands_off}) == []
+        assert _groups({"light.a": _off()}, levels={"light.a": hands_off}) == []
 
-    def test_distinct_multipliers_form_separate_groups(self):
-        groups = _groups({"light.a": _off(), "light.b": _off()}, multipliers={"light.a": 1, "light.b": 0.1})
-        by_multiplier = {g.multiplier: g for g in groups}
-        assert (by_multiplier[1].brightness, by_multiplier[1].combined) == (200, ["light.a"])
-        assert (by_multiplier[0.1].brightness, by_multiplier[0.1].combined) == (20, ["light.b"])
+    def test_a_light_with_a_level_gets_it_and_the_rest_get_brightness(self):
+        groups = _groups({"light.a": _off(), "light.b": _off()}, levels={"light.b": 20})
+        by_brightness = {g.brightness: g.combined for g in groups}
+        assert by_brightness == {200: ["light.a"], 20: ["light.b"]}
+
+    def test_lights_at_the_same_brightness_share_a_group(self):
+        groups = _groups({"light.a": _off(), "light.b": _off()}, levels={"light.b": 200})
+        assert [(g.brightness, g.combined) for g in groups] == [(200, ["light.a", "light.b"])]
 
     @pytest.mark.parametrize(
-        ("multiplier", "sensor_brightness", "expected"),
-        [(0.001, 10, 1), (1.5, 200, MAX_BRIGHTNESS), (0.5, 200, 100)],
-        ids=["floors at 1, not off", "caps at MAX_BRIGHTNESS", "scales in between"],
+        ("levels", "brightness", "expected"),
+        [({}, 0, 1), ({"light.a": 0.4}, 200, 1), ({"light.a": 300}, 200, MAX_BRIGHTNESS), ({"light.a": 99.6}, 200, 100)],
+        ids=["a brightness of 0 floors at 1, not off", "a level rounding to 0 isn't off", "caps at MAX_BRIGHTNESS", "rounds"],
     )
-    def test_arithmetic(self, multiplier, sensor_brightness, expected):
-        groups = _groups({"light.a": _off()}, brightness=sensor_brightness, multipliers={"light.a": multiplier})
+    def test_arithmetic(self, levels, brightness, expected):
+        groups = _groups({"light.a": _off()}, brightness=brightness, levels=levels)
         assert groups[0].brightness == expected
 
-    def test_a_light_at_max_is_not_recommanded_when_the_multiplier_overshoots(self):
+    def test_a_light_at_max_is_not_recommanded_when_the_level_overshoots(self):
         """light.turn_on clamps to 255, so an unclamped 300 target would
         never read as reached."""
-        groups = _groups({"light.a": _on(255, 3000)}, multipliers={"light.a": 1.5})
+        groups = _groups({"light.a": _on(255, 3000)}, levels={"light.a": 300})
         assert groups[0].combined == []
 
 
@@ -267,7 +268,7 @@ class TestOverrideProtection:
         assert groups[0].combined == []
 
     def test_an_overridden_light_is_left_out_of_the_off_group(self):
-        groups = _groups({"light.a": _overridden()}, multipliers={"light.a": 0}, lookup_kwargs=OURS)
+        groups = _groups({"light.a": _overridden()}, levels={"light.a": 0}, lookup_kwargs=OURS)
         assert groups[0].needing_off == []
 
     def test_an_overridden_rgb_light_is_left_out_too(self):

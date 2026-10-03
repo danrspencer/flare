@@ -56,22 +56,22 @@ data:
   brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
   color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
   transition: 2
-  brightness_multipliers: { light.kitchen_2: 0.5 }
+  brightness_levels: { light.kitchen_2: 60 }
   zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-This sets both kitchen lights to the Home schedule's current values, with `light.kitchen_2`
-at half the brightness.
+This sets both kitchen lights to the Home schedule's current colour temperature, with
+`light.kitchen_1` at the schedule's brightness and `light.kitchen_2` at 60.
 
 ### Fields
 
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
-| `brightness`<br>0–255 | yes | The brightness, before `brightness_multipliers` is applied. |
+| `brightness`<br>0–255 | unless every light has a level | The brightness for every light that isn't in `brightness_levels`. A brightness of 0 sets the lights as dim as they go, rather than turning them off. |
 | `color_temp_kelvin`<br>Kelvin | yes | The colour temperature. |
 | `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
-| `brightness_multipliers`<br>map of entity ID to number; default every light `1` | no | Scales the brightness for individual lights. See [brightness multipliers](#brightness-multipliers). |
+| `brightness_levels`<br>map of entity ID to level | no | A brightness for individual lights, in place of `brightness`. See [brightness levels](#brightness-levels). |
 | `zone_device_id`<br>zone device ID | no | The zone to record the change in. Without it, FLARE records nothing and doesn't leave any light alone. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
@@ -83,11 +83,11 @@ at half the brightness.
 | `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
 | `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
 
-### Brightness multipliers
+### Brightness levels
 
 | Value | Effect |
 |---|---|
-| A number | Multiplies the brightness. The result is limited to 1–255. |
+| `1`–`255` | Sets the light to this brightness. |
 | `0` | Turns the light off. |
 | `null` or `false` | Leaves the light alone, whether it's on or off. |
 
@@ -135,18 +135,17 @@ data:
   entities: [light.kitchen_1, light.kitchen_2]
   brightness: 200
   color_temp_kelvin: 3200
-  brightness_multipliers: { light.kitchen_2: 0.5 }
+  brightness_levels: { light.kitchen_2: 100 }
 response_variable: plan
 ```
 
 ### Response data
 
-`groups` is a list with one entry for each brightness multiplier in use. Each entry has these
+`groups` is a list with one entry for each brightness being sent, and each entry has these
 fields:
 
-- `multiplier`: The multiplier the group's lights share.
-- `brightness`: The brightness sent to the group, after the multiplier. `0` for lights being
-  turned off.
+- `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
+  off.
 - `needing_off`: Lights that need turning off.
 - `combined`: Lights sent brightness and colour temperature in one command.
 - `two_step`: Lights sent brightness and colour temperature as two commands.
@@ -157,15 +156,13 @@ in any list.
 
 ```yaml
 groups:
-  - multiplier: 1
-    brightness: 200
+  - brightness: 200
     needing_off: []
     combined: [light.kitchen_1]
     two_step: []
     combined_rgb: []
     two_step_rgb: []
-  - multiplier: 0.5
-    brightness: 100
+  - brightness: 100
     needing_off: []
     combined: []
     two_step: [light.kitchen_2]

@@ -60,12 +60,11 @@ async def test_a_failing_group_does_not_lock_out_the_lights_that_did_land(setup_
     for e in ("light.a", "light.sibling"):
         set_light(hass, e, "off", supported_color_modes=CT)
 
-    # Different multipliers -> two groups -> two separate light.turn_on calls.
+    # Different brightnesses -> two groups -> two separate light.turn_on calls.
     both = ["light.a", "light.sibling"]
-    mult = {"light.a": 1, "light.sibling": 0.5}
 
     c1 = Context()
-    await apply_lighting(hass, both, brightness_multipliers=mult, brightness=180, color_temp_kelvin=3200, context=c1)
+    await apply_lighting(hass, both, brightness_levels={"light.sibling": 90}, brightness=180, color_temp_kelvin=3200, context=c1)
     _land(hass, "light.a", context=c1, brightness=180, kelvin=3200)
     _land(hass, "light.sibling", context=c1, brightness=90, kelvin=3200)
 
@@ -73,7 +72,7 @@ async def test_a_failing_group_does_not_lock_out_the_lights_that_did_land(setup_
     fail["on"] = True
     c2 = Context()
     with pytest.raises(HomeAssistantError):
-        await apply_lighting(hass, both, brightness_multipliers=mult, brightness=200, color_temp_kelvin=3000, context=c2)
+        await apply_lighting(hass, both, brightness_levels={"light.sibling": 100}, brightness=200, color_temp_kelvin=3000, context=c2)
     _land(hass, "light.a", context=c2, brightness=200, kelvin=3000)
     # The sibling's write never arrived: it is still exactly what tick 1 left.
 

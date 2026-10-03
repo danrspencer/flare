@@ -31,6 +31,13 @@ CI — see `.github/workflows/release.yml`.
   `type:` in your dashboard's YAML.
 - **The blueprint now lives at `blueprints/automation/danrspencer/flare.yaml`**, the path
   Home Assistant already installs it to, so nothing changes for an imported copy.
+- **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
+  `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,
+  rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
+  already worked. `0` still turns a light off and `null` still leaves it alone. Lights
+  without a level get `brightness`, which is now only required if some light has no level.
+  `compute_lighting_groups` returns one group per brightness, without the `multiplier`
+  field. Only affects automations of your own; the blueprint is updated.
 
 ### Added
 

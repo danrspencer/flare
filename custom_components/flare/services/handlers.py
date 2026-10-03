@@ -15,6 +15,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -35,11 +36,17 @@ from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from ..zone.claims import ClaimRegistry
 
+# Entity ID to a 0-255 level. null/false hand the light over, so they're
+# kept as they are; vol.Any tries them first, before the number coerces.
+BRIGHTNESS_LEVELS = vol.Schema(
+    {cv.entity_id: vol.Any(None, False, vol.All(vol.Coerce(float), vol.Range(min=0)))}
+)
+
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
-        vol.Optional("brightness_multipliers", default=dict): dict,
-        vol.Required("brightness"): vol.Coerce(int),
+        vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
+        vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
         vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
@@ -81,8 +88,8 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
 APPLY_LIGHTING_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
-        vol.Optional("brightness_multipliers", default=dict): dict,
-        vol.Required("brightness"): vol.Coerce(int),
+        vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
+        vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
         vol.Required("transition"): vol.Coerce(float),
         vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
@@ -227,11 +234,22 @@ def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
     return SceneLookup(exists=exists, covered_entities=covered_entities)
 
 
+def _brightness(call: ServiceCall) -> int | None:
+    """`brightness`, which is only optional if every light has a level."""
+    brightness = call.data.get("brightness")
+    if brightness is None:
+        unlevelled = [e for e in call.data["entities"] if e not in call.data["brightness_levels"]]
+        if unlevelled:
+            raise ServiceValidationError(
+                f"brightness is required for lights not in brightness_levels: {', '.join(unlevelled)}"
+            )
+    return brightness
+
+
 def _groups_response(groups: list[Group]) -> ServiceResponse:
     return {
         "groups": [
             {
-                "multiplier": g.multiplier,
                 "brightness": g.brightness,
                 "needing_off": g.needing_off,
                 "combined": g.combined,
@@ -284,8 +302,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
             entities=call.data["entities"],
-            brightness_multipliers=call.data["brightness_multipliers"],
-            sensor_brightness=call.data["brightness"],
+            brightness_levels=call.data["brightness_levels"],
+            sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
             lookup=_build_lookup(hass, registry, zone),
             brightness_tolerance=call.data["brightness_tolerance"],
@@ -325,7 +343,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         With force, the write still records a claim if a zone is given, so the
         next non-forced call recognises it as ours."""
         force = call.data["force"]
-        brightness = call.data["brightness"]
+        brightness = _brightness(call)
         color_temp_kelvin = call.data["color_temp_kelvin"]
         rgb_color_raw = call.data.get("rgb_color")
         rgb_color = tuple(rgb_color_raw) if rgb_color_raw else None
@@ -333,7 +351,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         lookup = _build_lookup(hass, registry, zone)
         groups = build_groups(
             entities=call.data["entities"],
-            brightness_multipliers=call.data["brightness_multipliers"],
+            brightness_levels=call.data["brightness_levels"],
             sensor_brightness=brightness,
             sensor_color_temp_kelvin=color_temp_kelvin,
             lookup=lookup,

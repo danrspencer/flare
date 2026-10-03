@@ -9,6 +9,7 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.flare.services.grouping import target_brightness
 from tests.support import BLUEPRINT_PATH
 
 SENSOR = "sensor.test_adaptive"
@@ -117,7 +118,5 @@ def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room"
 
 
 def effective(call, entity_id):
-    """The brightness a light ends up at: levels travel as brightness 255
-    times a per-entity multiplier."""
-    multipliers = call.data.get("brightness_multipliers") or {}
-    return round(call.data["brightness"] * multipliers.get(entity_id, 1))
+    """The brightness apply_lighting sends a light, by the service's own rule."""
+    return target_brightness(entity_id, call.data.get("brightness_levels") or {}, call.data.get("brightness"))
