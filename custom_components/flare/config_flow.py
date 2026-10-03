@@ -6,6 +6,7 @@ their times and curve values are entities on the sensor's device."""
 
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import Any
 
 import voluptuous as vol
@@ -13,6 +14,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import (
     SOURCE_IMPORT,
     ConfigEntry,
+    ConfigSubentry,
     ConfigSubentryFlow,
     SubentryFlowResult,
 )
@@ -363,36 +365,63 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         return self.async_show_menu(step_id="user", menu_options=["blueprint", "custom"])
 
     async def async_step_blueprint(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
+        """Every FLARE room automation without a flare, all ticked. Each one
+        picked gets a flare named after it, in its area."""
         automations = await automations_using_our_blueprint(self.hass)
         if not automations:
             return self.async_abort(reason="no_room_automations")
-        errors: dict[str, str] = {}
+        entry = self._get_entry()
+        flared = {subentry.data.get(CONF_AUTOMATION) for subentry in entry.subentries.values()}
+        candidates = [
+            a
+            for a in automations
+            if automation_ref(self.hass, a) not in flared and (blueprint_inputs(self.hass, a) or {}).get(BLUEPRINT_LIGHTS_INPUT)
+        ]
+        if not candidates:
+            return self.async_abort(reason="every_room_has_a_flare")
+
         if user_input is not None:
-            entity_id = user_input[CONF_AUTOMATION]
-            inputs = blueprint_inputs(self.hass, entity_id) or {}
-            if not inputs.get(BLUEPRINT_LIGHTS_INPUT):
-                errors[CONF_AUTOMATION] = "input_not_set"
-            else:
-                self._choose(entity_id)
-                self._data.update(
-                    {
-                        CONF_LIGHTS_INPUT: BLUEPRINT_LIGHTS_INPUT,
-                        CONF_LIGHTS_INPUT_KIND: TARGET,
-                        CONF_ZONE_INPUT: BLUEPRINT_ZONE_INPUT,
-                    }
-                )
-                return await self.async_step_details()
-        options = [selector.SelectOptionDict(value=a, label=self._label(a)) for a in automations]
+            chosen = [a for a in candidates if a in user_input[CONF_AUTOMATION]]
+            for entity_id in chosen:
+                self.hass.config_entries.async_add_subentry(entry, self._room_flare(entry, entity_id))
+            return self.async_abort(reason="flares_added", description_placeholders={"count": str(len(chosen))})
+
+        options = [selector.SelectOptionDict(value=a, label=self._label(a)) for a in candidates]
         return self.async_show_form(
             step_id="blueprint",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_AUTOMATION): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=options, mode=selector.SelectSelectorMode.DROPDOWN)
+                    vol.Required(CONF_AUTOMATION, default=candidates): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options, multiple=True, mode=selector.SelectSelectorMode.LIST
+                        )
                     )
                 }
             ),
-            errors=errors,
+        )
+
+    def _room_flare(self, entry: ConfigEntry, entity_id: str) -> ConfigSubentry:
+        """A flare over a FLARE room automation, named after it and in its area."""
+        name = self._label(entity_id)
+        taken = {slugify(subentry.title) for subentry in entry.subentries.values()}
+        title, n = name, 2
+        while slugify(title) in taken:
+            title, n = f"{name} {n}", n + 1
+        registry_entry = er.async_get(self.hass).async_get(entity_id)
+        return ConfigSubentry(
+            subentry_type=SUBENTRY_TYPE_FLARE,
+            title=title,
+            unique_id=slugify(title) or None,
+            data=MappingProxyType(
+                {
+                    CONF_AUTOMATION: automation_ref(self.hass, entity_id),
+                    CONF_LIGHTS_INPUT: BLUEPRINT_LIGHTS_INPUT,
+                    CONF_LIGHTS_INPUT_KIND: TARGET,
+                    CONF_ZONE_INPUT: BLUEPRINT_ZONE_INPUT,
+                    CONF_TURN_OFF: TURN_OFF_FLARE,
+                    CONF_AREA: registry_entry.area_id if registry_entry else None,
+                }
+            ),
         )
 
     async def async_step_custom(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
@@ -484,9 +513,10 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         data = dict(subentry.data)
         entity_id = automation_entity_id(self.hass, data)
         fields: dict = {vol.Required("name"): selector.TextSelector(), **_TURN_OFF_FIELD}
+        # The same fields for every flare, however it was added.
         if data.get(CONF_LIGHTS_TARGET):
             fields.update(_TARGET_SCHEMA.schema)
-        elif data.get(CONF_LIGHTS_INPUT) != BLUEPRINT_LIGHTS_INPUT or data.get(CONF_ZONE_INPUT) != BLUEPRINT_ZONE_INPUT:
+        else:
             blueprint = await async_automation_blueprint(self.hass, entity_id) if entity_id else None
             if blueprint is not None:
                 fields.update(_inputs_schema(lights_input_kinds(blueprint), zone_inputs(blueprint)).schema)
@@ -512,6 +542,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), suggested),
             errors=errors,
+            description_placeholders={"automation": self._label(entity_id) if entity_id else data[CONF_AUTOMATION]},
         )
 
     def _choose(self, entity_id: str) -> None:

@@ -86,17 +86,15 @@
           "title": "Add flare",
           "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on with nothing else runs the room's automation, so the room comes on the way it normally would. Turning it on with a brightness or colour sets every light in the room to that. Turning it off turns the room off.",
           "menu_options": {
-            "blueprint": "A room automation from the FLARE blueprint",
+            "blueprint": "Rooms from the FLARE blueprint",
             "custom": "Another automation"
           }
         },
         "blueprint": {
-          "title": "Pick the room's automation",
+          "title": "Add flares for your rooms",
+          "description": "Each room picked gets a flare named after its automation, in the automation's area, turning off with flare.turn_off. You can rename one or change how it turns off afterwards. Rooms that already have a flare aren't listed.",
           "data": {
-            "automation": "Automation"
-          },
-          "data_description": {
-            "automation": "The flare's lights and zone are the automation's Lights & Occupancy and Zone, read whenever it's used."
+            "automation": "Rooms"
           }
         },
         "custom": {
@@ -148,6 +146,12 @@
             "lights_input": "Lights input",
             "zone_input": "Zone input",
             "lights_target": "Lights"
+          },
+          "description": "Runs the automation **{automation}**. To use a different automation, add a new flare.",
+          "data_description": {
+            "lights_input": "The automation's input naming the lights it controls.",
+            "zone_input": "The automation's input naming its FLARE zone. The flare's turn-off records in it.",
+            "lights_target": "The lights this automation controls."
           }
         }
       },
@@ -158,7 +162,9 @@
       "abort": {
         "no_room_automations": "No automation uses the FLARE blueprint yet. Create one first, or add the flare as another automation.",
         "no_light_inputs": "That automation's blueprint has no input that picks lights, areas or devices.",
-        "reconfigure_successful": "Flare updated"
+        "reconfigure_successful": "Flare updated",
+        "flares_added": "Added {count} flares.",
+        "every_room_has_a_flare": "Every room automation from the FLARE blueprint already has a flare."
       }
     }
   },

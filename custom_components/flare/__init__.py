@@ -4,6 +4,7 @@ dependency rule are in CONTRIBUTING.md."""
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url
@@ -170,11 +171,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+_RELOADS_QUEUED = "reloads_queued"
+
+
 def _lights_key(entry: ConfigEntry) -> str:
     return f"{entry.entry_id}_lights"
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """One reload for changes made together, such as adding several flares at
+    once: the first listener yields so the rest see it queued, then clears the
+    mark before reloading, so a later change still gets its own reload."""
+    queued = hass.data.setdefault(DOMAIN, {}).setdefault(_RELOADS_QUEUED, set())
+    if entry.entry_id in queued:
+        return
+    queued.add(entry.entry_id)
+    await asyncio.sleep(0)
+    queued.discard(entry.entry_id)
     await hass.config_entries.async_reload(entry.entry_id)
 
 

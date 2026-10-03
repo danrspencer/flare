@@ -19,19 +19,21 @@ and colour, rather than at whatever the bulbs last had.
 {:toc}
 </details>
 
-## Adding a flare for a room
+## Adding flares for your rooms
 
-Go to **Settings → Devices & Services → FLARE → Flares → Add flare** and choose **A room
-automation from the FLARE blueprint**. Pick the room's automation, and FLARE fills in the
-rest:
+Go to **Settings → Devices & Services → FLARE → Flares → Add flare** and choose **Rooms from
+the FLARE blueprint**. Every room automation that doesn't have a flare yet is listed and
+ticked, so you can add a flare for every room at once, or untick the ones you don't want.
 
-- **Name** starts as the automation's name, and becomes the light's name, so pick what you'd
-  say out loud: "Kitchen", not "Kitchen lighting".
-- **Area** starts as the automation's area, if it has one. Voice assistants and HomeKit use
-  the area to know which room the light is in.
-- **Turn off with** is `flare.turn_off`, which is what you want unless you know otherwise.
+Each flare is named after its room's automation and placed in the automation's area, which is
+how voice assistants and HomeKit know which room it's in. It turns off with `flare.turn_off`,
+which is what you want unless you know otherwise.
 
-The flare appears as `light.<name>_flare`, and always has the same lights as the room's
+A flare's name is what you'll say out loud, so if an automation is called something like
+"Kitchen lighting", rename its flare to "Kitchen" with **Reconfigure** in the flare's
+three-dot menu.
+
+Each flare appears as `light.<name>_flare` and always has the same lights as its room's
 automation. If you add a bulb to the room's area, it joins the flare too.
 
 ## Using it from a voice assistant or HomeKit

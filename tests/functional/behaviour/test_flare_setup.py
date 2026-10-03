@@ -18,6 +18,8 @@ from tests.functional.behaviour.harness import (
     HALL_BULBS,
     HALL_SENSOR,
     add_flare,
+    add_room_flares,
+    flares_entry,
     occupancy,
     room_brightness,
 )
@@ -140,13 +142,35 @@ async def test_a_flare_name_already_in_use_is_refused(hass: HomeAssistant, add_b
     bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
     await setup_room(lights=bulbs)
     await add_flare(hass, name="Hall")
-    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES]
+    entry = await flares_entry(hass)
 
-    result = await _start(hass, entry, "blueprint")
+    result = await _start(hass, entry, "custom")
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.room"})
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
+    )
     result = await _finish(hass, result, "hall")
 
     assert result["errors"] == {"name": "already_configured"}
+
+
+async def test_every_flare_shows_its_automation_and_where_its_lights_come_from(
+    hass: HomeAssistant, add_bulbs, setup_room, zone
+) -> None:
+    """A room flare is edited like any other: its inputs are on show."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    await setup_room(lights=bulbs)
+    await add_flare(hass, name="Hall")
+    entry = await flares_entry(hass)
+    (subentry_id,) = entry.subentries
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
+    )
+
+    shown = {str(key): (key.description or {}).get("suggested_value") for key in result["data_schema"].schema}
+    assert shown == {"name": "Hall", "turn_off": TURN_OFF_FLARE, "lights_input": "room_target", "zone_input": "zone"}
+    assert result["description_placeholders"] == {"automation": "room"}
 
 
 async def test_a_flare_can_be_renamed_and_its_turn_off_changed(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
@@ -160,10 +184,116 @@ async def test_a_flare_can_be_renamed_and_its_turn_off_changed(hass: HomeAssista
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": "Landing", "turn_off": TURN_OFF_LIGHT}
+        result["flow_id"], {"name": "Landing", "turn_off": TURN_OFF_LIGHT, "lights_input": "room_target", "zone_input": "zone"}
     )
     await hass.async_block_till_done()
 
     assert result["reason"] == "reconfigure_successful"
     subentry = entry.subentries[subentry_id]
     assert (subentry.title, subentry.data["turn_off"], subentry.data["lights_input"]) == ("Landing", TURN_OFF_LIGHT, "room_target")
+
+
+async def _two_rooms(hass: HomeAssistant, add_bulbs, zone) -> None:
+    """Two room automations from the blueprint, each in an area of its own."""
+    from homeassistant.helpers import area_registry as ar
+    from homeassistant.helpers import entity_registry as er
+
+    from tests.functional.behaviour.harness import ZONE, schedule_device, zone_device
+    from tests.support import BLUEPRINT_PATH
+
+    hall, landing = await add_bulbs("hall_a", "landing_a", area_id=zone)
+    rooms = []
+    for name, bulb in (("Hall", hall), ("Landing", landing)):
+        inputs = {
+            "schedule": schedule_device(hass),
+            "zone": zone_device(hass, ZONE),
+            "room_target": {"entity_id": [bulb.entity_id]},
+        }
+        rooms.append({"id": name.lower(), "alias": name, "use_blueprint": {"path": BLUEPRINT_PATH, "input": inputs}})
+    assert await async_setup_component(hass, "automation", {"automation": rooms})
+    await hass.async_block_till_done()
+    for name in ("Hall", "Landing"):
+        area = ar.async_get(hass).async_get_or_create(name).id
+        er.async_get(hass).async_update_entity(f"automation.{name.lower()}", area_id=area)
+
+
+async def test_every_room_can_be_given_a_flare_at_once(hass: HomeAssistant, add_bulbs, zone) -> None:
+    from homeassistant.helpers import area_registry as ar
+    from homeassistant.helpers import device_registry as dr
+    from homeassistant.helpers import entity_registry as er
+
+    await _two_rooms(hass, add_bulbs, zone)
+
+    result = await add_room_flares(hass)
+
+    assert (result["reason"], result["description_placeholders"]) == ("flares_added", {"count": "2"})
+    areas = {}
+    for name in ("Hall", "Landing"):
+        device_id = er.async_get(hass).async_get(f"light.{name.lower()}_flare").device_id
+        areas[name] = ar.async_get(hass).async_get_area(dr.async_get(hass).async_get(device_id).area_id).name
+    assert areas == {"Hall": "Hall", "Landing": "Landing"}
+
+
+async def test_only_the_rooms_picked_get_a_flare(hass: HomeAssistant, add_bulbs, zone) -> None:
+    await _two_rooms(hass, add_bulbs, zone)
+
+    await add_room_flares(hass, ["automation.landing"])
+
+    assert hass.states.get("light.landing_flare") is not None
+    assert hass.states.get("light.hall_flare") is None
+
+
+async def test_a_room_with_a_flare_is_not_offered_again(hass: HomeAssistant, add_bulbs, zone) -> None:
+    await _two_rooms(hass, add_bulbs, zone)
+    await add_room_flares(hass, ["automation.landing"])
+    entry = await flares_entry(hass)
+
+    result = await _start(hass, entry, "blueprint")
+    offered = [o["value"] for o in result["data_schema"].schema["automation"].config["options"]]
+    assert offered == ["automation.hall"]
+
+    await add_room_flares(hass)
+    result = await _start(hass, entry, "blueprint")
+    assert result["reason"] == "every_room_has_a_flare"
+
+
+async def test_adding_several_flares_reloads_the_entry_once(hass: HomeAssistant, add_bulbs, zone) -> None:
+    from unittest.mock import patch
+
+    await _two_rooms(hass, add_bulbs, zone)
+    entry = await flares_entry(hass)
+    reload = hass.config_entries.async_reload
+    reloaded: list[str] = []
+
+    async def counting(entry_id: str) -> bool:
+        reloaded.append(entry_id)
+        return await reload(entry_id)
+
+    with patch.object(hass.config_entries, "async_reload", counting):
+        await add_room_flares(hass)
+
+    assert reloaded == [entry.entry_id]
+    assert hass.states.get("light.hall_flare") and hass.states.get("light.landing_flare")
+
+
+async def test_a_room_flare_is_the_same_however_it_was_added(hass: HomeAssistant, add_bulbs, zone) -> None:
+    """The room list and "Another automation" differ only in how they ask."""
+    await _two_rooms(hass, add_bulbs, zone)
+    await add_room_flares(hass, ["automation.hall"])
+    entry = await flares_entry(hass)
+    result = await _start(hass, entry, "custom")
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.landing"})
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": "Landing", "turn_off": TURN_OFF_FLARE}
+    )
+    await hass.async_block_till_done()
+
+    by_title = {s.title: dict(s.data) for s in entry.subentries.values()}
+    hall, landing = by_title["Hall"], by_title["Landing"]
+    assert set(hall) == set(landing)
+    assert {k: v for k, v in hall.items() if k not in ("automation", "area_id")} == {
+        k: v for k, v in landing.items() if k not in ("automation", "area_id")
+    }

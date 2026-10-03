@@ -221,48 +221,62 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     return areas
 
 
-async def add_flare(
-    hass: HomeAssistant,
-    automation: str = "automation.room",
-    *,
-    name: str = "Room",
-    turn_off: str = TURN_OFF_FLARE,
-    area_id: str | None = None,
-) -> str:
-    """A flare over a blueprint automation, added through the real flow.
-    Creates the Flares entry first if there isn't one. Returns the flare's
-    entity_id."""
+async def flares_entry(hass: HomeAssistant) -> MockConfigEntry:
+    """The Flares entry, created and set up if there isn't one yet."""
     entries = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES]
     if entries:
-        (entry,) = entries
-    else:
-        entry = MockConfigEntry(
-            domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}, unique_id=f"{DOMAIN}_{ENTRY_TYPE_FLARES}", version=3
-        )
-        entry.add_to_hass(hass)
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        return entries[0]
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}, unique_id=f"{DOMAIN}_{ENTRY_TYPE_FLARES}", version=3
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def add_room_flares(hass: HomeAssistant, automations: list[str] | None = None) -> dict:
+    """Runs Add flare's "Rooms from the FLARE blueprint" step, picking
+    `automations` (every room offered, if None). Returns the flow's result."""
+    entry = await flares_entry(hass)
     flows = hass.config_entries.subentries
     result = await flows.async_init((entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "user"})
     result = await flows.async_configure(result["flow_id"], {"next_step_id": "blueprint"})
-    result = await flows.async_configure(result["flow_id"], {"automation": automation})
-    assert result["step_id"] == "details", result
-    details = {"name": name, "turn_off": turn_off}
-    if area_id is not None:
-        details["area_id"] = area_id
-    elif (suggested := _suggested(result, "area_id")) is not None:
-        details["area_id"] = suggested
-    result = await flows.async_configure(result["flow_id"], details)
-    assert result["type"] == "create_entry", result
+    if result["type"] != "form":
+        return result
+    offered = _default(result, "automation")
+    result = await flows.async_configure(
+        result["flow_id"], {"automation": offered if automations is None else automations}
+    )
+    await hass.async_block_till_done()
+    return result
+
+
+async def add_flare(
+    hass: HomeAssistant, automation: str = "automation.room", *, name: str = "Room", turn_off: str = TURN_OFF_FLARE
+) -> str:
+    """A flare over one blueprint room, added through the real flow and then
+    renamed and given `turn_off`. Returns its entity_id."""
+    result = await add_room_flares(hass, [automation])
+    assert result["reason"] == "flares_added", result
+    entry = await flares_entry(hass)
+    (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == hass.states.get(automation).name]
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": name, "turn_off": turn_off, "lights_input": "room_target", "zone_input": "zone"}
+    )
+    assert result["reason"] == "reconfigure_successful", result
     await hass.async_block_till_done()
     return f"light.{name.lower()}_flare"
 
 
-def _suggested(result, key: str):
-    """A form field's suggested value, as the frontend would pre-fill it."""
+def _default(result, key: str):
+    """A form field's default, as the frontend would pre-fill it."""
     for field in result["data_schema"].schema:
         if str(field) == key:
-            return (field.description or {}).get("suggested_value")
+            return field.default()
     return None
 
 

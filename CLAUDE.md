@@ -780,6 +780,17 @@ an override and leaves the room at whatever the bulbs restored to.
   inputs that can hold lights (a light-filtered entity selector, a
   target, area/floor/label, or a device selector not limited to FLARE's
   own Schedule/Zone devices).
+- **Room flares are added in bulk**: the blueprint step lists every
+  room automation without a flare, all ticked, and adds one per pick
+  with `async_add_subentry` (named after the automation, in its area),
+  ending on an abort. One flare at a time was a pain across a house.
+  Each add fires the update listener, so `_async_reload_entry` coalesces
+  listeners queued together into one reload (yield once, then clear the
+  mark before reloading so a later change still gets its own).
+- **Every flare's Reconfigure shows the same fields** - the automation
+  (in the description, since it can't change) and its lights/zone
+  inputs or target - however it was added. Hiding a room flare's
+  inputs made the two paths look like different kinds of thing.
 - **Nothing creates flares automatically.** A HomeKit Bridge including
   the `light` domain, or Alexa/Google with expose-new-entities on, would
   put every room in the Home app after an update.

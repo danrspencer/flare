@@ -30,8 +30,11 @@ A flare is a light entity that sits over an automation. Flares are under **Setti
 | **Turn off with** | `flare.turn_off` (the default) records the turn-off in the zone, so FLARE knows the lights were switched off by FLARE and not by hand. `light.turn_off` records nothing. |
 | **Area** | Only when adding: the area the flare's device starts in, which defaults to the automation's area. After that, the device's area is set the usual way. |
 
-Reconfigure changes the name, **Turn off with**, and the lights or inputs. The automation
-can't be changed: add a new flare instead.
+Adding flares from **Rooms from the FLARE blueprint** creates one for each room picked, named
+after its automation, in the automation's area, turning off with `flare.turn_off`.
+
+Reconfigure names the automation, and changes the name, **Turn off with**, and the lights or
+inputs. The automation can't be changed: add a new flare instead.
 
 ## The flare's light
 
