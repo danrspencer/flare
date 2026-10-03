@@ -21,11 +21,8 @@ from tests.functional.blueprint.harness import (
 class TestBrightnessScaling:
     """docs/reference/blueprint.md#brightness"""
 
-    async def test_a_schedule_at_zero_brightness_still_reaches_one_not_off(
-        self, hass, apply_lighting_calls
-    ):
-        """A curve brightness of 0 means "as dim as it goes", not off, which only
-        a level of 0 means."""
+    async def test_a_schedule_at_zero_brightness_turns_the_lights_off(self, hass, apply_lighting_calls):
+        """0 is off, as it is for light.turn_on."""
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
 
@@ -36,7 +33,7 @@ class TestBrightnessScaling:
         await hass.async_block_till_done()
 
         assert apply_lighting_calls
-        assert effective(apply_lighting_calls[-1], "light.a") == 1
+        assert effective(apply_lighting_calls[-1], "light.a") == 0
 
     async def test_phase_exclude_list_sets_a_zero_level_for_that_light(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")
