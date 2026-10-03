@@ -142,17 +142,18 @@ def clamp_color_temp_kelvin(entity_id: str, target_kelvin: int, lookup: EntityLo
 def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optional[int]) -> Optional[int]:
     """The brightness `entity_id` is sent: 0 for off, None for hands off.
 
-    A light without a level gets `brightness`. Only a level of 0 is off;
-    everything else is clamped to 1-MAX_BRIGHTNESS, so a brightness of 0 is
-    as dim as the light goes. null/false ("something else owns this") are matched by
-    identity, because `False == 0`."""
-    if entity_id not in brightness_levels:
-        return min(max(round(float(brightness)), 1), MAX_BRIGHTNESS)
-    level = brightness_levels[entity_id]
-    if level is None or level is False:
-        return None
-    level = float(level)
-    return 0 if level <= 0 else min(max(round(level), 1), MAX_BRIGHTNESS)
+    A light without a level gets `brightness`. Either way 0 is off, as it is
+    for light.turn_on, and anything else is clamped to 1-MAX_BRIGHTNESS.
+    null/false ("something else owns this") are matched by identity,
+    because `False == 0`."""
+    if entity_id in brightness_levels:
+        value = brightness_levels[entity_id]
+        if value is None or value is False:
+            return None
+    else:
+        value = brightness
+    value = float(value)
+    return 0 if value <= 0 else min(max(round(value), 1), MAX_BRIGHTNESS)
 
 
 def _bucket_by_brightness(entities: list, brightness_levels: dict, brightness: Optional[int]) -> dict:
