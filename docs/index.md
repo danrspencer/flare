@@ -35,7 +35,6 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
 - **It works with Siri, Alexa and Google.** Each room gets a single light to expose to them,
   so "turn on the kitchen" lights the kitchen the way FLARE would, rather than at whatever the
   bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone.
-  [See how →]({{ site.baseurl }}/guides/flares/)
 - **It's gentle on your Zigbee network.** Rooms update one after another rather than all
   at once, and changes too small to see aren't sent.
 
