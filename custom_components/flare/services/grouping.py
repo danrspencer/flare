@@ -3,10 +3,20 @@ light.turn_on/turn_off calls. Pure: HA access is injected through an
 EntityLookup."""
 
 from dataclasses import dataclass, field
-from typing import Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
-from ..zone.override_protection import _color_temp_matches, classify, is_blocked
+from ..zone.override_protection import (
+    DEFAULT_BRIGHTNESS_TOLERANCE,
+    DEFAULT_COLOR_TEMP_TOLERANCE,
+    DEFAULT_RGB_COLOR_TOLERANCE,
+    _color_temp_matches,
+    classify_state,
+    is_blocked,
+)
 from .two_step import TWO_STEP_LABEL_ID, model_matches
+
+if TYPE_CHECKING:
+    from homeassistant.core import State
 
 _RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
@@ -19,24 +29,21 @@ MAX_BRIGHTNESS = 255
 class EntityLookup:
     """HA state/registry access, injected so this module never sees `hass`."""
 
-    is_state: Callable[[str, str], bool]
-    state_attr: Callable[[str, str], object]
+    state: Callable[[str], Optional["State"]]
     device_id: Callable[[str], Optional[str]]
     labels: Callable[[str], list]
     # (None, None) for an entity with no device.
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
-    context_id: Callable[[str], Optional[str]]
-    # The two claims - see claims.py's module docstring.
-    observed_context_id: Callable[[str], Optional[str]]
-    latest_context_id: Callable[[str], Optional[str]]
-    # What each claim asked for, or None if it isn't one of our writes.
-    # Lets externally_set() recognise our own write echoed back under a new
-    # context.
-    latest_target: Callable[[str], Optional[dict]]
-    observed_target: Callable[[str], Optional[dict]]
-    # A two-step write's brightness-step context, or None.
-    latest_secondary_context_id: Callable[[str], Optional[str]]
-    observed_secondary_context_id: Callable[[str], Optional[str]]
+    # The light's claims in the caller's zone, or None - see claims.py.
+    claims: Callable[[str], Optional[dict]]
+
+    def is_state(self, entity_id: str, value: str) -> bool:
+        s = self.state(entity_id)
+        return s is not None and s.state == value
+
+    def state_attr(self, entity_id: str, attr: str) -> object:
+        s = self.state(entity_id)
+        return s.attributes.get(attr) if s is not None else None
 
     def reachable(self, entity_id: str) -> bool:
         """False for anything HA knows it can't reach."""
@@ -56,47 +63,18 @@ class EntityLookup:
         self,
         entity_id: str,
         force: bool = False,
-        brightness_tolerance: int = 2,
-        color_temp_tolerance: int = 10,
-        rgb_color_tolerance: int = 10,
+        brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
+        color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
+        rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     ) -> bool:
         """True if something other than the caller's own writes has touched this
-        light since. An adapter over override_protection.classify()/is_blocked(),
-        which hold the decision table. force bypasses it."""
-        observed_ctx = self.observed_context_id(entity_id)
-        observed = (
-            {
-                "context_id": observed_ctx,
-                "secondary_context_id": self.observed_secondary_context_id(entity_id),
-                "target": self.observed_target(entity_id),
-            }
-            if observed_ctx is not None
-            else None
-        )
-        latest_ctx = self.latest_context_id(entity_id)
-        latest = (
-            {
-                "context_id": latest_ctx,
-                "secondary_context_id": self.latest_secondary_context_id(entity_id),
-                "target": self.latest_target(entity_id),
-            }
-            if latest_ctx is not None
-            else None
-        )
-
-        status, _matched_via = classify(
-            self.is_state(entity_id, "on"),
-            observed,
-            latest,
-            self.context_id(entity_id),
-            self.state_attr(entity_id, "brightness"),
-            self.state_attr(entity_id, "color_temp_kelvin"),
-            self.state_attr(entity_id, "rgb_color"),
+        light since. force bypasses it."""
+        status, _matched_via = classify_state(
+            self.state(entity_id),
+            self.claims(entity_id),
             brightness_tolerance,
             color_temp_tolerance,
             rgb_color_tolerance,
-            self.state_attr(entity_id, "min_color_temp_kelvin"),
-            self.state_attr(entity_id, "max_color_temp_kelvin"),
         )
         return is_blocked(status, force)
 
@@ -173,13 +151,13 @@ def build_groups(
     sensor_brightness: Optional[int],
     sensor_color_temp_kelvin: int,
     lookup: EntityLookup,
-    brightness_tolerance: int = 2,
-    color_temp_tolerance: int = 10,
+    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
+    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     two_step_label: str = TWO_STEP_LABEL_ID,
     two_step_model_patterns: Iterable[str] = (),
     prefer_rgb_color: bool = False,
     rgb_color: Optional[tuple] = None,
-    rgb_color_tolerance: int = 10,
+    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     force: bool = False,
     min_brightness_change: float = 0,
     min_color_temp_change: float = 0,

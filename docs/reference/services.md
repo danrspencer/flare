@@ -244,7 +244,7 @@ response_variable: check
 `results` is keyed by entity ID, and each entry has these fields:
 
 - `blocked`: `true` if FLARE would leave the entity alone.
-- `status`: `controlled`, `overridden`, `untracked` or `off`. See
+- `status`: `controlled`, `overridden`, `untracked`, `off` or `unavailable`. See
   [inspecting tracked state](../zones/#inspecting-tracked-state).
 - `matched_via`: Which claim the entity matched, and how: `latest-context`, `latest-value`,
   `observed-context` or `observed-value`. `null` if it matched neither.

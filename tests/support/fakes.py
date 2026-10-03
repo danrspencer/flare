@@ -2,6 +2,8 @@
 
 from typing import Optional
 
+from homeassistant.core import Context, State
+
 from custom_components.flare.services.grouping import EntityLookup
 from custom_components.flare.services.scenes import SceneLookup
 
@@ -29,62 +31,42 @@ def make_lookup(
     device_of = device_of or {}
     labels_of = labels_of or {}
     device_identity = device_identity or {}
-    observed_context_ids = observed_context_ids or {}
-    latest_context_ids = latest_context_ids or {}
-    latest_targets = latest_targets or {}
-    observed_targets = observed_targets or {}
-    latest_secondary_context_ids = latest_secondary_context_ids or {}
-    observed_secondary_context_ids = observed_secondary_context_ids or {}
+    claim_fields = {
+        "observed": (observed_context_ids, observed_secondary_context_ids, observed_targets),
+        "latest": (latest_context_ids, latest_secondary_context_ids, latest_targets),
+    }
 
-    def is_state(entity_id, value):
-        return states.get(entity_id, {}).get("state") == value
+    def state(entity_id):
+        fake = states.get(entity_id)
+        if fake is None or "state" not in fake:
+            return None
+        return State(
+            entity_id,
+            fake["state"],
+            fake.get("attributes", {}),
+            context=Context(id=fake.get("context_id")),
+        )
 
-    def state_attr(entity_id, attr):
-        return states.get(entity_id, {}).get("attributes", {}).get(attr)
+    def claim(entity_id, context_ids, secondary_context_ids, targets):
+        context_id = (context_ids or {}).get(entity_id)
+        if context_id is None:
+            return None
+        return {
+            "context_id": context_id,
+            "secondary_context_id": (secondary_context_ids or {}).get(entity_id),
+            "target": (targets or {}).get(entity_id),
+        }
 
-    def device_id(entity_id):
-        return device_of.get(entity_id)
-
-    def labels(target_id):
-        return labels_of.get(target_id, [])
-
-    def manufacturer_model(entity_id):
-        return device_identity.get(device_of.get(entity_id), (None, None))
-
-    def context_id(entity_id):
-        return states.get(entity_id, {}).get("context_id")
-
-    def observed_context_id(entity_id):
-        return observed_context_ids.get(entity_id)
-
-    def latest_context_id(entity_id):
-        return latest_context_ids.get(entity_id)
-
-    def latest_target(entity_id):
-        return latest_targets.get(entity_id)
-
-    def observed_target(entity_id):
-        return observed_targets.get(entity_id)
-
-    def latest_secondary_context_id(entity_id):
-        return latest_secondary_context_ids.get(entity_id)
-
-    def observed_secondary_context_id(entity_id):
-        return observed_secondary_context_ids.get(entity_id)
+    def claims(entity_id):
+        record = {name: claim(entity_id, *fields) for name, fields in claim_fields.items()}
+        return record if any(record.values()) else None
 
     return EntityLookup(
-        is_state=is_state,
-        state_attr=state_attr,
-        device_id=device_id,
-        labels=labels,
-        manufacturer_model=manufacturer_model,
-        context_id=context_id,
-        observed_context_id=observed_context_id,
-        latest_context_id=latest_context_id,
-        latest_target=latest_target,
-        observed_target=observed_target,
-        latest_secondary_context_id=latest_secondary_context_id,
-        observed_secondary_context_id=observed_secondary_context_id,
+        state=state,
+        device_id=device_of.get,
+        labels=lambda target_id: labels_of.get(target_id, []),
+        manufacturer_model=lambda entity_id: device_identity.get(device_of.get(entity_id), (None, None)),
+        claims=claims,
     )
 
 

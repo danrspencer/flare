@@ -23,7 +23,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .zone.override_protection import classify
+from .zone.override_protection import classify_state
 from .zone.instance import ZoneInstance, zone_instances
 from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
@@ -52,19 +52,7 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    if state is None or state.state in ("unavailable", "unknown"):
-        return "unavailable", None, live_context_id
-    raw_status, matched_via = classify(
-        state.state == "on",
-        record.get("observed"),
-        record.get("latest"),
-        live_context_id,
-        state.attributes.get("brightness"),
-        state.attributes.get("color_temp_kelvin"),
-        state.attributes.get("rgb_color"),
-        min_color_temp_kelvin=state.attributes.get("min_color_temp_kelvin"),
-        max_color_temp_kelvin=state.attributes.get("max_color_temp_kelvin"),
-    )
+    raw_status, matched_via = classify_state(state, record)
     # "untracked" shows as "controlled": either way, not excluded.
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 

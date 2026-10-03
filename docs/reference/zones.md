@@ -149,6 +149,7 @@ triggers:
 | `overridden` | It matches neither claim, so something else has changed it. |
 | `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
 | `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
+| `unavailable` | Home Assistant can't reach it, so its claims aren't checked. It isn't blocked. |
 
 `matched_via` says which claim matched, and how: `latest-context`, `latest-value`,
 `observed-context` or `observed-value`.

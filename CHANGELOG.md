@@ -82,6 +82,10 @@ CI — see `.github/workflows/release.yml`.
   one's ran out, even if another had seen motion since. It now turns off only once
   every sensor has been clear for the full Wait time. A sensor that is unavailable
   no longer counts as occupied, so a dead sensor can't keep a room lit.
+- **`flare.claims_check` reports an unreachable light as `unavailable`.** It used to
+  judge an unavailable or unknown light against its claims as if it were off, so just
+  after a restart it could answer `overridden` and `blocked: true` while the zone's
+  sensors showed the same light as unavailable.
 
 ### Changed
 

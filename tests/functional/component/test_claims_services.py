@@ -26,6 +26,20 @@ async def test_claims_check_reports_untracked_for_a_brand_new_entity(setup_integ
     assert results["light.a"] == {"blocked": False, "status": "untracked", "matched_via": None, "zone": "Test Zone"}
 
 
+async def test_claims_check_reports_an_unreachable_light_as_unavailable_not_overridden(
+    setup_integration: HomeAssistant,
+):
+    """Claims restored at startup meet lights that haven't reconnected yet."""
+    hass = setup_integration
+    hass.states.async_set("light.a", "unavailable", {})
+    await claims_record(hass, ["light.a"], targets={"light.a": {"brightness": 100, "color_temp_kelvin": 3000}})
+    hass.states.async_set("light.a", "unknown", {}, context=Context())
+
+    results = await claims_check(hass, ["light.a"])
+
+    assert results["light.a"] == {"blocked": False, "status": "unavailable", "matched_via": None, "zone": "Test Zone"}
+
+
 async def test_claims_check_and_claims_record_round_trip(setup_integration: HomeAssistant):
     """Used together, with no apply_lighting, as an independent automation would."""
     hass = setup_integration

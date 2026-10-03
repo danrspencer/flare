@@ -507,7 +507,12 @@ docstring; the decision table lives in `override_protection.classify()`;
 the user-facing contract lives in `docs/reference/integration.md`. Three consumers
 share that one table - `grouping.py`'s `externally_set()`, `sensor.py`'s
 diagnostic status, and `claims_check` - deliberately, because they
-previously drifted.
+previously drifted. They share its input side too: each passes a live
+`State` and a claim record to `classify_state()`, which owns the
+unavailable check and reads the attributes, so only how a status is
+*used* differs between them. They had drifted there as well - `claims_check`
+judged an unavailable light as off. `tests/checks/test_one_classifier_adapter.py`
+fails if anything else calls `classify()` directly.
 
 Facts worth knowing before touching it, each verified against HA core
 rather than assumed:
