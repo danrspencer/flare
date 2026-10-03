@@ -8,11 +8,11 @@ code itself.
 ```
 custom_components/flare/
     __init__.py, config_flow.py, repairs.py, logbook.py, const.py
-                   the integration itself: setting up the two config
+                   the integration itself: setting up the three config
                    entries, the blueprint-update repair, the
                    logbook description, the dashboard front-end files
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
-    event.py
+    event.py, light.py
                    the entities. Home Assistant requires platform
                    modules at this level, so they can't live in a folder
                    (see the integration reference for what each is)
@@ -32,8 +32,15 @@ custom_components/flare/
                          restart
         instance.py      the zone device itself (one per room, usually)
         ticker.py        fires each zone's Tick in turn, a gap apart
+    flares/        flares: a light over each room's automation (the entity
+                   itself is light.py)
+        automation.py    reads an automation's lights and zone from its
+                         blueprint inputs
+        bare.py          what counts as a bare turn-on, which runs the
+                         automation
+        instance.py      the flare device itself
     services/      the services, and the planning behind them
-        handlers.py      the eight zone services, registered against real HA state
+        handlers.py      the nine zone services, registered against real HA state
         schedules.py     export_schedule / import_schedule, registered for the
                          domain rather than by either entry
         grouping.py      reachability, brightness bucketing, tolerance checks,
@@ -56,10 +63,11 @@ custom_components/flare/
                    so it ships and updates with the integration with no
                    manual Lovelace resource registration
 
-The three folders are grouped by concept rather than by how something is exposed, because the
+The four folders are grouped by concept rather than by how something is exposed, because the
 schedule and the claims are each exposed through both entities and services - so neither could
-live with either. Imports run one way: `schedule/` and `zone/` import nothing but `const.py`,
-`services/` may use both, and everything at the package root may use all three.
+live with either. Imports run one way: `schedule/`, `zone/` and `flares/` import nothing but
+`const.py`, `services/` may use `schedule/` and `zone/`, and everything at the package root may
+use all of them.
 `tests/checks/test_layering.py` enforces it.
 
 `schedule/`, `zone/` and most of `services/` are never handed a `hass` - testable with plain
@@ -93,13 +101,14 @@ tests/
 
 docs/
     index.md          the pitch, and what the four phases are for
-    installation.md   quickstart: HACS, blueprint, dashboard card
+    installation.md   quickstart: HACS, blueprint, flares, dashboard
     dashboard.md      how to add the view strategy, and what it builds
     playground.html   the interactive curve, running the real card
     guides/           how to do more: examples, the blueprint's template
-                      inputs, scenes, building without the blueprint
+                      inputs, scenes, voice assistants and HomeKit,
+                      building without the blueprint
     reference/        the technical docs: the blueprint's inputs,
-                      schedules, zones and services
+                      schedules, zones, flares and services
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call

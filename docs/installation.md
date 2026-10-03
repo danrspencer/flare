@@ -75,7 +75,17 @@ Those three are all a room needs, because every other input has a working defaul
 
 Repeat for each room.
 
-## Step 4 — add the dashboard (optional)
+## Step 4 — add flares for voice assistants and HomeKit (optional)
+
+A flare is a light for a whole room, so "Hey Siri, turn on the kitchen" brings the kitchen up
+the way FLARE would. Go to **Settings → Devices & Services → FLARE → Flares → Add flare**,
+choose **Rooms from the FLARE blueprint**, and submit: every room is ticked.
+
+Then expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, and rename
+each flare to what you'll say out loud. See
+[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/) for how.
+
+## Step 5 — add the dashboard (optional)
 
 FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
 configuration editor**, and add:
@@ -103,3 +113,5 @@ which lights FLARE is driving and which ones something else has taken over. See
   [Why didn't my light change?]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
 - Want it to behave differently — a weekend lie-in, a holiday schedule?
   [Examples]({{ site.baseurl }}/guides/examples/).
+- What each voice command does to a room:
+  [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#what-each-command-does).

@@ -32,6 +32,10 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
   of going dark.
 - **It leaves your changes alone.** If you change a light yourself, from an app, a wall
   switch or another automation, FLARE stops setting it until the room next goes dark.
+- **Voice assistants and HomeKit switch the room, not the bulbs.** Each room can have a
+  light of its own, a flare, for Siri, Alexa, Google or Assist. "Turn on the kitchen" brings
+  the kitchen up the way FLARE would, and a brightness or colour you ask for is left alone.
+  [Set it up →]({{ site.baseurl }}/guides/flares/)
 - **It's gentle on your Zigbee network.** Rooms update one after another rather than all
   at once, and changes too small to see aren't sent.
 
