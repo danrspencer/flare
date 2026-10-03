@@ -16,5 +16,7 @@ How to do more with FLARE once a room is running.
   Brightness and Scene templates, with worked examples.
 - **[Scenes]({{ site.baseurl }}/guides/scenes/)** — handing a room to a scene, and getting it
   back.
+- **[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/)** — a light for each
+  room that runs its automation, for Siri, Alexa, Google and HomeKit.
 - **[Building without the blueprint]({{ site.baseurl }}/guides/custom-automations/)** —
   driving FLARE from your own automations instead.

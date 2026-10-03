@@ -444,17 +444,21 @@ and they match the two config entries, Schedules and Zones.
   `ZoneInstance`; it lived in `coordinator.py` next to
   `ScheduleInstance` until the split, one file holding two concepts),
   and when each zone ticks (`ticker.py`).
-- `services/` - `handlers.py` (the eight services) and the planning
+- `flares/` - lights over automations: reading an automation's inputs
+  (`automation.py`), what counts as a bare turn-on (`bare.py`), and the
+  flare itself (`instance.py`). The entity is the root `light.py`.
+- `services/` - `handlers.py` (the nine services) and the planning
   behind them: `grouping.py`, `scenes.py`, `two_step.py`.
 - package root - what Home Assistant dictates: `__init__`, `config_flow`,
-  `repairs`, `logbook`, `const`, and the six entity platform modules.
+  `repairs`, `logbook`, `const`, and the seven entity platform modules.
   Platform modules **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`), which is why "entities" is not a
   folder here. `services.yaml` must stay at the root too. `www/` is the
   dashboard.
 
-**Dependencies run one way**: `schedule/` and `zone/` import only
-`const.py`; `services/` may use both; the root may use all three.
+**Dependencies run one way**: `schedule/`, `zone/` and `flares/` import
+only `const.py`; `services/` may use `schedule/` and `zone/`; the root may
+use everything.
 `tests/checks/test_layering.py` enforces it from the source, so it cannot drift
 silently. `services/__init__.py` holds no imports; the root imports
 `.services.handlers` directly.
@@ -465,7 +469,7 @@ Logger names follow the module path (e.g.
 
 ### Services (`custom_components/flare/services/handlers.py`)
 
-Eight, all unit tested and confirmed working live. Full field contracts
+Nine, all tested, and all but `claims_override` confirmed working live. Full field contracts
 in `docs/reference/integration.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
@@ -488,10 +492,11 @@ in `docs/reference/integration.md` and `services.yaml` - not repeated here.
   order and that encoding were the caller's to get right, and the order
   was wrong (see "Claims are recorded before the write"). **Don't split
   it back into two steps in a caller.**
-- `claims_check` / `claims_record` / `claims_clear` - override
-  protection exposed standalone, for callers that want it without any
-  curve/brightness logic. `claims_clear` is the manual escape hatch
-  for a light stuck `overridden`.
+- `claims_check` / `claims_record` / `claims_clear` / `claims_override`
+  - override protection exposed standalone, for callers that want it
+  without any curve/brightness logic. `claims_clear` is the manual
+  escape hatch for a light stuck `overridden`; `claims_override` is its
+  opposite, marking lights as someone else's (what flares use).
 
 `rgb_color` on both `apply_lighting` and `compute_lighting_groups`
 accepts an explicit `None`, not just an omitted key (`vol.Any(None,
@@ -688,38 +693,52 @@ claims sensor with a capturing `async_add_entities`, so
 save side goes through `async_mock_restore_state_shutdown_restart`, which
 also proves a claim survives HA's JSON encoder.
 
-### Two config entries
+### Three config entries
 
-The integration installs as **two** entries, not one: *FLARE Schedules*
-(day-phase/curve sensors) and *FLARE Zones* (the services, the claim
-registry, the zone scheduler, and the zones).
+The integration installs as **three** entries, not one: *Schedules*
+(day-phase/curve sensors), *Zones* (the services, the claim registry,
+the zone scheduler, and the zones) and *Flares* (light facades over
+automations - see "Flares" below).
 
-**User-facing names: "FLARE Zones" and "zone"**, the entry named after
+**Entry titles carry no "FLARE" prefix**, at the user's direction: the
+integration page already says FLARE above them, so "FLARE Zones" read as
+silly. Docs write the path as **FLARE → Zones**. Entries still titled
+the old defaults are renamed in `async_setup_entry`
+(`LEGACY_ENTRY_TITLES`); a title the user changed is left alone.
+
+**User-facing names: "Zones" and "zone"**, the entry named after
 what it holds, and the code says zone too. The stored values can't
 follow: `ENTRY_TYPE_ZONES` is `"tracking"` in each entry's data and
 `SUBENTRY_TYPE_ZONE` is `"state"`, because HA has no way to retype a
-subentry and recreating zones would give them new device ids. Both use the
-sensor platform; each platform module branches on
-`entry.data[CONF_ENTRY_TYPE]`.
+subentry and recreating zones would give them new device ids. Schedules
+and Zones both use the sensor platform; each platform module branches on
+`entry.data[CONF_ENTRY_TYPE]`. **`async_setup_entry` treats anything
+that isn't Zones or Flares as Schedules**, so a new entry type must
+branch before that fallthrough.
 
 Why: HA's integration page renders **one section per subentry** with no
 hook to group them by type (`subEntries.map(...)` in
 `ha-config-entry-row.ts`), so a single entry flattened schedules and
 zones into one long list of peers - 19 of them on this house. The entry
-is the only level at which the distinction can be expressed.
+is the only level at which the distinction can be expressed. Flares got
+their own entry for the same reason rather than being a second subentry
+type on Zones.
 
 The services live with **zones**, not schedules: every one of them is
 about which lights are being driven and by whom, and they need the claim
 registry that entry owns.
 
-**One "Add Integration" sets FLARE up ready to use.** Two entries is a
-grouping decision, never an argument for two trips through the flow.
-`async_step_user` asks for a first schedule's name (default Home) and
-which rooms become zones, creates each missing entry through
+**One "Add Integration" sets FLARE up ready to use.** Separate entries
+are a grouping decision, never an argument for several trips through the
+flow. `async_step_user` asks for a first schedule's name (default Home)
+and which rooms become zones, creates each missing entry through
 `SOURCE_IMPORT` - Schedules with that schedule as its subentry, Zones
-with a zone per room - and ends on an abort, `setup_complete`, carrying
-a summary. Each half is still creatable alone, so deleting one and
-adding it back works.
+with a zone per room, Flares empty - and ends on an abort,
+`setup_complete`, carrying a summary. Each entry is still creatable
+alone, so deleting one and adding it back works. An install from before
+Flares existed gets the entry from `async_setup`
+(`_ensure_flares_entry`), only when another FLARE entry already exists,
+so a fresh install never sprouts entries unasked.
 
 **The flow ends on an abort, never on an entry,** because of HA's
 "integration added" dialog (`step-flow-create-entry.ts`). It shows a
@@ -728,6 +747,98 @@ completes on, with no way to suppress it. Both entries now have devices
 from the start, so completing on either would put the schedule or every
 zone through that form. An abort has no entry, so no dialog; HA's own
 `reconfigure_successful` is the same pattern.
+
+### Flares
+
+A flare (`light.<slug>_flare`, `light.py` + `flares/`) is a light over an
+automation, so voice assistants, HomeKit and dashboards can switch a room
+without bypassing it. Built because a hand "on" from Siri/Alexa reads as
+an override and leaves the room at whatever the bulbs restored to.
+
+- **A bare turn-on is `automation.trigger`.** How a room comes on is the
+  automation's decision (allow_turn_on, templates, idle levels, scenes),
+  and a manual run already passes `allow_turn_on` and `force`, so it
+  also reclaims overridden lights: "on" again hands the room back.
+  `allow_turn_on` is untouched. "Bare" is no keys but `transition`
+  (`flares/bare.py`); note HA strips `transition` before the entity
+  sees it unless the light supports it, which is why the behaviour test
+  needs `supports_transition` bulbs.
+- **On with values, and off, mark the lights overridden first**
+  (`flare.claims_override`, in the zone named by the zone input), then
+  forward as `LightGroup` does. Without the mark, a light with no claim
+  - every light, once a room goes dark and the zone releases them - is
+  "untracked", which apply_lighting treats as free: the run the change
+  itself triggers (an Additional Trigger on a room light, or a tick)
+  took it over and dimmed Siri's "100%" back to the curve, live. The
+  override claim is an `observed` under a fresh context with no target,
+  so it never matches by context or value, on or off; the room's forced
+  manual run (a bare "on") takes it back as usual.
+- **Off is a plain `light.turn_off`**, never `flare.turn_off`. A
+  flare's off is the user's, so it must read as an override.
+  `flare.turn_off` claims the off as FLARE's, and that shipped once as
+  the default: a run landing while the room was half-off (an Additional
+  Trigger on one of the room's own lights, fired by the first bulb
+  reporting off) relit the off lights instantly. Pinned by
+  `test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation`,
+  which needs `reports_off_late` bulbs to reproduce the half-off moment.
+- **The zone input is for `claims_override` only.** It was removed with
+  the turn-off setting and brought back for the override; without one a
+  flare can't protect a light FLARE wasn't already driving.
+- **A flare stores the automation and the NAME of the input holding its
+  lights** (and of the one holding its zone), read live - not a light
+  list. For our blueprint that's `room_target`/`zone`
+  (`BLUEPRINT_*_INPUT`, pinned
+  by `tests/checks/test_flare_inputs.py`). A plain automation (no
+  inputs) stores a target instead. The automation is stored as its
+  entity-registry id so a rename doesn't orphan it.
+- **The inputs come from the automation entity's private
+  `_blueprint_inputs`** - `raw_config` is the substituted config, so
+  it's the only place they survive. Accepted risk, kept to
+  `flares/automation.py:blueprint_inputs`; the behaviour tests break if
+  HA changes its shape.
+- **Only automations from our blueprint are listed** in Add Flare - not
+  every automation calling a FLARE service, at the user's direction.
+  Any other automation goes through the custom path, which offers only
+  inputs that can hold lights (a light-filtered entity selector, a
+  target, area/floor/label, or a device selector not limited to FLARE's
+  own Schedule/Zone devices).
+- **Room flares are added in bulk**: the blueprint step lists every
+  room automation without a flare, all ticked, and adds one per pick
+  with `async_add_subentry` (named after the automation, in its area),
+  ending on an abort. One flare at a time was a pain across a house.
+  Each add fires the update listener, so `_async_reload_entry` coalesces
+  listeners queued together into one reload (yield once, then clear the
+  mark before reloading so a later change still gets its own).
+- **Every flare's Reconfigure shows the same fields** - the automation
+  (in the description, since it can't change) and its lights/zone
+  inputs or target - however it was added. Hiding a room flare's
+  inputs made the two paths look like different kinds of thing.
+- **Nothing creates flares automatically.** A HomeKit Bridge including
+  the `light` domain, or Alexa/Google with expose-new-entities on, would
+  put every room in the Home app after an update.
+- **The flare's device is placed in the automation's area once, at
+  creation** (`_place_in_area`, gated on the device not existing yet),
+  never again, so a user moving it isn't undone. Not
+  `DeviceInfo.suggested_area`, which is deprecated and takes a name.
+- **Membership tracking is `async_track_target_selector_state_change_event`**,
+  replacing GroupEntity's fixed list; it re-resolves on registry
+  changes. It skips hidden and entity-category lights (HA's primary-
+  entity rule), which differs from the blueprint's `area_entities`. It
+  retracks on `automation_reloaded`, on automation registry changes, and
+  once HA has started (automations load after FLARE).
+- **A flare must never be one of a room's lights.** In its room's area
+  the blueprint would send it the curve and it would forward that to
+  every light as an override, every tick. Three layers: the blueprint's
+  `resolved_entities` and `recovered` reject
+  `integration_entities('flare')`; the services drop flare-platform
+  lights (`_without_flares`); and a flare's own filter drops other
+  flares (without it, a flare containing itself recurses forever).
+  `integration_entities` reads live entity *sources*, not the registry,
+  so blueprint tests need a real `MockEntityPlatform` entity
+  (`add_flare_light`).
+- **The light platform is only forwarded when the entry has flares**, so
+  an empty Flares entry doesn't set up `light` early (which broke every
+  behaviour test registering its fake bulbs afterwards).
 
 ### Multi-sensor schedule architecture
 
@@ -1370,7 +1481,7 @@ raising, so a house moving between the two states leaves nothing behind.
   automations decide whether a blueprint is in use, and during setup
   they may not have loaded, so checking early finds every blueprint
   orphaned and reports nothing. Zones entry only, so a house with
-  both entries doesn't run it twice.
+  more than one entry doesn't run it twice.
 - A blueprint that fails to load comes back from
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
   hence the `isinstance` check, not a `None` check.

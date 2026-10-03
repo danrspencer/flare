@@ -4,6 +4,7 @@ zones, and the options flow."""
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
+from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.flare.const import (
@@ -14,8 +15,10 @@ from custom_components.flare.const import (
     DEFAULT_MIN_BRIGHTNESS_CHANGE,
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
     DOMAIN,
+    ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_ZONES,
+    SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_ZONE,
 )
@@ -58,7 +61,7 @@ async def test_setup_offers_one_zone_per_area_that_has_lights(stub_entry_setup, 
 
 
 async def test_adding_the_integration_once_gives_a_working_schedule_and_zones(stub_entry_setup, hass: HomeAssistant):
-    """Both entries, a first schedule with its entities, and a zone per room.
+    """Every entry, a first schedule with its entities, and a zone per room.
     The flow ends on a summary rather than on either entry: HA's
     "integration added" dialog would prompt to rename and place every
     device the entry it completes on has."""
@@ -74,9 +77,10 @@ async def test_adding_the_integration_once_gives_a_working_schedule_and_zones(st
 
     assert result["type"] == "abort" and result["reason"] == "setup_complete"
     assert result["description_placeholders"] == {"created": "a schedule called Downstairs and 1 zone"}
-    assert {e.data[CONF_ENTRY_TYPE] for e in hass.config_entries.async_entries(DOMAIN)} == {
-        ENTRY_TYPE_SCHEDULES,
-        ENTRY_TYPE_ZONES,
+    assert {e.data[CONF_ENTRY_TYPE]: e.title for e in hass.config_entries.async_entries(DOMAIN)} == {
+        ENTRY_TYPE_SCHEDULES: "Schedules",
+        ENTRY_TYPE_ZONES: "Zones",
+        ENTRY_TYPE_FLARES: "Flares",
     }
     assert hass.states.get("sensor.downstairs_flare").state in ("Morning", "Day", "Evening", "Night")
     assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
@@ -109,7 +113,7 @@ async def test_the_missing_zones_can_be_added_back_on_their_own(stub_entry_setup
     await hass.async_block_till_done()
 
     assert result["description_placeholders"] == {"created": "1 zone"}
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 2
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 3
 
 
 async def test_the_missing_schedules_can_be_added_back_with_a_first_schedule(stub_entry_setup, hass: HomeAssistant):
@@ -130,9 +134,9 @@ async def test_the_missing_schedules_can_be_added_back_with_a_first_schedule(stu
     assert [s.title for s in schedules.subentries.values()] == ["Home"]
 
 
-async def test_adding_it_again_with_both_present_aborts(stub_entry_setup, hass: HomeAssistant):
-    """Nothing left to create, and neither half may be duplicated."""
-    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES):
+async def test_adding_it_again_with_every_entry_present_aborts(stub_entry_setup, hass: HomeAssistant):
+    """Nothing left to create, and no entry may be duplicated."""
+    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES):
         MockConfigEntry(
             domain=DOMAIN,
             data={CONF_ENTRY_TYPE: entry_type},
@@ -144,7 +148,24 @@ async def test_adding_it_again_with_both_present_aborts(stub_entry_setup, hass: 
 
     assert result["type"] == "abort"
     assert result["reason"] == "already_configured"
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 2
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 3
+
+
+async def test_adding_it_again_with_only_flares_missing_adds_flares(stub_entry_setup, hass: HomeAssistant):
+    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES):
+        MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_ENTRY_TYPE: entry_type},
+            unique_id=f"{DOMAIN}_{entry_type}",
+            version=3,
+        ).add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    await hass.async_block_till_done()
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "flares_entry_created"
+    assert _entry_of_type(hass, ENTRY_TYPE_FLARES).title == "Flares"
 
 
 async def test_setup_with_no_areas_still_creates_a_schedule_and_no_zones(stub_entry_setup, hass: HomeAssistant):
@@ -177,8 +198,10 @@ async def _add_subentry(hass: HomeAssistant, entry, subentry_type: str, user_inp
 async def test_each_entry_offers_only_its_own_subentry_type(hass: HomeAssistant):
     schedules = _entry(hass, ENTRY_TYPE_SCHEDULES)
     zones = _entry(hass, ENTRY_TYPE_ZONES)
+    flares = _entry(hass, ENTRY_TYPE_FLARES)
     assert set(schedules.supported_subentry_types) == {SUBENTRY_TYPE_SENSOR}
     assert set(zones.supported_subentry_types) == {SUBENTRY_TYPE_ZONE}
+    assert set(flares.supported_subentry_types) == {SUBENTRY_TYPE_FLARE}
 
 
 async def test_adding_a_schedule_sensor(stub_entry_setup, hass: HomeAssistant):
@@ -271,3 +294,54 @@ async def test_only_the_zones_entry_has_options(stub_entry_setup, hass: HomeAssi
     zones = _entry(hass, ENTRY_TYPE_ZONES)
 
     assert (schedules.supports_options, zones.supports_options) == (False, True)
+
+
+async def test_an_install_from_before_flares_gets_a_flares_entry_at_startup(stub_entry_setup, hass: HomeAssistant):
+    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES):
+        MockConfigEntry(
+            domain=DOMAIN, data={CONF_ENTRY_TYPE: entry_type}, unique_id=f"{DOMAIN}_{entry_type}", version=3
+        ).add_to_hass(hass)
+
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+
+    assert _entry_of_type(hass, ENTRY_TYPE_FLARES).title == "Flares"
+
+
+async def test_a_new_install_gets_no_entries_at_startup(stub_entry_setup, hass: HomeAssistant):
+    """Adding FLARE is still the user's choice."""
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+
+    assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+async def test_entries_still_titled_the_old_way_lose_the_prefix(stub_entry_setup, hass: HomeAssistant):
+    old = {
+        ENTRY_TYPE_SCHEDULES: ("FLARE Schedules", "Schedules"),
+        ENTRY_TYPE_ZONES: ("FLARE Zones", "Zones"),
+    }
+    for entry_type, (title, _) in old.items():
+        MockConfigEntry(
+            domain=DOMAIN, title=title, data={CONF_ENTRY_TYPE: entry_type}, unique_id=f"{DOMAIN}_{entry_type}", version=3
+        ).add_to_hass(hass)
+
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+
+    assert {t: _entry_of_type(hass, t).title for t in old} == {t: new for t, (_, new) in old.items()}
+
+
+async def test_an_entry_the_user_renamed_keeps_its_name(stub_entry_setup, hass: HomeAssistant):
+    MockConfigEntry(
+        domain=DOMAIN,
+        title="Rooms",
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_ZONES}",
+        version=3,
+    ).add_to_hass(hass)
+
+    assert await async_setup_component(hass, DOMAIN, {})
+    await hass.async_block_till_done()
+
+    assert _entry_of_type(hass, ENTRY_TYPE_ZONES).title == "Rooms"

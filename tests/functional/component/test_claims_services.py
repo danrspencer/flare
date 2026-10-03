@@ -1,4 +1,4 @@
-"""claims_check, claims_record and claims_clear."""
+"""claims_check, claims_record, claims_clear and claims_override."""
 
 from __future__ import annotations
 
@@ -187,3 +187,52 @@ async def test_claims_clear_is_a_noop_for_an_untracked_entity_within_a_real_zone
     )
     assert result == {"cleared": ["light.never_tracked"]}
     assert claim_registry(hass).all_records() == {}
+
+
+async def _override(hass: HomeAssistant, entities: list[str]) -> dict:
+    return await hass.services.async_call(
+        DOMAIN,
+        "claims_override",
+        {"entities": entities, "zone_device_id": zone_device_id(hass)},
+        blocking=True,
+        return_response=True,
+    )
+
+
+async def test_claims_override_marks_lights_overridden_whatever_their_state(setup_integration: HomeAssistant):
+    """An untracked light, one FLARE drives, and an off one: each reads as
+    someone else's, even with values FLARE asked for."""
+    hass = setup_integration
+    ours = Context()
+    set_light(hass, "light.ours", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000, context=ours)
+    await claims_record(hass, ["light.ours"], targets={"light.ours": {"brightness": 100}}, context=ours)
+    set_light(hass, "light.untracked", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
+    set_light(hass, "light.off", "off")
+
+    response = await _override(hass, ["light.ours", "light.untracked", "light.off"])
+
+    assert response == {"overridden": ["light.ours", "light.untracked", "light.off"]}
+    results = await claims_check(hass, ["light.ours", "light.untracked", "light.off"])
+    assert {e: r["status"] for e, r in results.items()} == {
+        "light.ours": "overridden",
+        "light.untracked": "overridden",
+        "light.off": "overridden",
+    }
+
+
+async def test_claims_clear_undoes_claims_override(setup_integration: HomeAssistant):
+    hass = setup_integration
+    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
+    await _override(hass, ["light.a"])
+
+    await hass.services.async_call(
+        DOMAIN, "claims_clear", {"entities": ["light.a"], "zone_device_id": zone_device_id(hass)}, blocking=True
+    )
+
+    assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "untracked"
+
+
+async def test_claims_override_needs_a_zone(setup_integration: HomeAssistant):
+    hass = setup_integration
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(DOMAIN, "claims_override", {"entities": ["light.a"]}, blocking=True)

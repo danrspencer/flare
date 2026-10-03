@@ -18,5 +18,7 @@ creates.
   transitions, and copying a schedule.
 - **[Zones]({{ site.baseurl }}/reference/zones/)** — a zone's entities, override protection,
   and when zones tick.
+- **[Flares]({{ site.baseurl }}/reference/flares/)** — a flare's settings, and what each
+  light command does.
 - **[Services]({{ site.baseurl }}/reference/services/)** — each service, its fields and what it
   returns.

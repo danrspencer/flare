@@ -14,7 +14,7 @@ render_with_liquid: false
 
 A schedule sets when each of the four phases starts, and the brightness and colour temperature
 in each phase. Adding FLARE creates your first schedule. You can add more, for example for rooms
-that need different timing, under **Settings → Devices & Services → FLARE Schedules → Add
+that need different timing, under **Settings → Devices & Services → FLARE → Schedules → Add
 schedule sensor**.
 
 <details open markdown="block">
@@ -98,7 +98,7 @@ schedule, settings it leaves out keep their current values.
 To copy or apply a schedule, use any of:
 
 - **Copy** and **Paste** at the bottom of each schedule on the [dashboard](../../dashboard/).
-- **Reconfigure** in the schedule's three-dot menu under **FLARE Schedules**, which shows the
+- **Reconfigure** in the schedule's three-dot menu under **FLARE → Schedules**, which shows the
   schedule as text that you can replace and submit.
 - The services [`flare.export_schedule` and `flare.import_schedule`](../services/#flareexport_schedule).
 - **Copy schedule** and **Load** in the [curve playground](../../playground/).

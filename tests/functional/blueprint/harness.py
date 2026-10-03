@@ -7,7 +7,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import MockConfigEntry, MockEntity, MockEntityPlatform
 
 from custom_components.flare.services.grouping import target_brightness
 from tests.support import BLUEPRINT_PATH
@@ -120,3 +120,14 @@ def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room"
 def effective(call, entity_id):
     """The brightness apply_lighting sends a light, by the service's own rule."""
     return target_brightness(entity_id, call.data.get("brightness_levels") or {}, call.data.get("brightness"))
+
+
+async def add_flare_light(hass: HomeAssistant, object_id: str, area_id: str) -> str:
+    """A light from FLARE's own platform, as a flare is, in `area_id`. A real
+    entity, since the blueprint finds flares by the platform that added them."""
+    platform = MockEntityPlatform(hass, domain="light", platform_name="flare")
+    await platform.async_add_entities([MockEntity(unique_id=object_id, name=object_id)])
+    entity_id = er.async_get(hass).async_get_entity_id("light", "flare", object_id)
+    er.async_get(hass).async_update_entity(entity_id, area_id=area_id)
+    light(hass, entity_id, "on")
+    return entity_id

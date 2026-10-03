@@ -44,6 +44,14 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **Flares: a light for each room, for voice assistants and HomeKit.** A flare is a light
+  entity over an automation. Turning it on runs the automation, so "turn on the kitchen"
+  brings the room up the way FLARE would; turning it on with a brightness or colour sets
+  every light in the room to it, and turning it off turns the room off. Add one under the
+  new **Flares** entry, picking a room automation from the blueprint, or any other
+  automation. Existing installs get the **Flares** entry on the next restart.
+- **`flare.claims_override`** marks lights as changed by someone else, so FLARE leaves
+  them alone whether or not it was driving them. The opposite of `flare.claims_clear`.
 - **Motion sensors work in Lights & Occupancy.** Binary sensors with `device_class: motion`
   now turn a room on and off exactly like occupancy sensors, on their own or alongside them.
   Before, only `device_class: occupancy` sensors were picked up.
@@ -89,6 +97,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **FLARE's entries are called Schedules, Zones and Flares**, without the "FLARE" in front.
+  Entries still carrying the old default names are renamed; one you renamed yourself keeps
+  its name.
 - **The blueprint's first three inputs are Schedule, Zone and Lights & Occupancy**, in
   that order. **Schedule** is what was labelled **FLARE Sensor**; nothing to re-enter.
 - **A zone no longer has a "Lights, devices or areas" field.** It only put the zone's

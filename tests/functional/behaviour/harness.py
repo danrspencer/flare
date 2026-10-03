@@ -8,11 +8,19 @@ from datetime import datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_RGB_COLOR, ColorMode, LightEntity
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_RGB_COLOR,
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
+)
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import color as color_util
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
@@ -20,8 +28,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
     DOMAIN,
+    ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
     ENTRY_TYPE_ZONES,
+    SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_ZONE,
 )
@@ -54,12 +64,24 @@ class FakeBulb(LightEntity):
     Colour-temp only by default. Quirks, for test_device_quirks.py:
     supports_rgb; reports_via_rgb (translates Kelvin commands and reports
     rgb_color, like IKEA TRADFRI spots); needs_two_step (a call that
-    changes brightness and sets a colour applies only the brightness).
+    changes brightness and sets a colour applies only the brightness);
+    supports_transition (HA drops `transition` for a light without it);
+    reports_off_late (switches off, but only reports it on
+    async_report_off(), as a slow Zigbee bulb does).
     """
 
     _attr_should_poll = False
 
-    def __init__(self, name: str, *, supports_rgb=False, reports_via_rgb=False, needs_two_step=False) -> None:
+    def __init__(
+        self,
+        name: str,
+        *,
+        supports_rgb=False,
+        reports_via_rgb=False,
+        needs_two_step=False,
+        supports_transition=False,
+        reports_off_late=False,
+    ) -> None:
         self._attr_name = name
         self._attr_unique_id = name
         self._attr_is_on = False
@@ -71,6 +93,9 @@ class FakeBulb(LightEntity):
         if supports_rgb or reports_via_rgb:
             modes.add(ColorMode.RGB)
         self._attr_supported_color_modes = modes
+        if supports_transition:
+            self._attr_supported_features = LightEntityFeature.TRANSITION
+        self._reports_off_late = reports_off_late
         self._attr_color_mode = ColorMode.COLOR_TEMP
         self._reports_via_rgb = reports_via_rgb
         # Gated on brightness *changing*: two-step's second call re-sends
@@ -104,6 +129,13 @@ class FakeBulb(LightEntity):
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        if self._reports_off_late:
+            return
+        self._attr_is_on = False
+        self.async_write_ha_state()
+
+    async def async_report_off(self) -> None:
+        """The late report of a reports_off_late bulb's turn-off."""
         self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -204,6 +236,65 @@ async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | 
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return areas
+
+
+async def flares_entry(hass: HomeAssistant) -> MockConfigEntry:
+    """The Flares entry, created and set up if there isn't one yet."""
+    entries = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES]
+    if entries:
+        return entries[0]
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}, unique_id=f"{DOMAIN}_{ENTRY_TYPE_FLARES}", version=3
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def add_room_flares(hass: HomeAssistant, automations: list[str] | None = None) -> dict:
+    """Runs Add flare's "Rooms from the FLARE blueprint" step, picking
+    `automations` (every room offered, if None). Returns the flow's result."""
+    entry = await flares_entry(hass)
+    flows = hass.config_entries.subentries
+    result = await flows.async_init((entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "user"})
+    result = await flows.async_configure(result["flow_id"], {"next_step_id": "blueprint"})
+    if result["type"] != "form":
+        return result
+    offered = _default(result, "automation")
+    result = await flows.async_configure(
+        result["flow_id"], {"automation": offered if automations is None else automations}
+    )
+    await hass.async_block_till_done()
+    return result
+
+
+async def add_flare(hass: HomeAssistant, automation: str = "automation.room", *, name: str = "Room") -> str:
+    """A flare over one blueprint room, added through the real flow and then
+    renamed. Returns its entity_id."""
+    result = await add_room_flares(hass, [automation])
+    assert result["reason"] == "flares_added", result
+    entry = await flares_entry(hass)
+    (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == hass.states.get(automation).name]
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"name": name, "lights_input": "room_target", "zone_input": "zone"}
+    )
+    assert result["reason"] == "reconfigure_successful", result
+    await hass.async_block_till_done()
+    entity_id = er.async_get(hass).async_get_entity_id("light", DOMAIN, f"{subentry_id}_light")
+    assert entity_id is not None, "the flare has no light"
+    return entity_id
+
+
+def _default(result, key: str):
+    """A form field's default, as the frontend would pre-fill it."""
+    for field in result["data_schema"].schema:
+        if str(field) == key:
+            return field.default()
+    return None
 
 
 def schedule_device(hass: HomeAssistant) -> str:

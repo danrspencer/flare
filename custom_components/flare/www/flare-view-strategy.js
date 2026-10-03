@@ -42,7 +42,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
     if (!all.length) {
       return notice(
         'No FLARE schedules found yet.\n\nAdd one under **Settings → Devices & ' +
-          'Services → FLARE Schedules → Add schedule sensor**, and it will appear ' +
+          'Services → FLARE → Schedules → Add schedule sensor**, and it will appear ' +
           'here automatically.'
       );
     }
@@ -80,7 +80,7 @@ class FlareZoneViewStrategy extends HTMLElement {
     if (!zones.length) {
       return notice(
         'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
-          '& Services → FLARE Zones → Add zone**, and it will appear here ' +
+          '& Services → FLARE → Zones → Add zone**, and it will appear here ' +
           'automatically.'
       );
     }

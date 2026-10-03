@@ -7,6 +7,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import floor_registry as fr
 
 from tests.functional.blueprint.harness import (
+    add_flare_light,
     light,
     setup_room_automation,
 )
@@ -113,3 +114,21 @@ class TestRecoveredTrigger:
         await hass.async_block_till_done()
 
         assert apply_lighting_calls == []
+
+
+class TestRecoveredIgnoresFlares:
+    async def test_a_flare_in_the_room_does_not_count_as_a_reachable_light(self, hass, apply_lighting_calls):
+        """Counted, a flare would hold the trigger armed, so a light
+        reconnecting would never fire it."""
+        area = ar.async_get(hass).async_get_or_create("Lounge")
+        er.async_get(hass).async_get_or_create("light", "test", "a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=area.id)
+        light(hass, "light.a", "unavailable")
+        await add_flare_light(hass, "lounge_flare", area.id)
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"area_id": area.id})
+
+        light(hass, "light.a", "on", brightness=255)
+        await hass.async_block_till_done()
+
+        assert any(c.data["entities"] == ["light.a"] for c in apply_lighting_calls)

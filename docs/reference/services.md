@@ -1,7 +1,7 @@
 ---
 title: Services
 parent: Reference
-nav_order: 4
+nav_order: 5
 permalink: /reference/services/
 redirect_from:
   - /reference/integration/
@@ -27,6 +27,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
 | [`flare.claims_clear`](#flareclaims_clear) | Discards claims, so FLARE sets the lights again |
+| [`flare.claims_override`](#flareclaims_override) | Marks lights as changed by someone else, so FLARE leaves them alone |
 | [`flare.compute_scene_coverage`](#flarecompute_scene_coverage) | Which of a room's lights a scene sets |
 | [`flare.export_schedule`](#flareexport_schedule) | A schedule's settings as YAML |
 | [`flare.import_schedule`](#flareimport_schedule) | Sets a schedule from YAML |
@@ -74,8 +75,8 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of the target isn't sent anything. Two values that convert to the same mired always count as a match. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
-| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
-| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
+| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
+| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
@@ -318,6 +319,32 @@ data:
 
 Optional. `cleared` lists the entities passed in.
 
+## `flare.claims_override`
+
+Use this action when your automation changes lights by hand, so FLARE leaves them alone. It
+marks each entity as changed by someone else, whether FLARE was driving it or not, and
+whatever it's set to. A light marked this way stays overridden until its zone goes dark, its
+claims are cleared, or a forced `flare.apply_lighting` takes it back. Flares call it before
+turning a room off or setting it to a brightness or colour.
+
+```yaml
+action: flare.claims_override
+data:
+  entities: [light.kitchen_1]
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+```
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `entities`<br>list of entity IDs | yes | The entities to mark. |
+| `zone_device_id`<br>zone device ID | yes | The zone to mark them in. |
+
+### Response data
+
+Optional. `overridden` lists the entities passed in.
+
 ## `flare.compute_scene_coverage`
 
 Use this action to find out which of a set of lights a scene sets, so you can apply the scene
@@ -411,7 +438,7 @@ Some bulbs can't change brightness and colour temperature in one command: they j
 value, or ignore one of the two. FLARE sends these bulbs two commands, brightness first and
 then colour, each taking half the transition. It recognises them in two ways:
 
-- **By make and model**, from the **Two-step bulb models** field under **FLARE Zones →
+- **By make and model**, from the **Two-step bulb models** field under **FLARE → Zones →
   Configure**. It holds one pattern per line, matched case-insensitively against
   `"<manufacturer> <model>"`, and `*` matches anything, so `*TRADFRI bulb*` and `IKEA*` both
   work. The field is pre-filled with FLARE's default patterns. Your saved list replaces those

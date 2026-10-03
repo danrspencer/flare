@@ -77,6 +77,11 @@ async def blueprint_is_installed(hass: HomeAssistant) -> bool:
     return bool(await _ours(hass))
 
 
+async def automations_using_our_blueprint(hass: HomeAssistant) -> list[str]:
+    """Every automation built from any copy of our blueprint."""
+    return sorted({a for path in await _ours(hass) for a in automations_with_blueprint(hass, path)})
+
+
 async def outdated_blueprints(hass: HomeAssistant) -> list[InstalledBlueprint]:
     """Every copy of our blueprint that is in use and out of date."""
     installed = await _ours(hass)

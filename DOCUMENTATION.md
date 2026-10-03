@@ -169,6 +169,7 @@ starting from scratch, is not.
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
 | zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*. |
+| flare | external | A light over an automation, for voice assistants and HomeKit: `light.<name>_flare`. Lower case in running prose; **Flares** when naming the entry. |
 | Tick | external | A zone's `event.<name>_flare_tick` entity. Capitalised: it's the entity's name. The update it causes is still *the regular update*. |
 
 ### Behaviour
@@ -208,7 +209,8 @@ Never paraphrase these. They are what the user types or clicks.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
-- **Config entries** — FLARE Schedules, FLARE Zones.
+- **Config entries** — Schedules, Zones, Flares, under FLARE. Write the path as
+  **FLARE → Zones**.
 - **Dashboard views** — `custom:flare-schedule`, `custom:flare-zone`.
 
 ## Keeping this honest

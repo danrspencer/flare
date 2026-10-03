@@ -13,6 +13,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from tests.functional.blueprint.harness import (
+    add_flare_light,
     light,
     occupancy,
     add_zone,
@@ -195,3 +196,22 @@ class TestOverrideDetection:
         calls = apply_lighting_calls
         assert calls and calls[-1].data["zone_device_id"] == study
         assert calls[-1].data["force"] is False
+
+
+class TestFlaresAreNotRoomLights:
+    """docs/reference/blueprint.md#room"""
+
+    async def test_a_flare_in_the_rooms_area_is_not_one_of_its_lights(self, hass, apply_lighting_calls):
+        """Sent the room's values, a flare would pass them on to every light."""
+        area = ar.async_get(hass).async_get_or_create("Lounge")
+        er.async_get(hass).async_get_or_create("light", "test", "a", suggested_object_id="a")
+        er.async_get(hass).async_update_entity("light.a", area_id=area.id)
+        light(hass, "light.a", "on")
+        await add_flare_light(hass, "lounge_flare", area.id)
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"area_id": area.id})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
