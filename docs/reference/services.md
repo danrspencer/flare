@@ -27,6 +27,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
 | [`flare.claims_clear`](#flareclaims_clear) | Discards claims, so FLARE sets the lights again |
+| [`flare.claims_override`](#flareclaims_override) | Marks lights as changed by someone else, so FLARE leaves them alone |
 | [`flare.compute_scene_coverage`](#flarecompute_scene_coverage) | Which of a room's lights a scene sets |
 | [`flare.export_schedule`](#flareexport_schedule) | A schedule's settings as YAML |
 | [`flare.import_schedule`](#flareimport_schedule) | Sets a schedule from YAML |
@@ -317,6 +318,32 @@ data:
 ### Response data
 
 Optional. `cleared` lists the entities passed in.
+
+## `flare.claims_override`
+
+Use this action when your automation changes lights by hand, so FLARE leaves them alone. It
+marks each entity as changed by someone else, whether FLARE was driving it or not, and
+whatever it's set to. A light marked this way stays overridden until its zone goes dark, its
+claims are cleared, or a forced `flare.apply_lighting` takes it back. Flares call it before
+turning a room off or setting it to a brightness or colour.
+
+```yaml
+action: flare.claims_override
+data:
+  entities: [light.kitchen_1]
+  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+```
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `entities`<br>list of entity IDs | yes | The entities to mark. |
+| `zone_device_id`<br>zone device ID | yes | The zone to mark them in. |
+
+### Response data
+
+Optional. `overridden` lists the entities passed in.
 
 ## `flare.compute_scene_coverage`
 

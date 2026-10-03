@@ -61,11 +61,15 @@ data:
 
 - Without `zone_device_id`, `apply_lighting`, `turn_off` and `compute_lighting_groups` set the
   lights but record nothing, and don't leave any light alone.
-- `claims_check`, `claims_record` and `claims_clear` require `zone_device_id`.
+- `claims_check`, `claims_record`, `claims_clear` and `claims_override` require
+  `zone_device_id`.
 - A `zone_device_id` that isn't one of your zones is an error.
 - Calls naming the same zone share its claims. To keep two automations' lights separate, give
   them different zones.
 - `force: true` sets lights even if something else has changed them, and records the claim.
+- A light FLARE has no claim on is free for FLARE to set, so a change your own automation makes
+  to one isn't left alone unless you mark it with
+  [`flare.claims_override`](../services/#flareclaims_override).
 
 ### The two claims
 

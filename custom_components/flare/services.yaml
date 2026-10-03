@@ -692,6 +692,32 @@ claims_clear:
             - integration: flare
               model: Zone
 
+claims_override:
+  name: Override claims
+  description: >-
+    Marks entities as changed by someone else, so FLARE leaves them alone until
+    the zone goes dark, their claims are cleared, or a forced write takes them
+    back. Call it when your automation changes lights by hand.
+  fields:
+    entities:
+      name: Entities
+      description: >-
+        Entities to mark, of any domain.
+      required: true
+      selector:
+        entity:
+          multiple: true
+    zone_device_id:
+      name: Zone
+      description: >-
+        The zone to mark them in.
+      required: true
+      selector:
+        device:
+          filter:
+            - integration: flare
+              model: Zone
+
 export_schedule:
   name: Export schedule
   description: >-

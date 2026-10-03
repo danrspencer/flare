@@ -62,6 +62,7 @@ async def test_any_blueprints_automation_can_be_a_flare_by_naming_its_inputs(
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.room"})
     assert result["step_id"] == "custom_inputs"
     offered = {str(key): value.config.get("options") for key, value in result["data_schema"].schema.items()}
+    assert offered["zone_input"] == ["zone"]
     assert offered["lights_input"] == [
         "day_exclude_lights",
         "evening_exclude_lights",
@@ -70,7 +71,7 @@ async def test_any_blueprints_automation_can_be_a_flare_by_naming_its_inputs(
         "room_target",
     ]
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target"}
+        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
     )
     result = await _finish(hass, result, "Hall")
     assert result["type"] == "create_entry"
@@ -144,7 +145,7 @@ async def test_a_flare_name_already_in_use_is_refused(hass: HomeAssistant, add_b
     result = await _start(hass, entry, "custom")
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.room"})
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target"}
+        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
     )
     result = await _finish(hass, result, "hall")
 
@@ -166,7 +167,7 @@ async def test_every_flare_shows_its_automation_and_where_its_lights_come_from(
     )
 
     shown = {str(key): (key.description or {}).get("suggested_value") for key in result["data_schema"].schema}
-    assert shown == {"name": "Hall", "lights_input": "room_target"}
+    assert shown == {"name": "Hall", "lights_input": "room_target", "zone_input": "zone"}
     assert result["description_placeholders"] == {"automation": "room"}
 
 
@@ -181,7 +182,7 @@ async def test_a_flare_can_be_renamed(hass: HomeAssistant, add_bulbs, setup_room
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": "Landing", "lights_input": "room_target"}
+        result["flow_id"], {"name": "Landing", "lights_input": "room_target", "zone_input": "zone"}
     )
     await hass.async_block_till_done()
 
@@ -281,7 +282,7 @@ async def test_a_room_flare_is_the_same_however_it_was_added(hass: HomeAssistant
     result = await _start(hass, entry, "custom")
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.landing"})
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target"}
+        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
     )
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": "Landing"})
     await hass.async_block_till_done()

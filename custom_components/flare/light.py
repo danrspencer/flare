@@ -3,8 +3,10 @@
 A flare is a light group whose members are its automation's lights, read
 live. A bare turn-on runs the automation, so the room comes on however
 the automation decides. A turn-on with values, and a turn-off, go to the
-lights as any light group's do: they're the user's, so FLARE reads them as
-overrides. See flares/instance.py."""
+lights as any light group's do. They're the user's, so the flare first marks
+the lights overridden in its zone: a light FLARE had no claim on would
+otherwise be free for the room's next update to take over. See
+flares/instance.py."""
 
 from __future__ import annotations
 
@@ -21,7 +23,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.target import TargetStateChangedData, async_track_target_selector_state_change_event
 
 from .const import CONF_AREA, CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FLARES
-from .flares.automation import automation_entity_id, automation_exists, lights_target
+from .flares.automation import automation_entity_id, automation_exists, lights_target, zone_device_id
 from .flares.bare import is_bare_turn_on
 from .flares.instance import FlareInstance, flare_instances
 
@@ -159,12 +161,31 @@ class FlareLight(LightGroup):
         """Bare: run the automation, which decides how the room comes on.
         With values: send them to every light, as a light group does."""
         if not is_bare_turn_on(kwargs):
+            await self._async_mark_overridden()
             await super().async_turn_on(**kwargs)
             return
         await self.hass.services.async_call(
             "automation",
             "trigger",
             {ATTR_ENTITY_ID: automation_entity_id(self.hass, self._instance.config)},
+            blocking=True,
+            context=self._context,
+        )
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._async_mark_overridden()
+        await super().async_turn_off(**kwargs)
+
+    async def _async_mark_overridden(self) -> None:
+        """Before the user's own change, so the run it triggers already sees it.
+        Needs a zone, and the Zones entry that owns flare.claims_override."""
+        zone = zone_device_id(self.hass, self._instance.config)
+        if zone is None or not self._entity_ids or not self.hass.services.has_service(DOMAIN, "claims_override"):
+            return
+        await self.hass.services.async_call(
+            DOMAIN,
+            "claims_override",
+            {"entities": self._entity_ids, "zone_device_id": zone},
             blocking=True,
             context=self._context,
         )

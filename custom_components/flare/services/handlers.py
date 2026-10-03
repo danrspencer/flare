@@ -1,4 +1,4 @@
-"""FLARE's eight services, registered by the Zones entry: adapters that
+"""FLARE's nine services, registered by the Zones entry: adapters that
 read HA state into the pure planners (grouping.py, scenes.py, curve.py,
 override_protection.py) and dispatch the result. Field contracts are in
 services.yaml."""
@@ -304,7 +304,7 @@ async def _two_step_turn_on(
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
-    """Registers the eight services against this Zones entry."""
+    """Registers the nine services against this Zones entry."""
 
     async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
         """flare.compute_lighting_groups - see services.yaml."""
@@ -600,6 +600,14 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         tracked = registry.records_for_zone(zone)
         return {"recorded": [e for e in entities if e in tracked]}
 
+    async def claims_override(call: ServiceCall) -> ServiceResponse:
+        """flare.claims_override - marks lights as changed by someone else, so
+        FLARE leaves them alone. The opposite of claims_clear."""
+        entities = call.data["entities"]
+        zone = registry.resolve_zone_device(call.data["zone_device_id"])
+        await registry.async_override(zone, entities)
+        return {"overridden": entities}
+
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
         stuck "overridden"."""
@@ -678,6 +686,13 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         schema=CLAIMS_CLEAR_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
+    hass.services.async_register(
+        DOMAIN,
+        "claims_override",
+        claims_override,
+        schema=CLAIMS_CLEAR_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 
 def async_unload_services(hass: HomeAssistant) -> None:
@@ -690,5 +705,6 @@ def async_unload_services(hass: HomeAssistant) -> None:
         "claims_check",
         "claims_record",
         "claims_clear",
+        "claims_override",
     ):
         hass.services.async_remove(DOMAIN, service)

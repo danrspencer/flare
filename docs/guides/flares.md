@@ -106,7 +106,9 @@ it up as usual.
 
 Any automation can have a flare. Choose **Another automation** when adding one:
 
-- If the automation is built from a blueprint, pick the input that holds its lights.
+- If the automation is built from a blueprint, pick the input that holds its lights and, if
+  it has one, the input that holds its FLARE zone. Without a zone, FLARE can take over a light
+  you changed from the flare if it wasn't already driving it.
 - If it isn't, pick its lights directly.
 
 Turning the flare on runs that automation. The other commands work the same as above. The

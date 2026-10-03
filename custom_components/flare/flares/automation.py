@@ -1,4 +1,5 @@
-"""Reads a flare's automation: which lights it controls.
+"""Reads a flare's automation: which lights it controls, and the zone it
+records them in.
 
 A blueprint automation's inputs are only kept on the automation entity's
 private `_blueprint_inputs` (its `raw_config` is the substituted config),
@@ -22,6 +23,7 @@ from ..const import (
     CONF_LIGHTS_INPUT,
     CONF_LIGHTS_INPUT_KIND,
     CONF_LIGHTS_TARGET,
+    CONF_ZONE_INPUT,
 )
 
 TARGET = "target"
@@ -84,6 +86,18 @@ def lights_target(hass: HomeAssistant, config: Mapping[str, Any]) -> dict[str, A
     return {kind: value}
 
 
+def zone_device_id(hass: HomeAssistant, config: Mapping[str, Any]) -> str | None:
+    """The zone the flare marks its lights overridden in, or None for none."""
+    name = config.get(CONF_ZONE_INPUT)
+    entity_id = automation_entity_id(hass, config)
+    if not name or not entity_id:
+        return None
+    value = (blueprint_inputs(hass, entity_id) or {}).get(name)
+    if isinstance(value, list):
+        value = value[0] if value else None
+    return value if isinstance(value, str) and value else None
+
+
 async def async_automation_blueprint(hass: HomeAssistant, entity_id: str) -> Blueprint | None:
     """The blueprint an automation is built from, if any."""
     path = blueprint_in_automation(hass, entity_id)
@@ -135,3 +149,15 @@ def lights_input_kinds(blueprint: Blueprint) -> dict[str, str]:
                 kinds[name] = kind
                 break
     return kinds
+
+
+def zone_inputs(blueprint: Blueprint) -> list[str]:
+    """Each input that can pick a FLARE zone: one limited to zones, or failing
+    that, any device input not limited to something else."""
+    devices = {
+        name: _flare_device_models(((spec or {}).get("selector") or {}).get("device"))
+        for name, spec in blueprint.inputs.items()
+        if "device" in ((spec or {}).get("selector") or {})
+    }
+    zones = [name for name, models in devices.items() if "Zone" in models]
+    return zones or [name for name, models in devices.items() if not models]

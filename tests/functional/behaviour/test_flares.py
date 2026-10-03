@@ -274,3 +274,50 @@ async def test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_ru
     await hass.async_block_till_done()
 
     assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}
+
+
+async def test_a_brightness_from_the_flare_holds_in_a_room_flare_had_let_go_of(
+    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+) -> None:
+    """The room went dark, so its zone let go of every light. Without the
+    flare marking them overridden, the run its own change triggers would take
+    them over and set the curve."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    occupancy(hass, HALL_SENSOR, "off")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], extra_triggers=[bulbs[0].entity_id])
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    flare = await add_flare(hass)
+    await _turn_off(hass, flare)
+    assert await _statuses(hass, [b.entity_id for b in bulbs]) == {b.entity_id: "off" for b in bulbs}
+
+    await _turn_on(hass, flare, brightness=HAND_SET)
+    await let_time_pass(hass, frozen_time, 61)
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: HAND_SET for b in bulbs}
+
+
+async def test_a_room_flare_had_never_driven_stays_off_when_an_update_lands_mid_turn_off(
+    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+) -> None:
+    """Lights switched on by hand into a dark room have no claim. Turned off
+    from the flare while an update lands between bulbs reporting off, an
+    unclaimed one that's off would read as free to switch back on."""
+    first, *rest = HALL_BULBS
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone, **{name: {"reports_off_late": True} for name in rest})
+    occupancy(hass, HALL_SENSOR, "on")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
+    flare = await add_flare(hass)
+    await hass.services.async_call(
+        "light", "turn_on", {"entity_id": [b.entity_id for b in bulbs], "brightness": HAND_SET}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert set((await _statuses(hass, [b.entity_id for b in bulbs])).values()) == {"untracked"}
+
+    await _turn_off(hass, flare)
+    await let_time_pass(hass, frozen_time, 61)
+    for bulb in bulbs[1:]:
+        await bulb.async_report_off()
+    await hass.async_block_till_done()
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}

@@ -47,6 +47,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
+from homeassistant.util import ulid as ulid_util
 
 from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
 from .override_protection import _context_matches, _ContextClaim, _WriteRecord
@@ -187,6 +188,29 @@ class ClaimRegistry:
         popped = [store.claims.pop(entity_id, None) for entity_id in entity_ids]
         if any(value is not None for value in popped):
             self._notify([store])
+
+    async def async_override(self, subentry_id: str | None, entity_ids: list[str]) -> None:
+        """Marks lights as someone else's in one zone - behind claims_override.
+        The claim is an `observed` nothing will ever match, by context or by
+        value, so the light reads "overridden" until the zone goes dark, its
+        claims are cleared, or a forced write takes it back. No-op without a
+        zone."""
+        store = self._stores.get(subentry_id)
+        if store is None or not entity_ids:
+            return
+        now = dt_util.utcnow().isoformat()
+        for entity_id in entity_ids:
+            store.claims[entity_id] = {
+                "observed": {
+                    "context_id": ulid_util.ulid_now(),
+                    "secondary_context_id": None,
+                    "recorded_at": now,
+                    "target": None,
+                },
+                "latest": None,
+                "last_seen": now,
+            }
+        self._notify([store])
 
     async def async_record(
         self,

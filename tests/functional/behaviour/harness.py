@@ -280,7 +280,7 @@ async def add_flare(hass: HomeAssistant, automation: str = "automation.room", *,
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": name, "lights_input": "room_target"}
+        result["flow_id"], {"name": name, "lights_input": "room_target", "zone_input": "zone"}
     )
     assert result["reason"] == "reconfigure_successful", result
     await hass.async_block_till_done()

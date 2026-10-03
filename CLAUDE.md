@@ -447,7 +447,7 @@ and they match the two config entries, Schedules and Zones.
 - `flares/` - lights over automations: reading an automation's inputs
   (`automation.py`), what counts as a bare turn-on (`bare.py`), and the
   flare itself (`instance.py`). The entity is the root `light.py`.
-- `services/` - `handlers.py` (the eight services) and the planning
+- `services/` - `handlers.py` (the nine services) and the planning
   behind them: `grouping.py`, `scenes.py`, `two_step.py`.
 - package root - what Home Assistant dictates: `__init__`, `config_flow`,
   `repairs`, `logbook`, `const`, and the seven entity platform modules.
@@ -469,7 +469,7 @@ Logger names follow the module path (e.g.
 
 ### Services (`custom_components/flare/services/handlers.py`)
 
-Eight, all unit tested and confirmed working live. Full field contracts
+Nine, all tested, and all but `claims_override` confirmed working live. Full field contracts
 in `docs/reference/integration.md` and `services.yaml` - not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
@@ -492,10 +492,11 @@ in `docs/reference/integration.md` and `services.yaml` - not repeated here.
   order and that encoding were the caller's to get right, and the order
   was wrong (see "Claims are recorded before the write"). **Don't split
   it back into two steps in a caller.**
-- `claims_check` / `claims_record` / `claims_clear` - override
-  protection exposed standalone, for callers that want it without any
-  curve/brightness logic. `claims_clear` is the manual escape hatch
-  for a light stuck `overridden`.
+- `claims_check` / `claims_record` / `claims_clear` / `claims_override`
+  - override protection exposed standalone, for callers that want it
+  without any curve/brightness logic. `claims_clear` is the manual
+  escape hatch for a light stuck `overridden`; `claims_override` is its
+  opposite, marking lights as someone else's (what flares use).
 
 `rgb_color` on both `apply_lighting` and `compute_lighting_groups`
 accepts an explicit `None`, not just an omitted key (`vol.Any(None,
@@ -757,23 +758,31 @@ an override and leaves the room at whatever the bulbs restored to.
   (`flares/bare.py`); note HA strips `transition` before the entity
   sees it unless the light supports it, which is why the behaviour test
   needs `supports_transition` bulbs.
-- **On with values forwards to every light** (`LightGroup`'s own
-  `async_turn_on`) - an ordinary override, by design.
-- **Off is a plain `light.turn_off`** (`LightGroup`'s own), never
-  `flare.turn_off`. A flare's off is the user's, like a colour, so it
-  must read as an override. `flare.turn_off` claims the off as FLARE's,
-  and that was shipped once as the default: any run landing while the
-  room was half-off (here, an Additional Trigger on one of the room's
-  own lights, fired by the first bulb reporting off while the rest
-  were still on) treated the off lights as FLARE's and relit them
-  instantly. Nothing is lost: when the whole zone goes dark it releases
-  its claims, so motion lights the room next time. There is no setting
-  and no zone input for this reason. Pinned by
+- **On with values, and off, mark the lights overridden first**
+  (`flare.claims_override`, in the zone named by the zone input), then
+  forward as `LightGroup` does. Without the mark, a light with no claim
+  - every light, once a room goes dark and the zone releases them - is
+  "untracked", which apply_lighting treats as free: the run the change
+  itself triggers (an Additional Trigger on a room light, or a tick)
+  took it over and dimmed Siri's "100%" back to the curve, live. The
+  override claim is an `observed` under a fresh context with no target,
+  so it never matches by context or value, on or off; the room's forced
+  manual run (a bare "on") takes it back as usual.
+- **Off is a plain `light.turn_off`**, never `flare.turn_off`. A
+  flare's off is the user's, so it must read as an override.
+  `flare.turn_off` claims the off as FLARE's, and that shipped once as
+  the default: a run landing while the room was half-off (an Additional
+  Trigger on one of the room's own lights, fired by the first bulb
+  reporting off) relit the off lights instantly. Pinned by
   `test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation`,
   which needs `reports_off_late` bulbs to reproduce the half-off moment.
+- **The zone input is for `claims_override` only.** It was removed with
+  the turn-off setting and brought back for the override; without one a
+  flare can't protect a light FLARE wasn't already driving.
 - **A flare stores the automation and the NAME of the input holding its
-  lights**, read live - not a light list. For our blueprint that's
-  `room_target` (`BLUEPRINT_LIGHTS_INPUT`, pinned
+  lights** (and of the one holding its zone), read live - not a light
+  list. For our blueprint that's `room_target`/`zone`
+  (`BLUEPRINT_*_INPUT`, pinned
   by `tests/checks/test_flare_inputs.py`). A plain automation (no
   inputs) stores a target instead. The automation is stored as its
   entity-registry id so a rename doesn't orphan it.
@@ -796,8 +805,8 @@ an override and leaves the room at whatever the bulbs restored to.
   listeners queued together into one reload (yield once, then clear the
   mark before reloading so a later change still gets its own).
 - **Every flare's Reconfigure shows the same fields** - the automation
-  (in the description, since it can't change) and its lights input or
-  target - however it was added. Hiding a room flare's
+  (in the description, since it can't change) and its lights/zone
+  inputs or target - however it was added. Hiding a room flare's
   inputs made the two paths look like different kinds of thing.
 - **Nothing creates flares automatically.** A HomeKit Bridge including
   the `light` domain, or Alexa/Google with expose-new-entities on, would
