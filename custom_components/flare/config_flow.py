@@ -26,15 +26,12 @@ from homeassistant.util import slugify
 from .blueprint_check import automations_using_our_blueprint
 from .const import (
     BLUEPRINT_LIGHTS_INPUT,
-    BLUEPRINT_ZONE_INPUT,
     CONF_AREA,
     CONF_AUTOMATION,
     CONF_ENTRY_TYPE,
     CONF_LIGHTS_INPUT,
     CONF_LIGHTS_INPUT_KIND,
     CONF_LIGHTS_TARGET,
-    CONF_TURN_OFF,
-    CONF_ZONE_INPUT,
     CONF_MIN_BRIGHTNESS_CHANGE,
     CONF_MIN_COLOR_TEMP_CHANGE,
     CONF_TICK_GAP,
@@ -53,8 +50,6 @@ from .const import (
     SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_ZONE,
-    TURN_OFF_FLARE,
-    TURN_OFF_LIGHT,
     ZONES_ENTRY_TITLE,
 )
 from .flares.automation import (
@@ -64,7 +59,6 @@ from .flares.automation import (
     automation_ref,
     blueprint_inputs,
     lights_input_kinds,
-    zone_inputs,
 )
 from .schedule.transfer import ScheduleError, dump, parse
 from .services.schedules import async_apply_schedule, read_schedule, schedule_instance_for
@@ -417,8 +411,6 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                     CONF_AUTOMATION: automation_ref(self.hass, entity_id),
                     CONF_LIGHTS_INPUT: BLUEPRINT_LIGHTS_INPUT,
                     CONF_LIGHTS_INPUT_KIND: TARGET,
-                    CONF_ZONE_INPUT: BLUEPRINT_ZONE_INPUT,
-                    CONF_TURN_OFF: TURN_OFF_FLARE,
                     CONF_AREA: registry_entry.area_id if registry_entry else None,
                 }
             ),
@@ -438,7 +430,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         )
 
     async def async_step_custom_inputs(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """For an automation from any blueprint: which inputs hold its lights and zone."""
+        """For an automation from any blueprint: which input holds its lights."""
         blueprint = await async_automation_blueprint(self.hass, self._entity_id)
         kinds = lights_input_kinds(blueprint) if blueprint else {}
         errors: dict[str, str] = {}
@@ -451,7 +443,6 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                     {
                         CONF_LIGHTS_INPUT: lights_input,
                         CONF_LIGHTS_INPUT_KIND: kinds.get(lights_input, TARGET),
-                        CONF_ZONE_INPUT: user_input.get(CONF_ZONE_INPUT) or None,
                     }
                 )
                 return await self.async_step_details()
@@ -459,7 +450,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
             return self.async_abort(reason="no_light_inputs")
         return self.async_show_form(
             step_id="custom_inputs",
-            data_schema=self.add_suggested_values_to_schema(_inputs_schema(kinds, zone_inputs(blueprint)), user_input or {}),
+            data_schema=self.add_suggested_values_to_schema(_inputs_schema(kinds), user_input or {}),
             errors=errors,
         )
 
@@ -471,7 +462,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(step_id="custom_target", data_schema=_TARGET_SCHEMA)
 
     async def async_step_details(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """Name, turn-off, and the area the flare starts out in."""
+        """Name, and the area the flare starts out in."""
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input["name"].strip()
@@ -483,19 +474,16 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                     unique_id=slugify(name) or None,
                     data={
                         **self._data,
-                        CONF_TURN_OFF: user_input[CONF_TURN_OFF],
                         CONF_AREA: user_input.get(CONF_AREA),
                     },
                 )
         entry = er.async_get(self.hass).async_get(self._entity_id)
         suggested = {
             "name": self._label(self._entity_id),
-            CONF_TURN_OFF: TURN_OFF_FLARE,
             CONF_AREA: entry.area_id if entry else None,
         }
         fields = {
             vol.Required("name"): selector.TextSelector(),
-            **_TURN_OFF_FIELD,
             vol.Optional(CONF_AREA): selector.AreaSelector(),
         }
         return self.async_show_form(
@@ -507,19 +495,19 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         )
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
-        """Rename, change the turn-off, or pick different inputs or lights. The
+        """Rename, or pick a different input or lights. The
         area isn't here: once the device exists, its area is the user's."""
         subentry = self._get_reconfigure_subentry()
         data = dict(subentry.data)
         entity_id = automation_entity_id(self.hass, data)
-        fields: dict = {vol.Required("name"): selector.TextSelector(), **_TURN_OFF_FIELD}
+        fields: dict = {vol.Required("name"): selector.TextSelector()}
         # The same fields for every flare, however it was added.
         if data.get(CONF_LIGHTS_TARGET):
             fields.update(_TARGET_SCHEMA.schema)
         else:
             blueprint = await async_automation_blueprint(self.hass, entity_id) if entity_id else None
             if blueprint is not None:
-                fields.update(_inputs_schema(lights_input_kinds(blueprint), zone_inputs(blueprint)).schema)
+                fields.update(_inputs_schema(lights_input_kinds(blueprint)).schema)
 
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -527,14 +515,15 @@ class FlareSubentryFlow(ConfigSubentryFlow):
             if _name_taken(self._get_entry(), name, skip=subentry.subentry_id):
                 errors["name"] = "already_configured"
             else:
-                data[CONF_TURN_OFF] = user_input[CONF_TURN_OFF]
+                # Settings flares no longer have.
+                data.pop("turn_off", None)
+                data.pop("zone_input", None)
                 if CONF_LIGHTS_TARGET in user_input:
                     data[CONF_LIGHTS_TARGET] = user_input[CONF_LIGHTS_TARGET]
                 if CONF_LIGHTS_INPUT in user_input:
                     blueprint = await async_automation_blueprint(self.hass, entity_id)
                     data[CONF_LIGHTS_INPUT] = user_input[CONF_LIGHTS_INPUT]
                     data[CONF_LIGHTS_INPUT_KIND] = lights_input_kinds(blueprint).get(user_input[CONF_LIGHTS_INPUT], TARGET)
-                    data[CONF_ZONE_INPUT] = user_input.get(CONF_ZONE_INPUT) or None
                 return self.async_update_and_abort(self._get_entry(), subentry, title=name, data=data)
 
         suggested = user_input or {"name": subentry.title, **data}
@@ -554,12 +543,6 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         return state.name if state else entity_id
 
 
-_TURN_OFF_FIELD = {
-    vol.Required(CONF_TURN_OFF, default=TURN_OFF_FLARE): selector.SelectSelector(
-        selector.SelectSelectorConfig(options=[TURN_OFF_FLARE, TURN_OFF_LIGHT], translation_key=CONF_TURN_OFF)
-    )
-}
-
 _TARGET_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_LIGHTS_TARGET): selector.TargetSelector(
@@ -569,13 +552,10 @@ _TARGET_SCHEMA = vol.Schema(
 )
 
 
-def _inputs_schema(kinds: dict[str, str], zones: list[str]) -> vol.Schema:
-    fields: dict = {
-        vol.Required(CONF_LIGHTS_INPUT): selector.SelectSelector(selector.SelectSelectorConfig(options=sorted(kinds)))
-    }
-    if zones:
-        fields[vol.Optional(CONF_ZONE_INPUT)] = selector.SelectSelector(selector.SelectSelectorConfig(options=sorted(zones)))
-    return vol.Schema(fields)
+def _inputs_schema(kinds: dict[str, str]) -> vol.Schema:
+    return vol.Schema(
+        {vol.Required(CONF_LIGHTS_INPUT): selector.SelectSelector(selector.SelectSelectorConfig(options=sorted(kinds)))}
+    )
 
 
 def _name_taken(entry: ConfigEntry, name: str, skip: str | None = None) -> bool:

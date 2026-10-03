@@ -759,13 +759,21 @@ an override and leaves the room at whatever the bulbs restored to.
   needs `supports_transition` bulbs.
 - **On with values forwards to every light** (`LightGroup`'s own
   `async_turn_on`) - an ordinary override, by design.
-- **Off is per flare**: `flare.turn_off` (default, records the off claim
-  in the zone named by the zone input) or `light.turn_off`. If
-  `flare.turn_off` isn't registered (Zones not loaded) it falls back to
-  `light.turn_off` rather than failing.
+- **Off is a plain `light.turn_off`** (`LightGroup`'s own), never
+  `flare.turn_off`. A flare's off is the user's, like a colour, so it
+  must read as an override. `flare.turn_off` claims the off as FLARE's,
+  and that was shipped once as the default: any run landing while the
+  room was half-off (here, an Additional Trigger on one of the room's
+  own lights, fired by the first bulb reporting off while the rest
+  were still on) treated the off lights as FLARE's and relit them
+  instantly. Nothing is lost: when the whole zone goes dark it releases
+  its claims, so motion lights the room next time. There is no setting
+  and no zone input for this reason. Pinned by
+  `test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation`,
+  which needs `reports_off_late` bulbs to reproduce the half-off moment.
 - **A flare stores the automation and the NAME of the input holding its
-  lights** (and optionally its zone), read live - not a light list. For
-  our blueprint that's `room_target`/`zone` (`BLUEPRINT_*_INPUT`, pinned
+  lights**, read live - not a light list. For our blueprint that's
+  `room_target` (`BLUEPRINT_LIGHTS_INPUT`, pinned
   by `tests/checks/test_flare_inputs.py`). A plain automation (no
   inputs) stores a target instead. The automation is stored as its
   entity-registry id so a rename doesn't orphan it.
@@ -788,8 +796,8 @@ an override and leaves the room at whatever the bulbs restored to.
   listeners queued together into one reload (yield once, then clear the
   mark before reloading so a later change still gets its own).
 - **Every flare's Reconfigure shows the same fields** - the automation
-  (in the description, since it can't change) and its lights/zone
-  inputs or target - however it was added. Hiding a room flare's
+  (in the description, since it can't change) and its lights input or
+  target - however it was added. Hiding a room flare's
   inputs made the two paths look like different kinds of thing.
 - **Nothing creates flares automatically.** A HomeKit Bridge including
   the `light` domain, or Alexa/Google with expose-new-entities on, would

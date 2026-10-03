@@ -2,8 +2,9 @@
 
 A flare is a light group whose members are its automation's lights, read
 live. A bare turn-on runs the automation, so the room comes on however
-the automation decides; a turn-on with values goes to the lights like any
-light group's, which is an override. See flares/instance.py."""
+the automation decides. A turn-on with values, and a turn-off, go to the
+lights as any light group's do: they're the user's, so FLARE reads them as
+overrides. See flares/instance.py."""
 
 from __future__ import annotations
 
@@ -19,15 +20,8 @@ from homeassistant.helpers import area_registry as ar, device_registry as dr, en
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.target import TargetStateChangedData, async_track_target_selector_state_change_event
 
-from .const import (
-    CONF_AREA,
-    CONF_ENTRY_TYPE,
-    CONF_TURN_OFF,
-    DOMAIN,
-    ENTRY_TYPE_FLARES,
-    TURN_OFF_LIGHT,
-)
-from .flares.automation import automation_entity_id, automation_exists, lights_target, zone_device_id
+from .const import CONF_AREA, CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FLARES
+from .flares.automation import automation_entity_id, automation_exists, lights_target
 from .flares.bare import is_bare_turn_on
 from .flares.instance import FlareInstance, flare_instances
 
@@ -174,20 +168,3 @@ class FlareLight(LightGroup):
             blocking=True,
             context=self._context,
         )
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        if self._instance.config.get(CONF_TURN_OFF) == TURN_OFF_LIGHT or not self.hass.services.has_service(
-            DOMAIN, "turn_off"
-        ):
-            # flare.turn_off belongs to the Zones entry, which may not be loaded.
-            await super().async_turn_off(**kwargs)
-            return
-        # flare.turn_off records an off claim, so the room's own turn-on
-        # paths don't read these lights as switched off by someone else.
-        data: dict[str, Any] = {
-            "entities": self._entity_ids,
-            "zone_device_id": zone_device_id(self.hass, self._instance.config),
-        }
-        if "transition" in kwargs:
-            data["transition"] = kwargs["transition"]
-        await self.hass.services.async_call(DOMAIN, "turn_off", data, blocking=True, context=self._context)

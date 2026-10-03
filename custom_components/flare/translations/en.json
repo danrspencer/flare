@@ -84,7 +84,7 @@
       "step": {
         "user": {
           "title": "Add flare",
-          "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on with nothing else runs the room's automation, so the room comes on the way it normally would. Turning it on with a brightness or colour sets every light in the room to that. Turning it off turns the room off.",
+          "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on with nothing else runs the room's automation, so the room comes on the way it normally would. Turning it on with a brightness or colour sets every light in the room to that, and turning it off turns every light in the room off; FLARE leaves the room alone after either until it's empty and dark.",
           "menu_options": {
             "blueprint": "Rooms from the FLARE blueprint",
             "custom": "Another automation"
@@ -92,7 +92,7 @@
         },
         "blueprint": {
           "title": "Add flares for your rooms",
-          "description": "Each room picked gets a flare named after its automation, in the automation's area, turning off with flare.turn_off. You can rename one or change how it turns off afterwards. Rooms that already have a flare aren't listed.",
+          "description": "Each room picked gets a flare named after its automation, in the automation's area. You can rename one afterwards. Rooms that already have a flare aren't listed.",
           "data": {
             "automation": "Rooms"
           }
@@ -109,12 +109,10 @@
         "custom_inputs": {
           "title": "Where are its lights?",
           "data": {
-            "lights_input": "Lights input",
-            "zone_input": "Zone input"
+            "lights_input": "Lights input"
           },
           "data_description": {
-            "lights_input": "The automation's input naming the lights it controls.",
-            "zone_input": "The automation's input naming its FLARE zone, if it has one. The flare's turn-off records in it."
+            "lights_input": "The automation's input naming the lights it controls."
           }
         },
         "custom_target": {
@@ -130,11 +128,9 @@
           "title": "Name the flare",
           "data": {
             "name": "Name",
-            "turn_off": "Turn off with",
             "area_id": "Area"
           },
           "data_description": {
-            "turn_off": "flare.turn_off lets FLARE tell its own turn-off from anyone else's. Use light.turn_off only for lights FLARE doesn't track.",
             "area_id": "Where the flare's device starts out, which is how voice assistants and HomeKit know its room. Starts as the automation's area."
           }
         },
@@ -142,15 +138,12 @@
           "title": "Edit flare",
           "data": {
             "name": "Name",
-            "turn_off": "Turn off with",
             "lights_input": "Lights input",
-            "zone_input": "Zone input",
             "lights_target": "Lights"
           },
           "description": "Runs the automation **{automation}**. To use a different automation, add a new flare.",
           "data_description": {
             "lights_input": "The automation's input naming the lights it controls.",
-            "zone_input": "The automation's input naming its FLARE zone. The flare's turn-off records in it.",
             "lights_target": "The lights this automation controls."
           }
         }
@@ -216,14 +209,6 @@
           "min_brightness_change": "A light within this percentage of its target brightness is left alone.",
           "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone."
         }
-      }
-    }
-  },
-  "selector": {
-    "turn_off": {
-      "options": {
-        "flare": "flare.turn_off",
-        "light": "light.turn_off"
       }
     }
   }

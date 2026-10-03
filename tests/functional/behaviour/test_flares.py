@@ -5,7 +5,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
-from custom_components.flare.const import DOMAIN, TURN_OFF_LIGHT
+from custom_components.flare.const import DOMAIN
 from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     HALL_BULBS,
@@ -147,22 +147,13 @@ async def _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone):
     return room
 
 
-async def test_a_flare_turns_off_through_flare_so_the_zone_knows_it_was_ours(
+async def test_a_room_turned_off_from_its_flare_counts_as_turned_off_by_hand(
     hass: HomeAssistant, add_bulbs, setup_room, zone
 ) -> None:
+    """The zone still has a lit lamp, so it keeps its claims, and the flare's
+    lights read as someone else's - the user's - until the room goes dark."""
     room = await _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone)
     flare = await add_flare(hass)
-
-    await _turn_off(hass, flare)
-
-    assert set((await _statuses(hass, [b.entity_id for b in room])).values()) == {"controlled"}
-
-
-async def test_a_flare_set_to_light_turn_off_leaves_the_zone_reading_it_as_someone_elses(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
-) -> None:
-    room = await _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone)
-    flare = await add_flare(hass, turn_off=TURN_OFF_LIGHT)
 
     await _turn_off(hass, flare)
 
@@ -261,3 +252,25 @@ async def test_a_flare_whose_automation_is_gone_is_unavailable(
     await hass.async_block_till_done()
 
     assert hass.states.get(flare).state == "unavailable"
+
+
+async def test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation(
+    hass: HomeAssistant, add_bulbs, setup_room, zone
+) -> None:
+    """An Additional Trigger on one of the room's own lights runs the
+    automation as the first light reports off, while the rest are still on."""
+    first, *rest = HALL_BULBS
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone, **{name: {"reports_off_late": True} for name in rest})
+    occupancy(hass, HALL_SENSOR, "off")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], extra_triggers=[bulbs[0].entity_id])
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    flare = await add_flare(hass)
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+
+    await _turn_off(hass, flare)
+    for bulb in bulbs[1:]:
+        await bulb.async_report_off()
+    await hass.async_block_till_done()
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}

@@ -32,15 +32,10 @@ CONF_AUTOMATION = "automation"  # entity registry id, which survives renames
 CONF_LIGHTS_INPUT = "lights_input"  # the blueprint input holding the lights
 CONF_LIGHTS_INPUT_KIND = "lights_input_kind"  # "target", or the target key its value is
 CONF_LIGHTS_TARGET = "lights_target"  # a plain automation's lights, as a target
-CONF_ZONE_INPUT = "zone_input"  # the blueprint input holding the zone device
-CONF_TURN_OFF = "turn_off"
 CONF_AREA = "area_id"  # where the flare's device starts out
-TURN_OFF_FLARE = "flare"  # flare.turn_off, which records the off claim
-TURN_OFF_LIGHT = "light"  # a plain light.turn_off
 
-# Our blueprint's inputs naming the room's lights and its zone.
+# Our blueprint's input naming the room's lights.
 BLUEPRINT_LIGHTS_INPUT = "room_target"
-BLUEPRINT_ZONE_INPUT = "zone"
 
 # Options keys: the smallest change apply_lighting sends, as a percentage
 # of the target brightness and in mireds of colour temperature.

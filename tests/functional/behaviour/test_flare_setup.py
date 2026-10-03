@@ -10,8 +10,6 @@ from custom_components.flare.const import (
     DOMAIN,
     ENTRY_TYPE_FLARES,
     SUBENTRY_TYPE_FLARE,
-    TURN_OFF_FLARE,
-    TURN_OFF_LIGHT,
 )
 from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
@@ -41,8 +39,8 @@ async def _start(hass: HomeAssistant, entry, path: str):
     return await flows.async_configure(result["flow_id"], {"next_step_id": path})
 
 
-async def _finish(hass: HomeAssistant, result, name: str, turn_off: str = TURN_OFF_FLARE):
-    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": name, "turn_off": turn_off})
+async def _finish(hass: HomeAssistant, result, name: str):
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": name})
     await hass.async_block_till_done()
     return result
 
@@ -71,9 +69,8 @@ async def test_any_blueprints_automation_can_be_a_flare_by_naming_its_inputs(
         "night_exclude_lights",
         "room_target",
     ]
-    assert offered["zone_input"] == ["zone"]
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"lights_input": "room_target"}
     )
     result = await _finish(hass, result, "Hall")
     assert result["type"] == "create_entry"
@@ -147,7 +144,7 @@ async def test_a_flare_name_already_in_use_is_refused(hass: HomeAssistant, add_b
     result = await _start(hass, entry, "custom")
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.room"})
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"lights_input": "room_target"}
     )
     result = await _finish(hass, result, "hall")
 
@@ -169,11 +166,11 @@ async def test_every_flare_shows_its_automation_and_where_its_lights_come_from(
     )
 
     shown = {str(key): (key.description or {}).get("suggested_value") for key in result["data_schema"].schema}
-    assert shown == {"name": "Hall", "turn_off": TURN_OFF_FLARE, "lights_input": "room_target", "zone_input": "zone"}
+    assert shown == {"name": "Hall", "lights_input": "room_target"}
     assert result["description_placeholders"] == {"automation": "room"}
 
 
-async def test_a_flare_can_be_renamed_and_its_turn_off_changed(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
+async def test_a_flare_can_be_renamed(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
     bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
     await setup_room(lights=bulbs)
     await add_flare(hass, name="Hall")
@@ -184,13 +181,13 @@ async def test_a_flare_can_be_renamed_and_its_turn_off_changed(hass: HomeAssista
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": "Landing", "turn_off": TURN_OFF_LIGHT, "lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"name": "Landing", "lights_input": "room_target"}
     )
     await hass.async_block_till_done()
 
     assert result["reason"] == "reconfigure_successful"
     subentry = entry.subentries[subentry_id]
-    assert (subentry.title, subentry.data["turn_off"], subentry.data["lights_input"]) == ("Landing", TURN_OFF_LIGHT, "room_target")
+    assert (subentry.title, subentry.data["lights_input"]) == ("Landing", "room_target")
 
 
 async def _two_rooms(hass: HomeAssistant, add_bulbs, zone) -> None:
@@ -284,11 +281,9 @@ async def test_a_room_flare_is_the_same_however_it_was_added(hass: HomeAssistant
     result = await _start(hass, entry, "custom")
     result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"automation": "automation.landing"})
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"lights_input": "room_target"}
     )
-    result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": "Landing", "turn_off": TURN_OFF_FLARE}
-    )
+    result = await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": "Landing"})
     await hass.async_block_till_done()
 
     by_title = {s.title: dict(s.data) for s in entry.subentries.values()}

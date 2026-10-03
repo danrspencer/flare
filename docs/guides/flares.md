@@ -26,8 +26,7 @@ the FLARE blueprint**. Every room automation that doesn't have a flare yet is li
 ticked, so you can add a flare for every room at once, or untick the ones you don't want.
 
 Each flare is named after its room's automation and placed in the automation's area, which is
-how voice assistants and HomeKit know which room it's in. It turns off with `flare.turn_off`,
-which is what you want unless you know otherwise.
+how voice assistants and HomeKit know which room it's in.
 
 A flare's name is what you'll say out loud, so if an automation is called something like
 "Kitchen lighting", rename its flare to "Kitchen" with **Reconfigure** in the flare's
@@ -48,7 +47,7 @@ What each command does:
 | "Turn on the kitchen" | The room's automation runs, and the room comes on the way it normally would. |
 | "Set the kitchen to 30%" | Every light in the room goes to 30%. FLARE leaves them there until the room is empty and dark. |
 | "Turn on the kitchen" again | The room goes back to FLARE: the automation runs, and every light returns to the curve. |
-| "Turn off the kitchen" | Every light in the room turns off. |
+| "Turn off the kitchen" | Every light in the room turns off, and stays off until the room's sensors next detect motion. |
 
 ## Why did the room go dim, or turn off again?
 

@@ -33,7 +33,6 @@ from custom_components.flare.const import (
     SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
     SUBENTRY_TYPE_ZONE,
-    TURN_OFF_FLARE,
 )
 from tests.support import REPO_ROOT
 
@@ -65,13 +64,22 @@ class FakeBulb(LightEntity):
     supports_rgb; reports_via_rgb (translates Kelvin commands and reports
     rgb_color, like IKEA TRADFRI spots); needs_two_step (a call that
     changes brightness and sets a colour applies only the brightness);
-    supports_transition (HA drops `transition` for a light without it).
+    supports_transition (HA drops `transition` for a light without it);
+    reports_off_late (switches off, but only reports it on
+    async_report_off(), as a slow Zigbee bulb does).
     """
 
     _attr_should_poll = False
 
     def __init__(
-        self, name: str, *, supports_rgb=False, reports_via_rgb=False, needs_two_step=False, supports_transition=False
+        self,
+        name: str,
+        *,
+        supports_rgb=False,
+        reports_via_rgb=False,
+        needs_two_step=False,
+        supports_transition=False,
+        reports_off_late=False,
     ) -> None:
         self._attr_name = name
         self._attr_unique_id = name
@@ -86,6 +94,7 @@ class FakeBulb(LightEntity):
         self._attr_supported_color_modes = modes
         if supports_transition:
             self._attr_supported_features = LightEntityFeature.TRANSITION
+        self._reports_off_late = reports_off_late
         self._attr_color_mode = ColorMode.COLOR_TEMP
         self._reports_via_rgb = reports_via_rgb
         # Gated on brightness *changing*: two-step's second call re-sends
@@ -119,6 +128,13 @@ class FakeBulb(LightEntity):
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
+        if self._reports_off_late:
+            return
+        self._attr_is_on = False
+        self.async_write_ha_state()
+
+    async def async_report_off(self) -> None:
+        """The late report of a reports_off_late bulb's turn-off."""
         self._attr_is_on = False
         self.async_write_ha_state()
 
@@ -252,11 +268,9 @@ async def add_room_flares(hass: HomeAssistant, automations: list[str] | None = N
     return result
 
 
-async def add_flare(
-    hass: HomeAssistant, automation: str = "automation.room", *, name: str = "Room", turn_off: str = TURN_OFF_FLARE
-) -> str:
+async def add_flare(hass: HomeAssistant, automation: str = "automation.room", *, name: str = "Room") -> str:
     """A flare over one blueprint room, added through the real flow and then
-    renamed and given `turn_off`. Returns its entity_id."""
+    renamed. Returns its entity_id."""
     result = await add_room_flares(hass, [automation])
     assert result["reason"] == "flares_added", result
     entry = await flares_entry(hass)
@@ -265,7 +279,7 @@ async def add_flare(
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": name, "turn_off": turn_off, "lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"name": name, "lights_input": "room_target"}
     )
     assert result["reason"] == "reconfigure_successful", result
     await hass.async_block_till_done()

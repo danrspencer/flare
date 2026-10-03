@@ -25,16 +25,13 @@ A flare is a light entity that sits over an automation. Flares are under **Setti
 |---|---|
 | **Automation** | The automation that turning the flare on runs. If the automation is deleted, the flare is unavailable. |
 | **Lights input** | For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it's used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is **Lights & Occupancy**. |
-| **Zone input** | Optional. For an automation built from a blueprint: the input that holds its FLARE zone. `flare.turn_off` records the turn-off in that zone. For an automation from the FLARE blueprint this is **Zone**. |
 | **Lights** | For an automation not built from a blueprint: the lights, picked directly. |
-| **Turn off with** | `flare.turn_off` (the default) records the turn-off in the zone, so FLARE knows the lights were switched off by FLARE and not by hand. `light.turn_off` records nothing. |
 | **Area** | Only when adding: the area the flare's device starts in, which defaults to the automation's area. After that, the device's area is set the usual way. |
 
 Adding flares from **Rooms from the FLARE blueprint** creates one for each room picked, named
-after its automation, in the automation's area, turning off with `flare.turn_off`.
+after its automation, in the automation's area.
 
-Reconfigure names the automation, and changes the name, **Turn off with**, and the lights or
-inputs. The automation can't be changed: add a new flare instead.
+Reconfigure names the automation, and changes the name and the lights or lights input. The automation can't be changed: add a new flare instead.
 
 ## The flare's light
 
@@ -46,7 +43,7 @@ attribute lists the lights.
 |---|---|
 | `light.turn_on` with no brightness, colour or effect | Runs the automation, as **Run actions** does. A `transition` on its own is ignored. |
 | `light.turn_on` with a brightness, colour or effect | Sends them to every light, as a light group does. The lights then count as an override. |
-| `light.turn_off` | Calls the service set in **Turn off with** for every light. If `flare.turn_off` isn't available, because the Zones entry isn't loaded, it uses `light.turn_off`. |
+| `light.turn_off` | Turns every light off, as a light group does. Like any light switched off by hand, they stay off until the room's automation next turns them on, such as when it detects motion. |
 
 The flare's lights are found the way a service call's target is. A light that is hidden, or
 belongs to another flare, isn't one of them.
