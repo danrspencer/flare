@@ -41,20 +41,20 @@ async def async_setup_entry(
         return
     devices = dr.async_get(hass)
     for instance in flare_instances(entry):
-        is_new = devices.async_get_device(identifiers={(DOMAIN, instance.subentry_id)}) is None
+        is_new = devices.async_get_device_by_identifier((DOMAIN, instance.subentry_id), entry.entry_id) is None
         async_add_entities([FlareLight(instance)], config_subentry_id=instance.subentry_id)
         if is_new:
-            _place_in_area(hass, instance)
+            _place_in_area(hass, entry, instance)
 
 
-def _place_in_area(hass: HomeAssistant, instance: FlareInstance) -> None:
+def _place_in_area(hass: HomeAssistant, entry: ConfigEntry, instance: FlareInstance) -> None:
     """Puts a newly created flare's device in the area chosen when it was
     added. Only ever on creation: after that the area is the user's."""
     area_id = instance.config.get(CONF_AREA)
     if not area_id or ar.async_get(hass).async_get_area(area_id) is None:
         return
     devices = dr.async_get(hass)
-    device = devices.async_get_device(identifiers={(DOMAIN, instance.subentry_id)})
+    device = devices.async_get_device_by_identifier((DOMAIN, instance.subentry_id), entry.entry_id)
     if device is not None:
         devices.async_update_device(device.id, area_id=area_id)
 
