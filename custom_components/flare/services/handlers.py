@@ -31,7 +31,13 @@ from ..const import (
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
-from ..zone.override_protection import classify, is_blocked
+from ..zone.override_protection import (
+    DEFAULT_BRIGHTNESS_TOLERANCE,
+    DEFAULT_COLOR_TEMP_TOLERANCE,
+    DEFAULT_RGB_COLOR_TOLERANCE,
+    classify_state,
+    is_blocked,
+)
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from ..zone.claims import ClaimRegistry
@@ -48,14 +54,14 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
         vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
-        vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
+        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
+        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
         vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # Accepts an explicit None: a template reading a missing attribute
         # renders None, not an omitted key.
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
-        vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
+        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
         # None means "use the integration's setting".
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
@@ -92,13 +98,13 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
         vol.Required("transition"): vol.Coerce(float),
-        vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
+        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
+        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
         vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # Accepts an explicit None, as above.
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
-        vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
+        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
         # None means "use the integration's setting".
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
@@ -123,9 +129,9 @@ CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): [cv.entity_id],
         vol.Required("zone_device_id"): cv.string,
-        vol.Optional("brightness_tolerance", default=2): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=10): vol.Coerce(int),
-        vol.Optional("rgb_color_tolerance", default=10): vol.Coerce(int),
+        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
+        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
+        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
     }
 )
 
@@ -147,15 +153,7 @@ CLAIMS_CLEAR_SCHEMA = vol.Schema(
 
 def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str | None) -> EntityLookup:
     """Adapts HA state/registries to grouping.py's EntityLookup, with the
-    caller's zone bound into the claim accessors."""
-
-    def is_state(entity_id: str, state: str) -> bool:
-        s = hass.states.get(entity_id)
-        return s is not None and s.state == state
-
-    def state_attr(entity_id: str, attr: str) -> Any:
-        s = hass.states.get(entity_id)
-        return s.attributes.get(attr) if s else None
+    caller's zone bound into the claims lookup."""
 
     def device_id(entity_id: str) -> str | None:
         entry = er.async_get(hass).async_get(entity_id)
@@ -182,23 +180,12 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
             return list(device_entry.labels)
         return []
 
-    def context_id(entity_id: str) -> str | None:
-        s = hass.states.get(entity_id)
-        return s.context.id if s else None
-
     return EntityLookup(
-        is_state=is_state,
-        state_attr=state_attr,
+        state=hass.states.get,
         device_id=device_id,
         labels=labels,
         manufacturer_model=manufacturer_model,
-        context_id=context_id,
-        observed_context_id=lambda eid: tracker.observed_context_id(subentry_id, eid),
-        latest_context_id=lambda eid: tracker.latest_context_id(subentry_id, eid),
-        latest_target=lambda eid: tracker.latest_target(subentry_id, eid),
-        observed_target=lambda eid: tracker.observed_target(subentry_id, eid),
-        latest_secondary_context_id=lambda eid: tracker.latest_secondary_context_id(subentry_id, eid),
-        observed_secondary_context_id=lambda eid: tracker.observed_secondary_context_id(subentry_id, eid),
+        claims=lambda eid: tracker.record(subentry_id, eid),
     )
 
 
@@ -471,7 +458,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 )
 
         # Before dispatch, so it can't include this call's own writes.
-        live_context_before_write = {e: lookup.context_id(e) for e in written_entities}
+        live_context_before_write = {
+            e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in written_entities
+        }
 
         # Recorded BEFORE dispatch, so a run that fails or is cancelled part-way
         # (e.g. by `mode: restart` between two-step steps) still leaves claims for
@@ -533,40 +522,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         zone_title = registry.zone_title(zone)
         results: dict[str, Any] = {}
         for entity_id in call.data["entities"]:
-            state = hass.states.get(entity_id)
-            observed_ctx = registry.observed_context_id(zone, entity_id)
-            observed = (
-                {
-                    "context_id": observed_ctx,
-                    "secondary_context_id": registry.observed_secondary_context_id(zone, entity_id),
-                    "target": registry.observed_target(zone, entity_id),
-                }
-                if observed_ctx is not None
-                else None
-            )
-            latest_ctx = registry.latest_context_id(zone, entity_id)
-            latest = (
-                {
-                    "context_id": latest_ctx,
-                    "secondary_context_id": registry.latest_secondary_context_id(zone, entity_id),
-                    "target": registry.latest_target(zone, entity_id),
-                }
-                if latest_ctx is not None
-                else None
-            )
-            status, matched_via = classify(
-                state is not None and state.state == "on",
-                observed,
-                latest,
-                state.context.id if state is not None else None,
-                state.attributes.get("brightness") if state is not None else None,
-                state.attributes.get("color_temp_kelvin") if state is not None else None,
-                state.attributes.get("rgb_color") if state is not None else None,
+            status, matched_via = classify_state(
+                hass.states.get(entity_id),
+                registry.record(zone, entity_id),
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
-                state.attributes.get("min_color_temp_kelvin") if state is not None else None,
-                state.attributes.get("max_color_temp_kelvin") if state is not None else None,
             )
             results[entity_id] = {
                 "blocked": is_blocked(status),

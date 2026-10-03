@@ -1,7 +1,7 @@
 """Override protection's decision table: given one light's claims and live
 state, is it ours to write? Pure; the caller supplies the claims for
-whatever zone it named. Shared by grouping.py's externally_set(),
-sensor.py's status, and claims_check, so they can't disagree.
+whatever zone it named. grouping.py's externally_set(), sensor.py's status
+and claims_check all go through classify_state(), so they can't disagree.
 
 Each light has two claims: `observed`, a state we've seen and can safely
 write over, and `latest`, our most recent write, not yet seen landing.
@@ -9,11 +9,18 @@ See claims.py's module docstring."""
 
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 # HA's own conversions, so they match what devices actually report.
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
+
+if TYPE_CHECKING:
+    from homeassistant.core import State
+
+DEFAULT_BRIGHTNESS_TOLERANCE = 2
+DEFAULT_COLOR_TEMP_TOLERANCE = 10
+DEFAULT_RGB_COLOR_TOLERANCE = 10
 
 
 class _ContextClaim(TypedDict):
@@ -86,9 +93,9 @@ def target_matches_values(
     current_brightness,
     current_color_temp_kelvin,
     current_rgb_color,
-    brightness_tolerance: int = 2,
-    color_temp_tolerance: int = 10,
-    rgb_color_tolerance: int = 10,
+    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
+    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
+    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     min_color_temp_kelvin=None,
     max_color_temp_kelvin=None,
 ) -> bool:
@@ -140,9 +147,9 @@ def classify(
     current_brightness=None,
     current_color_temp_kelvin=None,
     current_rgb_color=None,
-    brightness_tolerance: int = 2,
-    color_temp_tolerance: int = 10,
-    rgb_color_tolerance: int = 10,
+    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
+    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
+    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     min_color_temp_kelvin=None,
     max_color_temp_kelvin=None,
 ) -> tuple[str, Optional[str]]:
@@ -203,6 +210,36 @@ def classify(
     ):
         return "controlled", "observed-value"
     return "overridden", None
+
+
+def classify_state(
+    state: Optional["State"],
+    record: Optional[_WriteRecord],
+    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
+    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
+    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
+) -> tuple[str, Optional[str]]:
+    """classify() for a live HA state and its claim record (None if
+    untracked). "unavailable" for a light HA can't reach or doesn't know,
+    before any claim is consulted."""
+    if state is None or state.state in ("unavailable", "unknown"):
+        return "unavailable", None
+    record = record or {}
+    attributes = state.attributes
+    return classify(
+        state.state == "on",
+        record.get("observed"),
+        record.get("latest"),
+        state.context.id,
+        attributes.get("brightness"),
+        attributes.get("color_temp_kelvin"),
+        attributes.get("rgb_color"),
+        brightness_tolerance,
+        color_temp_tolerance,
+        rgb_color_tolerance,
+        attributes.get("min_color_temp_kelvin"),
+        attributes.get("max_color_temp_kelvin"),
+    )
 
 
 def is_blocked(status: str, force: bool = False) -> bool:

@@ -1,10 +1,12 @@
 import pytest
+from homeassistant.core import Context, State
 
 from custom_components.flare.schedule.curve import kelvin_to_rgb
 from custom_components.flare.zone.override_protection import (
     _color_temp_matches,
     _context_matches,
     classify,
+    classify_state,
     is_blocked,
     target_matches_values,
 )
@@ -185,3 +187,27 @@ class TestColorTempMatches:
 
     def test_a_different_mired_does_not(self):
         assert not _color_temp_matches(6000, 3000, tolerance_kelvin=10)
+
+
+class TestClassifyState:
+    RECORD = {"observed": _claim("ctx-o", ON_TARGET), "latest": None}
+
+    @pytest.mark.parametrize("state", [None, State("light.a", "unavailable"), State("light.a", "unknown")])
+    def test_an_unreachable_light_is_unavailable_whatever_its_claims(self, state):
+        assert classify_state(state, self.RECORD) == ("unavailable", None)
+
+    def test_a_reachable_light_is_judged_against_its_claims(self):
+        state = State("light.a", "on", {"brightness": 40, "color_temp_kelvin": 6000}, context=Context(id="ctx-x"))
+        assert classify_state(state, self.RECORD) == ("overridden", None)
+        assert classify_state(state, None) == ("untracked", None)
+
+    def test_it_reads_the_live_values_and_the_bulbs_range(self):
+        # Parked at its advertised 4000K ceiling, so a 5000K target still matches.
+        state = State(
+            "light.a",
+            "on",
+            {"brightness": 200, "color_temp_kelvin": 4000, "max_color_temp_kelvin": 4000},
+            context=Context(id="ctx-x"),
+        )
+        record = {"observed": _claim("ctx-o", {"brightness": 200, "color_temp_kelvin": 5000}), "latest": None}
+        assert classify_state(state, record) == ("controlled", "observed-value")

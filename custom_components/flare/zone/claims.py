@@ -124,7 +124,8 @@ class ClaimRegistry:
                 return store
         return None
 
-    def _record(self, subentry_id: str | None, entity_id: str) -> _WriteRecord | None:
+    def record(self, subentry_id: str | None, entity_id: str) -> _WriteRecord | None:
+        """This light's claims in that zone, or None if it holds none."""
         if subentry_id is None:
             return None
         store = self._stores.get(subentry_id)
@@ -146,36 +147,6 @@ class ClaimRegistry:
         for store in stores:
             store.async_claims_changed()
         async_dispatcher_send(self._hass, SIGNAL_CLAIMS_UPDATED)
-
-    def observed_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("observed") if record else None
-        return claim["context_id"] if claim else None
-
-    def observed_target(self, subentry_id: str | None, entity_id: str) -> dict | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("observed") if record else None
-        return claim.get("target") if claim else None
-
-    def observed_secondary_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("observed") if record else None
-        return claim.get("secondary_context_id") if claim else None
-
-    def latest_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("latest") if record else None
-        return claim["context_id"] if claim else None
-
-    def latest_target(self, subentry_id: str | None, entity_id: str) -> dict | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("latest") if record else None
-        return claim.get("target") if claim else None
-
-    def latest_secondary_context_id(self, subentry_id: str | None, entity_id: str) -> str | None:
-        record = self._record(subentry_id, entity_id)
-        claim = record.get("latest") if record else None
-        return claim.get("secondary_context_id") if claim else None
 
     async def async_clear(self, subentry_id: str | None, entity_ids: list[str]) -> None:
         """Discards claims in one zone - behind claims_clear, the escape hatch for

@@ -24,6 +24,7 @@ from tests.functional.component.harness import (
     setup_zones_entry,
     zone_device_id,
 )
+from tests.support.claims import claim_field
 
 TRADFRI = "TRADFRI bulb GU10, color/white spectrum, 345 lm"
 
@@ -139,8 +140,8 @@ class TestTwoStep:
         assert color_call.data["color_temp_kelvin"] == 3000
         assert brightness_call.context.id != color_call.context.id
         registry, zone = claim_registry(hass), zone_id(hass)
-        assert registry.latest_context_id(zone, "light.a") == color_call.context.id
-        assert registry.latest_secondary_context_id(zone, "light.a") == brightness_call.context.id
+        assert claim_field(registry, zone, "light.a", "latest", "context_id") == color_call.context.id
+        assert claim_field(registry, zone, "light.a", "latest", "secondary_context_id") == brightness_call.context.id
 
     async def test_the_brightness_step_landing_alone_is_ours(self, setup_integration: HomeAssistant):
         hass = setup_integration
@@ -168,13 +169,13 @@ class TestTwoStep:
         registry, zone = claim_registry(hass), zone_id(hass)
 
         await apply_lighting(hass, ["light.a"], transition=0.2)
-        brightness_ctx = registry.latest_secondary_context_id(zone, "light.a")
-        color_ctx = registry.latest_context_id(zone, "light.a")
+        brightness_ctx = claim_field(registry, zone, "light.a", "latest", "secondary_context_id")
+        color_ctx = claim_field(registry, zone, "light.a", "latest", "context_id")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, context=Context(id=brightness_ctx))
         await apply_lighting(hass, ["light.a"], transition=0.2)
 
-        assert registry.observed_context_id(zone, "light.a") == color_ctx
-        assert registry.observed_secondary_context_id(zone, "light.a") == brightness_ctx
+        assert claim_field(registry, zone, "light.a", "observed", "context_id") == color_ctx
+        assert claim_field(registry, zone, "light.a", "observed", "secondary_context_id") == brightness_ctx
 
     async def test_a_device_matching_the_default_patterns_needs_no_label(self, hass: HomeAssistant):
         await setup_zones_entry(hass)

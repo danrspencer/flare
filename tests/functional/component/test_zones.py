@@ -24,6 +24,7 @@ from custom_components.flare.schedule.coordinator import ScheduleCoordinator, sc
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.instance import zone_instances
 from custom_components.flare.zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
+from tests.support.claims import claim_field
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -87,7 +88,7 @@ async def test_a_light_with_no_zone_named_is_not_tracked_and_stays_manageable(ha
 
     await _record(registry, None, "light.elsewhere", "ctx-1", ASKED)
     assert registry.all_records() == {}
-    assert registry.latest_context_id(None, "light.elsewhere") is None
+    assert claim_field(registry, None, "light.elsewhere", "latest", "context_id") is None
 
 
 async def test_a_write_before_the_zones_entity_exists_is_dropped(hass: HomeAssistant):
@@ -155,7 +156,7 @@ async def test_two_callers_writing_one_light_share_the_zones_claims(hass: HomeAs
     await _record(registry, zone, "light.a", "ctx-automation-two", {"brightness": 120, "color_temp_kelvin": 2700})
 
     assert list(registry.all_records()) == ["light.a"]
-    assert registry.latest_context_id(zone, "light.a") == "ctx-automation-two"
+    assert claim_field(registry, zone, "light.a", "latest", "context_id") == "ctx-automation-two"
 
 
 async def test_an_unavailable_light_holding_a_claim_does_not_hold_a_zone_open(hass: HomeAssistant):
