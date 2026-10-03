@@ -34,7 +34,7 @@ schedule sensor**.
 | `switch.<name>_sticky_phase_override` | When on, an override stays until you set the phase back to `Auto`. |
 | `time.<name>_morning_time`, `day_time`, `night_time` | When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. |
 | `time.<name>_evening_earliest_time`, `evening_latest_time` | Evening starts at sunset, but no earlier or later than these. Defaults: 17:00, 20:00. |
-| `number.<name>_<phase>_brightness` | The phase's brightness, 0–255. |
+| `number.<name>_<phase>_brightness` | The phase's brightness, 0–255. At `0`, the phase turns the lights off. |
 | `number.<name>_<phase>_kelvin` | The phase's colour temperature, 1000–10000 K. |
 | `number.<name>_<phase>_brightness_transition`, `_kelvin_transition` | The phase's transitions, in minutes. See [transitions](#transitions). |
 

@@ -36,6 +36,9 @@ CI — see `.github/workflows/release.yml`.
   rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
   already worked. `0` still turns a light off and `null` still leaves it alone. Lights
   without a level get `brightness`, which is now only required if some light has no level.
+  A `brightness` of `0` now turns those lights off, as it does for `light.turn_on`; it
+  used to set them as dim as they go. So a schedule phase at brightness 0 now turns the
+  room's lights off during it.
   `compute_lighting_groups` returns one group per brightness, without the `multiplier`
   field. Only affects automations of your own; the blueprint is updated.
 

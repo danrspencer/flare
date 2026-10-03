@@ -1102,11 +1102,12 @@ also calls so its expectations can't drift from the service:
 - **A light without a level gets `brightness`**, which is why the service
   only requires `brightness` when some light lacks a level - the idle
   calls send levels alone.
-- **Only an exact `0` is off.** Everything else clamps into 1-255, so a
-  schedule brightness of 0 (the `number`'s legal minimum) means "as dim
-  as this goes", and a fractional level like 0.4 lands on 1.
-  `test_a_schedule_at_zero_brightness_still_reaches_one_not_off` pins the
-  first - mutation testing once found nothing covering it.
+- **`0` is off, for `brightness` and levels alike**, matching
+  `light.turn_on` (`homeassistant/components/light/__init__.py`). So a
+  schedule phase at brightness 0 turns the room's lights off during it.
+  It used to mean "as dim as this goes", and was changed at the user's
+  direction so the two fields don't disagree. Anything else clamps into
+  1-255, so 0.4 lands on 1.
 
 **`0` and `null` levels are not the same thing.** `0` means "turn this
 light off"; `null`/`false` means "hands off, something else owns it" -

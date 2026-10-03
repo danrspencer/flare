@@ -67,21 +67,21 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 
 | Field | Required | Description |
 |---|---|---|
-| `entities`<br>list of light entity IDs | yes | The lights to set. |
-| `brightness`<br>0–255 | unless every light has a level | The brightness for every light that isn't in `brightness_levels`. A brightness of 0 sets the lights as dim as they go, rather than turning them off. |
-| `color_temp_kelvin`<br>Kelvin | yes | The colour temperature. |
-| `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
+| `brightness`<br>0–255 | unless every light has a level | The brightness for every light that isn't in `brightness_levels`. `0` turns the lights off, as it does for `light.turn_on`. |
 | `brightness_levels`<br>map of entity ID to level | no | A brightness for individual lights, in place of `brightness`. See [brightness levels](#brightness-levels). |
-| `zone_device_id`<br>zone device ID | no | The zone to record the change in. Without it, FLARE records nothing and doesn't leave any light alone. |
-| `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
-| `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
-| `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
-| `two_step_label`<br>label ID; default `no_combined_transition` | no | Lights or devices with this label are sent two commands. See [two-step bulbs](#two-step-bulbs). |
 | `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of the target brightness isn't sent anything. |
+| `color_temp_kelvin`<br>Kelvin | yes | The colour temperature. |
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of the target isn't sent anything. Two values that convert to the same mired always count as a match. |
-| `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
+| `entities`<br>list of light entity IDs | yes | The lights to set. |
+| `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
 | `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
 | `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
+| `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
+| `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
+| `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
+| `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
+| `two_step_label`<br>label ID; default `no_combined_transition` | no | Lights or devices with this label are sent two commands. See [two-step bulbs](#two-step-bulbs). |
+| `zone_device_id`<br>zone device ID | no | The zone to record the change in. Without it, FLARE records nothing and doesn't leave any light alone. |
 
 ### Brightness levels
 
@@ -191,11 +191,11 @@ response_variable: curve
 
 | Field | Required | Description |
 |---|---|---|
-| `morning`, `day`, `evening`, `night`<br>Unix timestamp | yes | When each phase starts today. |
 | `at`<br>Unix timestamp; default now | no | The moment to work out the values for. |
+| `day`, `evening`, `morning`, `night`<br>Unix timestamp | yes | When each phase starts today. |
 | `<phase>_brightness`<br>0–255; default Morning 255, Day 255, Evening 180, Night 80 | no | The phase's brightness. |
-| `<phase>_kelvin`<br>Kelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700 | no | The phase's colour temperature. |
 | `<phase>_brightness_transition`<br>minutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30 | no | How long before the phase ends its brightness starts changing to the next phase's. |
+| `<phase>_kelvin`<br>Kelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700 | no | The phase's colour temperature. |
 | `<phase>_kelvin_transition`<br>minutes, 0–1440; default Morning 60, Day 1440, Evening 60, Night 30 | no | How long before the phase ends its colour temperature starts changing to the next phase's. |
 
 `<phase>` is `morning`, `day`, `evening` or `night`, so `evening_brightness` is Evening's
@@ -233,11 +233,11 @@ response_variable: check
 
 | Field | Required | Description |
 |---|---|---|
-| `entities`<br>list of entity IDs | yes | The entities to check. |
-| `zone_device_id`<br>zone device ID | yes | The zone whose claims to check against. |
 | `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it. |
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it. |
+| `entities`<br>list of entity IDs | yes | The entities to check. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of a claimed RGB colour on every channel matches it. |
+| `zone_device_id`<br>zone device ID | yes | The zone whose claims to check against. |
 
 ### Response data
 
@@ -279,8 +279,8 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of entity IDs | yes | The entities you're about to change. |
-| `zone_device_id`<br>zone device ID | yes | The zone to record the claim in. |
 | `targets`<br>map of entity ID to values | no | What you're about to send each entity: `brightness` and either `color_temp_kelvin` or `rgb_color`. |
+| `zone_device_id`<br>zone device ID | yes | The zone to record the claim in. |
 
 ### Response data
 
@@ -397,8 +397,8 @@ This moves the start of Night to 23:00 and leaves every other setting as it is.
 
 | Field | Required | Description |
 |---|---|---|
-| `schedule_device_id`<br>schedule device ID | yes | The schedule to set. |
 | `schedule`<br>YAML text, or YAML written in the call | yes | The settings to apply, keyed by phase. Any setting it leaves out keeps its current value. |
+| `schedule_device_id`<br>schedule device ID | yes | The schedule to set. |
 
 ### Good to know
 

@@ -165,8 +165,20 @@ class TestBrightnessLevels:
 
     @pytest.mark.parametrize(
         ("levels", "brightness", "expected"),
-        [({}, 0, 1), ({"light.a": 0.4}, 200, 1), ({"light.a": 300}, 200, MAX_BRIGHTNESS), ({"light.a": 99.6}, 200, 100)],
-        ids=["a brightness of 0 floors at 1, not off", "a level rounding to 0 isn't off", "caps at MAX_BRIGHTNESS", "rounds"],
+        [
+            ({}, 0, 0),
+            ({}, 0.4, 1),
+            ({"light.a": 0.4}, 200, 1),
+            ({"light.a": 300}, 200, MAX_BRIGHTNESS),
+            ({"light.a": 99.6}, 200, 100),
+        ],
+        ids=[
+            "a brightness of 0 is off",
+            "a brightness rounding to 0 isn't off",
+            "a level rounding to 0 isn't off",
+            "caps at MAX_BRIGHTNESS",
+            "rounds",
+        ],
     )
     def test_arithmetic(self, levels, brightness, expected):
         groups = _groups({"light.a": _off()}, brightness=brightness, levels=levels)
