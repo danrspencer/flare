@@ -456,7 +456,8 @@ and they match the two config entries, Schedules and Zones.
 - `services/` - `handlers.py` (the nine services) and the planning
   behind them: `grouping.py`, `scenes.py`, `two_step.py`.
 - package root - what Home Assistant dictates: `__init__`, `config_flow`,
-  `repairs`, `logbook`, `const`, and the seven entity platform modules.
+  `repairs`, `logbook`, `const`, and the seven entity platform modules;
+  plus `area_setup`, which needs zones, flares and the blueprint at once.
   Platform modules **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`), which is why "entities" is not a
   folder here. `services.yaml` must stay at the root too. `www/` is the
@@ -734,17 +735,56 @@ The services live with **zones**, not schedules: every one of them is
 about which lights are being driven and by whom, and they need the claim
 registry that entry owns.
 
-**One "Add Integration" sets FLARE up ready to use.** Separate entries
-are a grouping decision, never an argument for several trips through the
-flow. `async_step_user` asks for a first schedule's name (default Home)
-and which rooms become zones, creates each missing entry through
-`SOURCE_IMPORT` - Schedules with that schedule as its subentry, Zones
-with a zone per room, Flares empty - and ends on an abort,
-`setup_complete`, carrying a summary. Each entry is still creatable
-alone, so deleting one and adding it back works. An install from before
+**One "Add Integration" sets FLARE up ready to use**, rooms included -
+the goal, at the user's direction, is a painless first install. Separate
+entries are a grouping decision, never an argument for several trips
+through the flow. The main flow asks how many schedules and their names,
+then which areas to set up (`async_step_areas`), creates each missing
+entry through `SOURCE_IMPORT`, and hands the areas to
+`area_setup.async_set_up_areas`. It ends on an abort carrying a summary.
+Each entry is still creatable alone, so deleting one and adding it back
+works. An install from before
 Flares existed gets the entry from `async_setup`
 (`_ensure_flares_entry`), only when another FLARE entry already exists,
 so a fresh install never sprouts entries unasked.
+
+**Once every entry exists, the main flow is "Set up area".** The
+integration page's top row is the main flow's button (labelled by
+`config.initiate_flow.user`) followed by one Add button per subentry type
+across all entries (`ha-config-integration-page.ts`), so the row reads
+Set up area, Add schedule, Add zone, Add flare. A subentry type of its
+own would have given the button too, but the main flow is the only one
+that isn't tied to an entry, and area setup touches all three.
+
+**Area setup** (`area_setup.py`), per area: a zone (reused if one has the
+area's name), an automation from the blueprint, and a flare named after
+the area. Things worth knowing:
+
+- **The automation is written to automations.yaml the way HA's
+  automation editor does** (`components/config/automation.py` +
+  `view.py`): load, append, dump, `write_utf8_file_atomic`, reload. There
+  is no public API. Each is validated with `async_validate_config_item`
+  before anything is written. If the reload doesn't produce the
+  entities, configuration.yaml doesn't include the file, and the
+  original text is restored byte for byte. A successful write drops any
+  comments in the file, exactly as the editor does.
+- **The zone's device is created by `area_setup`, not by the entry's
+  reload**, because the automation needs its id now; the reload finds it
+  by its identifiers. Nothing waits for that reload: `event.received`
+  re-resolves its target on registry changes
+  (`helpers/target.py`'s `TargetEntityChangeTracker`), so the automation
+  picks up the Tick when it appears.
+- **"Already set up" means a FLARE automation targets the area by
+  `area_id`.** Rooms targeted by entity (like this house's Bedroom Hall)
+  stay listed, which is why nothing is ticked once FLARE exists.
+- **With several schedules, each area is a field named after it**: the
+  dialog falls back to a field's name when it has no translation
+  (`renderShowFormStepFieldLabel`), which is the only way to label
+  fields made at runtime.
+- **Every area set up gets a flare, with no opt-out**, at the user's
+  direction. That is the one exception to "nothing creates flares
+  automatically" below: the user is choosing to set the area up, not
+  updating.
 
 **The flow ends on an abort, never on an entry,** because of HA's
 "integration added" dialog (`step-flow-create-entry.ts`). It shows a
@@ -819,9 +859,10 @@ an override and leaves the room at whatever the bulbs restored to.
   (in the description, since it can't change) and its lights/zone
   inputs or target - however it was added. Hiding a room flare's
   inputs made the two paths look like different kinds of thing.
-- **Nothing creates flares automatically.** A HomeKit Bridge including
-  the `light` domain, or Alexa/Google with expose-new-entities on, would
-  put every room in the Home app after an update.
+- **Nothing creates flares automatically**, except setting an area up
+  (see "Area setup" above). A HomeKit Bridge including the `light`
+  domain, or Alexa/Google with expose-new-entities on, would put every
+  room in the Home app after an update.
 - **The flare's device is placed in the automation's area once, at
   creation** (`_place_in_area`, gated on the device not existing yet),
   never again, so a user moving it isn't undone. Not

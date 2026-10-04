@@ -61,9 +61,12 @@ CI — see `.github/workflows/release.yml`.
 - **Motion sensors work in Lights & Occupancy.** Binary sensors with `device_class: motion`
   now turn a room on and off exactly like occupancy sensors, on their own or alongside them.
   Before, only `device_class: occupancy` sensors were picked up.
-- **Adding FLARE sets up a first schedule too.** Setup asks for its name (Home by default)
-  alongside the rooms to make zones from, so FLARE is ready for its first room automation
-  straight away. It now finishes with a summary of what it created.
+- **Adding FLARE sets your rooms up.** Setup asks how many schedules you want and their
+  names, then which areas to set up, and with more than one schedule, which one each follows.
+  Each area gets a zone, a room automation from the blueprint and a flare, all named after
+  it, so there's nothing left to do by hand. It finishes with a summary of what it created.
+- **Set up area**, the button at the top of FLARE's integration page, does the same for an
+  area added later. Only areas with lights and no FLARE automation are listed.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out
   as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
   buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new

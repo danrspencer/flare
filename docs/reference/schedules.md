@@ -13,9 +13,8 @@ render_with_liquid: false
 {: .no_toc }
 
 A schedule sets when each of the four phases starts, and the brightness and colour temperature
-in each phase. Adding FLARE creates your first schedule. You can add more, for example for rooms
-that need different timing, under **Settings → Devices & Services → FLARE → Schedules → Add
-schedule sensor**.
+in each phase. Adding FLARE creates your schedules. You can add more, for example for rooms
+that need different timing, with **Settings → Devices & Services → FLARE → Add schedule**.
 
 <details open markdown="block">
   <summary>On this page</summary>

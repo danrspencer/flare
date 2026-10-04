@@ -1,29 +1,52 @@
 {
   "config": {
+    "initiate_flow": {
+      "user": "Set up area"
+    },
     "step": {
-      "user": {
-        "title": "FLARE",
-        "description": "Sets up FLARE with a schedule and a zone per room, so it works straight away.\n\nThe schedule is the day's curve: when each phase starts and how bright and warm the light is. One is enough for most homes; add more later for floors that should differ.\n\nA zone is usually one room. It remembers which lights FLARE is driving, and its Tick tells the room's automation when to update. Every room with lights is pre-selected. You can add, rename or remove schedules and zones at any time.",
+      "schedules": {
+        "title": "Set up FLARE",
+        "description": "A schedule is the day's lighting: when each phase starts, and how bright and warm the light is. One is enough for most homes. Use more if parts of the house should differ, such as a schedule per floor.",
         "data": {
-          "schedule": "Schedule name",
-          "areas": "Rooms to set up as zones"
+          "count": "How many schedules?"
+        }
+      },
+      "schedule_names": {
+        "title": "Name your schedules",
+        "description": "Each name becomes part of that schedule's entity IDs, so pick names you're happy to keep.",
+        "data": {
+          "schedule_1": "First schedule",
+          "schedule_2": "Second schedule",
+          "schedule_3": "Third schedule",
+          "schedule_4": "Fourth schedule"
+        }
+      },
+      "areas": {
+        "title": "Set up areas",
+        "description": "Each area you set up gets a zone, which keeps track of the lights FLARE is driving there; a room automation from the FLARE blueprint, which drives them; and a flare, a light for the whole room for voice assistants and HomeKit.\n\nOnly areas with lights, and without a FLARE automation already, are listed.",
+        "data": {
+          "areas": "Areas"
         }
       }
     },
     "abort": {
-      "already_configured": "Already configured",
-      "setup_complete": "FLARE is set up with {created}. Next, add a room automation from the FLARE blueprint: see the quickstart.",
-      "flares_entry_created": "FLARE's Flares entry has been added."
+      "setup_complete": "FLARE is set up: {created}.",
+      "areas_set_up": "Set up {created}.",
+      "every_area_set_up": "Every area with lights already has a FLARE automation.",
+      "no_schedules": "Add a schedule first: an area's automation needs one to follow.",
+      "automations_not_loaded": "The zones are set up, but the room automations couldn't be: Home Assistant isn't loading automations.yaml, the file its automation editor saves to. Add `automation: !include automations.yaml` to configuration.yaml, restart, then use Set up area again.",
+      "setup_failed": "Setting up the areas failed. Home Assistant's log has the reason."
     },
     "error": {
-      "invalid_name": "Give the schedule a name with at least one letter or number"
+      "invalid_name": "Give the schedule a name with at least one letter or number",
+      "duplicate_name": "Two schedules can't share a name"
     }
   },
   "config_subentries": {
     "sensor": {
       "entry_type": "Sensor",
       "initiate_flow": {
-        "user": "Add schedule sensor"
+        "user": "Add schedule"
       },
       "step": {
         "user": {
@@ -213,6 +236,13 @@
           "min_brightness_change": "A light within this percentage of its target brightness is left alone.",
           "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone."
         }
+      }
+    }
+  },
+  "selector": {
+    "area_schedule": {
+      "options": {
+        "skip": "Don't set up"
       }
     }
   }
