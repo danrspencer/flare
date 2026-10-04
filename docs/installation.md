@@ -44,6 +44,8 @@ It asks:
   per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
 - **What to set up for each area**, and **which areas**. Every area with lights is listed and
   ticked. With more than one schedule, you pick the schedule each area follows instead.
+- **Whether to add a Lighting dashboard**: a page in the sidebar with a view for each
+  schedule and one for your zones. It's ticked. See [Dashboard]({{ site.baseurl }}/dashboard/).
 
 Each area you set up gets up to three things, named after it. All three is the default, and
 what most rooms want:
@@ -69,25 +71,6 @@ With all three, that's everything a room needs. The automation is an ordinary on
 Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, so "Hey Siri,
 turn on the kitchen" brings the kitchen up the way FLARE would. See
 [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/) for how.
-
-## Step 4 — add the dashboard (optional)
-
-FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
-configuration editor**, and add:
-
-```yaml
-views:
-  - title: Lighting
-    strategy:
-      type: custom:flare-schedule
-  - title: Zones
-    strategy:
-      type: custom:flare-zone
-```
-
-**Lighting** shows the day's curve and every setting of your schedules. **Zones** shows
-which lights FLARE is driving and which ones something else has taken over. See
-[Dashboard]({{ site.baseurl }}/dashboard/) for more, including adding just the chart.
 
 ## Adding a room later
 

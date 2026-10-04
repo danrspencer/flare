@@ -13,6 +13,8 @@ custom_components/flare/
                    logbook description, the dashboard front-end files
     area_setup.py  setting up an area: a zone, a room automation written
                    to automations.yaml, and a flare
+    lighting_dashboard.py
+                   creates the Lighting dashboard setup offers
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
     event.py, light.py
                    the entities. Home Assistant requires platform
@@ -65,7 +67,8 @@ custom_components/flare/
                    this directly from the integration's own folder
                    (since HA 2026.3.0), no external submission needed
     www/           the dashboard: the curve card, the slider card features,
-                   and the two view strategies. Served and auto-loaded by
+                   the view and dashboard strategies, and the flare:logo
+                   sidebar icon. Served and auto-loaded by
                    the integration itself (see __init__.py's async_setup),
                    so it ships and updates with the integration with no
                    manual Lovelace resource registration

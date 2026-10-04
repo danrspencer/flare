@@ -1,6 +1,7 @@
 /**
  * Two Lovelace view strategies: `custom:flare-schedule` (what lights are
- * scheduled to do) and `custom:flare-zone` (what FLARE is driving).
+ * scheduled to do) and `custom:flare-zone` (what FLARE is driving), and a
+ * dashboard strategy, `custom:flare`, made of them.
  *
  *   views:
  *     - title: Lighting
@@ -42,8 +43,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
     if (!all.length) {
       return notice(
         'No FLARE schedules found yet.\n\nAdd one under **Settings → Devices & ' +
-          'Services → FLARE → Schedules → Add schedule sensor**, and it will appear ' +
-          'here automatically.'
+          'Services → FLARE → Add schedule**, and it will appear here automatically.'
       );
     }
 
@@ -80,7 +80,7 @@ class FlareZoneViewStrategy extends HTMLElement {
     if (!zones.length) {
       return notice(
         'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
-          '& Services → FLARE → Zones → Add zone**, and it will appear here ' +
+          '& Services → FLARE → Set up area**, and it will appear here ' +
           'automatically.'
       );
     }
@@ -90,3 +90,27 @@ class FlareZoneViewStrategy extends HTMLElement {
 }
 
 customElements.define('ll-strategy-view-flare-zone', FlareZoneViewStrategy);
+
+/**
+ * The whole dashboard: a view per schedule, then Zones if there are any.
+ *
+ *   strategy:
+ *     type: custom:flare
+ */
+class FlareDashboardStrategy extends HTMLElement {
+  static async generate(config, hass) {
+    const schedules = scheduleSensors(hass).map(({ slug, title }) => ({
+      title,
+      path: slug,
+      strategy: { type: 'custom:flare-schedule', sensor: slug },
+    }));
+    const zones = listZones(hass).length
+      ? [{ title: 'Zones', path: 'zones', strategy: { type: 'custom:flare-zone' } }]
+      : [];
+    const views = [...schedules, ...zones];
+    // The schedule view explains an empty install.
+    return { views: views.length ? views : [{ title: 'Lighting', strategy: { type: 'custom:flare-schedule' } }] };
+  }
+}
+
+customElements.define('ll-strategy-dashboard-flare', FlareDashboardStrategy);

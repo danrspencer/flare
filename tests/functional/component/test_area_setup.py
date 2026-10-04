@@ -320,3 +320,41 @@ async def test_set_up_area_needs_a_schedule(stub_entry_setup, hass: HomeAssistan
     result = await _start(hass)
 
     assert result["reason"] == "no_schedules"
+
+
+# --- The dashboard -------------------------------------------------------
+
+
+async def _with_lovelace(hass: HomeAssistant) -> None:
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "lovelace", {})
+
+
+async def test_setup_offers_a_dashboard_and_creates_it(stub_entry_setup, automations_file, hass: HomeAssistant):
+    from homeassistant.components.lovelace.const import LOVELACE_DATA
+
+    await _with_lovelace(hass)
+    kitchen = _area(hass, "Kitchen", "light.k")
+    result = await _first_setup(hass, ["Home"])
+    assert result["data_schema"]({})["dashboard"] is True
+
+    result = await _submit(hass, result, {"areas": [kitchen]})
+
+    assert result["description_placeholders"]["created"].endswith("1 flare and a Lighting dashboard")
+    dashboard = hass.data[LOVELACE_DATA].dashboards["flare"]
+    assert (dashboard.config["title"], dashboard.config["icon"]) == ("Lighting", "flare:logo")
+    assert await dashboard.async_load(False) == {"strategy": {"type": "custom:flare"}}
+    result = await _start(hass)
+    assert "dashboard" not in result["data_schema"]({}), "only offered while there isn't one"
+
+
+async def test_the_dashboard_can_be_declined(stub_entry_setup, automations_file, hass: HomeAssistant):
+    from homeassistant.components.lovelace.const import LOVELACE_DATA
+
+    await _with_lovelace(hass)
+    kitchen = _area(hass, "Kitchen", "light.k")
+
+    await _submit(hass, await _first_setup(hass, ["Home"]), {"areas": [kitchen], "dashboard": False})
+
+    assert "flare" not in hass.data[LOVELACE_DATA].dashboards

@@ -1,4 +1,5 @@
-"""The two Lovelace view strategies and the sections they build."""
+"""The Lovelace strategies - two views and the dashboard made of them - and
+the sections they build."""
 
 import pytest
 
@@ -54,6 +55,8 @@ const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones }} = await imp
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
 const Zone = defined['ll-strategy-view-flare-zone'];
+const Dashboard = defined['ll-strategy-dashboard-flare'];
+const schedulesOnly = Object.fromEntries(Object.entries(input.states).filter(([id, s]) => !('claims' in s.attributes)));
 const generate = async (states, config = {{}}) => (Strategy ? await Strategy.generate(config, {{ states }}) : null);
 return {{
   section: sectionConfig('ground_floor', 'Ground Floor'),
@@ -69,6 +72,9 @@ return {{
   zones: listZones({{ states: input.states }}),
   zone: Zone ? await Zone.generate({{}}, {{ states: input.states }}) : null,
   emptyZones: Zone ? await Zone.generate({{}}, {{ states: {{}} }}) : null,
+  dashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: input.states }}) : null,
+  dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, {{ states: schedulesOnly }}) : null,
+  emptyDashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: {{}} }}) : null,
 }};""",
         {"states": STATES, "slugCases": SLUG_CASES},
     )
@@ -158,7 +164,7 @@ def test_no_schedules_explains_itself_rather_than_rendering_blank(result):
     content = view["sections"][0]["cards"][1]["content"]
 
     assert "No FLARE schedules found" in content
-    assert "Add schedule sensor" in content
+    assert "Add schedule" in content
 
 
 def test_every_schedule_time_and_curve_entity_is_present(result):
@@ -380,4 +386,27 @@ def test_no_zones_explains_itself_rather_than_rendering_blank(result):
     content = result["emptyZones"]["sections"][0]["cards"][1]["content"]
 
     assert "No FLARE zones found" in content
-    assert "Add zone" in content
+    assert "Set up area" in content
+
+
+# --- The dashboard -------------------------------------------------------
+
+
+def test_the_dashboard_is_a_view_per_schedule_then_zones(result):
+    views = result["dashboard"]["views"]
+
+    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Zones"]
+    assert [v["strategy"] for v in views] == [
+        {"type": "custom:flare-schedule", "sensor": "downstairs"},
+        {"type": "custom:flare-schedule", "sensor": "loft"},
+        {"type": "custom:flare-schedule", "sensor": "upstairs"},
+        {"type": "custom:flare-zone"},
+    ]
+
+
+def test_the_dashboard_has_no_zones_view_without_zones(result):
+    assert [v["title"] for v in result["dashboardWithoutZones"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
+
+
+def test_an_empty_dashboard_explains_itself(result):
+    assert result["emptyDashboard"]["views"] == [{"title": "Lighting", "strategy": {"type": "custom:flare-schedule"}}]
