@@ -1,5 +1,5 @@
-"""Sets up rooms in one go: for each area, a zone, an automation from the
-blueprint, and a flare over that automation.
+"""Sets up rooms in one go: for each area, a zone, and optionally an
+automation from the blueprint and a flare over that automation.
 
 The automation is written to automations.yaml the way HA's automation
 editor writes it (`components/config/automation.py`): read the file, add
@@ -49,6 +49,12 @@ from .zone.instance import zone_instances
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 
+# How much each area gets; each includes the ones before it.
+ZONE = "zone"
+AUTOMATION = "automation"
+FLARE = "flare"
+LEVELS = (ZONE, AUTOMATION, FLARE)
+
 
 class AutomationsNotLoaded(Exception):
     """configuration.yaml doesn't load automations.yaml."""
@@ -97,15 +103,21 @@ async def async_areas_set_up(hass: HomeAssistant) -> set[str]:
     return covered
 
 
-async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, str]) -> SetupResult:
-    """A zone, an automation and a flare for each area, the automation
-    following the schedule subentry given for it. Zones that already exist
-    by name are reused. Raises AutomationsNotLoaded, leaving automations.yaml
-    as it was, if the automations don't load."""
+async def async_set_up_areas(
+    hass: HomeAssistant, schedule_for_area: dict[Area, str], level: str = FLARE
+) -> SetupResult:
+    """For each area a zone and, depending on `level`, an automation
+    following the schedule subentry given for it, and a flare over that.
+    Zones that already exist by name are reused. Raises
+    AutomationsNotLoaded, leaving automations.yaml as it was, if the
+    automations don't load."""
     zones_entry = _entry(hass, ENTRY_TYPE_ZONES)
     flares_entry = _entry(hass, ENTRY_TYPE_FLARES)
     zones_before = len(zone_instances(zones_entry))
     zone_devices = {area: _zone_device(hass, zones_entry, area.name) for area in schedule_for_area}
+    zones = len(zone_instances(zones_entry)) - zones_before
+    if level == ZONE:
+        return SetupResult(zones=zones, automations=0, flares=0)
 
     path = await async_blueprint_path(hass)
     configs = {
@@ -129,14 +141,12 @@ async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, 
     registry = er.async_get(hass)
     for area, entity_id in zip(configs, entity_ids):
         registry.async_update_entity(entity_id, area_id=area.area_id)
+    if level == AUTOMATION:
+        return SetupResult(zones=zones, automations=len(entity_ids), flares=0)
     for area, entity_id in zip(configs, entity_ids):
         hass.config_entries.async_add_subentry(flares_entry, room_flare(hass, flares_entry, entity_id, area.name))
 
-    return SetupResult(
-        zones=len(zone_instances(zones_entry)) - zones_before,
-        automations=len(entity_ids),
-        flares=len(entity_ids),
-    )
+    return SetupResult(zones=zones, automations=len(entity_ids), flares=len(entity_ids))
 
 
 def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: str) -> ConfigSubentry:

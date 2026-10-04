@@ -64,7 +64,8 @@ CI — see `.github/workflows/release.yml`.
 - **Adding FLARE sets your rooms up.** Setup asks how many schedules you want and their
   names, then which areas to set up, and with more than one schedule, which one each follows.
   Each area gets a zone, a room automation from the blueprint and a flare, all named after
-  it, so there's nothing left to do by hand. It finishes with a summary of what it created.
+  it, so there's nothing left to do by hand. You can choose just the zone, or the zone and
+  the automation, instead. It finishes with a summary of what it created.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Only areas with lights and no FLARE automation are listed.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out

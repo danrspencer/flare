@@ -758,7 +758,10 @@ that isn't tied to an entry, and area setup touches all three.
 
 **Area setup** (`area_setup.py`), per area: a zone (reused if one has the
 area's name), an automation from the blueprint, and a flare named after
-the area. Things worth knowing:
+the area. The form's **For each area, set up** field picks zone / zone +
+automation / all three for the whole run, not per area: per area it would
+sit beside each area's schedule dropdown, and Set up area can simply be
+run again for the odd ones out. Things worth knowing:
 
 - **The automation is written to automations.yaml the way HA's
   automation editor does** (`components/config/automation.py` +

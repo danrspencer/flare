@@ -42,10 +42,11 @@ It asks:
   is the day's lighting: when each phase starts, and how bright and warm it is. One for the
   whole house is fine to start with; use more if parts of the house should differ, such as one
   per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
-- **Which areas to set up.** Every area with lights is listed and ticked. With more than one
-  schedule, you pick the schedule each area follows instead.
+- **What to set up for each area**, and **which areas**. Every area with lights is listed and
+  ticked. With more than one schedule, you pick the schedule each area follows instead.
 
-Each area you set up gets three things, named after it:
+Each area you set up gets up to three things, named after it. All three is the default, and
+what most rooms want:
 
 | | What it does |
 |---|---|
@@ -53,7 +54,11 @@ Each area you set up gets three things, named after it:
 | A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting". |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
-That's everything a room needs. The automation is an ordinary one in **Settings → Automations
+The zone is always set up. Leave out the flare if you don't use voice assistants or HomeKit,
+or the automation too if you'd rather build the room's automation yourself. An area set up
+without an automation can be set up again later to add the rest.
+
+With all three, that's everything a room needs. The automation is an ordinary one in **Settings → Automations
 & Scenes**, so change any of its other inputs there.
 
 {: .note }

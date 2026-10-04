@@ -23,6 +23,8 @@ from homeassistant.helpers import entity_registry as er, selector
 from homeassistant.util import slugify
 
 from .area_setup import (
+    FLARE,
+    LEVELS,
     Area,
     AutomationsNotLoaded,
     SetupResult,
@@ -81,6 +83,7 @@ SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
 DEFAULT_SCHEDULE_NAME = "Home"
 MAX_SCHEDULES = 4
 SKIP = "skip"
+SET_UP = "set_up"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -170,7 +173,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schedule_ids = self._schedule_ids()
         plan = {area: schedule_ids[key] for area, key in chosen.items()}
         try:
-            result = await async_set_up_areas(self.hass, plan) if plan else SetupResult(0, 0, 0)
+            level = (user_input or {}).get(SET_UP, FLARE)
+            result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0, 0)
         except AutomationsNotLoaded:
             return self.async_abort(reason="automations_not_loaded")
         except Exception:  # noqa: BLE001 - reported in the summary, details in the log
@@ -274,29 +278,31 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 def _areas_schema(areas: list[Area], schedules: list[tuple[str, str]], first_setup: bool) -> vol.Schema:
-    """With one schedule, a tick per area. With more, a schedule per area,
-    each field named after its area, which the dialog shows as its label."""
+    """What to set up, then the areas. With one schedule, a tick per area.
+    With more, a schedule per area, each field named after its area, which
+    the dialog shows as its label."""
+    fields: dict = {
+        vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=list(LEVELS), translation_key="set_up", mode=selector.SelectSelectorMode.LIST
+            )
+        )
+    }
     if len(schedules) == 1:
         options = [selector.SelectOptionDict(value=area.area_id, label=area.name) for area in areas]
         default = [area.area_id for area in areas] if first_setup else []
-        return vol.Schema(
-            {
-                vol.Optional("areas", default=default): selector.SelectSelector(
-                    selector.SelectSelectorConfig(options=options, multiple=True, mode=selector.SelectSelectorMode.LIST)
-                )
-            }
+        fields[vol.Optional("areas", default=default)] = selector.SelectSelector(
+            selector.SelectSelectorConfig(options=options, multiple=True, mode=selector.SelectSelectorMode.LIST)
         )
+        return vol.Schema(fields)
     options = [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
     options.append(selector.SelectOptionDict(value=SKIP, label="Don't set up"))
     default = schedules[0][0] if first_setup else SKIP
-    return vol.Schema(
-        {
-            vol.Required(area.name, default=default): selector.SelectSelector(
-                selector.SelectSelectorConfig(options=options, translation_key="area_schedule")
-            )
-            for area in areas
-        }
-    )
+    for area in areas:
+        fields[vol.Required(area.name, default=default)] = selector.SelectSelector(
+            selector.SelectSelectorConfig(options=options, translation_key="area_schedule")
+        )
+    return vol.Schema(fields)
 
 
 def _chosen(user_input: dict[str, Any], areas: list[Area], schedules: list[tuple[str, str]]) -> dict[Area, str]:
