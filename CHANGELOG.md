@@ -76,9 +76,10 @@ CI — see `.github/workflows/release.yml`.
   `flare:logo`, for its sidebar entry.
 - **An Activity feed on the Zones view**, like Home Assistant's Security dashboard: the
   last 24 hours of every zone's Activity.
-- **FLARE says when it takes a light back.** `flare_light_reclaimed` fires when an overridden
-  light is FLARE's again, and both it and `flare_light_overridden` show in the zone's
-  Activity on its device page.
+- **A zone's Activity says what it's doing.** `flare_lights_controlled` ("Kitchen is now
+  setting 6 lights") fires when a zone takes lights, once per room coming on rather than
+  per bulb, and `flare_light_reclaimed` when an overridden light is FLARE's again. Both, and
+  `flare_light_overridden`, show in the zone's Activity on its device page.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.

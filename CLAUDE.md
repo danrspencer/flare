@@ -1808,8 +1808,11 @@ caught.
   sections view's `sidebar`, targeting every zone's *device*, so it is
   exactly the zones' own device-page Activity (the user's call, over
   following the zones' lights). What lands there is whatever carries the
-  zone's `device_id`: `flare_light_overridden`, `flare_light_reclaimed`
-  and Clear presses. The claims and count sensors have units, so the
+  zone's `device_id`: `flare_lights_controlled`, `flare_light_overridden`,
+  `flare_light_reclaimed` and Clear presses. `flare_lights_controlled`
+  gathers for `CONTROLLED_GATHER_SECONDS` before firing, because a room's
+  bulbs confirm one by one and each confirmation is a separate status
+  refresh; announced per light it was one entry per bulb. The claims and count sensors have units, so the
   logbook leaves them out.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a

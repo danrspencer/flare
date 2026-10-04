@@ -2,6 +2,8 @@
 counts, the Clear button, the override event and area placement. A light's
 zone is whichever one a caller names, never resolved from its area."""
 
+from datetime import timedelta
+
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
@@ -9,7 +11,8 @@ from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.flare.button import async_setup_entry as button_setup
 from custom_components.flare.const import (
@@ -21,6 +24,7 @@ from custom_components.flare.const import (
     SUBENTRY_TYPE_ZONE,
 )
 from custom_components.flare.schedule.coordinator import ScheduleCoordinator, schedule_instances
+from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.instance import zone_instances
 from custom_components.flare.zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
@@ -278,6 +282,40 @@ async def test_a_light_set_again_after_an_override_says_so_in_the_zone(hass: Hom
     await hass.async_block_till_done()
 
     assert [e.data for e in events] == [{"entity_id": "light.a", "zone": "Kitchen", "device_id": device.id}]
+
+
+async def test_lights_a_zone_takes_are_announced_together(hass: HomeAssistant):
+    """flare_lights_controlled: one entry for a room coming on, not one per
+    bulb as each reports back, with the zone's device for its Activity."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    instance = zone_instances(entry)[0]
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Kitchen"
+    )
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    tracker.registry_entry = er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, tracker.unique_id, config_entry=entry, device_id=device.id
+    )
+    events: list = []
+    hass.bus.async_listen("flare_lights_controlled", events.append)
+    tracker._refresh_statuses()  # seeds without announcing
+
+    for light in ("light.a", "light.b"):
+        _light(hass, light, area_id=area.id)
+        await _record(registry, _zone_id(entry, "Kitchen"), light, f"ctx-{light}", ASKED)
+        tracker._refresh_statuses()
+    assert events == [], "gathered first"
+
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=CONTROLLED_GATHER_SECONDS + 1))
+    await hass.async_block_till_done()
+    tracker._refresh_statuses()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2 * CONTROLLED_GATHER_SECONDS + 2))
+    await hass.async_block_till_done()
+
+    assert [e.data for e in events] == [
+        {"entity_ids": ["light.a", "light.b"], "controlled": 2, "zone": "Kitchen", "device_id": device.id}
+    ], "once, and not again for lights it already had"
 
 
 async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssistant):

@@ -17,11 +17,19 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHT_RECLAIMED
+from .const import (
+    CONF_ENTRY_TYPE,
+    DOMAIN,
+    ENTRY_TYPE_ZONES,
+    EVENT_LIGHT_OVERRIDDEN,
+    EVENT_LIGHT_RECLAIMED,
+    EVENT_LIGHTS_CONTROLLED,
+)
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .zone.override_protection import classify_state
 from .zone.instance import ZoneInstance, zone_instances
@@ -58,6 +66,10 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
 
 
 
+# How long a zone gathers lights it has taken before announcing them.
+CONTROLLED_GATHER_SECONDS = 3
+
+
 class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     """One zone's claims - the storage itself, published as an attribute.
     Kept out of the recorder but restored across a restart."""
@@ -77,6 +89,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self._instance = instance
         self.claims: dict[str, dict] = {}
         self._last_statuses: dict[str, str] | None = None
+        self._newly_controlled: set[str] = set()
+        self._announce_later = None
         self._attr_unique_id = f"{instance.subentry_id}_claims"
         self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
@@ -98,6 +112,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         self._registry.unregister(self._instance.subentry_id)
+        if self._announce_later is not None:
+            self._announce_later()
 
     @callback
     def async_claims_changed(self) -> None:
@@ -112,9 +128,10 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     @callback
     def _refresh_statuses(self) -> None:
         """Fires EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the
-        claims and live values at that moment, and EVENT_LIGHT_RECLAIMED when
-        an overridden one is controlled again. Not in extra_state_attributes,
-        which HA reads on every state write."""
+        claims and live values at that moment, EVENT_LIGHT_RECLAIMED when
+        an overridden one is controlled again, and EVENT_LIGHTS_CONTROLLED
+        when the zone takes lights it wasn't setting. Not in
+        extra_state_attributes, which HA reads on every state write."""
         statuses = {}
         for entity_id, record in self.claims.items():
             status, _via, live_context_id = _classify_tracked(self.hass, entity_id, record)
@@ -126,6 +143,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 self._fire_overridden(entity_id, record, previous, live_context_id)
             elif status == "controlled" and previous == "overridden":
                 self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"entity_id": entity_id, **self._zone_data()})
+            elif status == "controlled" and previous != "controlled":
+                self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
 
@@ -149,6 +168,28 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 },
                 "observed": record.get("observed"),
                 "latest": record.get("latest"),
+            },
+        )
+
+    @callback
+    def _controlled_soon(self, entity_id: str) -> None:
+        """A room's lights report back one by one, so they're gathered for
+        a moment and announced together."""
+        self._newly_controlled.add(entity_id)
+        if self._announce_later is None:
+            self._announce_later = async_call_later(self.hass, CONTROLLED_GATHER_SECONDS, self._announce_controlled)
+
+    @callback
+    def _announce_controlled(self, _now) -> None:
+        self._announce_later = None
+        lights, self._newly_controlled = sorted(self._newly_controlled), set()
+        statuses = self._last_statuses or {}
+        self.hass.bus.async_fire(
+            EVENT_LIGHTS_CONTROLLED,
+            {
+                "entity_ids": lights,
+                "controlled": sum(status == "controlled" for status in statuses.values()),
+                **self._zone_data(),
             },
         )
 

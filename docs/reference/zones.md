@@ -153,7 +153,21 @@ device_id: ...                        # the zone's device
 
 > **Kitchen** is setting this light again
 
-Both appear in the light's logbook and in the zone's own Activity, on its device page.
+When a zone starts setting lights it wasn't, such as when a room comes on, FLARE fires
+`flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
+report back one by one:
+
+```yaml
+entity_ids: [light.kitchen_1, light.kitchen_2]   # the lights it took
+controlled: 6                                    # how many it's setting now
+zone: Kitchen
+device_id: ...                                   # the zone's device
+```
+
+> **Kitchen** is now setting 6 lights
+
+All three appear in the zone's own Activity, on its device page. The first two also appear in
+the light's logbook.
 
 ## Inspecting tracked state
 
