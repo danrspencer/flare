@@ -231,48 +231,6 @@ export function scheduleSensors(hass) {
 
 
 /**
- * The section for one zone, sized to flow several to a row.
- * `controlled` + `overridden` needn't equal the total tracked.
- */
-export function zoneSectionConfig(slug, title) {
-  const controlled = `sensor.${slug}_flare_controlled`;
-  const overridden = `sensor.${slug}_flare_overridden`;
-  const clear = `button.${slug}_flare_clear`;
-
-  return {
-    type: 'grid',
-    cards: [
-      heading(title, 'title', { icon: 'mdi:eye-outline' }),
-      tile({ entity: controlled, name: 'Controlled', columns: 6 }),
-      tile({ entity: overridden, name: 'Overridden', columns: 6 }),
-      // Hidden while zero, which is almost always.
-      {
-        type: 'markdown',
-        text_only: true,
-        grid_options: { columns: 'full' },
-        content:
-          `{% set lights = expand(state_attr('${overridden}', 'lights') or []) %}` +
-          `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
-        visibility: [{ condition: 'numeric_state', entity: overridden, above: 0 }],
-      },
-      // Explicit, so an upstream default change can't turn it into more-info.
-      {
-        type: 'tile',
-        entity: clear,
-        name: 'Clear claims',
-        icon: 'mdi:backup-restore',
-        grid_options: { columns: 'full' },
-        tap_action: {
-          action: 'perform-action',
-          perform_action: 'button.press',
-          target: { entity_id: clear },
-        },
-      },
-    ],
-  };
-}
-
-/**
  * Every zone as {slug, title}, identified by the `claims`
  * attribute. The title drops the trailing "Claims".
  */
@@ -289,4 +247,150 @@ export function listZones(hass) {
     })
     .filter((s) => s.slug)
     .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/** Each zone's device, as its claims sensor names it. */
+export function zoneDevices(hass, zones = listZones(hass)) {
+  const entities = (hass && hass.entities) || {};
+  return zones
+    .map(({ slug }) => entities[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id)
+    .filter(Boolean);
+}
+
+// Home Assistant's slugify, near enough for area names.
+const slugOf = (name) =>
+  String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+// The Light dashboard's screen-size conditions (view-columns-conditions.ts).
+const LARGE_SCREEN = { condition: 'view_columns', min: 2 };
+const SMALL_SCREEN = { condition: 'view_columns', max: 1 };
+
+const pressClear = (clear) => ({
+  action: 'perform-action',
+  perform_action: 'button.press',
+  target: { entity_id: clear },
+});
+
+/** A zone's area: its device's, or else the area named after it. */
+export function zoneArea(hass, { slug }) {
+  const entities = (hass && hass.entities) || {};
+  const devices = (hass && hass.devices) || {};
+  const areas = (hass && hass.areas) || {};
+  const device = devices[entities[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id];
+  if (device?.area_id && areas[device.area_id]) return areas[device.area_id];
+  return Object.values(areas).find((area) => slugOf(area.name) === slug) || null;
+}
+
+/**
+ * One zone's row, laid out like Home Assistant's Light dashboard: a heading
+ * (linking to the zone's device page), then on wide screens Clear where the
+ * Light dashboard has "All off", with the zone's two counts beside it, and on
+ * narrow ones Clear as a button on the heading. The overridden lights are
+ * named underneath while there are any.
+ */
+export function zoneCards(hass, zone, title) {
+  const { slug } = zone;
+  const controlled = `sensor.${slug}_flare_controlled`;
+  const clear = `button.${slug}_flare_clear`;
+  const overridden = `sensor.${slug}_flare_overridden`;
+  const device = ((hass && hass.entities) || {})[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id;
+  const cards = [
+    {
+      type: 'heading',
+      heading: title,
+      heading_style: 'subtitle',
+      ...(device ? { tap_action: { action: 'navigate', navigation_path: `/config/devices/device/${device}` } } : {}),
+      badges: [
+        { type: 'button', icon: 'mdi:backup-restore', text: 'Clear', tap_action: pressClear(clear), visibility: [SMALL_SCREEN] },
+      ],
+    },
+    // A third of the row on its own, like "All off".
+    { type: 'custom:flare-clear-card', entity: clear, visibility: [LARGE_SCREEN], grid_options: { columns: 4, rows: 1 } },
+  ];
+  cards.push(
+    { type: 'tile', entity: controlled, name: 'Controlled', grid_options: { columns: 4, rows: 1 } },
+    { type: 'tile', entity: overridden, name: 'Overridden', grid_options: { columns: 4, rows: 1 } }
+  );
+  cards.push({
+    type: 'markdown',
+    text_only: true,
+    grid_options: { columns: 'full' },
+    content:
+      `{% set lights = expand(state_attr('${overridden}', 'lights') or []) %}` +
+      `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
+    visibility: [{ condition: 'numeric_state', entity: overridden, above: 0 }],
+  });
+  return cards;
+}
+
+/** The house's totals, from every zone's counts. */
+export function zoneTotalsSection(zones) {
+  const sum = (status) =>
+    `{{ ${JSON.stringify(zones.map(({ slug }) => `sensor.${slug}_flare_${status}`)).replace(/"/g, "'")}` +
+    ` | map('states') | map('int', 0) | sum }}`;
+  return {
+    type: 'grid',
+    column_span: 2,
+    cards: [
+      { type: 'heading', heading: 'Zones', heading_style: 'title', icon: 'mdi:lightbulb-group' },
+      {
+        type: 'markdown',
+        text_only: true,
+        grid_options: { columns: 'full' },
+        content: `**${sum('controlled')}** lights controlled · **${sum('overridden')}** overridden`,
+      },
+    ],
+  };
+}
+
+/**
+ * Every zone, grouped by floor and then area like the Light dashboard. A
+ * zone named after its area takes the area's name; two in one area keep
+ * their own. Zones with no area come last.
+ */
+export function zoneSections(hass, zones) {
+  const floors = (hass && hass.floors) || {};
+  const byArea = new Map();
+  const unplaced = [];
+  for (const zone of zones) {
+    const area = zoneArea(hass, zone);
+    if (!area) unplaced.push(zone);
+    else byArea.set(area.area_id, { area, zones: [...(byArea.get(area.area_id)?.zones || []), zone] });
+  }
+  const rows = (entries) =>
+    entries
+      .sort((a, b) => a.area.name.localeCompare(b.area.name))
+      .flatMap(({ area, zones: inArea }) =>
+        inArea.flatMap((zone) =>
+          zoneCards(hass, zone, inArea.length === 1 ? area.name : zone.title)
+        )
+      );
+  const section = (heading, icon, cards) => ({
+    type: 'grid',
+    column_span: 2,
+    cards: [{ type: 'heading', heading, ...(icon ? { icon } : {}) }, ...cards],
+  });
+
+  const entries = [...byArea.values()];
+  const floorIds = [...new Set(entries.map(({ area }) => area.floor_id).filter((id) => id && floors[id]))].sort(
+    (a, b) => (floors[a].level ?? 0) - (floors[b].level ?? 0) || floors[a].name.localeCompare(floors[b].name)
+  );
+  const sections = floorIds.map((id) =>
+    section(floors[id].name, floors[id].icon || 'mdi:home-floor-0', rows(entries.filter(({ area }) => area.floor_id === id)))
+  );
+  const floorless = entries.filter(({ area }) => !floorIds.includes(area.floor_id));
+  if (floorless.length) sections.push(section(sections.length ? 'Other areas' : 'Areas', null, rows(floorless)));
+  if (unplaced.length) {
+    sections.push(
+      section(
+        'Other zones',
+        null,
+        unplaced.sort((a, b) => a.title.localeCompare(b.title)).flatMap((zone) => zoneCards(hass, zone, zone.title))
+      )
+    );
+  }
+  return sections;
 }

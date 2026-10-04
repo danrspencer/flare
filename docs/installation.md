@@ -72,22 +72,9 @@ turn on the kitchen" brings the kitchen up the way FLARE would. See
 
 ## Step 4 — add the dashboard (optional)
 
-FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
-configuration editor**, and add:
-
-```yaml
-views:
-  - title: Lighting
-    strategy:
-      type: custom:flare-schedule
-  - title: Zones
-    strategy:
-      type: custom:flare-zone
-```
-
-**Lighting** shows the day's curve and every setting of your schedules. **Zones** shows
-which lights FLARE is driving and which ones something else has taken over. See
-[Dashboard]({{ site.baseurl }}/dashboard/) for more, including adding just the chart.
+**Settings → Dashboards → Add dashboard**, and pick **FLARE Lighting**. It's a dashboard
+with a view for each schedule and one for your zones, and it keeps up as you add more. See
+[Dashboard]({{ site.baseurl }}/dashboard/).
 
 ## Adding a room later
 

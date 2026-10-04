@@ -66,6 +66,14 @@ CI — see `.github/workflows/release.yml`.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.
+- **A ready-made dashboard.** **FLARE Lighting** is now in **Settings → Dashboards → Add
+  dashboard**: a view for each schedule and one for your zones, which keeps up as you add
+  more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
+  `flare:logo`, for its sidebar entry.
+- **A redesigned Zones view.** The house's totals at the top, then each zone by floor and
+  area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
+  off" and the zone's counts where that has lights, and an Activity feed beside them like
+  the Security dashboard's.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out
   as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
   buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new

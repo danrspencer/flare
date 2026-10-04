@@ -1,4 +1,5 @@
-"""The two Lovelace view strategies and the sections they build."""
+"""The Lovelace strategies - two views and the dashboard made of them - and
+the sections they build."""
 
 import pytest
 
@@ -39,6 +40,21 @@ STATES = {
 }
 
 
+# A house for the Activity feed: the Bedroom zone's claims sensor names its
+# device.
+ACTIVITY = {
+    "states": {
+        "sensor.bedroom_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Bedroom Claims"}},
+        "sensor.attic_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Attic Claims"}},
+    },
+    "entities": {
+        "sensor.bedroom_flare_claims": {"entity_id": "sensor.bedroom_flare_claims", "device_id": "bedroom_zone"},
+        "sensor.attic_flare_claims": {"entity_id": "sensor.attic_flare_claims", "device_id": "attic_zone"},
+    },
+    "config": {"components": ["logbook"]},
+}
+
+
 # What might go in `sensor:`, including values that mean "no filter".
 SLUG_CASES = ["upstairs", "sensor.upstairs_flare", "  upstairs  ", "", "   ", None, 7]
 
@@ -50,10 +66,12 @@ def result():
 // Record registrations, which the shim otherwise drops.
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones }} = await import({js_path(WWW / "flare-section.js")});
+const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones, zoneDevices }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
 const Zone = defined['ll-strategy-view-flare-zone'];
+const Dashboard = defined['ll-strategy-dashboard-flare'];
+const schedulesOnly = Object.fromEntries(Object.entries(input.states).filter(([id, s]) => !('claims' in s.attributes)));
 const generate = async (states, config = {{}}) => (Strategy ? await Strategy.generate(config, {{ states }}) : null);
 return {{
   section: sectionConfig('ground_floor', 'Ground Floor'),
@@ -69,8 +87,15 @@ return {{
   zones: listZones({{ states: input.states }}),
   zone: Zone ? await Zone.generate({{}}, {{ states: input.states }}) : null,
   emptyZones: Zone ? await Zone.generate({{}}, {{ states: {{}} }}) : null,
+  dashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: input.states }}) : null,
+  dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, {{ states: schedulesOnly }}) : null,
+  emptyDashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: {{}} }}) : null,
+  customStrategies: globalThis.window.customStrategies,
+  zoneDevices: zoneDevices(input.activity),
+  activityView: Zone ? await Zone.generate({{}}, input.activity) : null,
+  noLogbookView: Zone ? await Zone.generate({{}}, {{ ...input.activity, config: {{ components: [] }} }}) : null,
 }};""",
-        {"states": STATES, "slugCases": SLUG_CASES},
+        {"states": STATES, "slugCases": SLUG_CASES, "activity": ACTIVITY},
     )
 
 
@@ -158,7 +183,7 @@ def test_no_schedules_explains_itself_rather_than_rendering_blank(result):
     content = view["sections"][0]["cards"][1]["content"]
 
     assert "No FLARE schedules found" in content
-    assert "Add schedule sensor" in content
+    assert "Add schedule" in content
 
 
 def test_every_schedule_time_and_curve_entity_is_present(result):
@@ -301,18 +326,8 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
 # --- The zone view -------------------------------------------------
 
 
-def _zone_section(result, index=0):
-    return result["zone"]["sections"][index]
-
-
 def test_the_zone_strategy_is_registered_separately(result):
     assert "ll-strategy-view-flare-zone" in result["registeredAs"]
-
-
-def test_a_zone_view_is_one_section_per_zone(result):
-    headings = [s["cards"][0]["heading"] for s in result["zone"]["sections"]]
-
-    assert headings == ["Bedroom", "Dining Room", "Utility"]
 
 
 def test_the_zone_name_drops_the_entitys_own_trailing_word(result):
@@ -342,42 +357,60 @@ def test_the_two_strategies_do_not_claim_each_others_sensors(result):
     assert not any("hallway" in slug for slug in schedule_slugs | zone_slugs)
 
 
-def test_a_zone_shows_both_counts_and_a_clear_button(result):
-    entities = [c.get("entity") for c in _zone_section(result)["cards"]]
-
-    assert "sensor.bedroom_flare_controlled" in entities
-    assert "sensor.bedroom_flare_overridden" in entities
-    assert "button.bedroom_flare_clear" in entities
-
-
-def test_the_clear_button_presses_rather_than_opening_a_dialog(result):
-    """Explicit, so an upstream default can't turn it into a more-info dialog."""
-    clear = next(
-        c for c in _zone_section(result)["cards"] if c.get("entity", "").startswith("button.")
-    )
-
-    assert clear["tap_action"] == {
-        "action": "perform-action",
-        "perform_action": "button.press",
-        "target": {"entity_id": "button.bedroom_flare_clear"},
-    }
-
-
-def test_the_overridden_lights_are_named_only_while_there_are_any(result):
-    """Hidden at zero, which is almost always."""
-    card = next(c for c in _zone_section(result)["cards"] if c.get("type") == "markdown")
-
-    assert card["visibility"] == [
-        {"condition": "numeric_state", "entity": "sensor.bedroom_flare_overridden", "above": 0}
-    ]
-    # expand() turns the entity_ids into states so real names show, and
-    # the `or []` keeps it from throwing before the attribute exists.
-    assert "expand(" in card["content"]
-    assert "or []" in card["content"]
-
-
 def test_no_zones_explains_itself_rather_than_rendering_blank(result):
     content = result["emptyZones"]["sections"][0]["cards"][1]["content"]
 
     assert "No FLARE zones found" in content
     assert "Add zone" in content
+
+
+# --- The dashboard -------------------------------------------------------
+
+
+def test_the_dashboard_is_a_view_per_schedule_then_zones(result):
+    views = result["dashboard"]["views"]
+
+    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Zones"]
+    assert [v["strategy"] for v in views] == [
+        {"type": "custom:flare-schedule", "sensor": "downstairs"},
+        {"type": "custom:flare-schedule", "sensor": "loft"},
+        {"type": "custom:flare-schedule", "sensor": "upstairs"},
+        {"type": "custom:flare-zone"},
+    ]
+
+
+def test_the_dashboard_has_no_zones_view_without_zones(result):
+    assert [v["title"] for v in result["dashboardWithoutZones"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
+
+
+def test_an_empty_dashboard_explains_itself(result):
+    assert result["emptyDashboard"]["views"] == [{"title": "Lighting", "strategy": {"type": "custom:flare-schedule"}}]
+
+
+def test_the_dashboard_is_offered_under_add_dashboard(result):
+    """HA's Add dashboard dialog lists window.customStrategies, and adds
+    `custom:` to the type."""
+    (entry,) = [s for s in result["customStrategies"] if s["type"] == "flare"]
+    assert entry["strategyType"] == "dashboard"
+    assert entry["name"] == "FLARE Lighting"
+    assert "ll-strategy-dashboard-flare" in result["registeredAs"]
+
+
+# --- Activity --------------------------------------------------------------
+
+
+def test_the_zone_view_has_an_activity_feed_of_the_zones_devices(result):
+    """The same entries as each zone's own Activity."""
+    sidebar = result["activityView"]["sidebar"]
+    heading, logbook = sidebar["sections"][0]["cards"]
+
+    assert result["zoneDevices"] == ["attic_zone", "bedroom_zone"]
+    assert heading["heading"] == "Activity"
+    assert logbook["type"] == "logbook"
+    assert logbook["target"] == {"device_id": ["attic_zone", "bedroom_zone"]}
+    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Zones", "Activity")
+
+
+def test_no_activity_feed_without_the_logbook(result):
+    assert "sidebar" not in result["noLogbookView"]
+    assert "sidebar" not in result["zone"], "nor without the zones' devices"

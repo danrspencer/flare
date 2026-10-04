@@ -6,10 +6,24 @@ permalink: /dashboard/
 
 # Dashboard
 
-FLARE comes with two ready-made dashboard views, which build themselves once you've added them.
+FLARE comes with a ready-made dashboard, which builds itself from your schedules and zones:
+a view for each schedule and one for your zones. A schedule or zone you add later appears
+without you touching it.
 
-Open the dashboard you want them on, then **Edit dashboard** → the three-dot menu →
-**Raw configuration editor**, and add:
+Add it from **Settings → Dashboards → Add dashboard**: pick **FLARE Lighting**, then give it a
+name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
+
+It's a dashboard whose whole YAML is:
+
+```yaml
+strategy:
+  type: custom:flare
+```
+
+## Adding the views to another dashboard
+
+The views it's made of can also go in a dashboard of your own. Open it, then **Edit
+dashboard** → the three-dot menu → **Raw configuration editor**, and add:
 
 ```yaml
 views:
@@ -23,8 +37,13 @@ views:
 
 - **Lighting** — the day's curve and every schedule and curve setting, one section per
   schedule sensor.
-- **Zones** — which lights FLARE is driving, which ones something else has taken
-  over, and a Clear button to hand them back.
+- **Zones** — how many lights FLARE is driving across the house and how many something
+  else has taken over, then each zone by floor and area, laid out like Home Assistant's
+  Lights dashboard: its controlled and overridden counts, a Clear button to hand its lights
+  back, and which are overridden.
+  A zone's name opens its device page.
+  Beside them, **Activity** is the last 24 hours of the zones' Activity.
+  On a narrow screen it's a tab.
 
 There's nothing to fill in: both views find their own entities, and a schedule sensor or zone
 you add later appears without you touching the dashboard again.
