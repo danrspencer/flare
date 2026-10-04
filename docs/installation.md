@@ -55,8 +55,7 @@ what most rooms want:
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
 The zone is always set up. Leave out the flare if you don't use voice assistants or HomeKit,
-or the automation too if you'd rather build the room's automation yourself. An area set up
-without an automation can be set up again later to add the rest.
+or the automation too if you'd rather build the room's automation yourself.
 
 With all three, that's everything a room needs. The automation is an ordinary one in **Settings → Automations
 & Scenes**, so change any of its other inputs there.
@@ -92,8 +91,10 @@ which lights FLARE is driving and which ones something else has taken over. See
 
 ## Adding a room later
 
-**Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights that
-doesn't have a FLARE automation yet; tick the ones to set up.
+**Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights, and
+ticks the ones without a zone yet. An area that already has a zone isn't ticked: setting it up
+again keeps its zone but gives it another automation and flare, so only tick it if it doesn't
+have them.
 
 The other buttons there add one thing at a time: **Add schedule**, **Add zone** and
 **Add flare**.

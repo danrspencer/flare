@@ -27,7 +27,7 @@ from homeassistant.util import slugify
 from homeassistant.util.file import write_utf8_file_atomic
 from homeassistant.util.yaml import dump, load_yaml
 
-from .blueprint_check import async_blueprint_path, automations_using_our_blueprint
+from .blueprint_check import async_blueprint_path
 from .const import (
     BLUEPRINT_LIGHTS_INPUT,
     BLUEPRINT_ZONE_INPUT,
@@ -44,7 +44,7 @@ from .const import (
     SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_ZONE,
 )
-from .flares.automation import TARGET, automation_ref, blueprint_inputs
+from .flares.automation import TARGET, automation_ref
 from .zone.instance import zone_instances
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
@@ -93,14 +93,11 @@ def areas_with_lights(hass: HomeAssistant) -> list[Area]:
     return sorted(areas, key=lambda area: area.name)
 
 
-async def async_areas_set_up(hass: HomeAssistant) -> set[str]:
-    """Areas a FLARE automation already targets by area."""
-    covered: set[str] = set()
-    for entity_id in await automations_using_our_blueprint(hass):
-        target = (blueprint_inputs(hass, entity_id) or {}).get(BLUEPRINT_LIGHTS_INPUT) or {}
-        area_ids = target.get("area_id", []) if isinstance(target, dict) else []
-        covered.update([area_ids] if isinstance(area_ids, str) else area_ids)
-    return covered
+def areas_with_zones(hass: HomeAssistant) -> set[str]:
+    """Areas with a zone of the same name, which is how setup names them."""
+    entry = _entry(hass, ENTRY_TYPE_ZONES, required=False)
+    zones = {slugify(z.title) for z in zone_instances(entry)} if entry else set()
+    return {area.area_id for area in areas_with_lights(hass) if slugify(area.name) in zones}
 
 
 async def async_set_up_areas(
@@ -220,8 +217,9 @@ def _restore(path: str, original: str | None) -> None:
         write_utf8_file_atomic(path, original)
 
 
-def _entry(hass: HomeAssistant, entry_type: str) -> ConfigEntry:
-    return next(e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == entry_type)
+def _entry(hass: HomeAssistant, entry_type: str, required: bool = True) -> ConfigEntry | None:
+    entries = (e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == entry_type)
+    return next(entries) if required else next(entries, None)
 
 
 def _zone_device(hass: HomeAssistant, entry: ConfigEntry, name: str) -> str:

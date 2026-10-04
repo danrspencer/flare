@@ -777,9 +777,12 @@ run again for the odd ones out. Things worth knowing:
   re-resolves its target on registry changes
   (`helpers/target.py`'s `TargetEntityChangeTracker`), so the automation
   picks up the Tick when it appears.
-- **"Already set up" means a FLARE automation targets the area by
-  `area_id`.** Rooms targeted by entity (like this house's Bedroom Hall)
-  stay listed, which is why nothing is ticked once FLARE exists.
+- **"Already set up" means a zone with the area's name exists**, and it
+  only unticks the area; every area with lights is always listed. At the
+  user's direction, after reading automations' Lights & Occupancy proved
+  unreliable: it only saw areas named by `area_id`, so rooms targeted by
+  entity (this house's Bedroom Hall) looked unset. Re-running an area
+  reuses its zone but adds another automation and flare.
 - **With several schedules, each area is a field named after it**: the
   dialog falls back to a field's name when it has no translation
   (`renderShowFormStepFieldLabel`), which is the only way to label

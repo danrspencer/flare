@@ -29,7 +29,7 @@ from .area_setup import (
     AutomationsNotLoaded,
     SetupResult,
     areas_with_lights,
-    async_areas_set_up,
+    areas_with_zones,
     async_set_up_areas,
     room_flare,
 )
@@ -150,21 +150,20 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Which areas to set up and, with more than one schedule, which
-        schedule each follows. On first setup every area with lights is
-        picked; afterwards, none are, and areas already set up aren't offered."""
+        schedule each follows. Every area with lights is listed; those
+        without a zone yet are picked."""
         first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES}
         schedules = self._schedule_choices()
         if not schedules:
             return self.async_abort(reason="no_schedules")
-        set_up = await async_areas_set_up(self.hass)
-        areas = [area for area in areas_with_lights(self.hass) if area.area_id not in set_up]
+        areas = areas_with_lights(self.hass)
         if not areas and not first_setup:
-            return self.async_abort(reason="every_area_set_up")
+            return self.async_abort(reason="no_areas")
 
         if user_input is None and areas:
             return self.async_show_form(
                 step_id="areas",
-                data_schema=_areas_schema(areas, schedules, first_setup),
+                data_schema=_areas_schema(areas, schedules, areas_with_zones(self.hass)),
                 description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
@@ -277,10 +276,10 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return FlareOptionsFlow()
 
 
-def _areas_schema(areas: list[Area], schedules: list[tuple[str, str]], first_setup: bool) -> vol.Schema:
-    """What to set up, then the areas. With one schedule, a tick per area.
-    With more, a schedule per area, each field named after its area, which
-    the dialog shows as its label."""
+def _areas_schema(areas: list[Area], schedules: list[tuple[str, str]], zoned: set[str]) -> vol.Schema:
+    """What to set up, then the areas, those in `zoned` unpicked. With one
+    schedule, a tick per area. With more, a schedule per area, each field
+    named after its area, which the dialog shows as its label."""
     fields: dict = {
         vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
             selector.SelectSelectorConfig(
@@ -290,15 +289,15 @@ def _areas_schema(areas: list[Area], schedules: list[tuple[str, str]], first_set
     }
     if len(schedules) == 1:
         options = [selector.SelectOptionDict(value=area.area_id, label=area.name) for area in areas]
-        default = [area.area_id for area in areas] if first_setup else []
+        default = [area.area_id for area in areas if area.area_id not in zoned]
         fields[vol.Optional("areas", default=default)] = selector.SelectSelector(
             selector.SelectSelectorConfig(options=options, multiple=True, mode=selector.SelectSelectorMode.LIST)
         )
         return vol.Schema(fields)
     options = [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
     options.append(selector.SelectOptionDict(value=SKIP, label="Don't set up"))
-    default = schedules[0][0] if first_setup else SKIP
     for area in areas:
+        default = SKIP if area.area_id in zoned else schedules[0][0]
         fields[vol.Required(area.name, default=default)] = selector.SelectSelector(
             selector.SelectSelectorConfig(options=options, translation_key="area_schedule")
         )

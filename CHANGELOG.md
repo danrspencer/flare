@@ -67,7 +67,8 @@ CI — see `.github/workflows/release.yml`.
   it, so there's nothing left to do by hand. You can choose just the zone, or the zone and
   the automation, instead. It finishes with a summary of what it created.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
-  area added later. Only areas with lights and no FLARE automation are listed.
+  area added later. Every area with lights is listed, with those that don't have a zone yet
+  ticked.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out
   as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
   buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new

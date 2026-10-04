@@ -160,7 +160,11 @@ async def _set_up_flare(hass: HomeAssistant, areas: list[str]) -> None:
         await _submit(hass, result, {"areas": areas})
 
 
-async def test_set_up_area_offers_only_areas_without_a_flare_automation(
+def _offered(result) -> list[str]:
+    return [o["value"] for o in result["data_schema"].schema["areas"].config["options"]]
+
+
+async def test_set_up_area_lists_every_area_and_ticks_those_without_a_zone(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):
     kitchen = _area(hass, "Kitchen", "light.k")
@@ -169,9 +173,8 @@ async def test_set_up_area_offers_only_areas_without_a_flare_automation(
 
     result = await _start(hass)
     assert result["step_id"] == "areas"
-    assert result["data_schema"]({}) == {"set_up": "flare", "areas": []}, "nothing ticked once FLARE is set up"
-    offered = [o["value"] for o in result["data_schema"].schema["areas"].config["options"]]
-    assert offered == [hall]
+    assert _offered(result) == [hall, kitchen]
+    assert result["data_schema"]({}) == {"set_up": "flare", "areas": [hall]}
 
     result = await _submit(hass, result, {"areas": [hall]})
 
@@ -180,13 +183,26 @@ async def test_set_up_area_offers_only_areas_without_a_flare_automation(
     assert sorted(a["alias"] for a in _automations(automations_file)) == ["Hall Lighting", "Kitchen Lighting"]
 
 
-async def test_set_up_area_with_every_area_done_says_so(stub_entry_setup, automations_file, hass: HomeAssistant):
-    kitchen = _area(hass, "Kitchen", "light.k")
-    await _set_up_flare(hass, [kitchen])
+async def test_with_several_schedules_an_area_with_a_zone_starts_as_dont_set_up(
+    stub_entry_setup, automations_file, hass: HomeAssistant
+):
+    _area(hass, "Kitchen", "light.k")
+    result = await _first_setup(hass, ["Downstairs", "Upstairs"])
+    await _submit(hass, result, {"Kitchen": "schedule_1"})
+    _area(hass, "Hall", "light.h")
 
     result = await _start(hass)
 
-    assert result["reason"] == "every_area_set_up"
+    downstairs = next(iter(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES).subentries))
+    assert result["data_schema"]({}) == {"set_up": "flare", "Hall": downstairs, "Kitchen": "skip"}
+
+
+async def test_set_up_area_with_no_lights_in_areas_says_so(stub_entry_setup, automations_file, hass: HomeAssistant):
+    await _set_up_flare(hass, [])
+
+    result = await _start(hass)
+
+    assert result["reason"] == "no_areas"
 
 
 async def test_an_existing_zone_with_the_areas_name_is_reused(stub_entry_setup, automations_file, hass: HomeAssistant):
@@ -198,7 +214,9 @@ async def test_an_existing_zone_with_the_areas_name_is_reused(stub_entry_setup, 
     (zone,) = zone_instances(zones)
     kitchen = _area(hass, "Kitchen", "light.k")
 
-    result = await _submit(hass, await _start(hass), {"areas": [kitchen]})
+    result = await _start(hass)
+    assert result["data_schema"]({})["areas"] == [], "it has a zone, so it isn't ticked"
+    result = await _submit(hass, result, {"areas": [kitchen]})
 
     assert result["description_placeholders"] == {"created": "1 room automation and 1 flare"}
     assert [z.subentry_id for z in zone_instances(zones)] == [zone.subentry_id]
@@ -207,7 +225,7 @@ async def test_an_existing_zone_with_the_areas_name_is_reused(stub_entry_setup, 
 
 
 async def test_an_area_can_get_just_a_zone(stub_entry_setup, automations_file, hass: HomeAssistant):
-    """And it's offered again, so it can get the rest later."""
+    """It's still listed, unticked, so it can get the rest later."""
     kitchen = _area(hass, "Kitchen", "light.k")
 
     result = await _submit(hass, await _first_setup(hass, ["Home"]), {"set_up": "zone", "areas": [kitchen]})
@@ -216,7 +234,8 @@ async def test_an_area_can_get_just_a_zone(stub_entry_setup, automations_file, h
     assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
     assert _automations(automations_file) == []
     result = await _start(hass)
-    assert [o["value"] for o in result["data_schema"].schema["areas"].config["options"]] == [kitchen]
+    assert _offered(result) == [kitchen]
+    assert result["data_schema"]({})["areas"] == []
 
 
 async def test_an_area_can_get_a_zone_and_automation_without_a_flare(
