@@ -17,6 +17,17 @@ def _describe_zone(zone: str | None) -> str:
     return zone or "FLARE"
 
 
+def _filed_under(data) -> dict[str, str]:
+    """The entity the entry links to. Events recorded before 1.0.0 have none,
+    or the light itself."""
+    return {LOGBOOK_ENTRY_ENTITY_ID: data["entity_id"]} if data.get("entity_id") else {}
+
+
+def _light_of(data) -> str | None:
+    """The light an override names: `light`, or before 1.0.0 `entity_id`."""
+    return data.get("light") or data.get("entity_id")
+
+
 def _light_name(hass: HomeAssistant, entity_id: str | None) -> str:
     state = hass.states.get(entity_id) if entity_id else None
     return state.name if state else (entity_id or "a light")
@@ -44,8 +55,8 @@ def async_describe_events(
             detail = ""
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(data.get("zone")),
-            LOGBOOK_ENTRY_MESSAGE: f"released {_light_name(hass, data.get('light'))} to something else{detail}",
-            LOGBOOK_ENTRY_ENTITY_ID: data["entity_id"],
+            LOGBOOK_ENTRY_MESSAGE: f"released {_light_name(hass, _light_of(data))} to something else{detail}",
+            **_filed_under(data),
         }
 
     @callback
@@ -54,7 +65,7 @@ def async_describe_events(
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
             LOGBOOK_ENTRY_MESSAGE: f"now controlling {count} light{'' if count == 1 else 's'}",
-            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
+            **_filed_under(event.data),
         }
 
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)
@@ -65,7 +76,7 @@ def async_describe_events(
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
             LOGBOOK_ENTRY_MESSAGE: f"cleared {count} light{'' if count == 1 else 's'}",
-            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
+            **_filed_under(event.data),
         }
 
     async_describe_event(DOMAIN, EVENT_LIGHTS_RELEASED, async_describe_released)
