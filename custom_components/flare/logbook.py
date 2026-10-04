@@ -1,6 +1,6 @@
-"""Describes EVENT_LIGHT_OVERRIDDEN in the logbook, so it shows on the
-light's timeline and the zone's Activity. Worded as a hand-over,
-not a failure."""
+"""Describes FLARE's hand-over events in the logbook, so they show on the
+light's timeline and the zone's Activity. Worded as hand-overs, not
+failures."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from collections.abc import Callable
 from homeassistant.components.logbook import LOGBOOK_ENTRY_ENTITY_ID, LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
 from homeassistant.core import Event, HomeAssistant, callback
 
-from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN
+from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHT_RECLAIMED
 
 
 def _describe_zone(zone: str | None) -> str:
@@ -30,7 +30,7 @@ def async_describe_events(
         latest = data.get("latest") or {}
         target = latest.get("target") or {}
         # What was asked for against what is actually there.
-        if target:
+        if target.get("brightness") is not None:
             asked = f"{target.get('brightness')}/{target.get('color_temp_kelvin') or target.get('rgb_color')}"
             found = f"{live.get('brightness')}/{live.get('color_temp_kelvin') or live.get('rgb_color')}"
             detail = f" (last asked for {asked}, found {found})"
@@ -42,4 +42,13 @@ def async_describe_events(
             LOGBOOK_ENTRY_ENTITY_ID: data["entity_id"],
         }
 
+    @callback
+    def async_describe_reclaim(event: Event) -> dict[str, str]:
+        return {
+            LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
+            LOGBOOK_ENTRY_MESSAGE: "is setting this light again",
+            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
+        }
+
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)
+    async_describe_event(DOMAIN, EVENT_LIGHT_RECLAIMED, async_describe_reclaim)

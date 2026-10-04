@@ -37,6 +37,10 @@ CI — see `.github/workflows/release.yml`.
   and always install the blueprint that matches your FLARE. It now lives at
   `custom_components/flare/blueprints/flare.yaml`; the repo's `blueprints/` folder is gone.
   It installs to `blueprints/automation/flare/flare.yaml`.
+- **A zone's tick is a plain `flare_tick` event, not an entity.** `event.<name>_flare_tick`
+  is removed, so ticks no longer fill every zone's Activity and history. An automation of
+  your own triggering on it needs an `event` trigger on `flare_tick` with the zone's
+  `device_id` instead; the blueprint is updated.
 - **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
   `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,
   rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
@@ -71,7 +75,10 @@ CI — see `.github/workflows/release.yml`.
   more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
   `flare:logo`, for its sidebar entry.
 - **An Activity feed on the Zones view**, like Home Assistant's Security dashboard: the
-  last 24 hours of the zones' lights turning on and off, and FLARE letting them go.
+  last 24 hours of every zone's Activity.
+- **FLARE says when it takes a light back.** `flare_light_reclaimed` fires when an overridden
+  light is FLARE's again, and both it and `flare_light_overridden` show in the zone's
+  Activity on its device page.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.

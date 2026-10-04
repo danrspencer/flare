@@ -128,9 +128,6 @@ A room updates straight away when the phase changes, a sensor detects someone, a
 Trigger changes, or one of its lights comes back online. Between those, it updates on its zone's
 [tick](../zones/#when-zones-tick), which is every minute by default.
 
-The automation finds the tick through the zone's device. Home Assistant leaves hidden entities
-out of a device, so hiding a zone's Tick entity stops the room updating.
-
 ### When lights turn on and off
 
 Lights turn on when a sensor detects someone, and turn off once every sensor in the room has

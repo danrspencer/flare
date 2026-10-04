@@ -229,4 +229,4 @@ actions:
 ```
 
 The event also carries what FLARE last asked for and what the light was actually showing —
-see [the hand-over event](../../reference/zones/#the-hand-over-event).
+see [the hand-over events](../../reference/zones/#the-hand-over-events).

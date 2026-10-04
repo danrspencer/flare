@@ -291,37 +291,10 @@ export function listZones(hass) {
     .sort((a, b) => a.title.localeCompare(b.title));
 }
 
-const slugOf = (name) =>
-  String(name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-/**
- * Every light a zone covers: those it holds a claim on, and those in the
- * area of the same name, which is how setup names zones. The area half
- * keeps a room that has gone dark (and so released its claims) in view.
- * FLARE's own flares are left out: they'd repeat their room's lights.
- */
-export function zoneLights(hass, zones = listZones(hass)) {
-  const states = (hass && hass.states) || {};
+/** Each zone's device, as its claims sensor names it. */
+export function zoneDevices(hass, zones = listZones(hass)) {
   const entities = (hass && hass.entities) || {};
-  const devices = (hass && hass.devices) || {};
-  const lights = new Set();
-  for (const { slug } of zones) {
-    const claims = states[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.attributes?.claims || {};
-    Object.keys(claims).forEach((id) => lights.add(id));
-  }
-  const zoneSlugs = new Set(zones.map(({ slug }) => slug));
-  const areas = new Set(
-    Object.values((hass && hass.areas) || {})
-      .filter((area) => zoneSlugs.has(slugOf(area.name)))
-      .map((area) => area.area_id)
-  );
-  for (const entry of Object.values(entities)) {
-    if (!entry.entity_id.startsWith('light.')) continue;
-    const area = entry.area_id || devices[entry.device_id]?.area_id;
-    if (areas.has(area)) lights.add(entry.entity_id);
-  }
-  return [...lights].filter((id) => entities[id]?.platform !== 'flare').sort();
+  return zones
+    .map(({ slug }) => entities[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id)
+    .filter(Boolean);
 }

@@ -35,11 +35,10 @@ kitchen on the curve:
 ```yaml
 alias: Kitchen lighting
 triggers:
-  - trigger: event.received
-    target:
-      entity_id: event.kitchen_flare_tick
-    options:
-      event_type: [flare_tick]
+  - trigger: event
+    event_type: flare_tick
+    event_data:
+      device_id: "<the Kitchen zone's device ID>"
 conditions:
   - condition: template
     value_template: "{{ area_entities('kitchen') | select('match', '^light\\.') | select('is_state', 'on') | list | count > 0 }}"
@@ -53,7 +52,8 @@ actions:
       zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
-It runs on the kitchen zone's tick and only passes lights that are on, since `apply_lighting`
+It runs on the kitchen zone's [tick](../../reference/zones/#when-zones-tick) and only passes
+lights that are on, since `apply_lighting`
 turns on everything it's given. Turning the room on and off is left to you.
 
 ## Sending the commands yourself

@@ -19,7 +19,7 @@ import {
   normaliseSlug,
   zoneSectionConfig,
   listZones,
-  zoneLights,
+  zoneDevices,
 } from './flare-section.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
@@ -68,7 +68,8 @@ customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrate
 /**
  * The zone view: one section per zone, with its counts, its
  * overridden lights and the Clear button, and an Activity sidebar: the
- * logbook for the zones' lights, as HA's Security dashboard does it.
+ * zones' devices' logbook, so it matches each zone's own Activity, as HA's
+ * Security dashboard does it.
  *
  *   views:
  *     - title: Zones
@@ -88,9 +89,9 @@ class FlareZoneViewStrategy extends HTMLElement {
     }
 
     const zoneView = view(zones.map(({ slug, title }) => zoneSectionConfig(slug, title)));
-    const lights = zoneLights(hass, zones);
+    const devices = zoneDevices(hass, zones);
     const hasLogbook = (hass.config?.components || []).includes('logbook');
-    if (!hasLogbook || !lights.length) return zoneView;
+    if (!hasLogbook || !devices.length) return zoneView;
     return {
       ...zoneView,
       sidebar: {
@@ -101,7 +102,7 @@ class FlareZoneViewStrategy extends HTMLElement {
               { type: 'heading', heading: 'Activity', heading_style: 'title' },
               {
                 type: 'logbook',
-                target: { entity_id: lights },
+                target: { device_id: devices },
                 hours_to_show: 24,
                 grid_options: { columns: 12 },
               },

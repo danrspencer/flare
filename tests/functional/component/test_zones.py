@@ -252,6 +252,34 @@ async def test_the_override_event_carries_the_zones_device_id(hass: HomeAssistan
     assert events[0].data["latest"]["target"] == ASKED
 
 
+async def test_a_light_set_again_after_an_override_says_so_in_the_zone(hass: HomeAssistant):
+    """flare_light_reclaimed, with the zone's device so it's in its Activity."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    instance = zone_instances(entry)[0]
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Kitchen"
+    )
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    tracker.registry_entry = er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, tracker.unique_id, config_entry=entry, device_id=device.id
+    )
+    events: list = []
+    hass.bus.async_listen("flare_light_reclaimed", events.append)
+    _light(hass, "light.a", area_id=area.id)
+    await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
+    tracker._refresh_statuses()
+    hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
+    tracker._refresh_statuses()
+    assert events == [], "overridden isn't set again"
+
+    hass.states.async_set("light.a", "on", ASKED, context=Context())
+    tracker._refresh_statuses()
+    await hass.async_block_till_done()
+
+    assert [e.data for e in events] == [{"entity_id": "light.a", "zone": "Kitchen", "device_id": device.id}]
+
+
 async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssistant):
     """Absent, not null."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")

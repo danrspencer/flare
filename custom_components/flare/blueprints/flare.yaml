@@ -297,15 +297,13 @@ trigger:
         - Day
         - Evening
         - Night
-  # The zone's Tick, spaced from every other zone's. The curve is flat in
+  # The zone's tick, spaced from every other zone's. The curve is flat in
   # Morning/Night, so phase_change goes quiet there. Also runs self-heal.
   - id: tick
-    trigger: event.received
-    target:
+    trigger: event
+    event_type: flare_tick
+    event_data:
       device_id: !input zone
-    options:
-      event_type:
-        - flare_tick
   - id: extra
     platform: state
     entity_id: !input extra_triggers

@@ -21,7 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN
+from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHT_RECLAIMED
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .zone.override_protection import classify_state
 from .zone.instance import ZoneInstance, zone_instances
@@ -112,7 +112,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     @callback
     def _refresh_statuses(self) -> None:
         """Fires EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the
-        claims and live values at that moment. Not in extra_state_attributes,
+        claims and live values at that moment, and EVENT_LIGHT_RECLAIMED when
+        an overridden one is controlled again. Not in extra_state_attributes,
         which HA reads on every state write."""
         statuses = {}
         for entity_id, record in self.claims.items():
@@ -120,8 +121,11 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             statuses[entity_id] = status
             if self._last_statuses is None:
                 continue
-            if status == "overridden" and self._last_statuses.get(entity_id) != "overridden":
-                self._fire_overridden(entity_id, record, self._last_statuses.get(entity_id), live_context_id)
+            previous = self._last_statuses.get(entity_id)
+            if status == "overridden" and previous != "overridden":
+                self._fire_overridden(entity_id, record, previous, live_context_id)
+            elif status == "controlled" and previous == "overridden":
+                self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"entity_id": entity_id, **self._zone_data()})
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
 
@@ -130,21 +134,11 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self, entity_id: str, record: dict, previous: str | None, live_context_id: str | None
     ) -> None:
         state = self.hass.states.get(entity_id)
-        # Identifiers are only unique per config entry.
-        device = None
-        if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
-            identifier = next(iter(self._instance.device_info["identifiers"]))
-            device = dr.async_get(self.hass).async_get_device_by_identifier(
-                identifier, self.registry_entry.config_entry_id
-            )
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
                 "entity_id": entity_id,
-                # device_id puts the event in the device's Activity; omitted, not None,
-                # if the device isn't registered.
-                "zone": self._instance.title,
-                **({"device_id": device.id} if device else {}),
+                **self._zone_data(),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
                 "live": {
@@ -157,6 +151,18 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 "latest": record.get("latest"),
             },
         )
+
+    def _zone_data(self) -> dict[str, str]:
+        """The zone, and its device: device_id puts an event in the zone's
+        Activity. Omitted, not None, if the device isn't registered."""
+        # Identifiers are only unique per config entry.
+        device = None
+        if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
+            identifier = next(iter(self._instance.device_info["identifiers"]))
+            device = dr.async_get(self.hass).async_get_device_by_identifier(
+                identifier, self.registry_entry.config_entry_id
+            )
+        return {"zone": self._instance.title, **({"device_id": device.id} if device else {})}
 
     @property
     def native_value(self) -> int:
