@@ -1826,19 +1826,23 @@ caught.
   distinguishing attribute (`points` / `claims`) so a name alone is
   never enough.
 - **The Zones view has an Activity sidebar**, copied from HA's Security
-  dashboard (`security-view-strategy.ts`): a `logbook` card in the
-  sections view's `sidebar`, targeting every zone's device. **Open
-  problem:** the card resolves a device target to the device's entities
-  and asks for those only (`hui-logbook-card.ts` passes `entityIds`, never
+  dashboard (`security-view-strategy.ts`), but not its `logbook` card:
+  that card resolves a device target to the device's entities and asks
+  for those only (`hui-logbook-card.ts` passes `entityIds`, never
   `deviceIds`, in 2026.9, 2026.10 and the frontend's dev branch), and the
   logbook server drops "continuous" sensors (any with a unit or state
-  class) from that list (`logbook/helpers.py`, `async_filter_entities`).
-  So a zone event filed under a count sensor shows on the zone's device
-  page (which asks by device) but not here; only Clear presses do.
-  Options weighed with the user: a FLARE card around `ha-logbook` passing
-  `deviceIds` (as the device page does); filing events under the Clear
-  button (the zone page then labels every entry "Clear"); or the claims
-  sensor with a fixed-word state. Undecided.
+  class) from that list (`logbook/helpers.py`, `async_filter_entities`),
+  so the zone events filed under a count sensor never showed - only
+  Clear presses did. `custom:flare-activity-card`
+  (`www/flare-activity-card.js`) renders the frontend's own `ha-logbook`
+  with the zones' entities AND `deviceIds`, exactly as a device page
+  does. `ha-logbook` is lazy-loaded, so the card has `loadCardHelpers`
+  create a built-in logbook card first, which imports it. Depending on
+  `ha-logbook` is an accepted risk, like `ha-control-slider`: if it
+  breaks, follow what `ha-config-device-page.ts` does next. Also
+  weighed with the user and not taken: filing events under the Clear
+  button (the zone page then labels every entry "Clear"), or the claims
+  sensor with a fixed-word state.
 - **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
   the user's screenshot): a section per floor (`column_span: 2`, by level),
   a subtitle heading per zone, and on wide screens Clear in the left third
@@ -1870,9 +1874,8 @@ caught.
   through `entity_id`, so they can't also stay on the light's own
   timeline; the user chose the zone. The count sensors have units, so the
   logbook leaves their own state changes out - and, for the same reason,
-  drops them from a logbook card's entity list, so a dashboard card
-  targeting the zones doesn't show these events (see the Zones view
-  Activity notes).
+  drops them from a logbook card's entity list, which is why the Zones
+  view has its own Activity card (see the Zones view Activity notes).
 - **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
   before firing, because a room's bulbs confirm one by one and each
   confirmation is a separate status refresh (announced per light it was
