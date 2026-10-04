@@ -1,12 +1,10 @@
 """The blueprint repairs, against real blueprints loaded in HA: reading
 the blueprint store, "is anything using it", and a blueprint that fails
-to load. Only in-use copies count, since a GitHub import lands under
-the owner's name and can leave an orphan at the other path."""
+to load. Only in-use copies count, since an unused copy at another
+path is never removed."""
 
-import shutil
 from pathlib import Path
 
-import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
@@ -14,21 +12,16 @@ from homeassistant.setup import async_setup_component
 from custom_components.flare.blueprint_check import (
     ISSUE_ID,
     MISSING_ISSUE_ID,
+    INSTALL_PATH,
     async_check,
+    async_install_blueprint,
+    async_update_blueprints,
     blueprint_is_installed,
     outdated_blueprints,
 )
+from custom_components.flare.blueprint_version import BLUEPRINT_VERSION, version_from_description
 from custom_components.flare.const import DOMAIN
-from tests.support import BLUEPRINT_PATH, REPO_ROOT
-
-
-@pytest.fixture
-def hass_config_dir(tmp_path) -> str:
-    """Copies blueprints/ rather than symlinking it: these tests write
-    blueprint files, which would otherwise land in the repo."""
-    (tmp_path / "custom_components").symlink_to(REPO_ROOT / "custom_components")
-    shutil.copytree(REPO_ROOT / "blueprints", tmp_path / "blueprints")
-    return str(tmp_path)
+from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH
 
 
 STALE = """\
@@ -191,7 +184,37 @@ async def test_installing_clears_the_missing_repair(hass: HomeAssistant):
     await async_check(hass)
     assert _issues(hass) == {MISSING_ISSUE_ID}
 
-    _write(hass, BLUEPRINT_PATH, (REPO_ROOT / "blueprints" / "automation" / BLUEPRINT_PATH).read_text())
+    _write(hass, BLUEPRINT_PATH, BLUEPRINT_FILE.read_text())
     await async_check(hass)
 
     assert _issues(hass) == set()
+
+
+# --- Fix ------------------------------------------------------------------
+
+
+def _installed_version(hass: HomeAssistant, path: str) -> str | None:
+    text = (Path(hass.config.config_dir) / "blueprints" / "automation" / path).read_text()
+    return version_from_description(text)
+
+
+async def test_fix_installs_the_shipped_blueprint(hass: HomeAssistant):
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    assert await async_install_blueprint(hass) == INSTALL_PATH
+
+    assert _installed_version(hass, INSTALL_PATH) == BLUEPRINT_VERSION
+    await async_check(hass)
+    assert _issues(hass) == set()
+
+
+async def test_fix_updates_a_stale_copy_where_it_was_found(hass: HomeAssistant):
+    _remove_ours(hass)
+    _write(hass, "stale/flare.yaml", STALE)
+    await _automation_using(hass, "stale/flare.yaml", "room")
+
+    assert await async_update_blueprints(hass) == ["stale/flare.yaml"]
+
+    assert _installed_version(hass, "stale/flare.yaml") == BLUEPRINT_VERSION

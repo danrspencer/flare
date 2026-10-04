@@ -48,7 +48,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 MANIFEST = "custom_components/flare/manifest.json"
 BLUEPRINT_VERSION_PY = "custom_components/flare/blueprint_version.py"
-BLUEPRINT = "blueprints/automation/danrspencer/flare.yaml"
+BLUEPRINT = "custom_components/flare/blueprints/flare.yaml"
 CHANGELOG = "CHANGELOG.md"
 
 # How long a version's newest beta must sit before it is promoted.
@@ -56,7 +56,7 @@ SOAK = timedelta(days=7)
 
 # The paths whose contents reach a user's house. A push to main that
 # touches none of them (docs, tests, CI) has nothing to put in a beta.
-SHIPPED = ("custom_components", "blueprints")
+SHIPPED = ("custom_components",)
 
 _BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
 

@@ -3,6 +3,8 @@ name."""
 
 from __future__ import annotations
 
+import logging
+
 import voluptuous as vol
 from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
@@ -14,6 +16,8 @@ from .blueprint_check import MISSING_ISSUE_ID as BLUEPRINT_MISSING_ISSUE_ID
 from .blueprint_check import async_install_blueprint
 from .blueprint_check import async_update_blueprints, describe as describe_blueprints, outdated_blueprints
 from .blueprint_version import BLUEPRINT_VERSION
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class OutdatedBlueprintRepairFlow(RepairsFlow):
@@ -30,7 +34,8 @@ class OutdatedBlueprintRepairFlow(RepairsFlow):
             try:
                 updated = await async_update_blueprints(self.hass)
             except Exception:  # noqa: BLE001
-                # A GitHub fetch; aborting leaves the repair to retry.
+                # Aborting leaves the repair to retry.
+                _LOGGER.exception("Could not update the FLARE blueprint")
                 return self.async_abort(reason="update_failed")
             return self.async_create_entry(title="", data={"updated": updated})
 
@@ -58,7 +63,8 @@ class MissingBlueprintRepairFlow(RepairsFlow):
             try:
                 path = await async_install_blueprint(self.hass)
             except Exception:  # noqa: BLE001
-                # A GitHub fetch; aborting leaves the repair to retry.
+                # Aborting leaves the repair to retry.
+                _LOGGER.exception("Could not install the FLARE blueprint")
                 return self.async_abort(reason="install_failed")
             return self.async_create_entry(title="", data={"installed": path})
 

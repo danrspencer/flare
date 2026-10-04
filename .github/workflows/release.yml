@@ -59,17 +59,17 @@ jobs:
           esac
 
       # The blueprint is versioned WITH FLARE: its stamp is the release's
-      # own version, so the repair's Fix button downloads from this very
-      # tag. scripts/release.py satisfies this by construction. It is checked here for a tag pushed by hand, where
-      # a stamp that was forgotten would make Fix fetch the wrong
-      # blueprint, or a URL that does not exist, silently.
+      # own version. scripts/release.py satisfies this by construction. It
+      # is checked here for a tag pushed by hand, where a constant and
+      # stamp that disagree would raise the outdated repair on every
+      # install, and Fix could never clear it.
       - name: The blueprint stamp must be this release's version
         run: |
           read -r constant description < <(python - <<'PY'
           import sys
           sys.path.insert(0, "custom_components/flare")
           import blueprint_version
-          text = open("blueprints/automation/danrspencer/flare.yaml").read()
+          text = open("custom_components/flare/blueprints/flare.yaml").read()
           print(blueprint_version.BLUEPRINT_VERSION, blueprint_version.version_from_description(text))
           PY
           )
