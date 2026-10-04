@@ -43,7 +43,7 @@ views:
   back, and which are overridden.
   A zone's name opens its device page.
   Beside them, **Activity** is the last 24 hours of the zones' own Activity: when a zone took
-  lights, let one go because something else changed it, or took one back, and Clear presses.
+  its lights, cleared them, or let one go because something else changed it.
   On a narrow screen it's a tab.
 
 There's nothing to fill in: both views find their own entities, and a schedule sensor or zone

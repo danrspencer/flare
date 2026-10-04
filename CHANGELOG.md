@@ -81,10 +81,10 @@ CI — see `.github/workflows/release.yml`.
   area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
   off" and the zone's counts where that has lights, and an Activity feed beside them like the Security dashboard's: the last 24 hours
   of every zone's Activity.
-- **A zone's Activity says what it's doing.** `flare_lights_controlled` ("Kitchen is now
-  setting 6 lights") fires when a zone takes lights, once per room coming on rather than
-  per bulb, and `flare_light_reclaimed` when an overridden light is FLARE's again. Both, and
-  `flare_light_overridden`, show in the zone's Activity on its device page.
+- **A zone's Activity says what it's doing.** "Kitchen now controlling 6 lights"
+  (`flare_lights_controlled`) when a zone takes its lights, once per room coming on rather
+  than per bulb, and "Kitchen cleared 6 lights" (`flare_lights_released`) when it lets them
+  go, as the room goes dark or Clear is pressed. Only an override names a single light.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.

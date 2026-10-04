@@ -115,25 +115,39 @@ Assistant restarts.
 
 ## The zone's events
 
-FLARE fires an event when a zone takes lights, lets one go, or takes one back. Each is filed
-under the zone: `entity_id` is one of the zone's count sensors and `device_id` its device, so
-they appear in the zone's Activity, on its device page, and in the dashboard's Activity.
+A zone says when it takes its lights, when it lets them go, and when something else changes one
+of them. Each event is filed under the zone: `entity_id` is one of the zone's count sensors and
+`device_id` its device, so they appear in the zone's Activity, on its device page, and in the
+dashboard's Activity. FLARE adjusting lights it already has isn't announced.
 
-When a zone starts setting lights it wasn't, such as when a room comes on, FLARE fires
+When a zone starts controlling lights it wasn't, such as when a room comes on, FLARE fires
 `flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
 report back one by one:
 
 ```yaml
 lights: [light.kitchen_1, light.kitchen_2]   # the lights it took
-controlled: 6                                # how many it's setting now
+controlled: 6                                # how many it's controlling now
 entity_id: sensor.kitchen_flare_controlled
 zone: Kitchen
 device_id: ...                               # the zone's device
 ```
 
-> **Kitchen** is now setting 6 lights
+> **Kitchen** now controlling 6 lights
 
-When something else takes over a light, FLARE fires `flare_light_overridden`:
+When a zone lets its lights go, because the room went dark or you pressed **Clear**, FLARE
+fires `flare_lights_released`:
+
+```yaml
+lights: [light.kitchen_1, light.kitchen_2]
+entity_id: sensor.kitchen_flare_controlled
+zone: Kitchen
+device_id: ...
+```
+
+> **Kitchen** cleared 6 lights
+
+When something else changes one of a zone's lights, FLARE fires `flare_light_overridden` for that
+light:
 
 ```yaml
 light: light.kitchen_1
@@ -157,18 +171,6 @@ triggers:
   - trigger: event
     event_type: flare_light_overridden
 ```
-
-When FLARE is setting an overridden light again, because a forced update took it back or it was
-put back the way FLARE had it, FLARE fires `flare_light_reclaimed`:
-
-```yaml
-light: light.kitchen_1
-entity_id: sensor.kitchen_flare_controlled
-zone: Kitchen
-device_id: ...
-```
-
-> **Kitchen** is setting Kitchen 1 again
 
 {: .note }
 > **Changed in 1.0.0** — `flare_light_overridden`'s light is in `light`; `entity_id` is now the

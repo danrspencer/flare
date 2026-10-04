@@ -259,34 +259,67 @@ async def test_the_override_event_is_filed_under_the_zone(hass: HomeAssistant):
     assert events[0].data["latest"]["target"] == ASKED
 
 
-async def test_a_light_set_again_after_an_override_says_so_in_the_zone(hass: HomeAssistant):
-    """flare_light_reclaimed, with the zone's device so it's in its Activity."""
+async def test_a_light_set_again_after_an_override_is_not_announced(hass: HomeAssistant):
+    """Churn, not news: neither taken nor anything else."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
     entry, registry, added = await _setup(hass, _zone("Kitchen"))
-    instance = zone_instances(entry)[0]
-    device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, identifiers=instance.device_info["identifiers"], name="Kitchen"
-    )
     tracker = next(e for e in added if hasattr(e, "claims"))
-    tracker.registry_entry = er.async_get(hass).async_get_or_create(
-        "sensor", DOMAIN, tracker.unique_id, config_entry=entry, device_id=device.id
-    )
     events: list = []
-    hass.bus.async_listen("flare_light_reclaimed", events.append)
+    hass.bus.async_listen("flare_lights_controlled", events.append)
     _light(hass, "light.a", area_id=area.id)
     await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
     tracker._refresh_statuses()
     hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
     tracker._refresh_statuses()
-    assert events == [], "overridden isn't set again"
 
     hass.states.async_set("light.a", "on", ASKED, context=Context())
     tracker._refresh_statuses()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=CONTROLLED_GATHER_SECONDS + 1))
     await hass.async_block_till_done()
 
-    assert [e.data for e in events] == [
-        {"light": "light.a", "entity_id": "sensor.kitchen_flare_controlled", "zone": "Kitchen", "device_id": device.id}
+    assert events == []
+
+
+async def test_a_zone_going_dark_says_it_cleared_its_lights(hass: HomeAssistant):
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, _ = await _setup(hass, _zone("Kitchen"))
+    events: list = []
+    hass.bus.async_listen("flare_lights_released", events.append)
+    for light in ("light.a", "light.b"):
+        _light(hass, light, area_id=area.id)
+        await _record(registry, _zone_id(entry, "Kitchen"), light, f"ctx-{light}", ASKED)
+    unsub = registry.async_start_listening(hass)
+
+    hass.states.async_set("light.a", "off", {})
+    await hass.async_block_till_done()
+    assert events == [], "one light still on"
+    hass.states.async_set("light.b", "off", {})
+    await hass.async_block_till_done()
+    unsub()
+
+    assert [(e.data["lights"], e.data["zone"], e.data["entity_id"]) for e in events] == [
+        (["light.a", "light.b"], "Kitchen", "sensor.kitchen_flare_controlled")
     ]
+
+
+async def test_clear_says_it_cleared_but_claims_clear_is_silent(hass: HomeAssistant):
+    """The service is the blueprint's bookkeeping, run as lights are handed off."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    events: list = []
+    hass.bus.async_listen("flare_lights_released", events.append)
+    for light in ("light.a", "light.b"):
+        _light(hass, light, area_id=area.id)
+        await _record(registry, _zone_id(entry, "Kitchen"), light, f"ctx-{light}", ASKED)
+
+    await registry.async_clear(_zone_id(entry, "Kitchen"), ["light.a"])
+    await hass.async_block_till_done()
+    assert events == []
+
+    await next(e for e in added if e.entity_id == "button.kitchen_flare_clear").async_press()
+    await hass.async_block_till_done()
+
+    assert [e.data["lights"] for e in events] == [["light.b"]]
 
 
 async def test_lights_a_zone_takes_are_announced_together(hass: HomeAssistant):

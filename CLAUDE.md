@@ -201,7 +201,7 @@ blueprint in this repo. Keep them that way.
 **Everything is an entity or an action, so a default can be replaced
 rather than configured.** Schedule settings are `time`/`number` entities,
 FLARE's live state is sensors and events (phase, tick, counts, the
-override and reclaim events), and everything it does is a service. That is the answer to most
+zone events), and everything it does is a service. That is the answer to most
 "can it do X differently?" requests: an automation changing an entity, or
 calling a service, needs no new option. Keep new behaviour in that shape -
 an entity or a service before a config field - and the docs homepage's
@@ -1823,10 +1823,16 @@ caught.
   resolves a device target to the device's entities and asks for those
   only** (`hui-logbook-card.ts` passes `entityIds`, never `deviceIds`),
   unlike a device page, which asks for both. So FLARE's zone events
-  (`flare_lights_controlled`, `flare_light_overridden`,
-  `flare_light_reclaimed`) carry a zone count sensor as `entity_id` (the
+  (`flare_lights_controlled`, `flare_lights_released`,
+  `flare_light_overridden`) carry a zone count sensor as `entity_id` (the
   card finds them) and the zone's `device_id` (the device page does), with
-  the light in `light`. The logbook matches events to entities only
+  the light in `light`. At the user's direction the zone speaks in whole-
+  room terms - "now controlling 7 lights", "cleared 7 lights"
+  (`flare_lights_released`: dark release or the Clear button, not the
+  `claims_clear` service, which the blueprint runs as bookkeeping) - and
+  only an override names one light. A light becoming controlled again
+  after an override is silent: a `flare_light_reclaimed` event was built
+  and removed as churn. The logbook matches events to entities only
   through `entity_id`, so there's no way to also keep them on the light's
   own timeline; the user chose the zone. The claims and count sensors
   have units, so the logbook leaves their own state changes out.

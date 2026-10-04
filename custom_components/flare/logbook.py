@@ -10,7 +10,7 @@ from collections.abc import Callable
 from homeassistant.components.logbook import LOGBOOK_ENTRY_ENTITY_ID, LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
 from homeassistant.core import Event, HomeAssistant, callback
 
-from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHT_RECLAIMED, EVENT_LIGHTS_CONTROLLED
+from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHTS_CONTROLLED, EVENT_LIGHTS_RELEASED
 
 
 def _describe_zone(zone: str | None) -> str:
@@ -49,22 +49,23 @@ def async_describe_events(
         }
 
     @callback
-    def async_describe_reclaim(event: Event) -> dict[str, str]:
-        return {
-            LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
-            LOGBOOK_ENTRY_MESSAGE: f"is setting {_light_name(hass, event.data.get('light'))} again",
-            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
-        }
-
-    @callback
     def async_describe_controlled(event: Event) -> dict[str, str]:
         count = event.data.get("controlled", 0)
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
-            LOGBOOK_ENTRY_MESSAGE: f"is now setting {count} light{'' if count == 1 else 's'}",
+            LOGBOOK_ENTRY_MESSAGE: f"now controlling {count} light{'' if count == 1 else 's'}",
             LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
         }
 
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)
     async_describe_event(DOMAIN, EVENT_LIGHTS_CONTROLLED, async_describe_controlled)
-    async_describe_event(DOMAIN, EVENT_LIGHT_RECLAIMED, async_describe_reclaim)
+    @callback
+    def async_describe_released(event: Event) -> dict[str, str]:
+        count = len(event.data.get("lights") or [])
+        return {
+            LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
+            LOGBOOK_ENTRY_MESSAGE: f"cleared {count} light{'' if count == 1 else 's'}",
+            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
+        }
+
+    async_describe_event(DOMAIN, EVENT_LIGHTS_RELEASED, async_describe_released)

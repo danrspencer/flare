@@ -28,8 +28,8 @@ from .const import (
     DOMAIN,
     ENTRY_TYPE_ZONES,
     EVENT_LIGHT_OVERRIDDEN,
-    EVENT_LIGHT_RECLAIMED,
     EVENT_LIGHTS_CONTROLLED,
+    EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .zone.override_protection import classify_state
@@ -129,9 +129,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     @callback
     def _refresh_statuses(self) -> None:
         """Fires EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the
-        claims and live values at that moment, EVENT_LIGHT_RECLAIMED when
-        an overridden one is controlled again, and EVENT_LIGHTS_CONTROLLED
-        when the zone takes lights it wasn't setting. Not in
+        claims and live values at that moment, and EVENT_LIGHTS_CONTROLLED
+        when the zone takes lights it wasn't setting. A light becoming
+        controlled again is churn, not news, so it's silent. Not in
         extra_state_attributes, which HA reads on every state write."""
         statuses = {}
         for entity_id, record in self.claims.items():
@@ -142,11 +142,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             previous = self._last_statuses.get(entity_id)
             if status == "overridden" and previous != "overridden":
                 self._fire_overridden(entity_id, record, previous, live_context_id)
-            elif status == "controlled" and previous == "overridden":
-                self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"light": entity_id, **self._zone_data("controlled")})
-            # A light coming back from unavailable (every light, after a
-            # restart) was already the zone's.
-            elif status == "controlled" and previous not in ("controlled", "unavailable"):
+            # Not back from overridden (churn), nor from unavailable (every
+            # light, after a restart), which were already the zone's.
+            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable"):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
@@ -196,6 +194,15 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self.hass.bus.async_fire(
             EVENT_LIGHTS_CONTROLLED,
             {"lights": lights, "controlled": len(lit), **self._zone_data("controlled")},
+        )
+
+    @callback
+    def async_announce_released(self, entity_ids: list[str]) -> None:
+        """The zone let these go: dark, or Clear."""
+        if not entity_ids:
+            return
+        self.hass.bus.async_fire(
+            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data("controlled")}
         )
 
     def _is_on(self, entity_id: str) -> bool:

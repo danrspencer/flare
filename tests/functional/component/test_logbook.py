@@ -13,10 +13,12 @@ def _describers(hass: HomeAssistant) -> dict:
 
 
 async def test_each_event_names_its_zone_and_is_filed_under_the_zones_sensor(hass: HomeAssistant):
+    """Taking lights and clearing them are one entry per zone; only an
+    override names a light."""
     hass.states.async_set("light.k1", "on", {"friendly_name": "Kitchen 1"})
     describe = _describers(hass)
 
-    released = describe["flare_light_overridden"](
+    overridden = describe["flare_light_overridden"](
         Event(
             "flare_light_overridden",
             {
@@ -28,8 +30,11 @@ async def test_each_event_names_its_zone_and_is_filed_under_the_zones_sensor(has
             },
         )
     )
-    reclaimed = describe["flare_light_reclaimed"](
-        Event("flare_light_reclaimed", {"light": "light.k1", "entity_id": "sensor.kitchen_flare_controlled", "zone": "Kitchen"})
+    released = describe["flare_lights_released"](
+        Event(
+            "flare_lights_released",
+            {"lights": ["light.k1", "light.k2"], "entity_id": "sensor.kitchen_flare_controlled", "zone": "Kitchen"},
+        )
     )
     controlled = describe["flare_lights_controlled"](
         Event(
@@ -38,13 +43,13 @@ async def test_each_event_names_its_zone_and_is_filed_under_the_zones_sensor(has
         )
     )
 
-    assert released == {
+    assert overridden == {
         "name": "Kitchen",
         "message": "released Kitchen 1 to something else (last asked for 255/4100, found 12/6500)",
         "entity_id": "sensor.kitchen_flare_overridden",
     }
-    assert reclaimed == {"name": "Kitchen", "message": "is setting Kitchen 1 again", "entity_id": "sensor.kitchen_flare_controlled"}
-    assert controlled == {"name": "Kitchen", "message": "is now setting 6 lights", "entity_id": "sensor.kitchen_flare_controlled"}
+    assert controlled == {"name": "Kitchen", "message": "now controlling 6 lights", "entity_id": "sensor.kitchen_flare_controlled"}
+    assert released == {"name": "Kitchen", "message": "cleared 2 lights", "entity_id": "sensor.kitchen_flare_controlled"}
 
 
 async def test_a_release_with_nothing_asked_for_has_no_comparison(hass: HomeAssistant):
