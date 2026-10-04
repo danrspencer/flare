@@ -21,19 +21,23 @@ and colour, rather than at whatever the bulbs last had.
 
 ## Adding flares for your rooms
 
-Go to **Settings → Devices & Services → FLARE → Flares → Add flare** and choose **Rooms from
-the FLARE blueprint**. Every room automation that doesn't have a flare yet is listed and
-ticked, so you can add a flare for every room at once, or untick the ones you don't want.
+Every area set up with **Set up area**, including when you first add FLARE, already has a
+flare, named after the area.
 
-Each flare is named after its room's automation and placed in the automation's area. It
-appears as `light.<name>_flare` and always has the same lights as its room's automation, so if
-you add a bulb to the room's area, it joins the flare too.
+For a room automation you made yourself, go to **Settings → Devices & Services → FLARE → Add
+flare** and choose **Rooms from the FLARE blueprint**. Every room automation that doesn't have
+a flare yet is listed and ticked, so you can add a flare for every room at once, or untick the
+ones you don't want. Each one is named after its automation.
+
+A flare is placed in its automation's area. It appears as `light.<name>_flare` and always has
+the same lights as its room's automation, so if you add a bulb to the room's area, it joins the
+flare too.
 
 ### Name it the way you'll say it
 
 A flare's name is what Siri, Alexa and Google hear. Automations often have names like
-"Kitchen lighting" or "Garden Lights Adaptive", which nobody says out loud, so rename each
-flare to the room's plain name, "Kitchen" or "Garden", with **Reconfigure** in the flare's
+"Kitchen lighting" or "Garden Lights Adaptive", which nobody says out loud, so rename a flare
+named after one to the room's plain name, "Kitchen" or "Garden", with **Reconfigure** in the flare's
 three-dot menu. Renaming a flare doesn't change its entity ID. If the flare is already in the
 Home app or the Alexa app, rename it there too, because they can keep the name they first saw.
 

@@ -2,11 +2,13 @@
 pytest-homeassistant-custom-component."""
 
 import shutil
+from pathlib import Path
 
 import pytest
 from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import mock_component
 
 from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH, REPO_ROOT
@@ -51,3 +53,12 @@ def stub_entry_setup(hass: HomeAssistant):
     mock_component(hass, "repairs")
     hass.data.setdefault("frontend_extra_module_url", set())
     return hass
+
+
+@pytest.fixture
+async def automations_file(hass: HomeAssistant) -> Path:
+    """automations.yaml, loaded the way HA's default configuration.yaml
+    loads it, with the automation component set up."""
+    Path(hass.config.config_dir, "configuration.yaml").write_text("automation: !include automations.yaml\n")
+    assert await async_setup_component(hass, "automation", {})
+    return Path(hass.config.config_dir, "automations.yaml")

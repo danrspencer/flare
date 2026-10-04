@@ -6,7 +6,7 @@ their times and curve values are entities on the sensor's device."""
 
 from __future__ import annotations
 
-from types import MappingProxyType
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -14,7 +14,6 @@ from homeassistant import config_entries
 from homeassistant.config_entries import (
     SOURCE_IMPORT,
     ConfigEntry,
-    ConfigSubentry,
     ConfigSubentryFlow,
     SubentryFlowResult,
 )
@@ -23,10 +22,20 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import entity_registry as er, selector
 from homeassistant.util import slugify
 
+from .area_setup import (
+    FLARE,
+    LEVELS,
+    Area,
+    AutomationsNotLoaded,
+    SetupResult,
+    areas_with_lights,
+    areas_with_zones,
+    async_set_up_areas,
+    room_flare,
+)
 from .blueprint_check import automations_using_our_blueprint
 from .const import (
     BLUEPRINT_LIGHTS_INPUT,
-    BLUEPRINT_ZONE_INPUT,
     CONF_AREA,
     CONF_AUTOMATION,
     CONF_ENTRY_TYPE,
@@ -63,108 +72,183 @@ from .flares.automation import (
     lights_input_kinds,
     zone_inputs,
 )
+from .schedule.coordinator import schedule_instances
 from .schedule.transfer import ScheduleError, dump, parse
 from .services.schedules import async_apply_schedule, read_schedule, schedule_instance_for
 from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
 
-# The first schedule, named on adding FLARE.
+# The first schedule's suggested name, when there's only one.
 DEFAULT_SCHEDULE_NAME = "Home"
+MAX_SCHEDULES = 4
+SKIP = "skip"
+SET_UP = "set_up"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """The integration page's main button. The first time, it creates every
+    entry and the schedules; after that it sets up areas. Each area gets a
+    zone, an automation from the blueprint and a flare.
+
+    The entries are created through SOURCE_IMPORT and the flow ends on an
+    abort carrying a summary. Completing on an entry instead would show
+    HA's "integration added" dialog, which prompts to rename and place
+    every device that entry has, with no way to suppress it."""
+
     VERSION = 3
 
+    def __init__(self) -> None:
+        self._schedule_count = 1
+        self._new_schedules: list[str] = []
+
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """One "Add FLARE" creates every entry, with a first schedule and a zone
-        per chosen room, so FLARE works straight away.
+        if ENTRY_TYPE_SCHEDULES not in self._configured():
+            return await self.async_step_schedules()
+        return await self.async_step_areas()
 
-        The entries are created through SOURCE_IMPORT and the flow ends on an
-        abort carrying a summary. Completing on an entry instead would show
-        HA's "integration added" dialog, which prompts to rename and place
-        every device that entry has, with no way to suppress it."""
-        configured = {entry.data.get(CONF_ENTRY_TYPE) for entry in self._async_current_entries()}
-        needs_schedules = ENTRY_TYPE_SCHEDULES not in configured
-        needs_zones = ENTRY_TYPE_ZONES not in configured
-        needs_flares = ENTRY_TYPE_FLARES not in configured
-        if not needs_schedules and not needs_zones and not needs_flares:
-            return self.async_abort(reason="already_configured")
+    async def async_step_schedules(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """How many schedules: one for the house, or one per floor."""
+        if user_input is not None:
+            self._schedule_count = int(user_input["count"])
+            return await self.async_step_schedule_names()
+        return self.async_show_form(
+            step_id="schedules",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("count", default=1): selector.NumberSelector(
+                        selector.NumberSelectorConfig(min=1, max=MAX_SCHEDULES, step=1, mode=selector.NumberSelectorMode.BOX)
+                    )
+                }
+            ),
+        )
 
-        # Pre-selects every area with a light. Areas with none are left out.
-        areas = _areas_with_lights(self.hass) if needs_zones else []
-        fields: dict = {}
-        if needs_schedules:
-            fields[vol.Required("schedule", default=DEFAULT_SCHEDULE_NAME)] = selector.TextSelector()
-        if areas:
-            fields[vol.Optional("areas", default=[area_id for area_id, _ in areas])] = selector.AreaSelector(
-                selector.AreaSelectorConfig(multiple=True)
-            )
-
+    async def async_step_schedule_names(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        keys = [f"schedule_{n}" for n in range(1, self._schedule_count + 1)]
         errors: dict[str, str] = {}
-        schedule = (user_input or {}).get("schedule", "").strip()
-        if user_input is not None and needs_schedules and not any(c.isalnum() for c in schedule):
-            errors["schedule"] = "invalid_name"
-        if fields and (user_input is None or errors):
+        if user_input is not None:
+            names = [user_input.get(key, "").strip() for key in keys]
+            slugs = [slugify(name) for name in names]
+            for key, name, slug in zip(keys, names, slugs):
+                if not any(c.isalnum() for c in name):
+                    errors[key] = "invalid_name"
+                elif slugs.count(slug) > 1:
+                    errors[key] = "duplicate_name"
+            if not errors:
+                self._new_schedules = names
+                return await self.async_step_areas()
+        suggested = user_input or ({"schedule_1": DEFAULT_SCHEDULE_NAME} if len(keys) == 1 else {})
+        return self.async_show_form(
+            step_id="schedule_names",
+            data_schema=self.add_suggested_values_to_schema(
+                vol.Schema({vol.Required(key): selector.TextSelector() for key in keys}), suggested
+            ),
+            errors=errors,
+        )
+
+    async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Which areas to set up and, with more than one schedule, which
+        schedule each follows. Every area with lights is listed; those
+        without a zone yet are picked."""
+        first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES}
+        schedules = self._schedule_choices()
+        if not schedules:
+            return self.async_abort(reason="no_schedules")
+        areas = areas_with_lights(self.hass)
+        if not areas and not first_setup:
+            return self.async_abort(reason="no_areas")
+
+        if user_input is None and areas:
             return self.async_show_form(
-                step_id="user",
-                data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), user_input or {}),
-                errors=errors,
+                step_id="areas",
+                data_schema=_areas_schema(areas, schedules, areas_with_zones(self.hass)),
+                description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
-        chosen = [area_id for area_id, _ in areas if area_id in (user_input or {}).get("areas", [])]
+        chosen = _chosen(user_input or {}, areas, schedules)
+        created = await self._create_entries()
+        schedule_ids = self._schedule_ids()
+        plan = {area: schedule_ids[key] for area, key in chosen.items()}
+        try:
+            level = (user_input or {}).get(SET_UP, FLARE)
+            result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0, 0)
+        except AutomationsNotLoaded:
+            return self.async_abort(reason="automations_not_loaded")
+        except Exception:  # noqa: BLE001 - reported in the summary, details in the log
+            _LOGGER.exception("Could not set up %s", ", ".join(area.name for area in plan))
+            return self.async_abort(reason="setup_failed")
+
+        summary = [*created, *_counts(result)]
+        return self.async_abort(
+            reason="setup_complete" if first_setup else "areas_set_up",
+            description_placeholders={"created": _join(summary) if summary else "nothing new"},
+        )
+
+    def _configured(self) -> set[str]:
+        return {entry.data.get(CONF_ENTRY_TYPE) for entry in self._async_current_entries()}
+
+    def _schedule_choices(self) -> list[tuple[str, str]]:
+        """(key, name) per schedule: an index for one being created now, its
+        subentry id for one that exists."""
+        if self._new_schedules:
+            return [(f"schedule_{n}", name) for n, name in enumerate(self._new_schedules, 1)]
+        entry = self._entry(ENTRY_TYPE_SCHEDULES)
+        return [(i.subentry_id, i.title) for i in schedule_instances(entry)] if entry else []
+
+    def _schedule_ids(self) -> dict[str, str]:
+        """Choice key -> subentry id, once the schedules exist."""
+        instances = schedule_instances(self._entry(ENTRY_TYPE_SCHEDULES))
+        by_name = {i.title: i.subentry_id for i in instances}
+        ids = {i.subentry_id: i.subentry_id for i in instances}
+        ids.update({f"schedule_{n}": by_name[name] for n, name in enumerate(self._new_schedules, 1)})
+        return ids
+
+    def _entry(self, entry_type: str) -> ConfigEntry | None:
+        return next((e for e in self._async_current_entries() if e.data.get(CONF_ENTRY_TYPE) == entry_type), None)
+
+    async def _create_entries(self) -> list[str]:
+        """Creates whichever entries are missing; returns what to report."""
+        configured = self._configured()
         created = []
-        if needs_schedules:
-            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES, "schedule": schedule})
-            created.append(f"a schedule called {schedule}")
-        if needs_zones:
-            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES, "areas": chosen})
-            created.append(f"{len(chosen)} zone{'' if len(chosen) == 1 else 's'}")
-        if needs_flares:
+        if ENTRY_TYPE_SCHEDULES not in configured:
+            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES, "schedules": self._new_schedules})
+            names = self._new_schedules
+            created.append(f"a schedule called {names[0]}" if len(names) == 1 else f"schedules called {_join(names)}")
+        if ENTRY_TYPE_ZONES not in configured:
+            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES})
+        if ENTRY_TYPE_FLARES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES})
-        if not created:
-            return self.async_abort(reason="flares_entry_created")
-        return self.async_abort(reason="setup_complete", description_placeholders={"created": " and ".join(created)})
+        return created
 
     async def _import(self, data: dict[str, Any]) -> None:
         await self.hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT}, data=data)
 
     async def async_step_import(self, import_data: dict[str, Any]) -> FlowResult:
-        """Creates one entry without a visible flow (see async_step_user)."""
+        """Creates one entry without a visible flow (see the class docstring)."""
         if import_data[CONF_ENTRY_TYPE] == ENTRY_TYPE_SCHEDULES:
-            return await self._create_schedules_entry(import_data["schedule"])
+            return await self._create_schedules_entry(import_data["schedules"])
         if import_data[CONF_ENTRY_TYPE] == ENTRY_TYPE_FLARES:
             return await self._create_flares_entry()
-        areas = [(a, n) for a, n in _areas_with_lights(self.hass) if a in import_data["areas"]]
-        return await self._create_zones_entry(areas)
+        return await self._create_zones_entry()
 
-    async def _create_schedules_entry(self, schedule: str) -> FlowResult:
+    async def _create_schedules_entry(self, schedules: list[str]) -> FlowResult:
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_SCHEDULES}")
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
             title=SCHEDULES_ENTRY_TITLE,
             data={CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES},
             subentries=[
-                {"subentry_type": SUBENTRY_TYPE_SENSOR, "title": schedule, "unique_id": slugify(schedule), "data": {}}
+                {"subentry_type": SUBENTRY_TYPE_SENSOR, "title": name, "unique_id": slugify(name), "data": {}}
+                for name in schedules
             ],
         )
 
-    async def _create_zones_entry(self, areas: list[tuple[str, str]]) -> FlowResult:
+    async def _create_zones_entry(self) -> FlowResult:
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_ZONES}")
         self._abort_if_unique_id_configured()
-        return self.async_create_entry(
-            title=ZONES_ENTRY_TITLE,
-            data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
-            subentries=[
-                {
-                    "subentry_type": SUBENTRY_TYPE_ZONE,
-                    "title": name,
-                    "unique_id": slugify(name),
-                    "data": {},
-                }
-                for area_id, name in areas
-            ],
-        )
+        return self.async_create_entry(title=ZONES_ENTRY_TITLE, data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES})
 
     async def _create_flares_entry(self) -> FlowResult:
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_FLARES}")
@@ -190,6 +274,55 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> config_entries.OptionsFlow:
         return FlareOptionsFlow()
+
+
+def _areas_schema(areas: list[Area], schedules: list[tuple[str, str]], zoned: set[str]) -> vol.Schema:
+    """What to set up, then the areas, those in `zoned` unpicked. With one
+    schedule, a tick per area. With more, a schedule per area, each field
+    named after its area, which the dialog shows as its label."""
+    fields: dict = {
+        vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=list(LEVELS), translation_key="set_up", mode=selector.SelectSelectorMode.LIST
+            )
+        )
+    }
+    if len(schedules) == 1:
+        options = [selector.SelectOptionDict(value=area.area_id, label=area.name) for area in areas]
+        default = [area.area_id for area in areas if area.area_id not in zoned]
+        fields[vol.Optional("areas", default=default)] = selector.SelectSelector(
+            selector.SelectSelectorConfig(options=options, multiple=True, mode=selector.SelectSelectorMode.LIST)
+        )
+        return vol.Schema(fields)
+    options = [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
+    options.append(selector.SelectOptionDict(value=SKIP, label="Don't set up"))
+    for area in areas:
+        default = SKIP if area.area_id in zoned else schedules[0][0]
+        fields[vol.Required(area.name, default=default)] = selector.SelectSelector(
+            selector.SelectSelectorConfig(options=options, translation_key="area_schedule")
+        )
+    return vol.Schema(fields)
+
+
+def _chosen(user_input: dict[str, Any], areas: list[Area], schedules: list[tuple[str, str]]) -> dict[Area, str]:
+    """Area -> schedule choice key, for every area picked."""
+    if len(schedules) == 1:
+        picked = set(user_input.get("areas", []))
+        return {area: schedules[0][0] for area in areas if area.area_id in picked}
+    keys = {key for key, _ in schedules}
+    return {area: user_input[area.name] for area in areas if user_input.get(area.name) in keys}
+
+
+def _counts(result: SetupResult) -> list[str]:
+    counts = []
+    for count, noun in ((result.zones, "zone"), (result.automations, "room automation"), (result.flares, "flare")):
+        if count:
+            counts.append(f"{count} {noun}{'' if count == 1 else 's'}")
+    return counts
+
+
+def _join(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 class FlareOptionsFlow(config_entries.OptionsFlow):
@@ -285,32 +418,6 @@ class SensorSubentryFlow(ConfigSubentryFlow):
         )
 
 
-def _areas_with_lights(hass) -> list[tuple[str, str]]:
-    """(area_id, name) for every area holding a light, by the entity's own
-    area or its device's."""
-    from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
-
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
-    area_ids = set()
-    for entry in entity_registry.entities.values():
-        if entry.domain != "light":
-            continue
-        area_id = entry.area_id
-        if area_id is None and entry.device_id:
-            device = device_registry.async_get(entry.device_id)
-            area_id = device.area_id if device else None
-        if area_id:
-            area_ids.add(area_id)
-    area_registry = ar.async_get(hass)
-    named = []
-    for area_id in area_ids:
-        area = area_registry.async_get_area(area_id)
-        if area is not None:
-            named.append((area_id, area.name))
-    return sorted(named, key=lambda pair: pair[1])
-
-
 class ZoneSubentryFlow(ConfigSubentryFlow):
     """Adds one zone (a "state" subentry). Which lights it tracks is decided
     by callers passing its zone_device_id."""
@@ -380,7 +487,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         if user_input is not None:
             chosen = [a for a in candidates if a in user_input[CONF_AUTOMATION]]
             for entity_id in chosen:
-                self.hass.config_entries.async_add_subentry(entry, self._room_flare(entry, entity_id))
+                self.hass.config_entries.async_add_subentry(entry, room_flare(self.hass, entry, entity_id, self._label(entity_id)))
             return self.async_abort(reason="flares_added", description_placeholders={"count": str(len(chosen))})
 
         options = [selector.SelectOptionDict(value=a, label=self._label(a)) for a in candidates]
@@ -393,29 +500,6 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                             options=options, multiple=True, mode=selector.SelectSelectorMode.LIST
                         )
                     )
-                }
-            ),
-        )
-
-    def _room_flare(self, entry: ConfigEntry, entity_id: str) -> ConfigSubentry:
-        """A flare over a FLARE room automation, named after it and in its area."""
-        name = self._label(entity_id)
-        taken = {slugify(subentry.title) for subentry in entry.subentries.values()}
-        title, n = name, 2
-        while slugify(title) in taken:
-            title, n = f"{name} {n}", n + 1
-        registry_entry = er.async_get(self.hass).async_get(entity_id)
-        return ConfigSubentry(
-            subentry_type=SUBENTRY_TYPE_FLARE,
-            title=title,
-            unique_id=slugify(title) or None,
-            data=MappingProxyType(
-                {
-                    CONF_AUTOMATION: automation_ref(self.hass, entity_id),
-                    CONF_LIGHTS_INPUT: BLUEPRINT_LIGHTS_INPUT,
-                    CONF_LIGHTS_INPUT_KIND: TARGET,
-                    CONF_ZONE_INPUT: BLUEPRINT_ZONE_INPUT,
-                    CONF_AREA: registry_entry.area_id if registry_entry else None,
                 }
             ),
         )

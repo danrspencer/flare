@@ -49,7 +49,7 @@ FLARE works from your schedule instead, using four named phases. With the defaul
 
 ## How it fits together
 
-Install FLARE from HACS, add it, and create an automation for each room from its blueprint. The blueprint covers
+Install FLARE from HACS and add it: it sets each room up with an automation from its blueprint. The blueprint covers
 what most rooms want; if it doesn't do what you need, everything it uses is an ordinary Home Assistant entity or
 action, so you can change it or write your own — see the
 [examples](https://danrspencer.github.io/flare/guides/examples/).
