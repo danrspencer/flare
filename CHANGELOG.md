@@ -34,6 +34,13 @@ CI — see `.github/workflows/release.yml`.
   and always install the blueprint that matches your FLARE. It now lives at
   `custom_components/flare/blueprints/flare.yaml`; the repo's `blueprints/` folder is gone.
   It installs to `blueprints/automation/flare/flare.yaml`.
+- **A zone's tick is a plain `flare_tick` event, not an entity.** `event.<name>_flare_tick`
+  is removed, so ticks no longer fill every zone's Activity and history. An automation of
+  your own triggering on it needs an `event` trigger on `flare_tick` with the zone's
+  `device_id` instead; the blueprint is updated.
+- **`flare_light_overridden` names its light in `light`.** `entity_id` is now the zone's
+  `sensor.<zone>_flare_overridden`, which files the event under the zone, so it shows in
+  the zone's Activity. Read `trigger.event.data.light` instead.
 - **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
   `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,
   rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
@@ -74,6 +81,10 @@ CI — see `.github/workflows/release.yml`.
   area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
   off" and the zone's counts where that has lights, and an Activity feed beside them like
   the Security dashboard's.
+- **A zone's Activity says what it's doing.** "Kitchen now controlling 6 lights"
+  (`flare_lights_controlled`) when a zone takes its lights, once per room coming on rather
+  than per bulb, and "Kitchen cleared 6 lights" (`flare_lights_released`) when it lets them
+  go, as the room goes dark or Clear is pressed. Only an override names a single light.
 - **Copy and paste a schedule.** A schedule's times and curve values can be copied out
   as YAML and pasted into another schedule: from the schedule view's new Copy and Paste
   buttons, the schedule's Reconfigure, the curve playground on the docs site, or the new

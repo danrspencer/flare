@@ -95,8 +95,8 @@ def add_schedule(hass: HomeAssistant, sensor: str | None = SENSOR, slug: str = "
 
 def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room") -> str:
     """A zone as the blueprint sees it: a FLARE device with model "Zone" and a
-    Tick firing at the top of every minute, as FLARE's scheduler would.
-    Returns its device_id."""
+    tick event naming it at the top of every minute, as FLARE's scheduler
+    would. Returns its device_id."""
     entry = MockConfigEntry(domain="flare")
     entry.add_to_hass(hass)
     device = dr.async_get(hass).async_get_or_create(
@@ -104,14 +104,10 @@ def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room"
     )
     if area_id is not None:
         dr.async_get(hass).async_update_device(device.id, area_id=area_id)
-    tick = er.async_get(hass).async_get_or_create(
-        "event", "flare", f"{slug}_tick", suggested_object_id=f"{slug}_flare_tick", device_id=device.id
-    ).entity_id
-    hass.states.async_set(tick, "unknown", {"event_types": ["flare_tick"], "event_type": None})
 
     @callback
     def _tick(now) -> None:
-        hass.states.async_set(tick, now.isoformat(), {"event_types": ["flare_tick"], "event_type": "flare_tick"})
+        hass.bus.async_fire("flare_tick", {"device_id": device.id})
 
     async_track_time_change(hass, _tick, second=0)
     return device.id

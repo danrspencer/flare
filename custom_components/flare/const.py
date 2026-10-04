@@ -16,6 +16,8 @@ SUBENTRY_TYPE_ZONE = "state"
 # Fired when a tracked light becomes "overridden", with both claims and
 # the live values at that moment (see sensor.py's _refresh_statuses).
 EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"
+EVENT_LIGHTS_CONTROLLED = "flare_lights_controlled"
+EVENT_LIGHTS_RELEASED = "flare_lights_released"
 
 # One config entry per kind of thing, because HA's integration page can't
 # group subentries by type. The values are stored in each entry's data.

@@ -31,7 +31,6 @@ under **Settings → Devices & Services → FLARE → Zones**.
 | `sensor.<name>_flare_controlled` | The number of the zone's lights FLARE is setting. For information only. |
 | `sensor.<name>_flare_overridden` | The number of the zone's lights something else has changed. For information only. |
 | `button.<name>_flare_clear` | Discards every claim in the zone. |
-| `event.<name>_flare_tick` | Fires once per update interval. See [when zones tick](#when-zones-tick). |
 
 The two counts are recorded in history, with long-term statistics, but the `claims` attribute
 isn't. A light that's unavailable or has no claim isn't included in either count.
@@ -118,14 +117,47 @@ stops following either. When this happens, FLARE shows a notification naming the
 zones. It shows this once for each light, and doesn't show it again for that light until Home
 Assistant restarts.
 
-## The hand-over event
+## The zone's events
 
-When something else takes over a tracked light, FLARE fires `flare_light_overridden`:
+A zone says when it takes its lights, when it lets them go, and when something else changes one
+of them. Each event is filed under the zone: `entity_id` is one of the zone's count sensors and
+`device_id` its device, so they appear in the zone's Activity, on its device page. FLARE
+adjusting lights it already has isn't announced.
+
+When a zone starts controlling lights it wasn't, such as when a room comes on, FLARE fires
+`flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
+report back one by one:
 
 ```yaml
-entity_id: light.kitchen_1
+lights: [light.kitchen_1, light.kitchen_2]   # the lights it took
+controlled: 6                                # how many it's controlling now
+entity_id: sensor.kitchen_flare_controlled
+zone: Kitchen
+device_id: ...                               # the zone's device
+```
+
+> **Kitchen** now controlling 6 lights
+
+When a zone lets its lights go, because the room went dark or you pressed **Clear**, FLARE
+fires `flare_lights_released`:
+
+```yaml
+lights: [light.kitchen_1, light.kitchen_2]
+entity_id: sensor.kitchen_flare_controlled
+zone: Kitchen
+device_id: ...
+```
+
+> **Kitchen** cleared 6 lights
+
+When something else changes one of a zone's lights, FLARE fires `flare_light_overridden` for that
+light:
+
+```yaml
+light: light.kitchen_1
+entity_id: sensor.kitchen_flare_overridden
 zone: Kitchen                        # the zone that lost the light
-device_id: ...                        # the zone's device
+device_id: ...
 previous_status: controlled
 live_context_id: 01M11...
 live: { state: on, brightness: 12, color_temp_kelvin: 6500, rgb_color: null }
@@ -133,19 +165,21 @@ observed: { context_id: ..., target: {...}, recorded_at: ... }
 latest:   { context_id: ..., target: {...}, recorded_at: ... }
 ```
 
+> **Kitchen** released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)
+
 It fires once when the light changes hands, not again while the light stays overridden, and not
-for lights that were already overridden before a restart. It also appears in the light's
-logbook:
-
-> **Kitchen** released this light to something else (last asked for 255/6667, found 12/6500)
-
-To trigger an automation on it:
+for lights that were already overridden before a restart. To trigger an automation on it:
 
 ```yaml
 triggers:
   - trigger: event
     event_type: flare_light_overridden
 ```
+
+{: .note }
+> **Changed in 1.0.0** — `flare_light_overridden`'s light is in `light`; `entity_id` is now the
+> zone's sensor. An automation reading `trigger.event.data.entity_id` for the light needs
+> `trigger.event.data.light` instead.
 
 ## Inspecting tracked state
 
@@ -168,9 +202,10 @@ deleted from Home Assistant stops being tracked.
 
 ## When zones tick
 
-Each zone's `event.<name>_flare_tick` fires an event of type `flare_tick` once per update
-interval. Zones fire one after another, in name order, a gap apart, so rooms don't all send
-commands at the same time. You can set the interval and the gap under **FLARE → Zones →
+Each zone fires a `flare_tick` event once per update interval, carrying the zone's device as
+`device_id`. Zones fire one after another, in name order, a gap apart, so rooms don't all send
+commands at the same time. A tick is a plain event, not an entity, so it never appears in
+Activity, history or the logbook. You can set the interval and the gap under **FLARE → Zones →
 Configure**:
 
 | Option | Default | Description |
@@ -182,13 +217,15 @@ To run an automation on a zone's tick:
 
 ```yaml
 triggers:
-  - trigger: event.received
-    target:
-      entity_id: event.kitchen_flare_tick
-    options:
-      event_type: [flare_tick]
+  - trigger: event
+    event_type: flare_tick
+    event_data:
+      device_id: "<the zone's device ID>"
 ```
 
-The blueprint targets the zone's device instead of the entity. Home Assistant leaves hidden
-entities out when it expands a device, so if you hide the Tick entity, the blueprint stops
-receiving it.
+The zone's device ID is in the address of its device page, or
+`{{ device_id('sensor.kitchen_flare_claims') }}` in the template editor.
+
+{: .note }
+> **Changed in 1.0.0** — the tick was an entity, `event.<name>_flare_tick`, which is removed.
+> An automation triggering on it needs the trigger above instead.

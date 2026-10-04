@@ -167,8 +167,8 @@ Blueprint input mechanics worth knowing:
   device's one `sensor` in `variables:`. A trigger can't do that lookup
   (trigger templates can't read the registry, and a `state` trigger only
   takes entity IDs), which is why each schedule has a Phase `event`
-  entity: `phase_change` is `event.received` on the device, like the
-  Tick. There is no "bring your own sensor": anyone wanting something
+  entity: `phase_change` is `event.received` on the device. There is no
+  "bring your own sensor": anyone wanting something
   different builds their own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
@@ -196,8 +196,8 @@ blueprint in this repo. Keep them that way.
 
 **Everything is an entity or an action, so a default can be replaced
 rather than configured.** Schedule settings are `time`/`number` entities,
-FLARE's live state is sensors and events (phase, Tick, counts, the override
-event), and everything it does is a service. That is the answer to most
+FLARE's live state is sensors and events (phase, tick, counts, the
+zone events), and everything it does is a service. That is the answer to most
 "can it do X differently?" requests: an automation changing an entity, or
 calling a service, needs no new option. Keep new behaviour in that shape -
 an entity or a service before a config field - and the docs homepage's
@@ -1107,7 +1107,7 @@ would otherwise permanently fail the condition.
 
 **Triggers:** `phase_change` (`event.received` on the Schedule device's
 Phase), `tick`
-(`event.received` on the Zone device's Tick), `extra`, `motion_on` /
+(an `event` trigger on `flare_tick` with the Zone's `device_id`), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
 **Zone ticks exist to stop every room writing in the same second.**
@@ -1115,24 +1115,28 @@ Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
 :00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
 seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
 command timeouts landing at :10 - sent at :00. `zone/ticker.py`
-fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
+fires each zone's `flare_tick` bus event a gap apart (title order),
 starting on each interval boundary; the blueprint's decision still
 happens fresh at trigger time, so this is NOT the jitter that was
 removed (see Standing decisions). Every room has a zone, so there is no
 `time_pattern` fallback.
 
-- **The Tick has no `entity_category` and must not be hidden.** The
-  trigger targets the zone's *device*, and HA expands a device target to
-  entities with no category and not hidden (`helpers/target.py`,
-  `_primary_entities_only`; same rule in 2026.4.0, checked). A user
-  hiding the Tick silently stops the room's ticks; the docs say not to.
-- **Lights & Occupancy's selector has no device filter or `event`
-  entry**, so the zone can't be picked there: the frontend only lists a
-  device in a target picker if it ALSO has an entity passing the entity
-  filter (`getDevices` in `src/data/device/device_picker.ts`), which
-  would make the Tick pickable too. Hence the separate Zone input.
-- The Tick is one recorder row per zone per interval. Accepted: the
-  schedule sensor already writes one per minute.
+- **The tick is a plain bus event, `flare_tick` with `{"device_id": ...}`,
+  not an entity** (`__init__.py`'s `_ticker`), at the user's direction:
+  as an event entity it logged every minute in every zone's Activity and
+  history, burying the events that matter. Undescribed bus events never
+  reach the logbook. It was an event entity (`event.<slug>_flare_tick`)
+  until 1.0.0; setup deletes any left in the registry. With no entity,
+  nothing cancels the scheduler at shutdown, hence the explicit
+  `EVENT_HOMEASSISTANT_STOP` listener - without it the tests fail on
+  lingering timers.
+- **Lights & Occupancy's selector has no device filter**, so the zone
+  can't be picked there: the frontend only lists a device in a target
+  picker if it ALSO has an entity passing the entity filter
+  (`getDevices` in `src/data/device/device_picker.ts`). Hence the
+  separate Zone input.
+- A tick is still one recorder row per zone per interval, in the events
+  table. Accepted: the schedule sensor already writes one per minute.
 
 - `phase_change` is the schedule's Phase event, which `event.py` fires
   only when the phase actually changes (a manual override included) and
@@ -1853,6 +1857,30 @@ caught.
   the top are a markdown template summing the zones' counts, at the
   user's direction: a stacked statistics graph was tried and dropped as
   ugly, and so were total sensors.
+- **FLARE's zone events** (`flare_lights_controlled`,
+  `flare_lights_released`, `flare_light_overridden`) carry one of the
+  zone's count sensors as `entity_id` and the zone's `device_id`, with the
+  light(s) in `light`/`lights`, so they show on the zone's device page,
+  labelled Controlled or Overridden. At the user's direction the zone
+  speaks in whole-room terms - "now controlling 7 lights", "cleared 7
+  lights" (`flare_lights_released`: dark release or the Clear button, not
+  the `claims_clear` service, which the blueprint runs as bookkeeping) -
+  and only an override names one light. A light becoming controlled
+  again after an override is silent: a `flare_light_reclaimed` event was
+  built and removed as churn. The logbook matches events to entities only
+  through `entity_id`, so they can't also stay on the light's own
+  timeline; the user chose the zone. The count sensors have units, so the
+  logbook leaves their own state changes out - and, for the same reason,
+  drops them from a logbook card's entity list, so a dashboard card
+  targeting the zones doesn't show these events (see the Zones view
+  Activity notes).
+- **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
+  before firing, because a room's bulbs confirm one by one and each
+  confirmation is a separate status refresh (announced per light it was
+  one entry per bulb), and names only lights that are on: a turn-off
+  claims lights too, and announced it read "now setting 0 lights". A
+  light coming back from unavailable isn't taken either, or every room
+  announced itself after a restart.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the
