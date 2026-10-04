@@ -814,6 +814,17 @@ run again for the odd ones out. Things worth knowing:
   That is the one exception to "nothing creates flares automatically"
   below: the user is choosing to set the area up, not updating.
 
+**The dashboard is offered, not created.** `custom:flare`
+(`ll-strategy-dashboard-flare`, a view per schedule plus Zones) is listed
+in **Settings → Dashboards → Add dashboard** through the frontend's public
+`window.customStrategies` hook; nothing opens the dialog itself. Creating
+it from setup was built and dropped at the user's direction: HA keeps the
+dashboards collection private, and the only way in was unwrapping the
+`lovelace/dashboards/create` websocket handler to its bound method. Don't
+bring that back. The sidebar icon `flare:logo` is registered on
+`window.customIcons` by `www/flare-icon.js`, a glyph generated from the
+logo's bars by `brand/generate_icon.py`.
+
 **The flow ends on an abort, never on an entry,** because of HA's
 "integration added" dialog (`step-flow-create-entry.ts`). It shows a
 device-rename + area-picker form for every device on the entry the flow
@@ -1604,12 +1615,7 @@ caught.
   bump, so every release needs a back-merge (and `main` requires linear
   history). A promotion rebuilds the beta's own source commit, recorded
   as `Source:` in the release commit's message; a hand-made tag has none
-  and cannot be promoted. Consequences worth knowing: a dev build's
-  front-end URL carries the placeholder version, so after a dev install
-  the browser can keep serving cached card code until a hard refresh -
-  accepted, at the user's direction, over putting dev-only code in
-  shipped files (the URL is cached hard, see the static-path notes
-  below); GitHub shows a "not on any branch" banner on release commits;
+  and cannot be promoted. Consequences worth knowing: GitHub shows a "not on any branch" banner on release commits;
   and `main`'s changelog section is never re-dated, so headings carry
   whatever a person wrote.
 - **A tag pushed by a workflow does not trigger another workflow**
@@ -1736,17 +1742,22 @@ caught.
   tile colour means something else. card-mod can, and was rejected: the
   generator's promise is paste-and-go with no third-party dependency.
   Built on `<input type="range">` rather than `ha-control-slider` for
-  the same reason - no dependency on frontend internals. **The URL carries the integration version**
-  (`/flare_static/<version>/...`) with `cache_headers=True`. It was an
+  the same reason - no dependency on frontend internals. **The URL carries a fingerprint of the
+  files** (`/flare_static/<hash>/...`, `www_fingerprint()`: sha256 of every
+  file's path and bytes) with `cache_headers=True`. It carried the
+  integration version until a dev build (always `0.0.0-dev`) kept serving a
+  stale strategy from Safari's cache through Empty Caches; the hash changes
+  exactly when the files do, for dev builds and releases alike, so it's not
+  dev-only code. Before that it was an
   unversioned path with `cache_headers=False`, which **does not do what
   it sounds like**: that only omits `Cache-Control`, leaving `ETag` and
   `Last-Modified`, so browsers fall back to *heuristic* caching (roughly
   10% of the age since `Last-Modified`). Safari applies that keenly -
   confirmed live, where a just-deployed card and feature both rendered
   as "Configuration error" until the window lapsed, then "fixed
-  themselves". With a version per release a cached copy can never be
-  taken for the current one, so caching hard is correct rather than
-  merely tolerable. **It must be a path segment, not `?v=`**: these
+  themselves". With a URL per change a cached copy can never be taken
+  for the current one, so caching hard is correct rather than merely
+  tolerable. **It must be a path segment, not `?v=`**: these
   modules import each other relatively, and a relative import resolves
   against the importing module's own URL - a path is inherited by those
   imports, a query is not, so `?v=` would load the card twice under two
@@ -1811,6 +1822,37 @@ caught.
   put every zone in the schedule view. Both enumerators also require a
   distinguishing attribute (`points` / `claims`) so a name alone is
   never enough.
+- **The Zones view has an Activity sidebar**, copied from HA's Security
+  dashboard (`security-view-strategy.ts`): a `logbook` card in the
+  sections view's `sidebar`, targeting every zone's device. **Open
+  problem:** the card resolves a device target to the device's entities
+  and asks for those only (`hui-logbook-card.ts` passes `entityIds`, never
+  `deviceIds`, in 2026.9, 2026.10 and the frontend's dev branch), and the
+  logbook server drops "continuous" sensors (any with a unit or state
+  class) from that list (`logbook/helpers.py`, `async_filter_entities`).
+  So a zone event filed under a count sensor shows on the zone's device
+  page (which asks by device) but not here; only Clear presses do.
+  Options weighed with the user: a FLARE card around `ha-logbook` passing
+  `deviceIds` (as the device page does); filing events under the Clear
+  button (the zone page then labels every entry "Clear"); or the claims
+  sensor with a fixed-word state. Undecided.
+- **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
+  the user's screenshot): a section per floor (`column_span: 2`, by level),
+  a subtitle heading per zone, and on wide screens Clear in the left third
+  where that has "All off", with the zone's Controlled and Overridden
+  tiles beside it where that has the lights (the screenshot was for layout
+  only: lights there were a misreading, built and removed). Clear is
+  FLARE's own `custom:flare-clear-card` (`www/flare-clear-card.js`), drawn
+  like the "All off" `toggle-group` card: no card around it, a round icon
+  and a label. A tile was tried and looked like one more tile in the grid;
+  `toggle-group` itself can't be used, since its icon is always the power
+  symbol and its text always on/off counts. On narrow screens Clear is a
+  button badge on the heading (the `view_columns` conditions are HA's
+  own). A zone's area is its device's, else the area named after it; it
+  takes the area's name unless two zones share the area. The totals at
+  the top are a markdown template summing the zones' counts, at the
+  user's direction: a stacked statistics graph was tried and dropped as
+  ugly, and so were total sensors.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

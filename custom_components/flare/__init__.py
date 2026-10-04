@@ -5,11 +5,11 @@ dependency rule are in CONTRIBUTING.md."""
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.loader import async_get_integration
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -53,6 +53,7 @@ FEATURE_JS_PATH = "flare-kelvin-feature.js"
 STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
+ICON_JS_PATH = "flare-icon.js"
 # flare-section.js and flare-value-slider.js register nothing; the modules
 # above import them.
 
@@ -61,19 +62,28 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve www/, load the front-end modules on every page, and register
     the schedule services, which belong to neither entry.
 
-    The URL is versioned and cached hard, so each release is a new URL.
-    The version is a path segment, not `?v=`: the modules import each
-    other relatively, and a query isn't inherited by relative imports."""
-    integration = await async_get_integration(hass, DOMAIN)
-    base = f"{CARD_URL_BASE}/{integration.version or 'dev'}"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(base, str(Path(__file__).parent / "www"), cache_headers=True)]
-    )
-    for js in (CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
+    The URL carries a fingerprint of the files and is cached hard, so any
+    change to them is a new URL. A path segment, not `?v=`: the modules
+    import each other relatively, and a query isn't inherited by relative
+    imports."""
+    www = Path(__file__).parent / "www"
+    base = f"{CARD_URL_BASE}/{await hass.async_add_executor_job(www_fingerprint, www)}"
+    await hass.http.async_register_static_paths([StaticPathConfig(base, str(www), cache_headers=True)])
+    for js in (ICON_JS_PATH, CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
     async_setup_schedule_services(hass)
     _ensure_flares_entry(hass)
     return True
+
+
+def www_fingerprint(directory: Path) -> str:
+    """A short hash of every file's name and contents."""
+    digest = hashlib.sha256()
+    for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(directory).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 @callback

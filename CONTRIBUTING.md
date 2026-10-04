@@ -65,7 +65,8 @@ custom_components/flare/
                    this directly from the integration's own folder
                    (since HA 2026.3.0), no external submission needed
     www/           the dashboard: the curve card, the slider card features,
-                   and the two view strategies. Served and auto-loaded by
+                   the view and dashboard strategies, and the flare:logo
+                   sidebar icon. Served and auto-loaded by
                    the integration itself (see __init__.py's async_setup),
                    so it ships and updates with the integration with no
                    manual Lovelace resource registration
@@ -313,10 +314,9 @@ change.
 GitHub shows a "does not belong to any branch" banner on these commits. That is expected.
 The release commit's message records its `Source:` commit.
 
-Shipped code has no special handling for a development build, on purpose. Two things follow:
-after a dev install the browser can serve cached card code until you hard-refresh, because
-the front-end URL carries the placeholder version and is cached hard; and the blueprint's
-stamp in source is whatever it last held, so a changed blueprint raises no repair. Copy the
+Shipped code has no special handling for a development build, on purpose. One thing follows:
+the blueprint's stamp in source is whatever it last held, so a changed blueprint raises no
+repair. Copy the
 changed file over your installed `blueprints/automation/flare/flare.yaml` yourself.
 
 ### Two channels
