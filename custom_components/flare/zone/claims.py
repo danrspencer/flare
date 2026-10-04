@@ -58,6 +58,9 @@ STALE_RECORD_MAX_AGE_DAYS = 1
 
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
+# Where each light last came back online, for classify_state.
+RECONNECTS = f"{DOMAIN}_reconnected_at"
+
 # Fired whenever any zone's claims change, so the count sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 
@@ -65,6 +68,11 @@ SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 # holds a claim on the same light. Each zone then reads the other's writes
 # as overrides, so the light quietly stops following either.
 NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
+
+
+def reconnected_at(hass: HomeAssistant, entity_id: str):
+    """When the light last came back online this run, or None."""
+    return hass.data.get(RECONNECTS, {}).get(entity_id)
 
 
 class ClaimStore(Protocol):
@@ -314,15 +322,31 @@ class ClaimRegistry:
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
         """One listener for every tracked light:
 
+        - Back online (unavailable/unknown -> on/off), any light:
+          noted for classify_state, tracked or not, since a claim may come
+          after it. Forgotten once a write from FLARE is seen landing.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
         - Off (on/off -> off): releases the zone if it has gone dark."""
+        reconnects = hass.data.setdefault(RECONNECTS, {})
 
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
             entity_id = event.data["entity_id"]
+            old, new = event.data["old_state"], event.data["new_state"]
+            if (
+                entity_id.startswith("light.")
+                and new is not None
+                and new.state in ("on", "off")
+                and old is not None
+                and old.state in ("unavailable", "unknown")
+            ):
+                reconnects[entity_id] = new.last_changed
             store = self._store_for(entity_id)
             if store is None or entity_id not in store.claims:
                 return
+            if new is not None and _context_matches(store.claims[entity_id].get("latest"), new.context.id):
+                # FLARE's write landed: the light has settled under FLARE.
+                reconnects.pop(entity_id, None)
             old_state = event.data["old_state"]
             new_state = event.data["new_state"]
             old_available = old_state is not None and old_state.state not in ("unavailable", "unknown")

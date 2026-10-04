@@ -9,6 +9,7 @@ See claims.py's module docstring."""
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, TypedDict
 
 # HA's own conversions, so they match what devices actually report.
@@ -212,19 +213,58 @@ def classify(
     return "overridden", None
 
 
+# How long after a light comes back online its reports are still the bulb
+# settling (Zigbee2MQTT sends the attributes some seconds after the state).
+RECONNECT_SETTLE = timedelta(seconds=30)
+
+
 def classify_state(
     state: Optional["State"],
     record: Optional[_WriteRecord],
     brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
     color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
+    reconnected_at: Optional[datetime] = None,
 ) -> tuple[str, Optional[str]]:
     """classify() for a live HA state and its claim record (None if
     untracked). "unavailable" for a light HA can't reach or doesn't know,
-    before any claim is consulted."""
+    before any claim is consulted.
+
+    A light still showing what it came back online as (last updated within
+    RECONNECT_SETTLE of `reconnected_at`) that FLARE wrote to after it came
+    back is "untracked" rather than "overridden": the command was lost as
+    the bulb booted, nobody changed the light, so FLARE sends it again.
+    Without this it stays overridden at its power-on default. Only writes
+    after the reconnect count, so a light someone changed before it dropped
+    out stays theirs; and claims.py forgets the reconnect once a write from
+    FLARE lands, so a change after that is an override as usual."""
     if state is None or state.state in ("unavailable", "unknown"):
         return "unavailable", None
-    record = record or {}
+    status, matched_via = _classify_live(
+        state, record or {}, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance
+    )
+    if (
+        status == "overridden"
+        and reconnected_at is not None
+        and state.last_updated <= reconnected_at + RECONNECT_SETTLE
+        and _written_since(record or {}, reconnected_at)
+    ):
+        return "untracked", None
+    return status, matched_via
+
+
+def _written_since(record: _WriteRecord, when: datetime) -> bool:
+    """Whether FLARE's latest write was recorded at or after `when`."""
+    recorded = (record.get("latest") or {}).get("recorded_at")
+    if not recorded:
+        return False
+    try:
+        return datetime.fromisoformat(recorded) >= when
+    except (TypeError, ValueError):
+        return False
+
+
+def _classify_live(state, record, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance):
     attributes = state.attributes
     return classify(
         state.state == "on",

@@ -107,6 +107,10 @@ override: once the room is dark, FLARE sets every light in it again.
 A light also loses its claim when it goes unavailable, and you can discard a zone's claims by
 hand with its **Clear** button.
 
+A light that has just come back online, say switched on at the wall, starts at whatever it
+powers up as, and may miss a command sent while it boots. That isn't counted as someone
+changing it: FLARE sends it again until it takes. Something changing it afterwards is.
+
 ### One zone per light
 
 If two zones set the same light, each treats the other's changes as someone else's, and the light

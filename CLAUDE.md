@@ -691,6 +691,33 @@ first-write baseline), reads `overridden`. HA saves restore state every
 15 minutes and at shutdown, so a crash loses up to 15 minutes of claims,
 which fail open.
 
+**A command lost as a light comes back online is resent, not an
+override** (`classify_state`'s `reconnected_at`). Found live on
+2026-10-04: the Study Pendant, a Hue bulb on a wall switch, booted at its
+own 2702K default; the blueprint's `recovered` trigger wrote the evening
+colour 26ms later, the bulb never acted on it, and the light read
+`overridden` all evening - every evening. `classify()` judges live values
+against the claims, never how the light got there. So `claims.py`'s
+listener notes when any light comes back online (unavailable/unknown ->
+on/off; not from no state, which is every light on a fresh start and in
+every test) and forgets it once a FLARE write is seen landing (the light
+reports under `latest`'s context). A light that would read `overridden`
+is `untracked` instead while all three hold: it came back online, its
+state was last updated within `RECONNECT_SETTLE` (30s) of that, and
+FLARE's latest write was recorded after it came back. The last is what
+keeps a real override real: a light someone changed before it dropped
+out (a restart, a blip) has its last FLARE write from before, and stays
+theirs - `test_reconnecting_after_a_restart_does_not_take_the_light_back`
+is the guard, and the "recovery re-baseline" deleted in #70/#99 is the
+thing not to rebuild. Note `latest` can't stand in for "landed": it's
+promoted to `observed` only at the next write, so between writes it
+always looks unconfirmed.
+
+Still parked: the same loss when FLARE wrote *before* the reconnect
+(`light.dining_room_7` on 2026-10-04: a write at 15:47, a restart, back
+as `off` at 15:50). That needed three restarts in fifteen minutes, which
+ordinary use doesn't do.
+
 **Testing it needs a real entity add.** The other harnesses attach the
 claims sensor with a capturing `async_add_entities`, so
 `async_added_to_hass` never runs and nothing is ever saved or restored.

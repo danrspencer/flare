@@ -25,7 +25,7 @@ from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRI
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .zone.override_protection import classify_state
 from .zone.instance import ZoneInstance, zone_instances
-from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
+from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry, reconnected_at
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -52,7 +52,7 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record)
+    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected_at(hass, entity_id))
     # "untracked" shows as "controlled": either way, not excluded.
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
