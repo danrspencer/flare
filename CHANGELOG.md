@@ -42,7 +42,7 @@ CI — see `.github/workflows/release.yml`.
   your own triggering on it needs an `event` trigger on `flare_tick` with the zone's
   `device_id` instead; the blueprint is updated.
 - **`flare_light_overridden` names its light in `light`.** `entity_id` is now the zone's
-  `sensor.<zone>_flare_overridden`, which files the event under the zone, so it shows in
+  `button.<zone>_flare_clear`, which files the event under the zone, so it shows in
   the zone's Activity and the dashboard's. Read `trigger.event.data.light` instead.
 - **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
   `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,

@@ -158,7 +158,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             EVENT_LIGHT_OVERRIDDEN,
             {
                 "light": entity_id,
-                **self._zone_data("overridden"),
+                **self._zone_data(),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
                 "live": {
@@ -193,7 +193,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             return
         self.hass.bus.async_fire(
             EVENT_LIGHTS_CONTROLLED,
-            {"lights": lights, "controlled": len(lit), **self._zone_data("controlled")},
+            {"lights": lights, "controlled": len(lit), **self._zone_data()},
         )
 
     @callback
@@ -202,21 +202,23 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         if not entity_ids:
             return
         self.hass.bus.async_fire(
-            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data("controlled")}
+            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data()}
         )
 
     def _is_on(self, entity_id: str) -> bool:
         state = self.hass.states.get(entity_id)
         return state is not None and state.state == "on"
 
-    def _zone_data(self, status: str) -> dict[str, str]:
-        """Files an event under the zone: entity_id is the zone's count
-        sensor for `status`, which puts it in a logbook card targeting the
-        zone, and device_id puts it in the zone's own Activity (omitted, not
-        None, if the device isn't registered)."""
+    def _zone_data(self) -> dict[str, str]:
+        """Files an event under the zone: entity_id is the zone's Clear
+        button, which puts it in a logbook card targeting the zone, and
+        device_id puts it in the zone's own Activity (omitted, not None, if
+        the device isn't registered). The button because the logbook drops
+        sensors with a unit from the entities it's asked for, which is every
+        other zone entity."""
         entity_id = er.async_get(self.hass).async_get_entity_id(
-            "sensor", DOMAIN, f"{self._instance.subentry_id}_{status}"
-        ) or f"sensor.{self._instance.prefix}flare_{status}"
+            "button", DOMAIN, f"{self._instance.subentry_id}_clear"
+        ) or f"button.{self._instance.prefix}flare_clear"
         # Identifiers are only unique per config entry.
         device = None
         if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:

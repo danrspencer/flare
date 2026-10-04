@@ -22,6 +22,7 @@ import {
   listZones,
   zoneDevices,
 } from './flare-section.js';
+import './flare-clear-card.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
 

@@ -252,7 +252,7 @@ async def test_the_override_event_is_filed_under_the_zone(hass: HomeAssistant):
 
     assert len(events) == 1
     assert events[0].data["device_id"] == device.id
-    assert events[0].data["entity_id"] == "sensor.kitchen_flare_overridden"
+    assert events[0].data["entity_id"] == "button.kitchen_flare_clear"
     assert events[0].data["light"] == "light.a"
     assert events[0].data["zone"] == "Kitchen"
     assert events[0].data["live"]["brightness"] == 12
@@ -298,7 +298,7 @@ async def test_a_zone_going_dark_says_it_cleared_its_lights(hass: HomeAssistant)
     unsub()
 
     assert [(e.data["lights"], e.data["zone"], e.data["entity_id"]) for e in events] == [
-        (["light.a", "light.b"], "Kitchen", "sensor.kitchen_flare_controlled")
+        (["light.a", "light.b"], "Kitchen", "button.kitchen_flare_clear")
     ]
 
 
@@ -355,7 +355,7 @@ async def test_lights_a_zone_takes_are_announced_together(hass: HomeAssistant):
         {
             "lights": ["light.a", "light.b"],
             "controlled": 2,
-            "entity_id": "sensor.kitchen_flare_controlled",
+            "entity_id": "button.kitchen_flare_clear",
             "zone": "Kitchen",
             "device_id": device.id,
         }

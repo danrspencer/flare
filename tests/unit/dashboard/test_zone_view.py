@@ -111,15 +111,16 @@ def test_a_zone_takes_its_areas_name_unless_it_shares_the_area(view):
 
 
 def test_clear_sits_where_the_light_dashboard_has_all_off(view):
-    """A tile on wide screens; a button on the heading on narrow ones."""
+    """Its own control in the left third on wide screens; a button on the
+    heading on narrow ones."""
     upstairs = view["sections"][2]
     heading = next(c for c in upstairs["cards"] if c.get("heading") == "Bedroom")
-    tile = next(c for c in upstairs["cards"] if c.get("entity") == "button.bedroom_flare_clear")
+    clear = next(c for c in upstairs["cards"] if c.get("entity") == "button.bedroom_flare_clear")
     press = {"action": "perform-action", "perform_action": "button.press", "target": {"entity_id": "button.bedroom_flare_clear"}}
 
-    assert tile["tap_action"] == press
-    assert tile["visibility"] == [{"condition": "view_columns", "min": 2}]
-    assert tile["grid_options"] == {"columns": 6, "rows": 1}
+    assert clear["type"] == "custom:flare-clear-card"
+    assert clear["visibility"] == [{"condition": "view_columns", "min": 2}]
+    assert clear["grid_options"] == {"columns": 4, "rows": 1}
     assert heading["badges"][0]["tap_action"] == press
     assert heading["badges"][0]["visibility"] == [{"condition": "view_columns", "max": 1}]
 

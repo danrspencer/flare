@@ -1824,9 +1824,13 @@ caught.
   only** (`hui-logbook-card.ts` passes `entityIds`, never `deviceIds`),
   unlike a device page, which asks for both. So FLARE's zone events
   (`flare_lights_controlled`, `flare_lights_released`,
-  `flare_light_overridden`) carry a zone count sensor as `entity_id` (the
-  card finds them) and the zone's `device_id` (the device page does), with
-  the light in `light`. At the user's direction the zone speaks in whole-
+  `flare_light_overridden`) carry the zone's **Clear button** as
+  `entity_id` (the card finds them) and the zone's `device_id` (the device
+  page does), with the light in `light`. Not a count sensor: the logbook
+  server drops "continuous" sensors (any with a unit or state class) from
+  the entity list a request names (`logbook/helpers.py`,
+  `async_filter_entities`), so events filed under one never reached the
+  card. That shipped once, and the card showed only Clear presses. At the user's direction the zone speaks in whole-
   room terms - "now controlling 7 lights", "cleared 7 lights"
   (`flare_lights_released`: dark release or the Clear button, not the
   `claims_clear` service, which the blueprint runs as bookkeeping) - and
@@ -1845,9 +1849,14 @@ caught.
   announced itself after a restart.
 - **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
   the user's screenshot): a section per floor (`column_span: 2`, by level),
-  a subtitle heading per zone, and on wide screens a 6-column Clear tile
+  a subtitle heading per zone, and on wide screens Clear in the left third
   where that has "All off", with the zone's Controlled and Overridden
-  tiles where that has the lights (the user's screenshot was for layout
+  tiles beside it where that has the lights. Clear is FLARE's own
+  `custom:flare-clear-card` (`www/flare-clear-card.js`), drawn like the
+  "All off" `toggle-group` card: no card around it, a round icon and a
+  label. A tile was tried and looked like one more tile in the grid;
+  `toggle-group` itself can't be used, since its icon is always the power
+  symbol and its text always on/off counts (the user's screenshot was for layout
   only: lights there were a misreading, built and removed); on narrow
   screens Clear is a button badge on the heading (the `view_columns`
   conditions are HA's own). A zone's area is its device's, else the area

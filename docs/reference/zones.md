@@ -116,7 +116,7 @@ Assistant restarts.
 ## The zone's events
 
 A zone says when it takes its lights, when it lets them go, and when something else changes one
-of them. Each event is filed under the zone: `entity_id` is one of the zone's count sensors and
+of them. Each event is filed under the zone: `entity_id` is the zone's Clear button and
 `device_id` its device, so they appear in the zone's Activity, on its device page, and in the
 dashboard's Activity. FLARE adjusting lights it already has isn't announced.
 
@@ -127,7 +127,7 @@ report back one by one:
 ```yaml
 lights: [light.kitchen_1, light.kitchen_2]   # the lights it took
 controlled: 6                                # how many it's controlling now
-entity_id: sensor.kitchen_flare_controlled
+entity_id: button.kitchen_flare_clear
 zone: Kitchen
 device_id: ...                               # the zone's device
 ```
@@ -139,7 +139,7 @@ fires `flare_lights_released`:
 
 ```yaml
 lights: [light.kitchen_1, light.kitchen_2]
-entity_id: sensor.kitchen_flare_controlled
+entity_id: button.kitchen_flare_clear
 zone: Kitchen
 device_id: ...
 ```
@@ -151,7 +151,7 @@ light:
 
 ```yaml
 light: light.kitchen_1
-entity_id: sensor.kitchen_flare_overridden
+entity_id: button.kitchen_flare_clear
 zone: Kitchen                        # the zone that lost the light
 device_id: ...
 previous_status: controlled
@@ -174,7 +174,7 @@ triggers:
 
 {: .note }
 > **Changed in 1.0.0** — `flare_light_overridden`'s light is in `light`; `entity_id` is now the
-> zone's sensor. An automation reading `trigger.event.data.entity_id` for the light needs
+> zone's Clear button. An automation reading `trigger.event.data.entity_id` for the light needs
 > `trigger.event.data.light` instead.
 
 ## Inspecting tracked state
