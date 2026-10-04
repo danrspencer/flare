@@ -1594,12 +1594,7 @@ caught.
   bump, so every release needs a back-merge (and `main` requires linear
   history). A promotion rebuilds the beta's own source commit, recorded
   as `Source:` in the release commit's message; a hand-made tag has none
-  and cannot be promoted. Consequences worth knowing: a dev build's
-  front-end URL carries the placeholder version, so after a dev install
-  the browser can keep serving cached card code until a hard refresh -
-  accepted, at the user's direction, over putting dev-only code in
-  shipped files (the URL is cached hard, see the static-path notes
-  below); GitHub shows a "not on any branch" banner on release commits;
+  and cannot be promoted. Consequences worth knowing: GitHub shows a "not on any branch" banner on release commits;
   and `main`'s changelog section is never re-dated, so headings carry
   whatever a person wrote.
 - **A tag pushed by a workflow does not trigger another workflow**
@@ -1726,17 +1721,22 @@ caught.
   tile colour means something else. card-mod can, and was rejected: the
   generator's promise is paste-and-go with no third-party dependency.
   Built on `<input type="range">` rather than `ha-control-slider` for
-  the same reason - no dependency on frontend internals. **The URL carries the integration version**
-  (`/flare_static/<version>/...`) with `cache_headers=True`. It was an
+  the same reason - no dependency on frontend internals. **The URL carries a fingerprint of the
+  files** (`/flare_static/<hash>/...`, `www_fingerprint()`: sha256 of every
+  file's path and bytes) with `cache_headers=True`. It carried the
+  integration version until a dev build (always `0.0.0-dev`) kept serving a
+  stale strategy from Safari's cache through Empty Caches; the hash changes
+  exactly when the files do, for dev builds and releases alike, so it's not
+  dev-only code. Before that it was an
   unversioned path with `cache_headers=False`, which **does not do what
   it sounds like**: that only omits `Cache-Control`, leaving `ETag` and
   `Last-Modified`, so browsers fall back to *heuristic* caching (roughly
   10% of the age since `Last-Modified`). Safari applies that keenly -
   confirmed live, where a just-deployed card and feature both rendered
   as "Configuration error" until the window lapsed, then "fixed
-  themselves". With a version per release a cached copy can never be
-  taken for the current one, so caching hard is correct rather than
-  merely tolerable. **It must be a path segment, not `?v=`**: these
+  themselves". With a URL per change a cached copy can never be taken
+  for the current one, so caching hard is correct rather than merely
+  tolerable. **It must be a path segment, not `?v=`**: these
   modules import each other relatively, and a relative import resolves
   against the importing module's own URL - a path is inherited by those
   imports, a query is not, so `?v=` would load the card twice under two

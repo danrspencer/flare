@@ -1,5 +1,5 @@
 """The www/ modules import each other relatively, so an import inherits
-the versioned static path (`/flare_static/<version>/`) of the module doing
+the fingerprinted static path (`/flare_static/<fingerprint>/`) of the module doing
 the importing. An absolute import would load a module a second time under
 another URL, and its customElements.define would throw."""
 
