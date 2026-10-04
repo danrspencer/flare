@@ -40,7 +40,7 @@ from ..zone.override_protection import (
 )
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
-from ..zone.claims import ClaimRegistry
+from ..zone.claims import ClaimRegistry, reconnected_at
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
@@ -186,6 +186,7 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
         labels=labels,
         manufacturer_model=manufacturer_model,
         claims=lambda eid: tracker.record(subentry_id, eid),
+        reconnected_at=lambda eid: reconnected_at(hass, eid),
     )
 
 
@@ -538,6 +539,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
+                reconnected_at(hass, entity_id),
             )
             results[entity_id] = {
                 "blocked": is_blocked(status),
