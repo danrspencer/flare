@@ -162,6 +162,10 @@ Blueprint input mechanics worth knowing:
   in a section does **not** change its name for `!input` purposes.
 - The blueprint declares `homeassistant.min_version: 2026.4.0` - what
   the `occupancy.*` triggers require, not `sections`' lower floor.
+- **The integration needs 2026.10.0** (`hacs.json`'s `homeassistant`):
+  earlier releases make every subentry's Add button ask which entry
+  type first, a frontend bug that would read as ours. The blueprint's
+  own floor stays at what it needs.
 - **Schedule and Zone are both device selectors** (`integration: flare`,
   `model: Schedule` / `model: Zone`). The blueprint finds the schedule
   device's one `sensor` in `variables:`. A trigger can't do that lookup
