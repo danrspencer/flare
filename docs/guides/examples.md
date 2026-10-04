@@ -179,6 +179,16 @@ Running the room's automation from another automation counts as running it by ha
 switch lights on, but it also brings back to the curve any light in the room that someone set
 themselves.
 
+If the hall has a [flare](../flares/), you can turn that on instead, like any other light. It
+runs the room's automation in the same way:
+
+```yaml
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.hallway_lights_flare
+```
+
 ## Something else at a phase change
 
 Close the blinds when Night starts.
