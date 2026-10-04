@@ -36,56 +36,41 @@ with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
 Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
 
-It asks two things:
+It asks:
 
-- **A name for your first schedule** — Home, unless you change it. A
-  [schedule]({{ site.baseurl }}/reference/schedules/) is the day's lighting: when each phase
-  starts, and how bright and warm it is. One for the whole house is fine to start with. Pick
-  a name you're happy to keep: it becomes part of the schedule's entity IDs.
-- **Which rooms to set up** — every area with lights is offered, pre-selected, and each one
-  you keep becomes a [zone]({{ site.baseurl }}/reference/zones/), named after the room. A zone
-  keeps track of which lights FLARE is driving in that room, which is how it knows to leave
-  alone a light you've changed yourself.
+- **How many schedules, and their names.** A [schedule]({{ site.baseurl }}/reference/schedules/)
+  is the day's lighting: when each phase starts, and how bright and warm it is. One for the
+  whole house is fine to start with; use more if parts of the house should differ, such as one
+  per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
+- **What to set up for each area**, and **which areas**. Every area with lights is listed and
+  ticked. With more than one schedule, you pick the schedule each area follows instead.
 
-You can add more schedules and zones later, from **Schedules** and **Zones** under FLARE.
+Each area you set up gets up to three things, named after it. All three is the default, and
+what most rooms want:
 
-{: .note }
-> A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
-> to pick between Schedules, Zones and Flares first. Pick the one that matches what you're
-> adding; Home Assistant 2026.10 fixes this.
-
-## Step 3 — install the blueprint and create an automation
-
-FLARE will spot that its blueprint isn't installed and offer it in
-**Settings → System → Repairs**. Press **Fix** and it installs it.
-
-Create an automation from it and fill in three things:
-
-| Input | What to put |
+| | What it does |
 |---|---|
-| **Schedule** | The schedule from step 2 — Home, unless you named it something else. |
-| **Zone** | The room's zone from step 2 — usually the one named after the room. |
-| **Lights & Occupancy** | One target for the room — pick the **area**. Lights inside it get driven; occupancy and motion sensors inside it decide when. |
+| A [zone]({{ site.baseurl }}/reference/zones/) | Keeps track of which lights FLARE is driving there, so it leaves alone a light you've changed yourself. |
+| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting". |
+| A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
-Those three are all a room needs, because every other input has a working default.
+The zone is always set up. Leave out the flare if you don't use voice assistants or HomeKit,
+or the automation too if you'd rather build the room's automation yourself.
+
+With all three, that's everything a room needs. The automation is an ordinary one in **Settings → Automations
+& Scenes**, so change any of its other inputs there.
 
 {: .note }
 > A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
 > off by itself.
 
-Repeat for each room.
+## Step 3 — use your flares (optional)
 
-## Step 4 — add flares for voice assistants and HomeKit (optional)
-
-A flare is a light for a whole room, so "Hey Siri, turn on the kitchen" brings the kitchen up
-the way FLARE would. Go to **Settings → Devices & Services → FLARE → Flares → Add flare**,
-choose **Rooms from the FLARE blueprint**, and submit: every room is ticked.
-
-Then expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, and rename
-each flare to what you'll say out loud. See
+Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, so "Hey Siri,
+turn on the kitchen" brings the kitchen up the way FLARE would. See
 [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/) for how.
 
-## Step 5 — add the dashboard (optional)
+## Step 4 — add the dashboard (optional)
 
 FLARE ships two ready-made views. **Edit dashboard** → the three-dot menu → **Raw
 configuration editor**, and add:
@@ -103,6 +88,21 @@ views:
 **Lighting** shows the day's curve and every setting of your schedules. **Zones** shows
 which lights FLARE is driving and which ones something else has taken over. See
 [Dashboard]({{ site.baseurl }}/dashboard/) for more, including adding just the chart.
+
+## Adding a room later
+
+**Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights, and
+ticks the ones without a zone yet. An area that already has a zone isn't ticked: setting it up
+again keeps its zone but gives it another automation and flare, so only tick it if it doesn't
+have them.
+
+The other buttons there add one thing at a time: **Add schedule**, **Add zone** and
+**Add flare**.
+
+{: .note }
+> A bug in Home Assistant 2026.9 and earlier makes **Add schedule**, **Add zone** and **Add
+> flare** ask you to pick between Schedules, Zones and Flares first. Pick the one that matches
+> what you're adding; Home Assistant 2026.10 fixes this.
 
 ---
 

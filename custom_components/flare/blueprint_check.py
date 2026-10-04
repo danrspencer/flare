@@ -150,6 +150,18 @@ async def async_install_blueprint(hass: HomeAssistant) -> str:
     return INSTALL_PATH
 
 
+async def async_blueprint_path(hass: HomeAssistant) -> str:
+    """The path new automations should use: INSTALL_PATH if a copy is
+    there, otherwise any copy of ours, otherwise a fresh install."""
+    installed = await _ours(hass)
+    if INSTALL_PATH in installed or not installed:
+        if not installed:
+            await async_install_blueprint(hass)
+            await async_check(hass)
+        return INSTALL_PATH
+    return sorted(installed)[0]
+
+
 async def async_update_blueprints(hass: HomeAssistant) -> list[str]:
     """Overwrite every stale in-use copy, at whatever path it was found."""
     outdated = await outdated_blueprints(hass)
