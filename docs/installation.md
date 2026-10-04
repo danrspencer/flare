@@ -10,7 +10,7 @@ permalink: /installation/
 Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.10.0 or newer, [HACS](https://hacs.xyz) installed,
+> **Prerequisites** — Home Assistant 2026.4.0 or newer, [HACS](https://hacs.xyz) installed,
 > and your lights assigned to areas, so FLARE can set itself up room by room.
 
 1. TOC
@@ -48,6 +48,11 @@ It asks two things:
   alone a light you've changed yourself.
 
 You can add more schedules and zones later, from **Schedules** and **Zones** under FLARE.
+
+{: .note }
+> A bug in Home Assistant 2026.9 and earlier makes adding another schedule or zone ask you
+> to pick between Schedules, Zones and Flares first. Pick the one that matches what you're
+> adding; Home Assistant 2026.10 fixes this.
 
 ## Step 3 — install the blueprint and create an automation
 
