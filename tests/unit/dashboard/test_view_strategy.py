@@ -327,7 +327,8 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
 
 
 def _zone_section(result, index=0):
-    return result["zone"]["sections"][index]
+    """The zones' sections come after the graphs."""
+    return result["zone"]["sections"][index + 1]
 
 
 def test_the_zone_strategy_is_registered_separately(result):
@@ -337,7 +338,7 @@ def test_the_zone_strategy_is_registered_separately(result):
 def test_a_zone_view_is_one_section_per_zone(result):
     headings = [s["cards"][0]["heading"] for s in result["zone"]["sections"]]
 
-    assert headings == ["Bedroom", "Dining Room", "Utility"]
+    assert headings == ["Lights", "Bedroom", "Dining Room", "Utility"]
 
 
 def test_the_zone_name_drops_the_entitys_own_trailing_word(result):
@@ -453,6 +454,21 @@ def test_the_zone_view_has_an_activity_feed_of_the_zones_devices(result):
     assert logbook["type"] == "logbook"
     assert logbook["target"] == {"device_id": ["attic_zone", "bedroom_zone"]}
     assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Zones", "Activity")
+
+
+def test_the_zone_view_opens_with_every_zones_counts_stacked(result):
+    """Stacked so the top edge is the total, two columns wide beside the
+    Activity sidebar."""
+    first = result["activityView"]["sections"][0]
+    heading, controlled, overridden = first["cards"]
+
+    assert first["column_span"] == 2
+    assert heading["heading"] == "Lights"
+    for graph, status in ((controlled, "controlled"), (overridden, "overridden")):
+        assert graph["type"] == "statistics-graph"
+        assert graph["chart_type"] == "line-stack"
+        assert graph["entities"] == [f"sensor.attic_flare_{status}", f"sensor.bedroom_flare_{status}"]
+        assert graph["days_to_show"] == 1
 
 
 def test_no_activity_feed_without_the_logbook(result):

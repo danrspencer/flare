@@ -41,6 +41,9 @@ CI — see `.github/workflows/release.yml`.
   is removed, so ticks no longer fill every zone's Activity and history. An automation of
   your own triggering on it needs an `event` trigger on `flare_tick` with the zone's
   `device_id` instead; the blueprint is updated.
+- **`flare_light_overridden` names its light in `light`.** `entity_id` is now the zone's
+  `sensor.<zone>_flare_overridden`, which files the event under the zone, so it shows in
+  the zone's Activity and the dashboard's. Read `trigger.event.data.light` instead.
 - **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
   `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,
   rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
@@ -75,7 +78,8 @@ CI — see `.github/workflows/release.yml`.
   more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
   `flare:logo`, for its sidebar entry.
 - **An Activity feed on the Zones view**, like Home Assistant's Security dashboard: the
-  last 24 hours of every zone's Activity.
+  last 24 hours of every zone's Activity. Beside it, every zone's controlled and overridden
+  lights over the last day, stacked so the top edge is the house's total.
 - **A zone's Activity says what it's doing.** `flare_lights_controlled` ("Kitchen is now
   setting 6 lights") fires when a zone takes lights, once per room coming on rather than
   per bulb, and `flare_light_reclaimed` when an overridden light is FLARE's again. Both, and

@@ -113,14 +113,33 @@ stops following either. When this happens, FLARE shows a notification naming the
 zones. It shows this once for each light, and doesn't show it again for that light until Home
 Assistant restarts.
 
-## The hand-over events
+## The zone's events
 
-When something else takes over a tracked light, FLARE fires `flare_light_overridden`:
+FLARE fires an event when a zone takes lights, lets one go, or takes one back. Each is filed
+under the zone: `entity_id` is one of the zone's count sensors and `device_id` its device, so
+they appear in the zone's Activity, on its device page, and in the dashboard's Activity.
+
+When a zone starts setting lights it wasn't, such as when a room comes on, FLARE fires
+`flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
+report back one by one:
 
 ```yaml
-entity_id: light.kitchen_1
+lights: [light.kitchen_1, light.kitchen_2]   # the lights it took
+controlled: 6                                # how many it's setting now
+entity_id: sensor.kitchen_flare_controlled
+zone: Kitchen
+device_id: ...                               # the zone's device
+```
+
+> **Kitchen** is now setting 6 lights
+
+When something else takes over a light, FLARE fires `flare_light_overridden`:
+
+```yaml
+light: light.kitchen_1
+entity_id: sensor.kitchen_flare_overridden
 zone: Kitchen                        # the zone that lost the light
-device_id: ...                        # the zone's device
+device_id: ...
 previous_status: controlled
 live_context_id: 01M11...
 live: { state: on, brightness: 12, color_temp_kelvin: 6500, rgb_color: null }
@@ -128,13 +147,10 @@ observed: { context_id: ..., target: {...}, recorded_at: ... }
 latest:   { context_id: ..., target: {...}, recorded_at: ... }
 ```
 
+> **Kitchen** released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)
+
 It fires once when the light changes hands, not again while the light stays overridden, and not
-for lights that were already overridden before a restart. It also appears in the light's
-logbook:
-
-> **Kitchen** released this light to something else (last asked for 255/6667, found 12/6500)
-
-To trigger an automation on it:
+for lights that were already overridden before a restart. To trigger an automation on it:
 
 ```yaml
 triggers:
@@ -146,28 +162,18 @@ When FLARE is setting an overridden light again, because a forced update took it
 put back the way FLARE had it, FLARE fires `flare_light_reclaimed`:
 
 ```yaml
-entity_id: light.kitchen_1
+light: light.kitchen_1
+entity_id: sensor.kitchen_flare_controlled
 zone: Kitchen
-device_id: ...                        # the zone's device
+device_id: ...
 ```
 
-> **Kitchen** is setting this light again
+> **Kitchen** is setting Kitchen 1 again
 
-When a zone starts setting lights it wasn't, such as when a room comes on, FLARE fires
-`flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
-report back one by one:
-
-```yaml
-entity_ids: [light.kitchen_1, light.kitchen_2]   # the lights it took
-controlled: 6                                    # how many it's setting now
-zone: Kitchen
-device_id: ...                                   # the zone's device
-```
-
-> **Kitchen** is now setting 6 lights
-
-All three appear in the zone's own Activity, on its device page. The first two also appear in
-the light's logbook.
+{: .note }
+> **Changed in 1.0.0** — `flare_light_overridden`'s light is in `light`; `entity_id` is now the
+> zone's sensor. An automation reading `trigger.event.data.entity_id` for the light needs
+> `trigger.event.data.light` instead.
 
 ## Inspecting tracked state
 

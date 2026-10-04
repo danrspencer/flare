@@ -16,6 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -142,7 +143,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             if status == "overridden" and previous != "overridden":
                 self._fire_overridden(entity_id, record, previous, live_context_id)
             elif status == "controlled" and previous == "overridden":
-                self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"entity_id": entity_id, **self._zone_data()})
+                self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"light": entity_id, **self._zone_data("controlled")})
             # A light coming back from unavailable (every light, after a
             # restart) was already the zone's.
             elif status == "controlled" and previous not in ("controlled", "unavailable"):
@@ -158,8 +159,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
-                "entity_id": entity_id,
-                **self._zone_data(),
+                "light": entity_id,
+                **self._zone_data("overridden"),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
                 "live": {
@@ -183,21 +184,32 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
 
     @callback
     def _announce_controlled(self, _now) -> None:
+        """Only lights that are on: a turn-off claims lights too, and taking a
+        room's lights to switch them off isn't taking control of them."""
         self._announce_later = None
-        lights, self._newly_controlled = sorted(self._newly_controlled), set()
+        gathered, self._newly_controlled = self._newly_controlled, set()
         statuses = self._last_statuses or {}
+        lit = sorted(e for e, status in statuses.items() if status == "controlled" and self._is_on(e))
+        lights = [e for e in lit if e in gathered]
+        if not lights:
+            return
         self.hass.bus.async_fire(
             EVENT_LIGHTS_CONTROLLED,
-            {
-                "entity_ids": lights,
-                "controlled": sum(status == "controlled" for status in statuses.values()),
-                **self._zone_data(),
-            },
+            {"lights": lights, "controlled": len(lit), **self._zone_data("controlled")},
         )
 
-    def _zone_data(self) -> dict[str, str]:
-        """The zone, and its device: device_id puts an event in the zone's
-        Activity. Omitted, not None, if the device isn't registered."""
+    def _is_on(self, entity_id: str) -> bool:
+        state = self.hass.states.get(entity_id)
+        return state is not None and state.state == "on"
+
+    def _zone_data(self, status: str) -> dict[str, str]:
+        """Files an event under the zone: entity_id is the zone's count
+        sensor for `status`, which puts it in a logbook card targeting the
+        zone, and device_id puts it in the zone's own Activity (omitted, not
+        None, if the device isn't registered)."""
+        entity_id = er.async_get(self.hass).async_get_entity_id(
+            "sensor", DOMAIN, f"{self._instance.subentry_id}_{status}"
+        ) or f"sensor.{self._instance.prefix}flare_{status}"
         # Identifiers are only unique per config entry.
         device = None
         if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
@@ -205,7 +217,11 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
             device = dr.async_get(self.hass).async_get_device_by_identifier(
                 identifier, self.registry_entry.config_entry_id
             )
-        return {"zone": self._instance.title, **({"device_id": device.id} if device else {})}
+        return {
+            "entity_id": entity_id,
+            "zone": self._instance.title,
+            **({"device_id": device.id} if device else {}),
+        }
 
     @property
     def native_value(self) -> int:

@@ -1819,15 +1819,29 @@ caught.
   never enough.
 - **The Zones view has an Activity sidebar**, copied from HA's Security
   dashboard (`security-view-strategy.ts`): a `logbook` card in the
-  sections view's `sidebar`, targeting every zone's *device*, so it is
-  exactly the zones' own device-page Activity (the user's call, over
-  following the zones' lights). What lands there is whatever carries the
-  zone's `device_id`: `flare_lights_controlled`, `flare_light_overridden`,
-  `flare_light_reclaimed` and Clear presses. `flare_lights_controlled`
-  gathers for `CONTROLLED_GATHER_SECONDS` before firing, because a room's
-  bulbs confirm one by one and each confirmation is a separate status
-  refresh; announced per light it was one entry per bulb. The claims and count sensors have units, so the
-  logbook leaves them out.
+  sections view's `sidebar`, targeting every zone's device. **The card
+  resolves a device target to the device's entities and asks for those
+  only** (`hui-logbook-card.ts` passes `entityIds`, never `deviceIds`),
+  unlike a device page, which asks for both. So FLARE's zone events
+  (`flare_lights_controlled`, `flare_light_overridden`,
+  `flare_light_reclaimed`) carry a zone count sensor as `entity_id` (the
+  card finds them) and the zone's `device_id` (the device page does), with
+  the light in `light`. The logbook matches events to entities only
+  through `entity_id`, so there's no way to also keep them on the light's
+  own timeline; the user chose the zone. The claims and count sensors
+  have units, so the logbook leaves their own state changes out.
+- **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
+  before firing, because a room's bulbs confirm one by one and each
+  confirmation is a separate status refresh (announced per light it was
+  one entry per bulb), and names only lights that are on: a turn-off
+  claims lights too, and announced it read "now setting 0 lights". A
+  light coming back from unavailable isn't taken either, or every room
+  announced itself after a restart.
+- **Each zone's counts are graphed stacked**, two `statistics-graph`
+  cards (`chart_type: line-stack`), in a 2-column section first in the
+  view, beside the sidebar. The top edge is the house total; the stock
+  cards can't sum any other way, and a total sensor was built and dropped
+  for it. Statistics, so 5-minute resolution.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

@@ -38,7 +38,8 @@ views:
 - **Lighting** — the day's curve and every schedule and curve setting, one section per
   schedule sensor.
 - **Zones** — which lights FLARE is driving, which ones something else has taken
-  over, and a Clear button to hand them back.
+  over, and a Clear button to hand them back. At the top, every zone's controlled and
+  overridden lights over the last day, stacked so the top edge is the house's total.
   Beside them, **Activity** is the last 24 hours of the zones' own Activity: when a zone took
   lights, let one go because something else changed it, or took one back, and Clear presses.
   On a narrow screen it's a tab.

@@ -1,6 +1,7 @@
-"""Describes FLARE's hand-over events in the logbook, so they show on the
-light's timeline and the zone's Activity. Worded as hand-overs, not
-failures."""
+"""Describes FLARE's zone events in the logbook. Each is filed under one of
+the zone's count sensors and its device, so it shows in the zone's
+Activity and in a logbook card targeting the zone. Worded as hand-overs,
+not failures."""
 
 from __future__ import annotations
 
@@ -14,6 +15,11 @@ from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHT_RECLAIMED, EVENT_
 
 def _describe_zone(zone: str | None) -> str:
     return zone or "FLARE"
+
+
+def _light_name(hass: HomeAssistant, entity_id: str | None) -> str:
+    state = hass.states.get(entity_id) if entity_id else None
+    return state.name if state else (entity_id or "a light")
 
 
 @callback
@@ -38,7 +44,7 @@ def async_describe_events(
             detail = ""
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(data.get("zone")),
-            LOGBOOK_ENTRY_MESSAGE: f"released this light to something else{detail}",
+            LOGBOOK_ENTRY_MESSAGE: f"released {_light_name(hass, data.get('light'))} to something else{detail}",
             LOGBOOK_ENTRY_ENTITY_ID: data["entity_id"],
         }
 
@@ -46,7 +52,7 @@ def async_describe_events(
     def async_describe_reclaim(event: Event) -> dict[str, str]:
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
-            LOGBOOK_ENTRY_MESSAGE: "is setting this light again",
+            LOGBOOK_ENTRY_MESSAGE: f"is setting {_light_name(hass, event.data.get('light'))} again",
             LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
         }
 
@@ -56,6 +62,7 @@ def async_describe_events(
         return {
             LOGBOOK_ENTRY_NAME: _describe_zone(event.data.get("zone")),
             LOGBOOK_ENTRY_MESSAGE: f"is now setting {count} light{'' if count == 1 else 's'}",
+            LOGBOOK_ENTRY_ENTITY_ID: event.data["entity_id"],
         }
 
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)

@@ -223,10 +223,10 @@ actions:
   - action: notify.notify
     data:
       message: >
-        {{ state_attr(trigger.event.data.entity_id, 'friendly_name') }} in
+        {{ state_attr(trigger.event.data.light, 'friendly_name') }} in
         {{ trigger.event.data.zone }} was changed by something else, so FLARE has
         stopped driving it until the room goes dark.
 ```
 
 The event also carries what FLARE last asked for and what the light was actually showing —
-see [the hand-over events](../../reference/zones/#the-hand-over-events).
+see [the zone's events](../../reference/zones/#the-zones-events).
