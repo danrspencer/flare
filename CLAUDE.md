@@ -796,10 +796,9 @@ run again for the odd ones out. Things worth knowing:
   comments in the file, exactly as the editor does.
 - **The zone's device is created by `area_setup`, not by the entry's
   reload**, because the automation needs its id now; the reload finds it
-  by its identifiers. Nothing waits for that reload: `event.received`
-  re-resolves its target on registry changes
-  (`helpers/target.py`'s `TargetEntityChangeTracker`), so the automation
-  picks up the Tick when it appears.
+  by its identifiers. Nothing waits for that reload: the tick trigger
+  matches `flare_tick` on the device id alone, so the automation works
+  before the zone's entities exist.
 - **"Already set up" means a zone with the area's name exists**, and it
   only unticks the area; every area with lights is always listed. At the
   user's direction, after reading automations' Lights & Occupancy proved
