@@ -36,8 +36,6 @@ SHIPPED_BLUEPRINT = Path(__file__).parent / "blueprints" / "flare.yaml"
 QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
 _OUR_NAME = "FLARE"
-# Copies imported from GitHub before it shipped with FLARE carry this.
-_OUR_REPO = "danrspencer/flare"
 
 
 @dataclass(frozen=True)
@@ -50,11 +48,7 @@ class InstalledBlueprint:
 
 
 def _is_ours(blueprint: Blueprint) -> bool:
-    """By name or by source_url, since an edited copy may have lost either."""
-    metadata = blueprint.metadata
-    if metadata.get("name") == _OUR_NAME:
-        return True
-    return _OUR_REPO in (metadata.get("source_url") or "")
+    return blueprint.metadata.get("name") == _OUR_NAME
 
 
 async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:

@@ -34,7 +34,6 @@ blueprint:
     Blueprint version 0.0.1 - the integration raises a repair when a
     newer one is available.
   domain: automation
-  source_url: https://github.com/danrspencer/flare/blob/main/blueprints/automation/danrspencer/flare.yaml
   input: {}
 triggers: []
 actions: []
