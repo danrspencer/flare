@@ -321,11 +321,17 @@ Optional. `cleared` lists the entities passed in.
 
 ## `flare.claims_override`
 
-Use this action when your automation changes lights by hand, so FLARE leaves them alone. It
-marks each entity as changed by someone else, whether FLARE was driving it or not, and
-whatever it's set to. A light marked this way stays overridden until its zone goes dark, its
-claims are cleared, or a forced `flare.apply_lighting` takes it back. Flares call it before
-turning a room off or setting it to a brightness or colour.
+Use this action to mark lights as changed by someone else, so FLARE leaves them alone.
+
+You don't usually need it. When something other than FLARE changes a light that FLARE is
+driving, FLARE notices on its own and leaves the light alone. It's for lights FLARE isn't
+driving yet, such as when your automation turns lights on in a dark room and you want FLARE to
+leave them as they are. Without it, the room's FLARE automation sets those lights back to the
+curve on its next update.
+
+It marks each entity whatever it's set to. A light marked this way stays overridden until its
+zone goes dark, its claims are cleared, or a forced `flare.apply_lighting` takes it back.
+Flares call it before turning a room off or setting it to a brightness or colour.
 
 ```yaml
 action: flare.claims_override
