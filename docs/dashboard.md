@@ -6,12 +6,14 @@ permalink: /dashboard/
 
 # Dashboard
 
-FLARE comes with a ready-made dashboard, which builds itself from your schedules and zones.
-Adding FLARE offers to create it: **Lighting**, in the sidebar, with a view for each schedule
-and one for your zones. A schedule or zone you add later appears without you touching it.
+FLARE comes with a ready-made dashboard, which builds itself from your schedules and zones:
+a view for each schedule and one for your zones. A schedule or zone you add later appears
+without you touching it.
 
-To add it later, or to a dashboard of your own, set the dashboard's YAML (**Edit dashboard** →
-the three-dot menu → **Raw configuration editor**) to:
+Add it from **Settings → Dashboards → Add dashboard**: pick **FLARE Lighting**, then give it a
+name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
+
+It's a dashboard whose whole YAML is:
 
 ```yaml
 strategy:

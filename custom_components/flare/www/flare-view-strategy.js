@@ -114,3 +114,13 @@ class FlareDashboardStrategy extends HTMLElement {
 }
 
 customElements.define('ll-strategy-dashboard-flare', FlareDashboardStrategy);
+
+// Lists it under Settings → Dashboards → Add dashboard.
+window.customStrategies = window.customStrategies || [];
+window.customStrategies.push({
+  type: 'flare',
+  strategyType: 'dashboard',
+  name: 'FLARE Lighting',
+  description: 'A view for each FLARE schedule, and one for your zones. Keeps up as you add more.',
+  documentationURL: 'https://danrspencer.github.io/flare/dashboard/',
+});

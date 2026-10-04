@@ -34,8 +34,6 @@ from .area_setup import (
     room_flare,
 )
 from .blueprint_check import automations_using_our_blueprint
-from .lighting_dashboard import TITLE as DASHBOARD_TITLE
-from .lighting_dashboard import async_create_dashboard, dashboard_exists
 from .const import (
     BLUEPRINT_LIGHTS_INPUT,
     CONF_AREA,
@@ -86,7 +84,6 @@ DEFAULT_SCHEDULE_NAME = "Home"
 MAX_SCHEDULES = 4
 SKIP = "skip"
 SET_UP = "set_up"
-DASHBOARD = "dashboard"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -154,24 +151,19 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Which areas to set up and, with more than one schedule, which
         schedule each follows. Every area with lights is listed; those
-        without a zone yet are picked. Offers FLARE's dashboard while there
-        isn't one."""
+        without a zone yet are picked."""
         first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES}
         schedules = self._schedule_choices()
         if not schedules:
             return self.async_abort(reason="no_schedules")
         areas = areas_with_lights(self.hass)
-        offer_dashboard = "lovelace" in self.hass.config.components and not dashboard_exists(self.hass)
-        if not areas and not first_setup and not offer_dashboard:
+        if not areas and not first_setup:
             return self.async_abort(reason="no_areas")
 
-        if user_input is None and (areas or offer_dashboard):
-            schema = _areas_schema(areas, schedules, areas_with_zones(self.hass)) if areas else vol.Schema({})
-            if offer_dashboard:
-                schema = schema.extend({vol.Optional(DASHBOARD, default=True): selector.BooleanSelector()})
+        if user_input is None and areas:
             return self.async_show_form(
                 step_id="areas",
-                data_schema=schema,
+                data_schema=_areas_schema(areas, schedules, areas_with_zones(self.hass)),
                 description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
@@ -189,13 +181,6 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="setup_failed")
 
         summary = [*created, *_counts(result)]
-        if offer_dashboard and (user_input or {}).get(DASHBOARD):
-            try:
-                await async_create_dashboard(self.hass)
-            except Exception:  # noqa: BLE001 - the rest is set up; details in the log
-                _LOGGER.exception("Could not create FLARE's dashboard")
-            else:
-                summary.append(f"a {DASHBOARD_TITLE} dashboard")
         return self.async_abort(
             reason="setup_complete" if first_setup else "areas_set_up",
             description_placeholders={"created": _join(summary) if summary else "nothing new"},

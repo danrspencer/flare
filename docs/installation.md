@@ -44,8 +44,6 @@ It asks:
   per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
 - **What to set up for each area**, and **which areas**. Every area with lights is listed and
   ticked. With more than one schedule, you pick the schedule each area follows instead.
-- **Whether to add a Lighting dashboard**: a page in the sidebar with a view for each
-  schedule and one for your zones. It's ticked. See [Dashboard]({{ site.baseurl }}/dashboard/).
 
 Each area you set up gets up to three things, named after it. All three is the default, and
 what most rooms want:
@@ -66,7 +64,13 @@ With all three, that's everything a room needs. The automation is an ordinary on
 > A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
 > off by itself.
 
-## Step 3 — use your flares (optional)
+## Step 3 — add the dashboard (optional)
+
+**Settings → Dashboards → Add dashboard**, and pick **FLARE Lighting**. It's a dashboard
+with a view for each schedule and one for your zones, and it keeps up as you add more. See
+[Dashboard]({{ site.baseurl }}/dashboard/).
+
+## Step 4 — use your flares (optional)
 
 Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, so "Hey Siri,
 turn on the kitchen" brings the kitchen up the way FLARE would. See

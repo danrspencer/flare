@@ -792,17 +792,17 @@ run again for the odd ones out. Things worth knowing:
   automatically" below: the user is choosing to set the area up, not
   updating.
 
-**The Lighting dashboard** (`lighting_dashboard.py`) is offered on the
-areas step while it doesn't exist. It is a storage dashboard whose whole
-config is `strategy: {type: custom:flare}` (`ll-strategy-dashboard-flare`,
-a view per schedule plus Zones), so it never needs rewriting. It's made
-the way HA makes its Map dashboard, through the dashboards collection,
-which HA keeps private: it's reached by unwrapping the
-`lovelace/dashboards/create` websocket handler to its bound method. A
-storage dashboard, not a panel registered at every startup, so it's the
-user's: listed, renamable, deletable. Its icon, `flare:logo`, is
-registered on `window.customIcons` by `www/flare-icon.js`, a glyph
-generated from the logo's bars by `brand/generate_icon.py`.
+**The dashboard is offered, not created.** `custom:flare`
+(`ll-strategy-dashboard-flare`, a view per schedule plus Zones) is listed
+in **Settings → Dashboards → Add dashboard** through the frontend's public
+`window.customStrategies` hook, and the setup summary links to that page;
+nothing opens the dialog itself. Setup creating the dashboard was built
+and dropped at the user's direction: HA keeps the dashboards collection
+private, and the only way in was unwrapping the
+`lovelace/dashboards/create` websocket handler to its bound method. Don't
+bring that back. The sidebar icon `flare:logo` is registered on
+`window.customIcons` by `www/flare-icon.js`, a glyph generated from the
+logo's bars by `brand/generate_icon.py`.
 
 **The flow ends on an abort, never on an entry,** because of HA's
 "integration added" dialog (`step-flow-create-entry.ts`). It shows a

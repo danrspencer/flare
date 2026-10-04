@@ -13,8 +13,6 @@ custom_components/flare/
                    logbook description, the dashboard front-end files
     area_setup.py  setting up an area: a zone, a room automation written
                    to automations.yaml, and a flare
-    lighting_dashboard.py
-                   creates the Lighting dashboard setup offers
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
     event.py, light.py
                    the entities. Home Assistant requires platform

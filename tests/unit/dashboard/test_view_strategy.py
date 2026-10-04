@@ -75,6 +75,7 @@ return {{
   dashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: input.states }}) : null,
   dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, {{ states: schedulesOnly }}) : null,
   emptyDashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: {{}} }}) : null,
+  customStrategies: globalThis.window.customStrategies,
 }};""",
         {"states": STATES, "slugCases": SLUG_CASES},
     )
@@ -410,3 +411,12 @@ def test_the_dashboard_has_no_zones_view_without_zones(result):
 
 def test_an_empty_dashboard_explains_itself(result):
     assert result["emptyDashboard"]["views"] == [{"title": "Lighting", "strategy": {"type": "custom:flare-schedule"}}]
+
+
+def test_the_dashboard_is_offered_under_add_dashboard(result):
+    """HA's Add dashboard dialog lists window.customStrategies, and adds
+    `custom:` to the type."""
+    (entry,) = [s for s in result["customStrategies"] if s["type"] == "flare"]
+    assert entry["strategyType"] == "dashboard"
+    assert entry["name"] == "FLARE Lighting"
+    assert "ll-strategy-dashboard-flare" in result["registeredAs"]
