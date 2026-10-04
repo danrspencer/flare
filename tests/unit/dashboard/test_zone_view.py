@@ -1,6 +1,6 @@
 """The Zones view's layout: totals at the top, then every zone by floor and
 area like Home Assistant's Light dashboard, with Clear where that has "All
-off"."""
+off" and the zone's two counts where that has the lights."""
 
 import pytest
 
@@ -110,14 +110,6 @@ def test_a_zone_takes_its_areas_name_unless_it_shares_the_area(view):
     assert _headings(other_zones, "subtitle") == ["Attic"]
 
 
-def test_a_zones_lights_are_its_claims_and_its_areas_lights(view):
-    """Not FLARE's own flare, nor a categorised entity."""
-    upstairs = view["sections"][2]
-    lights = [c["entity"] for c in upstairs["cards"] if c["type"] == "tile" and c["entity"].startswith("light.")]
-
-    assert lights == ["light.bed_ceiling", "light.bed_lamp", "light.landing"]
-
-
 def test_clear_sits_where_the_light_dashboard_has_all_off(view):
     """A tile on wide screens; a button on the heading on narrow ones."""
     upstairs = view["sections"][2]
@@ -132,19 +124,15 @@ def test_clear_sits_where_the_light_dashboard_has_all_off(view):
     assert heading["badges"][0]["visibility"] == [{"condition": "view_columns", "max": 1}]
 
 
-def test_lights_line_up_beside_clear_on_wide_screens(view):
-    """A blank before every third light, as the Light dashboard does."""
+def test_a_zones_row_is_clear_then_its_two_counts(view):
     downstairs = view["sections"][1]
     start = next(i for i, c in enumerate(downstairs["cards"]) if c.get("heading") == "Kitchen Main")
     row = [c.get("entity") or c["type"] for c in downstairs["cards"][start + 1 :]]
 
     assert row == [
         "button.kitchen_main_flare_clear",
-        "light.k1",
-        "light.k2",
-        "light.k3",
-        "vertical-stack",
-        "light.k4",
+        "sensor.kitchen_main_flare_controlled",
+        "sensor.kitchen_main_flare_overridden",
         "markdown",
     ]
 

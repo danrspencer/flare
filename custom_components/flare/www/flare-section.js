@@ -285,36 +285,15 @@ export function zoneArea(hass, { slug }) {
 }
 
 /**
- * A zone's lights: those it holds a claim on, and those in its area, so a
- * dark room (which has released its claims) still shows its lights.
- * FLARE's own flares and categorised entities are left out.
- */
-export function zoneLightIds(hass, { slug }, area) {
-  const states = (hass && hass.states) || {};
-  const entities = (hass && hass.entities) || {};
-  const devices = (hass && hass.devices) || {};
-  const ids = new Set(Object.keys(states[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.attributes?.claims || {}));
-  if (area) {
-    for (const entry of Object.values(entities)) {
-      if (!entry.entity_id.startsWith('light.')) continue;
-      if ((entry.area_id || devices[entry.device_id]?.area_id) === area.area_id) ids.add(entry.entity_id);
-    }
-  }
-  const name = (id) => states[id]?.attributes?.friendly_name || id;
-  return [...ids]
-    .filter((id) => entities[id]?.platform !== 'flare' && !entities[id]?.entity_category)
-    .sort((a, b) => name(a).localeCompare(name(b)));
-}
-
-/**
  * One zone's row, laid out like Home Assistant's Light dashboard: a heading
  * (linking to the zone's device page), then on wide screens Clear where the
- * Light dashboard has "All off", with the lights beside it, and on narrow
- * ones Clear as a button on the heading. The overridden lights are named
- * underneath while there are any.
+ * Light dashboard has "All off", with the zone's two counts beside it, and on
+ * narrow ones Clear as a button on the heading. The overridden lights are
+ * named underneath while there are any.
  */
-export function zoneCards(hass, zone, title, lights) {
+export function zoneCards(hass, zone, title) {
   const { slug } = zone;
+  const controlled = `sensor.${slug}_flare_controlled`;
   const clear = `button.${slug}_flare_clear`;
   const overridden = `sensor.${slug}_flare_overridden`;
   const device = ((hass && hass.entities) || {})[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id;
@@ -339,14 +318,10 @@ export function zoneCards(hass, zone, title, lights) {
       grid_options: { columns: 6, rows: 1 },
     },
   ];
-  lights.forEach((entity, index) => {
-    // A blank before every third light keeps them in line under the first
-    // on wide screens, as the Light dashboard does.
-    if (index && index % 3 === 0) {
-      cards.push({ type: 'vertical-stack', cards: [], visibility: [LARGE_SCREEN], grid_options: { columns: 6, rows: 1 } });
-    }
-    cards.push({ type: 'tile', entity });
-  });
+  cards.push(
+    { type: 'tile', entity: controlled, name: 'Controlled', grid_options: { columns: 6, rows: 1 } },
+    { type: 'tile', entity: overridden, name: 'Overridden', grid_options: { columns: 6, rows: 1 } }
+  );
   cards.push({
     type: 'markdown',
     text_only: true,
@@ -398,7 +373,7 @@ export function zoneSections(hass, zones) {
       .sort((a, b) => a.area.name.localeCompare(b.area.name))
       .flatMap(({ area, zones: inArea }) =>
         inArea.flatMap((zone) =>
-          zoneCards(hass, zone, inArea.length === 1 ? area.name : zone.title, zoneLightIds(hass, zone, area))
+          zoneCards(hass, zone, inArea.length === 1 ? area.name : zone.title)
         )
       );
   const section = (heading, icon, cards) => ({
@@ -421,7 +396,7 @@ export function zoneSections(hass, zones) {
       section(
         'Other zones',
         null,
-        unplaced.sort((a, b) => a.title.localeCompare(b.title)).flatMap((zone) => zoneCards(hass, zone, zone.title, zoneLightIds(hass, zone, null)))
+        unplaced.sort((a, b) => a.title.localeCompare(b.title)).flatMap((zone) => zoneCards(hass, zone, zone.title))
       )
     );
   }

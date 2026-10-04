@@ -1840,12 +1840,13 @@ caught.
 - **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
   the user's screenshot): a section per floor (`column_span: 2`, by level),
   a subtitle heading per zone, and on wide screens a 6-column Clear tile
-  where that has "All off", with a blank `vertical-stack` before every
-  third light so the tiles line up; on narrow screens Clear is a button
-  badge on the heading (the `view_columns` conditions are HA's own). A
-  zone's area is its device's, else the area named after it; it takes the
-  area's name unless two zones share the area. Its lights are its claims
-  plus its area's lights, so a dark room still shows them. The totals at
+  where that has "All off", with the zone's Controlled and Overridden
+  tiles where that has the lights (the user's screenshot was for layout
+  only: lights there were a misreading, built and removed); on narrow
+  screens Clear is a button badge on the heading (the `view_columns`
+  conditions are HA's own). A zone's area is its device's, else the area
+  named after it; it takes the area's name unless two zones share the
+  area. The totals at
   the top are a markdown template summing the zones' counts, at the
   user's direction: a stacked statistics graph was tried and dropped as
   ugly, and so were total sensors.

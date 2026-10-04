@@ -39,7 +39,8 @@ views:
   schedule sensor.
 - **Zones** — how many lights FLARE is driving across the house and how many something
   else has taken over, then each zone by floor and area, laid out like Home Assistant's
-  Lights dashboard: its lights, a Clear button to hand them back, and which are overridden.
+  Lights dashboard: its controlled and overridden counts, a Clear button to hand its lights
+  back, and which are overridden.
   A zone's name opens its device page.
   Beside them, **Activity** is the last 24 hours of the zones' own Activity: when a zone took
   lights, let one go because something else changed it, or took one back, and Clear presses.

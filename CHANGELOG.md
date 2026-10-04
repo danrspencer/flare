@@ -79,7 +79,7 @@ CI — see `.github/workflows/release.yml`.
   `flare:logo`, for its sidebar entry.
 - **A redesigned Zones view.** The house's totals at the top, then each zone by floor and
   area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
-  off", and an Activity feed beside them like the Security dashboard's: the last 24 hours
+  off" and the zone's counts where that has lights, and an Activity feed beside them like the Security dashboard's: the last 24 hours
   of every zone's Activity.
 - **A zone's Activity says what it's doing.** `flare_lights_controlled` ("Kitchen is now
   setting 6 lights") fires when a zone takes lights, once per room coming on rather than
