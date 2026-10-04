@@ -77,9 +77,10 @@ CI — see `.github/workflows/release.yml`.
   dashboard**: a view for each schedule and one for your zones, which keeps up as you add
   more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
   `flare:logo`, for its sidebar entry.
-- **An Activity feed on the Zones view**, like Home Assistant's Security dashboard: the
-  last 24 hours of every zone's Activity. Beside it, every zone's controlled and overridden
-  lights over the last day, stacked so the top edge is the house's total.
+- **A redesigned Zones view.** The house's totals at the top, then each zone by floor and
+  area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
+  off", and an Activity feed beside them like the Security dashboard's: the last 24 hours
+  of every zone's Activity.
 - **A zone's Activity says what it's doing.** `flare_lights_controlled` ("Kitchen is now
   setting 6 lights") fires when a zone takes lights, once per room coming on rather than
   per bulb, and `flare_light_reclaimed` when an overridden light is FLARE's again. Both, and

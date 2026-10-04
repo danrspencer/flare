@@ -1837,11 +1837,18 @@ caught.
   claims lights too, and announced it read "now setting 0 lights". A
   light coming back from unavailable isn't taken either, or every room
   announced itself after a restart.
-- **Each zone's counts are graphed stacked**, two `statistics-graph`
-  cards (`chart_type: line-stack`), in a 2-column section first in the
-  view, beside the sidebar. The top edge is the house total; the stock
-  cards can't sum any other way, and a total sensor was built and dropped
-  for it. Statistics, so 5-minute resolution.
+- **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
+  the user's screenshot): a section per floor (`column_span: 2`, by level),
+  a subtitle heading per zone, and on wide screens a 6-column Clear tile
+  where that has "All off", with a blank `vertical-stack` before every
+  third light so the tiles line up; on narrow screens Clear is a button
+  badge on the heading (the `view_columns` conditions are HA's own). A
+  zone's area is its device's, else the area named after it; it takes the
+  area's name unless two zones share the area. Its lights are its claims
+  plus its area's lights, so a dark room still shows them. The totals at
+  the top are a markdown template summing the zones' counts, at the
+  user's direction: a stacked statistics graph was tried and dropped as
+  ugly, and so were total sensors.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

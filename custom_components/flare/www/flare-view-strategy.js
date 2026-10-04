@@ -17,7 +17,8 @@ import {
   sectionConfig,
   scheduleSensors,
   normaliseSlug,
-  zoneSectionConfig,
+  zoneSections,
+  zoneTotalsSection,
   listZones,
   zoneDevices,
 } from './flare-section.js';
@@ -66,8 +67,8 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * The zone view: one section per zone, with its counts, its
- * overridden lights and the Clear button, and an Activity sidebar: the
+ * The zone view: the totals, then every zone laid out by floor and area
+ * like Home Assistant's Light dashboard, and an Activity sidebar: the
  * zones' devices' logbook, so it matches each zone's own Activity, as HA's
  * Security dashboard does it.
  *
@@ -76,36 +77,6 @@ customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrate
  *       strategy:
  *         type: custom:flare-zone
  */
-// Every zone's controlled and overridden counts, stacked so the top edge is
-// the house's total, two columns wide so it sits beside the Activity sidebar.
-// Statistics, so 5-minute resolution; the stock cards can't sum otherwise.
-const stacked = (title, sensors) => ({
-  type: 'statistics-graph',
-  title,
-  entities: sensors,
-  chart_type: 'line-stack',
-  period: '5minute',
-  days_to_show: 1,
-  stat_types: ['mean'],
-  hide_legend: true,
-  grid_options: { columns: 'full' },
-});
-
-const totalsSection = (zones) =>
-  zones.length
-    ? [
-        {
-          type: 'grid',
-          column_span: 2,
-          cards: [
-            { type: 'heading', heading: 'Lights', heading_style: 'title', icon: 'mdi:chart-line' },
-            stacked('Controlled', zones.map(({ slug }) => `sensor.${slug}_flare_controlled`)),
-            stacked('Overridden', zones.map(({ slug }) => `sensor.${slug}_flare_overridden`)),
-          ],
-        },
-      ]
-    : [];
-
 class FlareZoneViewStrategy extends HTMLElement {
   static async generate(config, hass) {
     const zones = listZones(hass);
@@ -118,10 +89,7 @@ class FlareZoneViewStrategy extends HTMLElement {
       );
     }
 
-    const zoneView = view([
-      ...totalsSection(zones),
-      ...zones.map(({ slug, title }) => zoneSectionConfig(slug, title)),
-    ]);
+    const zoneView = { type: 'sections', max_columns: 2, sections: [zoneTotalsSection(zones), ...zoneSections(hass, zones)] };
     const devices = zoneDevices(hass, zones);
     const hasLogbook = (hass.config?.components || []).includes('logbook');
     if (!hasLogbook || !devices.length) return zoneView;
