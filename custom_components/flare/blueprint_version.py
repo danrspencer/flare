@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 
 # Written by scripts/release.py, along with the blueprint's stamp.
-BLUEPRINT_VERSION = "0.16.0"
+BLUEPRINT_VERSION = "1.0.0-beta.10"
 
 # Loose about what follows the number, so the sentence can be reworded.
 _VERSION_IN_DESCRIPTION = re.compile(
