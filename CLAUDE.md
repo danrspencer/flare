@@ -348,13 +348,13 @@ models - are the exception: entry-wide plumbing, not schedule settings.)
     testing a just-pushed change against a live instance.
 
 13. **`ha_import_blueprint` derives the installed path from the GitHub
-    URL's *owner* and *file name*, not from the folder holding it**
-    (`<owner>/<file>`, `importer.py`). So the shipped blueprint is
-    `custom_components/flare/blueprints/flare.yaml`, and a direct import
-    of it lands on `danrspencer/flare.yaml`, the repair's install path:
-    a file of a different name means an import lands at a second path
-    beside the one in use (`overrides_existing: false` is the tell), the
-    same class of collision as lesson 6. An unused copy
+    URL's *owner* and *file name*** (`<owner>/<file>`, `importer.py`),
+    never the path a house already uses. So importing by URL lands at a
+    second path beside the one in use (`overrides_existing: false` is
+    the tell), the same class of collision as lesson 6. FLARE installs
+    to `flare/flare.yaml`, which no URL import can produce; write to it
+    with `ha_manage_blueprints(action="save", path=..., overwrite=True)`
+    instead. An unused copy
     at an old path is harmless (not domain-scanned, unlike lesson 9's
     `.bak-*`); repoint `use_blueprint.path` rather than editing
     `blueprints/`, which is read-only through every file tool.
@@ -1468,10 +1468,9 @@ raising, so a house moving between the two states leaves nothing behind.
 - **`IssueSeverity` has no INFO level** - WARNING is the floor, which is
   why the wording carries the "the blueprint is optional" line rather
   than the severity carrying it.
-- **The install path is `danrspencer/flare.yaml`** (`INSTALL_PATH`), the
-  path HA derives from a GitHub import of the shipped file, so anyone
-  importing by URL by hand overwrites it rather than collecting two
-  copies. See lesson 13.
+- **The install path is `flare/flare.yaml`** (`INSTALL_PATH`), at the
+  user's direction - it was `danrspencer/flare.yaml`, the path a GitHub
+  import derives, back when importing by URL was a supported route.
 - **The quickstart's import badge is gone**, replaced by this repair -
   at the user's direction. Don't reintroduce it: it went through
   `my.home-assistant.io` to a `main` raw URL, which is lessons 12 and 13
@@ -1585,10 +1584,11 @@ caught.
      is immutable (lesson 12's reasoning) and skips branch resolution.
   3. Confirm with `ha_read_file` that the deployed files match that
      commit before restarting, then restart.
-  4. If the blueprint changed: `ha_import_blueprint` of
-     `custom_components/flare/blueprints/flare.yaml` pinned to the same
-     SHA, with `overwrite=true` (lesson 13 - it installs under
-     `danrspencer/`). The repair can't tell, since the stamps agree. **To get back onto a release**,
+  4. If the blueprint changed: `ha_manage_blueprints(action="save",
+     path="flare/flare.yaml", overwrite=True)` with
+     `custom_components/flare/blueprints/flare.yaml` at that SHA (not
+     `ha_import_blueprint`, which would land under `danrspencer/` -
+     lesson 13). The repair can't tell, since the stamps agree. **To get back onto a release**,
   download `version` = the release tag. **Not yet exercised against
   this integration:** it is read from HACS's source, not seen working.
   The first time it is used, check the result and HACS's log; if HACS

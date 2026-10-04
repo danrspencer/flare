@@ -314,9 +314,8 @@ The release commit's message records its `Source:` commit.
 Shipped code has no special handling for a development build, on purpose. Two things follow:
 after a dev install the browser can serve cached card code until you hard-refresh, because
 the front-end URL carries the placeholder version and is cached hard; and the blueprint's
-stamp in source is whatever it last held, so a changed blueprint raises no repair. Import it
-directly from the commit you installed (its GitHub URL lands on the same path as the repair's
-install).
+stamp in source is whatever it last held, so a changed blueprint raises no repair. Copy the
+changed file over your installed `blueprints/automation/flare/flare.yaml` yourself.
 
 ### Two channels
 

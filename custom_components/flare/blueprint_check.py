@@ -27,9 +27,8 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_ID = "outdated_blueprint"
 MISSING_ISSUE_ID = "blueprint_not_installed"
 
-# HA derives an import's path from the GitHub URL's owner and file name,
-# so importing the shipped file by URL lands here too.
-INSTALL_PATH = "danrspencer/flare.yaml"
+# Under blueprints/automation/.
+INSTALL_PATH = "flare/flare.yaml"
 
 # The blueprint this release ships, installed and updated from here.
 SHIPPED_BLUEPRINT = Path(__file__).parent / "blueprints" / "flare.yaml"
@@ -37,6 +36,7 @@ SHIPPED_BLUEPRINT = Path(__file__).parent / "blueprints" / "flare.yaml"
 QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
 _OUR_NAME = "FLARE"
+# Copies imported from GitHub before it shipped with FLARE carry this.
 _OUR_REPO = "danrspencer/flare"
 
 
@@ -44,7 +44,7 @@ _OUR_REPO = "danrspencer/flare"
 class InstalledBlueprint:
     """One copy of our blueprint that some automation is using."""
 
-    path: str  # as Home Assistant knows it, e.g. "danrspencer/flare.yaml"
+    path: str  # as Home Assistant knows it, e.g. "flare/flare.yaml"
     version: str | None  # None for anything released before the stamp existed
     automations: int
 

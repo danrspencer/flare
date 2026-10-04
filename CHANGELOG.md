@@ -33,6 +33,8 @@ CI — see `.github/workflows/release.yml`.
   the integration's own files instead of downloading it from GitHub, so they work offline
   and always install the blueprint that matches your FLARE. It now lives at
   `custom_components/flare/blueprints/flare.yaml`; the repo's `blueprints/` folder is gone.
+  A fresh install puts it at `blueprints/automation/flare/flare.yaml`; a copy already
+  installed elsewhere keeps working and is updated where it is.
 - **`brightness_multipliers` is now `brightness_levels`** on `flare.apply_lighting` and
   `flare.compute_lighting_groups`. Each light's value is the brightness it's set to, 0–255,
   rather than a multiple of `brightness`, the same way the blueprint's Brightness Template
