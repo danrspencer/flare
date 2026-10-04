@@ -143,7 +143,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 self._fire_overridden(entity_id, record, previous, live_context_id)
             elif status == "controlled" and previous == "overridden":
                 self.hass.bus.async_fire(EVENT_LIGHT_RECLAIMED, {"entity_id": entity_id, **self._zone_data()})
-            elif status == "controlled" and previous != "controlled":
+            # A light coming back from unavailable (every light, after a
+            # restart) was already the zone's.
+            elif status == "controlled" and previous not in ("controlled", "unavailable"):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses

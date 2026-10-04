@@ -318,6 +318,26 @@ async def test_lights_a_zone_takes_are_announced_together(hass: HomeAssistant):
     ], "once, and not again for lights it already had"
 
 
+async def test_a_light_coming_back_online_is_not_announced_as_taken(hass: HomeAssistant):
+    """As every light does after a restart: it was already the zone's."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    events: list = []
+    hass.bus.async_listen("flare_lights_controlled", events.append)
+    _light(hass, "light.a", area_id=area.id)
+    await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
+    hass.states.async_set("light.a", "unavailable", {}, context=Context())
+    tracker._refresh_statuses()  # seeds: unavailable
+
+    hass.states.async_set("light.a", "on", ASKED, context=Context())
+    tracker._refresh_statuses()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=CONTROLLED_GATHER_SECONDS + 1))
+    await hass.async_block_till_done()
+
+    assert events == []
+
+
 async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssistant):
     """Absent, not null."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
