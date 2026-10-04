@@ -692,6 +692,20 @@ first-write baseline), reads `overridden`. HA saves restore state every
 15 minutes and at shutdown, so a crash loses up to 15 minutes of claims,
 which fail open.
 
+**A lost command reads as an override too**, seen live on 2026-10-04
+(`light.dining_room_7`). After a restart the first tick sends to every
+light in a room at once; one bulb never acted on its turn-on, and when it
+reconnected as `off` it matched neither claim (both "on at 255"), so it
+read `overridden` and was never sent again. Nothing had touched it: its
+only state changes since FLARE's write were reconnects. `classify()`
+compares live values with the claims, never *how* the light got there, so
+it can't tell this from a hand switch-off. A fix would only count a state
+change that came after FLARE's write and wasn't a reconnect, leaving a
+light that ignored a command as FLARE's so the next tick resends it.
+Parked at the user's direction: it needed three restarts in fifteen
+minutes to provoke, which ordinary use doesn't do, and it changes
+override protection, which wants its own careful PR.
+
 **Testing it needs a real entity add.** The other harnesses attach the
 claims sensor with a capturing `async_add_entities`, so
 `async_added_to_hass` never runs and nothing is ever saved or restored.
