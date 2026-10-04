@@ -40,6 +40,28 @@ STATES = {
 }
 
 
+# A house for the Activity feed: the Bedroom zone holds a claim on one
+# light; two more are in the Bedroom area, one directly and one through its
+# device; the Bedroom's flare and a light elsewhere aren't the zone's.
+ACTIVITY = {
+    "states": {
+        "sensor.bedroom_flare_claims": {
+            "attributes": {"claims": {"light.claimed": {}}, "friendly_name": "Bedroom Claims"}
+        },
+    },
+    "areas": {"bedroom": {"area_id": "bedroom", "name": "Bedroom"}, "garage": {"area_id": "garage", "name": "Garage"}},
+    "devices": {"lamp_device": {"area_id": "bedroom"}},
+    "entities": {
+        "light.ceiling": {"entity_id": "light.ceiling", "area_id": "bedroom"},
+        "light.lamp": {"entity_id": "light.lamp", "device_id": "lamp_device"},
+        "light.bedroom_flare": {"entity_id": "light.bedroom_flare", "area_id": "bedroom", "platform": "flare"},
+        "light.garage": {"entity_id": "light.garage", "area_id": "garage"},
+        "sensor.bedroom_temperature": {"entity_id": "sensor.bedroom_temperature", "area_id": "bedroom"},
+    },
+    "config": {"components": ["logbook"]},
+}
+
+
 # What might go in `sensor:`, including values that mean "no filter".
 SLUG_CASES = ["upstairs", "sensor.upstairs_flare", "  upstairs  ", "", "   ", None, 7]
 
@@ -51,7 +73,7 @@ def result():
 // Record registrations, which the shim otherwise drops.
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones }} = await import({js_path(WWW / "flare-section.js")});
+const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones, zoneLights }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
 const Zone = defined['ll-strategy-view-flare-zone'];
@@ -76,8 +98,11 @@ return {{
   dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, {{ states: schedulesOnly }}) : null,
   emptyDashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: {{}} }}) : null,
   customStrategies: globalThis.window.customStrategies,
+  zoneLights: zoneLights(input.activity),
+  activityView: Zone ? await Zone.generate({{}}, input.activity) : null,
+  noLogbookView: Zone ? await Zone.generate({{}}, {{ ...input.activity, config: {{ components: [] }} }}) : null,
 }};""",
-        {"states": STATES, "slugCases": SLUG_CASES},
+        {"states": STATES, "slugCases": SLUG_CASES, "activity": ACTIVITY},
     )
 
 
@@ -420,3 +445,25 @@ def test_the_dashboard_is_offered_under_add_dashboard(result):
     assert entry["strategyType"] == "dashboard"
     assert entry["name"] == "FLARE Lighting"
     assert "ll-strategy-dashboard-flare" in result["registeredAs"]
+
+
+# --- Activity --------------------------------------------------------------
+
+
+def test_a_zones_lights_are_its_claims_and_its_areas_lights(result):
+    assert result["zoneLights"] == ["light.ceiling", "light.claimed", "light.lamp"]
+
+
+def test_the_zone_view_has_an_activity_feed_of_those_lights(result):
+    sidebar = result["activityView"]["sidebar"]
+    heading, logbook = sidebar["sections"][0]["cards"]
+
+    assert heading["heading"] == "Activity"
+    assert logbook["type"] == "logbook"
+    assert logbook["target"] == {"entity_id": ["light.ceiling", "light.claimed", "light.lamp"]}
+    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Zones", "Activity")
+
+
+def test_no_activity_feed_without_the_logbook(result):
+    assert "sidebar" not in result["noLogbookView"]
+    assert "sidebar" not in result["zone"], "nor without any lights"

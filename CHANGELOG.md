@@ -70,6 +70,8 @@ CI — see `.github/workflows/release.yml`.
   dashboard**: a view for each schedule and one for your zones, which keeps up as you add
   more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
   `flare:logo`, for its sidebar entry.
+- **An Activity feed on the Zones view**, like Home Assistant's Security dashboard: the
+  last 24 hours of the zones' lights turning on and off, and FLARE letting them go.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.

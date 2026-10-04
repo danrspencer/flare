@@ -39,6 +39,9 @@ views:
   schedule sensor.
 - **Zones** — which lights FLARE is driving, which ones something else has taken
   over, and a Clear button to hand them back.
+  Beside them, **Activity** is the last 24 hours of the zones' lights: each one turning on or
+  off, what turned it, and when FLARE let one go because something else changed it. On a
+  narrow screen it's a tab.
 
 There's nothing to fill in: both views find their own entities, and a schedule sensor or zone
 you add later appears without you touching the dashboard again.

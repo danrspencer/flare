@@ -1801,6 +1801,13 @@ caught.
   put every zone in the schedule view. Both enumerators also require a
   distinguishing attribute (`points` / `claims`) so a name alone is
   never enough.
+- **The Zones view has an Activity sidebar**, copied from HA's Security
+  dashboard (`security-view-strategy.ts`): a `logbook` card in the
+  sections view's `sidebar`. Its lights are `zoneLights()`: each zone's
+  claims plus the lights in the area named after it, because a dark room
+  has released its claims and would otherwise drop out of its own
+  history. The logbook only records on/off (and our
+  `flare_light_overridden` description), never brightness changes.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the
