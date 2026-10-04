@@ -57,7 +57,7 @@ You can add more schedules and zones later, from **Schedules** and **Zones** und
 ## Step 3 — install the blueprint and create an automation
 
 FLARE will spot that its blueprint isn't installed and offer it in
-**Settings → System → Repairs**. Press **Fix** and it downloads it.
+**Settings → System → Repairs**. Press **Fix** and it installs it.
 
 Create an automation from it and fill in three things:
 

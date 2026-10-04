@@ -178,8 +178,7 @@ STAMP_PY = 'import re\n\nBLUEPRINT_VERSION = "0.0.0-dev"\n\nOTHER = "0.0.0-dev"\
 
 
 def write_tree(root: Path, *, blueprint: str = BLUEPRINT_A, changelog: str = "") -> None:
-    (root / "custom_components" / "flare").mkdir(parents=True, exist_ok=True)
-    (root / "blueprints" / "automation" / "danrspencer").mkdir(parents=True, exist_ok=True)
+    (root / release.BLUEPRINT).parent.mkdir(parents=True, exist_ok=True)
     (root / release.MANIFEST).write_text(MANIFEST_JSON)
     (root / release.BLUEPRINT_VERSION_PY).write_text(STAMP_PY)
     (root / release.BLUEPRINT).write_text(bp(blueprint, "0.0.0-dev"))

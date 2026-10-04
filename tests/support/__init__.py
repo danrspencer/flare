@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPONENT = REPO_ROOT / "custom_components" / "flare"
 WWW = COMPONENT / "www"
 BLUEPRINT_PATH = "danrspencer/flare.yaml"
-BLUEPRINT_FILE = REPO_ROOT / "blueprints" / "automation" / BLUEPRINT_PATH
+BLUEPRINT_FILE = COMPONENT / "blueprints" / "flare.yaml"
 
 
 class _BlueprintLoader(yaml.SafeLoader):

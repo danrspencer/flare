@@ -1,22 +1,26 @@
 """Functional tests run against a real Home Assistant instance, via
 pytest-homeassistant-custom-component."""
 
+import shutil
+
 import pytest
 from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import mock_component
 
-from tests.support import REPO_ROOT
+from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH, REPO_ROOT
 
 
 @pytest.fixture
 def hass_config_dir(tmp_path) -> str:
-    """A throwaway config dir with this repo's custom_components/ and
-    blueprints/ symlinked in, so HA loads the real source while everything
-    it writes lands in tmp_path."""
+    """A throwaway config dir with this repo's custom_components/ symlinked
+    in and the blueprint installed as a copy, so HA loads the real source
+    while everything it writes lands in tmp_path."""
     (tmp_path / "custom_components").symlink_to(REPO_ROOT / "custom_components")
-    (tmp_path / "blueprints").symlink_to(REPO_ROOT / "blueprints")
+    installed = tmp_path / "blueprints" / "automation" / BLUEPRINT_PATH
+    installed.parent.mkdir(parents=True)
+    shutil.copy(BLUEPRINT_FILE, installed)
     return str(tmp_path)
 
 

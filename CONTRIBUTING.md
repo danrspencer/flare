@@ -50,6 +50,11 @@ custom_components/flare/
                          default for whatever it doesn't cover)
         two_step.py      which bulb models need two-step transitions
 
+    blueprints/flare.yaml
+                   the automation blueprint: triggers, conditions, target
+                   resolution, and the action sequence (which service to
+                   call, with what target). Ships with the integration;
+                   the blueprint repairs install and update it from here
     manifest.json, services.yaml, strings.json, translations/
                    standard HA integration/HACS scaffolding (services.yaml
                    has to sit at this level)
@@ -84,10 +89,6 @@ brand/
                       icon.svg plus the PNGs HA serves from
                       custom_components/flare/brand/. Rerun it after
                       changing the curve defaults
-
-blueprints/automation/danrspencer/flare.yaml
-    The automation blueprint: triggers, conditions, target resolution,
-    and the action sequence (which service to call, with what target).
 
 tests/
     unit/        no running Home Assistant: the pure modules, the
@@ -264,11 +265,10 @@ passes, cuts `vX.Y.Z-beta.N` as a GitHub pre-release. **`X.Y.Z` is whatever the 
 `## [x.y.z]` heading of `CHANGELOG.md` says** - that heading is the one place anyone
 says what version is being worked toward, and it is already required, so write it
 before the first change that should ship. Breaking changes bump the **minor** while
-below 1.0, and say so in the section, because this ships in two halves (integration
-and blueprint) that deploy separately.
+below 1.0, and say so in the section.
 
 A push cuts nothing, and stays green, when the top heading is a version that has already
-been released, or when nothing under `custom_components/` or `blueprints/` changed since
+been released, or when nothing under `custom_components/` changed since
 the last beta. So docs, test and CI changes can go to `main` freely; a change that should
 ship but forgot its heading is the thing to watch for. A heading *below* an existing
 beta fails the run - that would reach testers as a downgrade.
@@ -313,10 +313,10 @@ The release commit's message records its `Source:` commit.
 
 Shipped code has no special handling for a development build, on purpose. Two things follow:
 after a dev install the browser can serve cached card code until you hard-refresh, because
-the front-end URL carries the placeholder version and is cached hard; and the blueprint repair
-stays quiet only if you import the blueprint from the same commit as the integration, so
-that their stamps agree. Update the blueprint with a direct import rather than the repair's
-Fix button.
+the front-end URL carries the placeholder version and is cached hard; and the blueprint's
+stamp in source is whatever it last held, so a changed blueprint raises no repair. Import it
+directly from the commit you installed (its GitHub URL lands on the same path as the repair's
+install).
 
 ### Two channels
 

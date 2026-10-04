@@ -348,11 +348,13 @@ models - are the exception: entry-wide plumbing, not schedule settings.)
     testing a just-pushed change against a live instance.
 
 13. **`ha_import_blueprint` derives the installed path from the GitHub
-    repo *owner* in the URL, not from the repo's blueprint folder.** So
-    the repo's folder is `blueprints/automation/danrspencer/`, matching
-    the owner: a folder of a different name means an import lands at a
-    second path beside the one in use (`overrides_existing: false` is
-    the tell), the same class of collision as lesson 6. An unused copy
+    URL's *owner* and *file name*, not from the folder holding it**
+    (`<owner>/<file>`, `importer.py`). So the shipped blueprint is
+    `custom_components/flare/blueprints/flare.yaml`, and a direct import
+    of it lands on `danrspencer/flare.yaml`, the repair's install path:
+    a file of a different name means an import lands at a second path
+    beside the one in use (`overrides_existing: false` is the tell), the
+    same class of collision as lesson 6. An unused copy
     at an old path is harmless (not domain-scanned, unlike lesson 9's
     `.bak-*`); repoint `use_blueprint.path` rather than editing
     `blueprints/`, which is read-only through every file tool.
@@ -954,7 +956,17 @@ facts:
 deliberately at the user's direction. RGB is just the Kelvin→RGB
 conversion of `kelvin`; there is no separate RGB curve.
 
-### Blueprint (`blueprints/automation/danrspencer/flare.yaml`)
+### Blueprint (`custom_components/flare/blueprints/flare.yaml`)
+
+**The blueprint ships inside the integration**, and both repairs install
+it from there. It used to live at the repo root and the repairs
+downloaded it from the release's GitHub tag; that was only ever because
+the blueprint once had its own version. Once it was versioned with FLARE
+(see "Blueprint version checking"), the file HACS had just installed was
+the one being downloaded. HA itself never loads it: only built-in
+integrations get their blueprints auto-installed. It has no
+`source_url`, so HA's "Re-import" (which would fetch `main`, lesson 12)
+isn't offered; the repair is how it updates.
 
 **Every `condition:` (leaf and composite - `and`/`or`/`not`/`trigger`/
 `template`/`occupancy.is_detected`) and every `choose:` branch carries
@@ -1424,12 +1436,11 @@ it.
 **The repair code deliberately knows nothing about dev builds.** It was
 briefly taught to stand down on a placeholder version, and that was
 removed at the user's direction: shipped code should not special-case a
-development workflow. A dev install stays quiet because the blueprint is
-imported from the same commit as the integration, so the constant and
-the stamp agree. A blueprint is updated there with a direct
-`ha_import_blueprint`, never the repair's Fix button - on a dev install
-that would fetch whatever tag the stale constant names and quietly
-replace the blueprint under test with a released one.
+development workflow. On a dev install the constant and the stamp both
+hold whatever they last held, so they agree and the repair stays quiet
+even when the blueprint changed - it is updated there with a direct
+`ha_import_blueprint`. Fix is safe there too: it installs the file
+shipped beside the integration under test.
 
 **The stamp lives in the blueprint's `description`** because there is
 nowhere else. `blueprint/schemas.py` validates the `blueprint:` block
@@ -1458,8 +1469,9 @@ raising, so a house moving between the two states leaves nothing behind.
   why the wording carries the "the blueprint is optional" line rather
   than the severity carrying it.
 - **The install path is `danrspencer/flare.yaml`** (`INSTALL_PATH`), the
-  path HA derives from a GitHub import, so anyone importing by URL by
-  hand overwrites it rather than collecting two copies. See lesson 13.
+  path HA derives from a GitHub import of the shipped file, so anyone
+  importing by URL by hand overwrites it rather than collecting two
+  copies. See lesson 13.
 - **The quickstart's import badge is gone**, replaced by this repair -
   at the user's direction. Don't reintroduce it: it went through
   `my.home-assistant.io` to a `main` raw URL, which is lessons 12 and 13
@@ -1473,9 +1485,8 @@ raising, so a house moving between the two states leaves nothing behind.
   blueprint, and lesson 13's owner-vs-folder mismatch means a house can
   hold an orphan at a second path forever - a repair about a file
   nothing reads is noise the user can't silence.
-- **The fix fetches a commit-pinned tag**, not `main` (lesson 12), and
-  writes to whatever path the stale copy was found at rather than the
-  path HA would derive. `async_add_blueprint(..., allow_override=True)`
+- **The fix writes the shipped file** to whatever path the stale copy
+  was found at, rather than the path HA would derive. `async_add_blueprint(..., allow_override=True)`
   reloads the consuming automations itself.
 - **The check runs via `async_at_started`, not during setup** -
   automations decide whether a blueprint is in use, and during setup
@@ -1485,19 +1496,17 @@ raising, so a house moving between the two states leaves nothing behind.
 - A blueprint that fails to load comes back from
   `async_get_blueprints()` as the **exception**, not a `Blueprint` -
   hence the `isinstance` check, not a `None` check.
-- **The stamp is the release's own version**, so the Fix button
-  downloads from this very tag. `scripts/release.py` writes it, so it is
-  right by construction; `release.yml` checks it for a tag pushed by
-  hand (constant and description must both equal the tag), because a
-  stamp left at an earlier value would make Fix fetch the wrong
-  blueprint, or a URL that does not exist, silently.
+- **The stamp is the release's own version.** `scripts/release.py`
+  writes it, so it is right by construction; `release.yml` checks it
+  for a tag pushed by hand (constant and description must both equal
+  the tag), because a constant and stamp that disagree would raise the
+  outdated repair on every install, with a Fix that can never clear it.
 
-**`tests/functional/component/test_blueprint_version_repair.py` overrides
-`hass_config_dir` to COPY `blueprints/` instead of symlinking it.** The
-shared fixture symlinks the real directory, so a test writing blueprint
-files writes them into the actual repo - which happened while this was
-being written, and four junk blueprints were staged before it was
-caught. Don't "simplify" it back to the shared fixture.
+**The functional tests install the blueprint as a COPY**
+(`tests/functional/conftest.py`), never a symlink: tests write
+blueprint files, and a symlink writes them into the actual repo - which
+happened once, and four junk blueprints were staged before it was
+caught.
 
 ### Deployment / operational notes
 
@@ -1576,12 +1585,10 @@ caught. Don't "simplify" it back to the shared fixture.
      is immutable (lesson 12's reasoning) and skips branch resolution.
   3. Confirm with `ha_read_file` that the deployed files match that
      commit before restarting, then restart.
-  4. The blueprint is separate: `ha_import_blueprint` pinned to the same
+  4. If the blueprint changed: `ha_import_blueprint` of
+     `custom_components/flare/blueprints/flare.yaml` pinned to the same
      SHA, with `overwrite=true` (lesson 13 - it installs under
-     `danrspencer/`).
-  Import the blueprint from the same commit as the integration and the
-  blueprint repair stays quiet, since both then carry the same stamp.
-  Never press the repair's Fix button on a dev build. **To get back onto a release**,
+     `danrspencer/`). The repair can't tell, since the stamps agree. **To get back onto a release**,
   download `version` = the release tag. **Not yet exercised against
   this integration:** it is read from HACS's source, not seen working.
   The first time it is used, check the result and HACS's log; if HACS
@@ -1590,12 +1597,8 @@ caught. Don't "simplify" it back to the shared fixture.
   HACS. `update_information` then `download`, confirm the deployed file
   matches the merge with `ha_read_file` before restarting (see lesson
   12), then restart.
-- **Blueprint**: `ha_import_blueprint` with `overwrite=true`, pinned to
-  a commit SHA rather than a branch (lesson 12). It installs under
-  `danrspencer/` (lesson 13).
-- The two halves deploy separately, so a brief window where a restarted
-  integration meets a not-yet-reimported blueprint is expected and
-  self-resolves.
+- **Blueprint**: ships with the integration; a release raises the
+  outdated repair, and its Fix installs it.
 - **The dashboard front-end files ship inside the integration**
   (`custom_components/flare/www/`) and self-register
   via `async_setup` → `async_register_static_paths` +
@@ -1806,8 +1809,8 @@ Shared helpers live in `tests/support/` and each functional directory's
   asserts on the bulbs' final state. The day is pinned (sunset 18:00,
   clock from 19:00), and a phase change means moving the clock.
 - `tests/functional/conftest.py` overrides the plugin's `hass_config_dir`
-  to symlink this repo's `custom_components/` and `blueprints/` into a
-  throwaway `tmp_path`.
+  to symlink this repo's `custom_components/` into a throwaway
+  `tmp_path`, and copies the blueprint into its `blueprints/`.
 
 **Practices this repo relies on, worth keeping:**
 

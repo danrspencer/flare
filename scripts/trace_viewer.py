@@ -62,7 +62,7 @@ from urllib.parse import urlsplit
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-BLUEPRINT_PATH = REPO_ROOT / "blueprints" / "automation" / "danrspencer" / "flare.yaml"
+BLUEPRINT_PATH = REPO_ROOT / "custom_components" / "flare" / "blueprints" / "flare.yaml"
 TRACE_DIR = REPO_ROOT / "trace-dumps"
 HTML_PATH = Path(__file__).resolve().parent / "trace_viewer.html"
 

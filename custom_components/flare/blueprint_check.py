@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from homeassistant.components.automation import automations_with_blueprint
 from homeassistant.components.automation.helpers import async_get_blueprints
 from homeassistant.components.blueprint.models import Blueprint
+from homeassistant.components.blueprint.schemas import BLUEPRINT_SCHEMA
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.util import yaml as yaml_util
 
 from .blueprint_version import BLUEPRINT_VERSION, is_outdated, version_from_description
 from .const import DOMAIN
@@ -24,17 +27,14 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_ID = "outdated_blueprint"
 MISSING_ISSUE_ID = "blueprint_not_installed"
 
-# HA derives the install path from the GitHub URL's owner (`danrspencer`),
-# so a hand import by URL overwrites this file rather than duplicating it.
+# HA derives an import's path from the GitHub URL's owner and file name,
+# so importing the shipped file by URL lands here too.
 INSTALL_PATH = "danrspencer/flare.yaml"
 
-QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
+# The blueprint this release ships, installed and updated from here.
+SHIPPED_BLUEPRINT = Path(__file__).parent / "blueprints" / "flare.yaml"
 
-# A tag, not `main`: a branch raw URL can be served stale after a push.
-BLUEPRINT_URL = (
-    "https://github.com/danrspencer/flare/blob/v{version}"
-    "/blueprints/automation/danrspencer/flare.yaml"
-)
+QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
 _OUR_NAME = "FLARE"
 _OUR_REPO = "danrspencer/flare"
@@ -142,20 +142,16 @@ async def async_check(hass: HomeAssistant) -> None:
     )
 
 
-async def _fetch(hass: HomeAssistant):
-    """The shipped blueprint, from this release's tag."""
-    from homeassistant.components.blueprint.importer import fetch_blueprint_from_url
-
-    return await fetch_blueprint_from_url(
-        hass, BLUEPRINT_URL.format(version=BLUEPRINT_VERSION)
-    )
+async def _shipped(hass: HomeAssistant) -> Blueprint:
+    """The blueprint packaged with this release."""
+    data = await hass.async_add_executor_job(yaml_util.load_yaml_dict, SHIPPED_BLUEPRINT)
+    return Blueprint(data, expected_domain="automation", schema=BLUEPRINT_SCHEMA)
 
 
 async def async_install_blueprint(hass: HomeAssistant) -> str:
     """Install the blueprint for a house that has none. Never overwrites."""
-    imported = await _fetch(hass)
     await async_get_blueprints(hass).async_add_blueprint(
-        imported.blueprint, INSTALL_PATH, allow_override=False
+        await _shipped(hass), INSTALL_PATH, allow_override=False
     )
     return INSTALL_PATH
 
@@ -166,13 +162,13 @@ async def async_update_blueprints(hass: HomeAssistant) -> list[str]:
     if not outdated:
         return []
 
-    imported = await _fetch(hass)
+    shipped = await _shipped(hass)
     domain_blueprints = async_get_blueprints(hass)
 
     updated = []
     for stale in outdated:
         await domain_blueprints.async_add_blueprint(
-            imported.blueprint, stale.path, allow_override=True
+            shipped, stale.path, allow_override=True
         )
         updated.append(stale.path)
     return updated
