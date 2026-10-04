@@ -76,3 +76,22 @@ async def test_events_recorded_before_1_0_still_read(hass: HomeAssistant):
 
     assert overridden == {"name": "Kitchen", "message": "released Kitchen 1 to something else", "entity_id": "light.k1"}
     assert controlled == {"name": "Kitchen", "message": "now controlling 1 light"}
+
+
+async def test_an_rgb_request_is_compared_with_the_lights_rgb(hass: HomeAssistant):
+    """Not with its colour temperature, which a bulb reports alongside."""
+    describe = _describers(hass)
+
+    overridden = describe["flare_light_overridden"](
+        Event(
+            "flare_light_overridden",
+            {
+                "light": "light.k1",
+                "zone": "Study",
+                "live": {"brightness": 180, "color_temp_kelvin": 2702, "rgb_color": [255, 167, 88]},
+                "latest": {"target": {"brightness": 180, "rgb_color": [255, 184, 123]}},
+            },
+        )
+    )
+
+    assert overridden["message"].endswith("(last asked for 180/[255, 184, 123], found 180/[255, 167, 88])")

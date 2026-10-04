@@ -46,10 +46,12 @@ def async_describe_events(
         live = data.get("live") or {}
         latest = data.get("latest") or {}
         target = latest.get("target") or {}
-        # What was asked for against what is actually there.
+        # What was asked for against what is actually there, in the same
+        # terms: RGB against RGB, colour temperature against colour temperature.
         if target.get("brightness") is not None:
-            asked = f"{target.get('brightness')}/{target.get('color_temp_kelvin') or target.get('rgb_color')}"
-            found = f"{live.get('brightness')}/{live.get('color_temp_kelvin') or live.get('rgb_color')}"
+            colour = "rgb_color" if target.get("rgb_color") is not None else "color_temp_kelvin"
+            asked = f"{target.get('brightness')}/{target.get(colour)}"
+            found = f"{live.get('brightness')}/{live.get(colour)}"
             detail = f" (last asked for {asked}, found {found})"
         else:
             detail = ""
