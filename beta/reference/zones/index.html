@@ -1,0 +1,594 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(3)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(6) > ul > li:nth-child(3) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(6) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(6) > ul > li:nth-child(3) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(6) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(6) > ul.nav-list > li.nav-list-item:nth-child(3) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>Zones | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Zones" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/reference/zones/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/reference/zones/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="Zones" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"Zones","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/reference/zones/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/zones/" class="nav-list-link">Zones</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/reference/">Reference</a></li>
+    <li class="breadcrumb-nav-list-item"><span>Zones</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="zones">
+  
+  
+    <a href="#zones" class="anchor-heading" aria-labelledby="zones"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Zones
+  
+  
+</h1>
+    
+
+<p>A zone records which lights FLARE has set, usually for one room. FLARE uses it to tell its own
+changes from anyone else’s, so it can leave alone a light you’ve changed yourself. Zones are
+under <strong>Settings → Devices &amp; Services → FLARE → Zones</strong>.</p>
+
+<details open="">
+  <summary class="text-delta">On this page</summary>
+<ol id="markdown-toc">
+  <li><a href="#a-zones-entities" id="markdown-toc-a-zones-entities">A zone’s entities</a></li>
+  <li><a href="#override-protection" id="markdown-toc-override-protection">Override protection</a>    <ol>
+      <li><a href="#the-two-claims" id="markdown-toc-the-two-claims">The two claims</a></li>
+      <li><a href="#turning-a-light-off-counts" id="markdown-toc-turning-a-light-off-counts">Turning a light off counts</a></li>
+      <li><a href="#when-flare-sets-a-light-again" id="markdown-toc-when-flare-sets-a-light-again">When FLARE sets a light again</a></li>
+      <li><a href="#one-zone-per-light" id="markdown-toc-one-zone-per-light">One zone per light</a></li>
+    </ol>
+  </li>
+  <li><a href="#the-hand-over-event" id="markdown-toc-the-hand-over-event">The hand-over event</a></li>
+  <li><a href="#inspecting-tracked-state" id="markdown-toc-inspecting-tracked-state">Inspecting tracked state</a></li>
+  <li><a href="#when-zones-tick" id="markdown-toc-when-zones-tick">When zones tick</a></li>
+</ol>
+
+</details>
+<h2 id="a-zones-entities">
+  
+  
+    <a href="#a-zones-entities" class="anchor-heading" aria-labelledby="a-zones-entities"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> A zone’s entities
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Entity</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sensor.&lt;name&gt;_flare_claims</code></td>
+      <td>Where FLARE stores the zone’s claims. The state is the number of lights tracked; the <code class="language-plaintext highlighter-rouge">claims</code> attribute has each light’s claims. Don’t disable it: without it the zone can’t record anything.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sensor.&lt;name&gt;_flare_controlled</code></td>
+      <td>The number of the zone’s lights FLARE is setting. For information only.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sensor.&lt;name&gt;_flare_overridden</code></td>
+      <td>The number of the zone’s lights something else has changed. For information only.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">button.&lt;name&gt;_flare_clear</code></td>
+      <td>Discards every claim in the zone.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code></td>
+      <td>Fires once per update interval. See <a href="#when-zones-tick">when zones tick</a>.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>The two counts are recorded in history, with long-term statistics, but the <code class="language-plaintext highlighter-rouge">claims</code> attribute
+isn’t. A light that’s unavailable or has no claim isn’t included in either count.</p>
+
+<p><strong>Clear</strong> discards every claim in the zone, not only for the overridden lights. FLARE then sets
+all of the zone’s lights again on their next update.</p>
+<h2 id="override-protection">
+  
+  
+    <a href="#override-protection" class="anchor-heading" aria-labelledby="override-protection"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Override protection
+  
+  
+</h2>
+    
+
+<p>When <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> or <code class="language-plaintext highlighter-rouge">flare.turn_off</code> changes a light, it records a <strong>claim</strong> on the
+light in the zone the call names. On the next update, FLARE compares the light with its claim.
+If the light still shows what FLARE set, FLARE carries on setting it. If it doesn’t, something
+else has changed it, and FLARE leaves it alone.</p>
+
+<p>The blueprint passes its <strong>Zone</strong> input with every call. If you call the services yourself,
+pass the zone as <code class="language-plaintext highlighter-rouge">zone_device_id</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.apply_lighting</span>
+<span class="na">data</span><span class="pi">:</span>
+  <span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
+  <span class="na">brightness</span><span class="pi">:</span> <span class="m">200</span>
+  <span class="na">color_temp_kelvin</span><span class="pi">:</span> <span class="m">3200</span>
+  <span class="na">transition</span><span class="pi">:</span> <span class="m">2</span>
+  <span class="na">zone_device_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">device_id('sensor.kitchen_flare_claims')</span><span class="nv"> </span><span class="s">}}"</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Without <code class="language-plaintext highlighter-rouge">zone_device_id</code>, <code class="language-plaintext highlighter-rouge">apply_lighting</code>, <code class="language-plaintext highlighter-rouge">turn_off</code> and <code class="language-plaintext highlighter-rouge">compute_lighting_groups</code> set the
+lights but record nothing, and don’t leave any light alone.</li>
+  <li><code class="language-plaintext highlighter-rouge">claims_check</code>, <code class="language-plaintext highlighter-rouge">claims_record</code>, <code class="language-plaintext highlighter-rouge">claims_clear</code> and <code class="language-plaintext highlighter-rouge">claims_override</code> require
+<code class="language-plaintext highlighter-rouge">zone_device_id</code>.</li>
+  <li>A <code class="language-plaintext highlighter-rouge">zone_device_id</code> that isn’t one of your zones is an error.</li>
+  <li>Calls naming the same zone share its claims. To keep two automations’ lights separate, give
+them different zones.</li>
+  <li><code class="language-plaintext highlighter-rouge">force: true</code> sets lights even if something else has changed them, and records the claim.</li>
+  <li>A light FLARE has no claim on is free for FLARE to set, so a change your own automation makes
+to one isn’t left alone unless you mark it with
+<a href="../services/#flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>.</li>
+</ul>
+<h3 id="the-two-claims">
+  
+  
+    <a href="#the-two-claims" class="anchor-heading" aria-labelledby="the-two-claims"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The two claims
+  
+  
+</h3>
+    
+
+<p>Each tracked light has two claims:</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">latest</code></strong>: the last change FLARE sent to the light.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">observed</code></strong>: a change FLARE has seen the light report. On its next update, if the light
+reports <code class="language-plaintext highlighter-rouge">latest</code>’s context, FLARE promotes <code class="language-plaintext highlighter-rouge">latest</code> to <code class="language-plaintext highlighter-rouge">observed</code>.</li>
+</ul>
+
+<p>A light matching either claim is FLARE’s. So a change that never reaches the light, such as a
+dropped Zigbee command, doesn’t make FLARE treat the light as changed by someone else; the light
+still matches <code class="language-plaintext highlighter-rouge">observed</code>.</p>
+
+<p>A light matches a claim if it reports the context of that claim’s change, or the values in it.
+Values are needed because Home Assistant drops a change’s context after five seconds, and some
+bulbs take longer than that to report back.</p>
+
+<p>Claims are kept across a restart. After a restart every light has a new context, so restored
+claims are matched by values only: a light still showing what FLARE set is FLARE’s, and any
+other light is left alone.</p>
+<h3 id="turning-a-light-off-counts">
+  
+  
+    <a href="#turning-a-light-off-counts" class="anchor-heading" aria-labelledby="turning-a-light-off-counts"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Turning a light off counts
+  
+  
+</h3>
+    
+
+<p>Turning a light off yourself counts as changing it, so FLARE doesn’t turn it back on. FLARE’s own
+turn-offs record a claim of <code class="language-plaintext highlighter-rouge">{"state": "off"}</code>, which is how FLARE tells them apart from yours.</p>
+<h3 id="when-flare-sets-a-light-again">
+  
+  
+    <a href="#when-flare-sets-a-light-again" class="anchor-heading" aria-labelledby="when-flare-sets-a-light-again"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> When FLARE sets a light again
+  
+  
+</h3>
+    
+
+<p><strong>A zone discards all its claims when none of its lights are on.</strong> This is what normally ends an
+override: once the room is dark, FLARE sets every light in it again.</p>
+
+<ul>
+  <li>A light that isn’t in the zone doesn’t count.</li>
+  <li>A light that’s unavailable counts as off, so one dead bulb can’t keep the zone’s claims.</li>
+</ul>
+
+<p>A light also loses its claim when it goes unavailable, and you can discard a zone’s claims by
+hand with its <strong>Clear</strong> button.</p>
+
+<p>A light that has just come back online, say switched on at the wall, starts at whatever it
+powers up as, and may miss a command sent while it boots. That isn’t counted as someone
+changing it: FLARE sends it again until it takes. Something changing it afterwards is.</p>
+<h3 id="one-zone-per-light">
+  
+  
+    <a href="#one-zone-per-light" class="anchor-heading" aria-labelledby="one-zone-per-light"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> One zone per light
+  
+  
+</h3>
+    
+
+<p>If two zones set the same light, each treats the other’s changes as someone else’s, and the light
+stops following either. When this happens, FLARE shows a notification naming the light and the
+zones. It shows this once for each light, and doesn’t show it again for that light until Home
+Assistant restarts.</p>
+<h2 id="the-hand-over-event">
+  
+  
+    <a href="#the-hand-over-event" class="anchor-heading" aria-labelledby="the-hand-over-event"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The hand-over event
+  
+  
+</h2>
+    
+
+<p>When something else takes over a tracked light, FLARE fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">entity_id</span><span class="pi">:</span> <span class="s">light.kitchen_1</span>
+<span class="na">zone</span><span class="pi">:</span> <span class="s">Kitchen</span>                        <span class="c1"># the zone that lost the light</span>
+<span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>                        <span class="c1"># the zone's device</span>
+<span class="na">previous_status</span><span class="pi">:</span> <span class="s">controlled</span>
+<span class="na">live_context_id</span><span class="pi">:</span> <span class="s">01M11...</span>
+<span class="na">live</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">state</span><span class="pi">:</span> <span class="nv">on</span><span class="pi">,</span> <span class="nv">brightness</span><span class="pi">:</span> <span class="nv">12</span><span class="pi">,</span> <span class="nv">color_temp_kelvin</span><span class="pi">:</span> <span class="nv">6500</span><span class="pi">,</span> <span class="nv">rgb_color</span><span class="pi">:</span> <span class="nv">null</span> <span class="pi">}</span>
+<span class="na">observed</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">context_id</span><span class="pi">:</span> <span class="nv">...</span><span class="pi">,</span> <span class="nv">target</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">...</span><span class="pi">},</span> <span class="nv">recorded_at</span><span class="pi">:</span> <span class="nv">...</span> <span class="pi">}</span>
+<span class="na">latest</span><span class="pi">:</span>   <span class="pi">{</span> <span class="nv">context_id</span><span class="pi">:</span> <span class="nv">...</span><span class="pi">,</span> <span class="nv">target</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">...</span><span class="pi">},</span> <span class="nv">recorded_at</span><span class="pi">:</span> <span class="nv">...</span> <span class="pi">}</span>
+</code></pre></div></div>
+
+<p>It fires once when the light changes hands, not again while the light stays overridden, and not
+for lights that were already overridden before a restart. It also appears in the light’s
+logbook:</p>
+
+<blockquote>
+  <p><strong>Kitchen</strong> released this light to something else (last asked for 255/6667, found 12/6500)</p>
+</blockquote>
+
+<p>To trigger an automation on it:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">triggers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event</span>
+    <span class="na">event_type</span><span class="pi">:</span> <span class="s">flare_light_overridden</span>
+</code></pre></div></div>
+<h2 id="inspecting-tracked-state">
+  
+  
+    <a href="#inspecting-tracked-state" class="anchor-heading" aria-labelledby="inspecting-tracked-state"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Inspecting tracked state
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">flare.claims_check</code> returns each light’s status:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code></td>
+      <td>FLARE is setting it: it matches one of its claims.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+      <td>It matches neither claim, so something else has changed it.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">untracked</code></td>
+      <td>It’s on, and has no claim, or only one FLARE hasn’t seen the light report yet. FLARE sets it as usual.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">off</code></td>
+      <td>It’s off and has no claim. A light FLARE turned off is <code class="language-plaintext highlighter-rouge">controlled</code>; one someone else turned off is <code class="language-plaintext highlighter-rouge">overridden</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">unavailable</code></td>
+      <td>Home Assistant can’t reach it, so its claims aren’t checked. It isn’t blocked.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p><code class="language-plaintext highlighter-rouge">matched_via</code> says which claim matched, and how: <code class="language-plaintext highlighter-rouge">latest-context</code>, <code class="language-plaintext highlighter-rouge">latest-value</code>,
+<code class="language-plaintext highlighter-rouge">observed-context</code> or <code class="language-plaintext highlighter-rouge">observed-value</code>.</p>
+
+<p>Each claim has a <code class="language-plaintext highlighter-rouge">recorded_at</code> time and a <code class="language-plaintext highlighter-rouge">context_id</code>, which you can use to find the change in
+Home Assistant’s logbook. Claims that haven’t changed for a day are discarded, so a light
+deleted from Home Assistant stops being tracked.</p>
+<h2 id="when-zones-tick">
+  
+  
+    <a href="#when-zones-tick" class="anchor-heading" aria-labelledby="when-zones-tick"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> When zones tick
+  
+  
+</h2>
+    
+
+<p>Each zone’s <code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code> fires an event of type <code class="language-plaintext highlighter-rouge">flare_tick</code> once per update
+interval. Zones fire one after another, in name order, a gap apart, so rooms don’t all send
+commands at the same time. You can set the interval and the gap under <strong>FLARE → Zones →
+Configure</strong>:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Update interval</td>
+      <td>1 minute</td>
+      <td>How often each zone ticks, from 1 to 60 minutes.</td>
+    </tr>
+    <tr>
+      <td>Gap between zones</td>
+      <td>1 second</td>
+      <td>Reduced automatically when the zones wouldn’t otherwise fit in the interval.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>To run an automation on a zone’s tick:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">triggers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event.received</span>
+    <span class="na">target</span><span class="pi">:</span>
+      <span class="na">entity_id</span><span class="pi">:</span> <span class="s">event.kitchen_flare_tick</span>
+    <span class="na">options</span><span class="pi">:</span>
+      <span class="na">event_type</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">flare_tick</span><span class="pi">]</span>
+</code></pre></div></div>
+
+<p>The blueprint targets the zone’s device instead of the entity. Home Assistant leaves hidden
+entities out when it expands a device, so if you hide the Tick entity, the blueprint stops
+receiving it.</p>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+</body>
+</html>
+

@@ -1,0 +1,109 @@
+{
+  "test": "tests/functional/behaviour/test_flare_setup.py::test_a_plain_automation_is_a_flare_over_the_lights_picked_for_it",
+  "outcome": "passed",
+  "traces": [
+    {
+      "last_step": "action/0",
+      "run_id": "80550e56de472d1bc4b153bcb2b1e387",
+      "state": "stopped",
+      "script_execution": "finished",
+      "timestamp": {
+        "start": "2026-10-06T02:00:02+00:00",
+        "finish": "2026-10-06T02:00:02+00:00"
+      },
+      "domain": "automation",
+      "item_id": "porch",
+      "trigger": null,
+      "trace": {
+        "trigger": [
+          {
+            "path": "trigger",
+            "timestamp": "2026-10-06T02:00:02+00:00",
+            "changed_variables": {
+              "this": {
+                "entity_id": "automation.porch",
+                "state": "on",
+                "attributes": {
+                  "id": "porch",
+                  "last_triggered": null,
+                  "mode": "single",
+                  "current": 0,
+                  "friendly_name": "porch"
+                },
+                "last_changed": "2026-10-06T02:00:02+00:00",
+                "last_reported": "2026-10-06T02:00:02+00:00",
+                "last_updated": "2026-10-06T02:00:02+00:00",
+                "context": {
+                  "id": "01M47F0X6GVF398FKW4SV4YN20",
+                  "parent_id": null,
+                  "user_id": null
+                }
+              },
+              "trigger": {
+                "platform": null
+              }
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-06T02:00:02+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M45KDSCD2AGWADQ21Z93GTT4",
+                "parent_id": "01M45KDSCCS6DC9RFV5BNSD5PB",
+                "user_id": null
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "light",
+                "service": "turn_on",
+                "service_data": {
+                  "brightness": 99,
+                  "entity_id": [
+                    "light.porch_1",
+                    "light.porch_2"
+                  ]
+                },
+                "target": {
+                  "entity_id": [
+                    "light.porch_1",
+                    "light.porch_2"
+                  ]
+                }
+              },
+              "running_script": false
+            }
+          }
+        ]
+      },
+      "config": {
+        "id": "porch",
+        "alias": "porch",
+        "triggers": [],
+        "actions": [
+          {
+            "action": "light.turn_on",
+            "target": {
+              "entity_id": [
+                "light.porch_1",
+                "light.porch_2"
+              ]
+            },
+            "data": {
+              "brightness": 99
+            }
+          }
+        ]
+      },
+      "blueprint_inputs": null,
+      "context": {
+        "id": "01M45KDSCD2AGWADQ21Z93GTT4",
+        "parent_id": "01M45KDSCCS6DC9RFV5BNSD5PB",
+        "user_id": null
+      }
+    }
+  ]
+}

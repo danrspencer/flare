@@ -1,0 +1,663 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(1)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(6) > ul > li:nth-child(1) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(6) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(6) > ul > li:nth-child(1) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(6) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(6) > ul.nav-list > li.nav-list-item:nth-child(1) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>Blueprint | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Blueprint" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/reference/blueprint/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/reference/blueprint/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="Blueprint" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"Blueprint","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/reference/blueprint/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/zones/" class="nav-list-link">Zones</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/reference/">Reference</a></li>
+    <li class="breadcrumb-nav-list-item"><span>Blueprint</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="blueprint">
+  
+  
+    <a href="#blueprint" class="anchor-heading" aria-labelledby="blueprint"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Blueprint
+  
+  
+</h1>
+    
+
+<p>The blueprint is the automation each room runs. This page covers every input and how a room
+behaves.</p>
+
+<details open="">
+  <summary class="text-delta">On this page</summary>
+<ul id="markdown-toc">
+  <li><a href="#room" id="markdown-toc-room">Room</a></li>
+  <li><a href="#colour" id="markdown-toc-colour">Colour</a></li>
+  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
+  <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
+  <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
+  <li><a href="#timing" id="markdown-toc-timing">Timing</a></li>
+  <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
+  <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
+      <li><a href="#when-the-room-updates" id="markdown-toc-when-the-room-updates">When the room updates</a></li>
+      <li><a href="#when-lights-turn-on-and-off" id="markdown-toc-when-lights-turn-on-and-off">When lights turn on and off</a></li>
+      <li><a href="#why-didnt-my-light-change" id="markdown-toc-why-didnt-my-light-change">Why didn’t my light change?</a></li>
+    </ul>
+  </li>
+  <li><a href="#updating-the-blueprint" id="markdown-toc-updating-the-blueprint">Updating the blueprint</a></li>
+</ul>
+
+</details>
+<h2 id="room">
+  
+  
+    <a href="#room" class="anchor-heading" aria-labelledby="room"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Room
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Schedule</strong></td>
+      <td>required</td>
+      <td>The FLARE schedule the room follows.</td>
+    </tr>
+    <tr>
+      <td><strong>Zone</strong></td>
+      <td>required</td>
+      <td>The FLARE zone the room belongs to.</td>
+    </tr>
+    <tr>
+      <td><strong>Lights &amp; Occupancy</strong></td>
+      <td>required</td>
+      <td>The room’s lights, and the occupancy and motion sensors that turn them on and off.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p><strong>Lights &amp; Occupancy</strong> takes an area, a floor, a device, a label, or individual entities. An
+area includes lights and sensors added to it later.</p>
+
+<p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
+other binary sensors in the target are ignored. A room can mix both kinds.</p>
+
+<p>A room with no sensor follows the schedule but never turns its lights on or off.</p>
+
+<p>If a room has two automations, for example one for a lamp and one for the ceiling light, give
+both the same <strong>Zone</strong>.</p>
+<h2 id="colour">
+  
+  
+    <a href="#colour" class="anchor-heading" aria-labelledby="colour"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Colour
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Prefer RGB During</strong></td>
+      <td>Evening, Night</td>
+      <td>Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
+leaves Morning and Day on colour temperature.</p>
+<h2 id="scenes">
+  
+  
+    <a href="#scenes" class="anchor-heading" aria-labelledby="scenes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scenes
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Morning / Day / Evening / Night Scene</strong></td>
+      <td>none</td>
+      <td>A scene the room uses instead of the schedule during that phase.</td>
+    </tr>
+    <tr>
+      <td><strong>Scene Template</strong></td>
+      <td>none</td>
+      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. Overrides the per-phase scenes when it returns a scene that exists.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
+the schedule. When a scene is used, any light in the room that the scene doesn’t set still
+follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
+<h2 id="brightness">
+  
+  
+    <a href="#brightness" class="anchor-heading" aria-labelledby="brightness"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Brightness
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Lights Off During Morning / Day / Evening / Night</strong></td>
+      <td>none</td>
+      <td>Lights to turn off during that phase.</td>
+    </tr>
+    <tr>
+      <td><strong>Brightness Template</strong></td>
+      <td>none</td>
+      <td>A template returning a mapping of entity ID to brightness. Overrides the lists above for the lights it includes.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Brightness Template values:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Value</th>
+      <th>Effect</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">1</code>–<code class="language-plaintext highlighter-rouge">255</code></td>
+      <td>Sets the light to this brightness, on the same scale as the phase brightnesses.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">0</code></td>
+      <td>Turns the light off.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">null</code></td>
+      <td>FLARE leaves the light alone, including when the room empties.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>A single number instead of a mapping applies to every light in the room, and any light the
+template doesn’t include follows the schedule. See <a href="../../guides/templates/#brightness-template">Templates</a>.</p>
+<h2 id="idle-brightness">
+  
+  
+    <a href="#idle-brightness" class="anchor-heading" aria-labelledby="idle-brightness"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Idle brightness
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Morning / Day / Evening / Night Idle Brightness</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">0</code></td>
+      <td>The brightness, 0–255, the room’s lights dim to when it empties during that phase. <code class="language-plaintext highlighter-rouge">0</code> turns them off.</td>
+    </tr>
+    <tr>
+      <td><strong>Idle Brightness Template</strong></td>
+      <td>none</td>
+      <td>Like Brightness Template, for when the room is empty. Overrides the settings above for the lights it includes.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>For a nightlight whenever it’s dark outside, leave the four settings at <code class="language-plaintext highlighter-rouge">0</code> and set the template
+to:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="nv">10 if is_state('sun.sun'</span><span class="pi">,</span> <span class="s1">'</span><span class="s">below_horizon'</span><span class="nv">) else</span> <span class="pi">{}</span> <span class="pi">}}</span>
+</code></pre></div></div>
+
+<p>An idle brightness is the only way the room’s lights come on while it’s empty. See
+<a href="../../guides/templates/#idle-brightness-template">Templates</a> for one lamp as the nightlight,
+and other variations.</p>
+<h2 id="timing">
+  
+  
+    <a href="#timing" class="anchor-heading" aria-labelledby="timing"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Timing
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Wait time</strong></td>
+      <td>120s</td>
+      <td>How long every sensor must be clear before the room is empty.</td>
+    </tr>
+    <tr>
+      <td><strong>Motion On Transition</strong></td>
+      <td>1s</td>
+      <td>Transition when someone comes in, or when you run the automation by hand.</td>
+    </tr>
+    <tr>
+      <td><strong>Motion Off Transition</strong></td>
+      <td>15s</td>
+      <td>Transition when the room empties.</td>
+    </tr>
+    <tr>
+      <td><strong>Background Transition</strong></td>
+      <td>5s</td>
+      <td>Transition for every other update.</td>
+    </tr>
+  </tbody>
+</table></div>
+<h2 id="additional-triggers">
+  
+  
+    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Additional Triggers</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
+while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
+on from something else, see
+<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+<h2 id="how-a-room-behaves">
+  
+  
+    <a href="#how-a-room-behaves" class="anchor-heading" aria-labelledby="how-a-room-behaves"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> How a room behaves
+  
+  
+</h2>
+    
+<h3 id="when-the-room-updates">
+  
+  
+    <a href="#when-the-room-updates" class="anchor-heading" aria-labelledby="when-the-room-updates"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> When the room updates
+  
+  
+</h3>
+    
+
+<p>A room updates straight away when the phase changes, a sensor detects someone, an Additional
+Trigger changes, or one of its lights comes back online. Between those, it updates on its zone’s
+<a href="../zones/#when-zones-tick">tick</a>, which is every minute by default.</p>
+
+<p>The automation finds the tick through the zone’s device. Home Assistant leaves hidden entities
+out of a device, so hiding a zone’s Tick entity stops the room updating.</p>
+<h3 id="when-lights-turn-on-and-off">
+  
+  
+    <a href="#when-lights-turn-on-and-off" class="anchor-heading" aria-labelledby="when-lights-turn-on-and-off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> When lights turn on and off
+  
+  
+</h3>
+    
+
+<p>Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
+been clear for the <strong>Wait time</strong>.</p>
+
+<p>While every light in <strong>Lights &amp; Occupancy</strong> is off, the only things that turn any of them on are
+a sensor detecting someone, running the automation by hand, and
+<a href="#idle-brightness">idle brightness</a>. Once at least one light is on, any update can turn on the
+others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
+online stays off if the rest of the room is off.</p>
+
+<p>If a light is still on after the room has been empty for the <strong>Wait time</strong>, the turn-off is sent
+again.</p>
+
+<p>Running the automation by hand sets every light in the room, including ones someone else has
+changed.</p>
+<h3 id="why-didnt-my-light-change">
+  
+  
+    <a href="#why-didnt-my-light-change" class="anchor-heading" aria-labelledby="why-didnt-my-light-change"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Why didn’t my light change?
+  
+  
+</h3>
+    
+
+<ul>
+  <li><strong>Someone else changed it.</strong> A light changed from a wall switch, an app, a voice assistant or
+another automation, including being turned off, is left alone until every light in the room is
+off. See <a href="../zones/#override-protection">override protection</a>.</li>
+  <li><strong>The room is empty and the light was off.</strong> See
+<a href="#when-lights-turn-on-and-off">when lights turn on and off</a>.</li>
+  <li><strong>It’s already close enough.</strong> Changes smaller than 5% of the brightness or 5 mireds of colour
+temperature aren’t sent. You can change both limits under <strong>FLARE → Zones → Configure</strong>.</li>
+  <li><strong>It’s unavailable.</strong> FLARE sets it once it comes back online.</li>
+  <li><strong>A scene has it</strong>, or <strong>Brightness Template</strong> returns <code class="language-plaintext highlighter-rouge">null</code> for it.</li>
+  <li><strong>It’s at its idle brightness.</strong> See <a href="#idle-brightness">idle brightness</a>.</li>
+</ul>
+<h2 id="updating-the-blueprint">
+  
+  
+    <a href="#updating-the-blueprint" class="anchor-heading" aria-labelledby="updating-the-blueprint"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Updating the blueprint
+  
+  
+</h2>
+    
+
+<p>When a FLARE update includes a new blueprint, a repair appears under <strong>Settings → System →
+Repairs</strong>. Press <strong>Fix</strong> to install it; your automations keep their settings. If you’ve edited
+your own copy, ignore the repair, because installing replaces the file.</p>
+
+<p>The <a href="../../trace-report/">test trace reports</a> show runs of the blueprint from its tests, with
+each step matched to the line of the blueprint it comes from.</p>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+</body>
+</html>
+
