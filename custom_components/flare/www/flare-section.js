@@ -307,13 +307,22 @@ export function zoneCards(hass, zone, title) {
         { type: 'button', icon: 'mdi:backup-restore', text: 'Clear', tap_action: pressClear(clear), visibility: [SMALL_SCREEN] },
       ],
     },
-    // A third of the row on its own, like "All off".
-    { type: 'custom:flare-clear-card', entity: clear, visibility: [LARGE_SCREEN], grid_options: { columns: 4, rows: 1 } },
+    { type: 'custom:flare-clear-card', entity: clear, visibility: [LARGE_SCREEN], grid_options: { columns: 3, rows: 1 } },
   ];
-  cards.push(
-    { type: 'tile', entity: controlled, name: 'Controlled', grid_options: { columns: 4, rows: 1 } },
-    { type: 'tile', entity: overridden, name: 'Overridden', grid_options: { columns: 4, rows: 1 } }
-  );
+  // The counts share one card, so they stay beside Clear: a tile is never
+  // narrower than half a 12-column section.
+  const counts = (columns, visibility) => ({
+    type: 'grid',
+    columns: 2,
+    square: false,
+    cards: [
+      { type: 'tile', entity: controlled, name: 'Controlled' },
+      { type: 'tile', entity: overridden, name: 'Overridden' },
+    ],
+    grid_options: { columns },
+    visibility: [visibility],
+  });
+  cards.push(counts(9, LARGE_SCREEN), counts('full', SMALL_SCREEN));
   cards.push({
     type: 'markdown',
     text_only: true,

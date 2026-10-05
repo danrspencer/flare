@@ -20,7 +20,7 @@ class FlareClearCard extends HTMLElement {
   }
 
   getGridOptions() {
-    return { columns: 4, rows: 1 };
+    return { columns: 3, rows: 1 };
   }
 
   _press() {

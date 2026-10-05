@@ -1845,10 +1845,13 @@ caught.
   sensor with a fixed-word state.
 - **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
   the user's screenshot): a section per floor (`column_span: 2`, by level),
-  a subtitle heading per zone, and on wide screens Clear in the left third
+  a subtitle heading per zone, and on wide screens Clear on the left
   where that has "All off", with the zone's Controlled and Overridden
   tiles beside it where that has the lights (the screenshot was for layout
-  only: lights there were a misreading, built and removed). Clear is
+  only: lights there were a misreading, built and removed). The two tiles
+  share one `grid` card: the sidebar takes one of `max_columns: 2`, so a
+  zone section is always 12 columns, and a tile's `min_columns` is 6, so
+  loose tiles wrapped under Clear (HA's view has 24 columns to work with). Clear is
   FLARE's own `custom:flare-clear-card` (`www/flare-clear-card.js`), drawn
   like the "All off" `toggle-group` card: no card around it, a round icon
   and a label. A tile was tried and looked like one more tile in the grid;

@@ -120,22 +120,27 @@ def test_clear_sits_where_the_light_dashboard_has_all_off(view):
 
     assert clear["type"] == "custom:flare-clear-card"
     assert clear["visibility"] == [{"condition": "view_columns", "min": 2}]
-    assert clear["grid_options"] == {"columns": 4, "rows": 1}
+    assert clear["grid_options"] == {"columns": 3, "rows": 1}
     assert heading["badges"][0]["tap_action"] == press
     assert heading["badges"][0]["visibility"] == [{"condition": "view_columns", "max": 1}]
 
 
 def test_a_zones_row_is_clear_then_its_two_counts(view):
+    """The counts share one card, so on wide screens they fill the rest of
+    Clear's row rather than wrapping under it."""
     downstairs = view["sections"][1]
     start = next(i for i, c in enumerate(downstairs["cards"]) if c.get("heading") == "Kitchen Main")
-    row = [c.get("entity") or c["type"] for c in downstairs["cards"][start + 1 :]]
+    clear, wide, narrow, names = downstairs["cards"][start + 1 : start + 5]
+    counts = ["sensor.kitchen_main_flare_controlled", "sensor.kitchen_main_flare_overridden"]
 
-    assert row == [
-        "button.kitchen_main_flare_clear",
-        "sensor.kitchen_main_flare_controlled",
-        "sensor.kitchen_main_flare_overridden",
-        "markdown",
-    ]
+    assert clear["entity"] == "button.kitchen_main_flare_clear"
+    assert clear["grid_options"]["columns"] + wide["grid_options"]["columns"] == 12
+    assert [c["entity"] for c in wide["cards"]] == counts
+    assert wide["visibility"] == [{"condition": "view_columns", "min": 2}]
+    assert [c["entity"] for c in narrow["cards"]] == counts
+    assert narrow["grid_options"] == {"columns": "full"}
+    assert narrow["visibility"] == [{"condition": "view_columns", "max": 1}]
+    assert names["type"] == "markdown"
 
 
 def test_the_heading_opens_the_zones_device_page(view):

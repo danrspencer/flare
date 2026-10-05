@@ -43,8 +43,8 @@ def test_it_reads_clear_beside_its_icon(result):
     assert ">Clear<" in result["html"]
 
 
-def test_it_takes_a_third_of_the_row(result):
-    assert result["grid"] == {"columns": 4, "rows": 1}
+def test_it_takes_a_quarter_of_the_row(result):
+    assert result["grid"] == {"columns": 3, "rows": 1}
 
 
 def test_it_needs_an_entity(result):
