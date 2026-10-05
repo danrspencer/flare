@@ -277,29 +277,32 @@ async def _back_online_at_a_stale_level(hass: HomeAssistant):
     hass.data.setdefault(RECONNECTS, {})["light.a"] = hass.states.get("light.a").last_changed
     tracker._refresh_statuses()
     await hass.async_block_till_done()
-    return tracker, events
+    overridden = next(e for e in added if e.entity_id.endswith("_flare_overridden"))
+    return tracker, events, overridden
 
 
-async def test_a_light_back_online_is_not_announced_overridden_while_it_settles(hass: HomeAssistant):
-    tracker, events = await _back_online_at_a_stale_level(hass)
+async def test_a_light_back_online_is_not_shown_overridden_while_it_settles(hass: HomeAssistant):
+    tracker, events, overridden = await _back_online_at_a_stale_level(hass)
 
     assert events == []
+    assert overridden.native_value == 0
     await tracker.async_will_remove_from_hass()  # cancels its recheck
 
 
-async def test_a_light_still_overridden_once_settled_is_announced(hass: HomeAssistant):
-    _tracker, events = await _back_online_at_a_stale_level(hass)
+async def test_a_light_still_overridden_once_settled_is_announced_and_counted(hass: HomeAssistant):
+    _tracker, events, overridden = await _back_online_at_a_stale_level(hass)
 
     later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
     with freeze_time(later, real_asyncio=True):
         async_fire_time_changed(hass, later)
         await hass.async_block_till_done()
+        assert overridden.native_value == 1
 
     assert [e.data["light"] for e in events] == ["light.a"]
 
 
 async def test_a_light_that_settles_to_what_flare_asked_for_is_never_announced(hass: HomeAssistant):
-    tracker, events = await _back_online_at_a_stale_level(hass)
+    tracker, events, overridden = await _back_online_at_a_stale_level(hass)
     hass.states.async_set("light.a", "on", ASKED, context=Context())
     tracker._refresh_statuses()
 
@@ -307,6 +310,7 @@ async def test_a_light_that_settles_to_what_flare_asked_for_is_never_announced(h
     with freeze_time(later, real_asyncio=True):
         async_fire_time_changed(hass, later)
         await hass.async_block_till_done()
+        assert overridden.native_value == 0
 
     assert events == []
 

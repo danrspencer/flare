@@ -62,9 +62,15 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected_at(hass, entity_id))
+    reconnected = reconnected_at(hass, entity_id)
+    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected)
     # "untracked" shows as "controlled": either way, not excluded.
-    return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
+    status = "controlled" if raw_status == "untracked" else raw_status
+    # A light just back online reports stale values before FLARE's resend
+    # lands, so it isn't shown as overridden until it has settled.
+    if status == "overridden" and reconnected is not None and dt_util.utcnow() < reconnected + RECONNECT_SETTLE:
+        status = "settling"
+    return status, matched_via, live_context_id
 
 
 
@@ -140,27 +146,20 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         for entity_id, record in self.claims.items():
             status, _via, live_context_id = _classify_tracked(self.hass, entity_id, record)
             statuses[entity_id] = status
+            if status == "settling":
+                self._recheck_after_settling()
             if self._last_statuses is None:
                 continue
             previous = self._last_statuses.get(entity_id)
             if status == "overridden" and previous != "overridden":
-                # A light just back online reports stale values before
-                # FLARE's resend lands; judged again once it has settled.
-                if self._settling(entity_id):
-                    statuses[entity_id] = previous
-                    self._recheck_after_settling()
-                else:
-                    self._fire_overridden(entity_id, record, previous, live_context_id)
-            # Not back from overridden (churn), nor from unavailable (every
-            # light, after a restart), which were already the zone's.
-            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable"):
+                self._fire_overridden(entity_id, record, previous, live_context_id)
+            # Not back from overridden (churn), nor from unavailable or
+            # settling (every light, after a restart), which were already
+            # the zone's.
+            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "settling"):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
-
-    def _settling(self, entity_id: str) -> bool:
-        reconnected = reconnected_at(self.hass, entity_id)
-        return reconnected is not None and dt_util.utcnow() < reconnected + RECONNECT_SETTLE
 
     @callback
     def _recheck_after_settling(self) -> None:
@@ -173,6 +172,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     def _recheck(self, _now) -> None:
         self._recheck_later = None
         self._refresh_statuses()
+        # The counts settle too.
+        async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
     def _fire_overridden(
