@@ -259,7 +259,7 @@ under <strong>Settings → Devices &amp; Services → FLARE → Zones</strong>.<
       <li><a href="#one-zone-per-light" id="markdown-toc-one-zone-per-light">One zone per light</a></li>
     </ol>
   </li>
-  <li><a href="#the-hand-over-event" id="markdown-toc-the-hand-over-event">The hand-over event</a></li>
+  <li><a href="#the-zones-events" id="markdown-toc-the-zones-events">The zone’s events</a></li>
   <li><a href="#inspecting-tracked-state" id="markdown-toc-inspecting-tracked-state">Inspecting tracked state</a></li>
   <li><a href="#when-zones-tick" id="markdown-toc-when-zones-tick">When zones tick</a></li>
 </ol>
@@ -297,10 +297,6 @@ under <strong>Settings → Devices &amp; Services → FLARE → Zones</strong>.<
     <tr>
       <td><code class="language-plaintext highlighter-rouge">button.&lt;name&gt;_flare_clear</code></td>
       <td>Discards every claim in the zone.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code></td>
-      <td>Fires once per update interval. See <a href="#when-zones-tick">when zones tick</a>.</td>
     </tr>
   </tbody>
 </table></div>
@@ -424,20 +420,55 @@ changing it: FLARE sends it again until it takes. Something changing it afterwar
 stops following either. When this happens, FLARE shows a notification naming the light and the
 zones. It shows this once for each light, and doesn’t show it again for that light until Home
 Assistant restarts.</p>
-<h2 id="the-hand-over-event">
+<h2 id="the-zones-events">
   
   
-    <a href="#the-hand-over-event" class="anchor-heading" aria-labelledby="the-hand-over-event"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The hand-over event
+    <a href="#the-zones-events" class="anchor-heading" aria-labelledby="the-zones-events"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The zone’s events
   
   
 </h2>
     
 
-<p>When something else takes over a tracked light, FLARE fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code>:</p>
+<p>A zone says when it takes its lights, when it lets them go, and when something else changes one
+of them. Each event is filed under the zone: <code class="language-plaintext highlighter-rouge">entity_id</code> is one of the zone’s count sensors and
+<code class="language-plaintext highlighter-rouge">device_id</code> its device, so they appear in the zone’s Activity, on its device page. FLARE
+adjusting lights it already has isn’t announced.</p>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">entity_id</span><span class="pi">:</span> <span class="s">light.kitchen_1</span>
+<p>When a zone starts controlling lights it wasn’t, such as when a room comes on, FLARE fires
+<code class="language-plaintext highlighter-rouge">flare_lights_controlled</code> once for them all, a few seconds after the first, since the bulbs
+report back one by one:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">lights</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>   <span class="c1"># the lights it took</span>
+<span class="na">controlled</span><span class="pi">:</span> <span class="m">6</span>                                <span class="c1"># how many it's controlling now</span>
+<span class="na">entity_id</span><span class="pi">:</span> <span class="s">sensor.kitchen_flare_controlled</span>
+<span class="na">zone</span><span class="pi">:</span> <span class="s">Kitchen</span>
+<span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>                               <span class="c1"># the zone's device</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Kitchen</strong> now controlling 6 lights</p>
+</blockquote>
+
+<p>When a zone lets its lights go, because the room went dark or you pressed <strong>Clear</strong>, FLARE
+fires <code class="language-plaintext highlighter-rouge">flare_lights_released</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">lights</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
+<span class="na">entity_id</span><span class="pi">:</span> <span class="s">sensor.kitchen_flare_controlled</span>
+<span class="na">zone</span><span class="pi">:</span> <span class="s">Kitchen</span>
+<span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Kitchen</strong> cleared 6 lights</p>
+</blockquote>
+
+<p>When something else changes one of a zone’s lights, FLARE fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code> for that
+light:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">light</span><span class="pi">:</span> <span class="s">light.kitchen_1</span>
+<span class="na">entity_id</span><span class="pi">:</span> <span class="s">sensor.kitchen_flare_overridden</span>
 <span class="na">zone</span><span class="pi">:</span> <span class="s">Kitchen</span>                        <span class="c1"># the zone that lost the light</span>
-<span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>                        <span class="c1"># the zone's device</span>
+<span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>
 <span class="na">previous_status</span><span class="pi">:</span> <span class="s">controlled</span>
 <span class="na">live_context_id</span><span class="pi">:</span> <span class="s">01M11...</span>
 <span class="na">live</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">state</span><span class="pi">:</span> <span class="nv">on</span><span class="pi">,</span> <span class="nv">brightness</span><span class="pi">:</span> <span class="nv">12</span><span class="pi">,</span> <span class="nv">color_temp_kelvin</span><span class="pi">:</span> <span class="nv">6500</span><span class="pi">,</span> <span class="nv">rgb_color</span><span class="pi">:</span> <span class="nv">null</span> <span class="pi">}</span>
@@ -445,20 +476,23 @@ Assistant restarts.</p>
 <span class="na">latest</span><span class="pi">:</span>   <span class="pi">{</span> <span class="nv">context_id</span><span class="pi">:</span> <span class="nv">...</span><span class="pi">,</span> <span class="nv">target</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">...</span><span class="pi">},</span> <span class="nv">recorded_at</span><span class="pi">:</span> <span class="nv">...</span> <span class="pi">}</span>
 </code></pre></div></div>
 
-<p>It fires once when the light changes hands, not again while the light stays overridden, and not
-for lights that were already overridden before a restart. It also appears in the light’s
-logbook:</p>
-
 <blockquote>
-  <p><strong>Kitchen</strong> released this light to something else (last asked for 255/6667, found 12/6500)</p>
+  <p><strong>Kitchen</strong> released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)</p>
 </blockquote>
 
-<p>To trigger an automation on it:</p>
+<p>It fires once when the light changes hands, not again while the light stays overridden, and not
+for lights that were already overridden before a restart. To trigger an automation on it:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">triggers</span><span class="pi">:</span>
   <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event</span>
     <span class="na">event_type</span><span class="pi">:</span> <span class="s">flare_light_overridden</span>
 </code></pre></div></div>
+
+<blockquote class="note">
+  <p><strong>Changed in 1.0.0</strong> — <code class="language-plaintext highlighter-rouge">flare_light_overridden</code>’s light is in <code class="language-plaintext highlighter-rouge">light</code>; <code class="language-plaintext highlighter-rouge">entity_id</code> is now the
+zone’s sensor. An automation reading <code class="language-plaintext highlighter-rouge">trigger.event.data.entity_id</code> for the light needs
+<code class="language-plaintext highlighter-rouge">trigger.event.data.light</code> instead.</p>
+</blockquote>
 <h2 id="inspecting-tracked-state">
   
   
@@ -516,9 +550,10 @@ deleted from Home Assistant stops being tracked.</p>
 </h2>
     
 
-<p>Each zone’s <code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code> fires an event of type <code class="language-plaintext highlighter-rouge">flare_tick</code> once per update
-interval. Zones fire one after another, in name order, a gap apart, so rooms don’t all send
-commands at the same time. You can set the interval and the gap under <strong>FLARE → Zones →
+<p>Each zone fires a <code class="language-plaintext highlighter-rouge">flare_tick</code> event once per update interval, carrying the zone’s device as
+<code class="language-plaintext highlighter-rouge">device_id</code>. Zones fire one after another, in name order, a gap apart, so rooms don’t all send
+commands at the same time. A tick is a plain event, not an entity, so it never appears in
+Activity, history or the logbook. You can set the interval and the gap under <strong>FLARE → Zones →
 Configure</strong>:</p>
 
 <div class="table-wrapper"><table>
@@ -546,16 +581,19 @@ Configure</strong>:</p>
 <p>To run an automation on a zone’s tick:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">triggers</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event.received</span>
-    <span class="na">target</span><span class="pi">:</span>
-      <span class="na">entity_id</span><span class="pi">:</span> <span class="s">event.kitchen_flare_tick</span>
-    <span class="na">options</span><span class="pi">:</span>
-      <span class="na">event_type</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">flare_tick</span><span class="pi">]</span>
+  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event</span>
+    <span class="na">event_type</span><span class="pi">:</span> <span class="s">flare_tick</span>
+    <span class="na">event_data</span><span class="pi">:</span>
+      <span class="na">device_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">&lt;the</span><span class="nv"> </span><span class="s">zone's</span><span class="nv"> </span><span class="s">device</span><span class="nv"> </span><span class="s">ID&gt;"</span>
 </code></pre></div></div>
 
-<p>The blueprint targets the zone’s device instead of the entity. Home Assistant leaves hidden
-entities out when it expands a device, so if you hide the Tick entity, the blueprint stops
-receiving it.</p>
+<p>The zone’s device ID is in the address of its device page, or
+<code class="language-plaintext highlighter-rouge">{{ device_id('sensor.kitchen_flare_claims') }}</code> in the template editor.</p>
+
+<blockquote class="note">
+  <p><strong>Changed in 1.0.0</strong> — the tick was an entity, <code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code>, which is removed.
+An automation triggering on it needs the trigger above instead.</p>
+</blockquote>
 
           
 

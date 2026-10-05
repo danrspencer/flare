@@ -497,13 +497,13 @@ new phase as its <code class="language-plaintext highlighter-rouge">event_type</
   <span class="pi">-</span> <span class="na">action</span><span class="pi">:</span> <span class="s">notify.notify</span>
     <span class="na">data</span><span class="pi">:</span>
       <span class="na">message</span><span class="pi">:</span> <span class="pi">&gt;</span>
-        <span class="s">{{ state_attr(trigger.event.data.entity_id, 'friendly_name') }} in</span>
+        <span class="s">{{ state_attr(trigger.event.data.light, 'friendly_name') }} in</span>
         <span class="s">{{ trigger.event.data.zone }} was changed by something else, so FLARE has</span>
         <span class="s">stopped driving it until the room goes dark.</span>
 </code></pre></div></div>
 
 <p>The event also carries what FLARE last asked for and what the light was actually showing —
-see <a href="../../reference/zones/#the-hand-over-event">the hand-over event</a>.</p>
+see <a href="../../reference/zones/#the-zones-events">the zone’s events</a>.</p>
 
           
 

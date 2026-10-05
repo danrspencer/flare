@@ -271,11 +271,10 @@ kitchen on the curve:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">alias</span><span class="pi">:</span> <span class="s">Kitchen lighting</span>
 <span class="na">triggers</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event.received</span>
-    <span class="na">target</span><span class="pi">:</span>
-      <span class="na">entity_id</span><span class="pi">:</span> <span class="s">event.kitchen_flare_tick</span>
-    <span class="na">options</span><span class="pi">:</span>
-      <span class="na">event_type</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">flare_tick</span><span class="pi">]</span>
+  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event</span>
+    <span class="na">event_type</span><span class="pi">:</span> <span class="s">flare_tick</span>
+    <span class="na">event_data</span><span class="pi">:</span>
+      <span class="na">device_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">&lt;the</span><span class="nv"> </span><span class="s">Kitchen</span><span class="nv"> </span><span class="s">zone's</span><span class="nv"> </span><span class="s">device</span><span class="nv"> </span><span class="s">ID&gt;"</span>
 <span class="na">conditions</span><span class="pi">:</span>
   <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">template</span>
     <span class="na">value_template</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">area_entities('kitchen')</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">select('match',</span><span class="nv"> </span><span class="s">'^light</span><span class="se">\\</span><span class="s">.')</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">select('is_state',</span><span class="nv"> </span><span class="s">'on')</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">list</span><span class="nv"> </span><span class="s">|</span><span class="nv"> </span><span class="s">count</span><span class="nv"> </span><span class="s">&gt;</span><span class="nv"> </span><span class="s">0</span><span class="nv"> </span><span class="s">}}"</span>
@@ -289,7 +288,8 @@ kitchen on the curve:</p>
       <span class="na">zone_device_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">device_id('sensor.kitchen_flare_claims')</span><span class="nv"> </span><span class="s">}}"</span>
 </code></pre></div></div>
 
-<p>It runs on the kitchen zone’s tick and only passes lights that are on, since <code class="language-plaintext highlighter-rouge">apply_lighting</code>
+<p>It runs on the kitchen zone’s <a href="../../reference/zones/#when-zones-tick">tick</a> and only passes
+lights that are on, since <code class="language-plaintext highlighter-rouge">apply_lighting</code>
 turns on everything it’s given. Turning the room on and off is left to you.</p>
 <h2 id="sending-the-commands-yourself">
   
