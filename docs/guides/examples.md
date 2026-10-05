@@ -174,11 +174,6 @@ actions:
       entity_id: automation.hallway_lights
 ```
 
-**Additional Triggers** can't do this, because they only adjust lights that are already on.
-Running the room's automation from another automation counts as running it by hand, which can
-switch lights on, but it also brings back to the curve any light in the room that someone set
-themselves.
-
 If the hall has a [flare](../flares/), you can turn that on instead, like any other light. It
 runs the room's automation in the same way:
 
