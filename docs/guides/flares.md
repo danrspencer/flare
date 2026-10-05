@@ -97,15 +97,6 @@ Assist uses the same **Expose** list. Expose the flares and un-expose the bulbs,
 the kitchen" turns on the flare. If you'd rather keep the flare's name as it is, add the room's
 name as an alias on the flare instead, under **Voice assistants** in its settings.
 
-## Why did the room go dim, or turn off again?
-
-Turning a flare on runs the room's automation, so the room's own rules still apply. If the
-room's occupancy sensors haven't detected anyone for its **Wait time**, a room with an
-[idle brightness](../../reference/blueprint/#idle-brightness) comes on at the idle level
-rather than the curve. A room without one comes on at the curve, but the next regular update
-turns it off again, as it would any light left on in an empty room. Motion in the room brings
-it up as usual.
-
 ## A flare for your own automation
 
 Any automation can have a flare. Choose **Another automation** when adding one:
