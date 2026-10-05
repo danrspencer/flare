@@ -12,6 +12,7 @@ from tests.functional.behaviour.harness import (
     HALL_SENSOR,
     ZONE,
     add_flare,
+    flares_entry,
     let_time_pass,
     occupancy,
     room_brightness,
@@ -187,7 +188,7 @@ async def test_a_flare_taken_out_of_its_area_stays_out(hass: HomeAssistant, add_
     device_id = er.async_get(hass).async_get(flare).device_id
     devices.async_update_device(device_id, area_id=None)
 
-    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.title == "Flares"]
+    entry = await flares_entry(hass)
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
 
