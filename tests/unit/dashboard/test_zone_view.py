@@ -135,7 +135,7 @@ def test_a_zones_row_is_clear_then_its_two_counts(view):
 
     assert clear["entity"] == "button.kitchen_main_flare_clear"
     assert clear["grid_options"]["columns"] + wide["grid_options"]["columns"] == 12
-    assert [c["entity"] for c in wide["cards"]] == counts[:1] + counts[1:] * 2
+    assert [c["entity"] for c in wide["cards"]] == [counts[0], counts[0], counts[1], counts[1]]
     assert wide["visibility"] == [{"condition": "view_columns", "min": 2}]
     assert narrow["cards"] == wide["cards"]
     assert narrow["grid_options"] == {"columns": "full"}
@@ -143,14 +143,15 @@ def test_a_zones_row_is_clear_then_its_two_counts(view):
     assert names["type"] == "markdown"
 
 
-def test_overridden_is_amber_only_while_it_has_lights(view):
-    """One of the two is shown at a time, so the pair still fills the row."""
+@pytest.mark.parametrize(("status", "color", "first"), [("controlled", "blue", 0), ("overridden", "amber", 2)])
+def test_a_count_is_coloured_only_while_it_has_lights(view, status, color, first):
+    """One of each pair is shown at a time, so the counts still fill the row."""
     downstairs = view["sections"][1]
     counts = next(c for c in downstairs["cards"] if c["type"] == "grid")
-    amber, grey = counts["cards"][1:]
-    some = {"condition": "numeric_state", "entity": "sensor.kitchen_island_flare_overridden", "above": 0}
+    coloured, grey = counts["cards"][first : first + 2]
+    some = {"condition": "numeric_state", "entity": f"sensor.kitchen_island_flare_{status}", "above": 0}
 
-    assert (amber["color"], amber["visibility"]) == ("amber", [some])
+    assert (coloured["color"], coloured["visibility"]) == (color, [some])
     assert (grey["color"], grey["visibility"]) == ("grey", [{"condition": "not", "conditions": [some]}])
 
 

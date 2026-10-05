@@ -1852,9 +1852,10 @@ caught.
   share one `grid` card: the sidebar takes one of `max_columns: 2`, so a
   zone section is always 12 columns, and a tile's `min_columns` is 6, so
   loose tiles wrapped under Clear (HA's view has 24 columns to work with).
-  Overridden is two tiles, amber while the count is above zero and grey
-  otherwise, one shown at a time, since a tile's `color` takes no
-  template; it is how a zone with overrides is spotted. Also weighed and
+  Each count is two tiles - Controlled blue, Overridden amber, while the
+  count is above zero, and grey otherwise - one shown at a time, since a
+  tile's `color` takes no template; it is how a zone with overrides is
+  spotted. Also weighed and
   left for later, at the user's direction, to let the view settle: a
   list of overridden lights under the totals, tiles for the lights
   themselves, and a Clear per light. Clear is
