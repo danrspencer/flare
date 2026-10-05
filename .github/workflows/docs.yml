@@ -1,28 +1,66 @@
 name: docs
 
+# The site keeps every release's docs, plus the newest beta's. Each is
+# built on its own and kept on the `docs-site` branch, which
+# scripts/docs_site.py assembles and this workflow uploads to Pages:
+#
+#   cut-beta.yml        -> the beta's docs, at /beta/ (and at / until
+#                          there's a release), on every push to main
+#   promote.yml         -> a release's docs, at /v/<version>/ and at /
+#   a pull request      -> builds the site, publishes nothing
+#
+# Both are called once their tag is pushed, so the beta's docs carry its
+# own number. Run by hand with a tag to republish that release; without
+# one, it republishes the beta from the branch it runs on.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
+    inputs:
+      tag:
+        description: "The release tag to publish (vX.Y.Z); empty for the beta"
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "A release tag to republish (vX.Y.Z); empty for the beta"
+        type: string
+        default: ""
 
-# Lets the deploy job publish to GitHub Pages. Read-only elsewhere.
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-# Never let two deploys race; queue instead. In-progress runs finish
-# rather than being cancelled, so a half-published site can't happen.
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.what.outputs.channel }}
+      version: ${{ steps.what.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || '' }}
+          # beta-version reads the tags.
+          fetch-depth: 0
+
+      - name: What this run publishes
+        id: what
+        env:
+          TAG: ${{ inputs.tag }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ -n "$TAG" ]; then
+            case "$TAG" in
+              v*-*) echo "::error::$TAG is not a release tag"; exit 1 ;;
+            esac
+            echo "channel=release" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "baseurl=/flare/v/${TAG#v}" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT" != pull_request ]; then
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "version=$(python3 scripts/docs_site.py beta-version)" >> "$GITHUB_OUTPUT"
+            echo "baseurl=/flare/beta" >> "$GITHUB_OUTPUT"
+          fi
 
       # The playground page renders the integration's REAL dashboard
       # card, which lives outside docs/ - and Jekyll can only serve files
@@ -34,23 +72,20 @@ jobs:
           cp custom_components/flare/www/flare-curve-card.js \
              docs/assets/js/flare-curve-card.js
 
-      # Publishes the current blueprint automation trace as a page with
-      # no nav entry, no link from anywhere else in the site - reachable
-      # only to someone who already has the URL (docs/trace-report/).
-      # Main-only and gated the same as `deploy` below: a PR's docs
-      # preview build doesn't pay for a full pytest-homeassistant-
-      # custom-component install just to produce a page nobody but a
-      # published main build actually serves.
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # The blueprint trace report, a page with no nav entry and no link
+      # from anywhere else - reachable only to someone who already has the
+      # URL (/trace-report/). Beta builds only, so a pull request doesn't
+      # pay for a full pytest-homeassistant-custom-component install.
+      - if: steps.what.outputs.channel == 'beta'
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - if: steps.what.outputs.channel == 'beta'
         run: pip install pytest pytest-homeassistant-custom-component
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - if: steps.what.outputs.channel == 'beta'
         name: Capture a fresh blueprint trace for this commit
         run: pytest tests/functional/behaviour -q
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - if: steps.what.outputs.channel == 'beta'
         name: Export the trace report into the site
         run: python scripts/trace_viewer.py --export docs/trace-report
 
@@ -62,34 +97,90 @@ jobs:
           bundler-cache: true
           working-directory: docs
 
+      # JEKYLL_ENV=production so the theme emits canonical URLs and skips
+      # its development-only output. A version is built twice: once for
+      # its own path, once for the root it may become.
       - name: Build site
         working-directory: docs
-        # JEKYLL_ENV=production so the theme emits canonical URLs and
-        # skips its development-only output.
-        run: JEKYLL_ENV=production bundle exec jekyll build --trace
+        env:
+          BASEURL: ${{ steps.what.outputs.baseurl }}
+        run: |
+          if [ -n "$BASEURL" ]; then
+            JEKYLL_ENV=production bundle exec jekyll build --trace --baseurl "$BASEURL" -d ../builds/version
+          fi
+          JEKYLL_ENV=production bundle exec jekyll build --trace -d ../builds/root
 
-      # No configure-pages step: it only exists to inject a baseurl for
-      # sites that don't set their own, and it FAILS outright until Pages
-      # has been enabled on the repository. docs/_config.yml sets baseurl
-      # explicitly, so skipping it lets pull requests fully build and
-      # validate the site whether or not Pages is switched on yet.
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.what.outputs.channel != ''
+        uses: actions/upload-artifact@v4
         with:
-          path: docs/_site
+          name: docs-builds
+          path: builds
 
-  # Only main publishes. Pull requests still run the build above, so a
-  # broken site fails review rather than fails after merge.
-  #
-  # This job needs Pages enabled on the repository with its source set
-  # to "GitHub Actions" (Settings -> Pages). Until that's done it is
-  # the only part of this workflow that can't succeed.
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: needs.build.outputs.channel != ''
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    # One publish at a time, each on the branch the last one left.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-builds
+          path: builds
+
+      - name: Check out the published site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          url="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if git ls-remote --exit-code --heads "$url" docs-site >/dev/null; then
+            git clone --quiet --branch docs-site --single-branch --depth 1 "$url" site
+          else
+            git init --quiet -b docs-site site
+            git -C site remote add origin "$url"
+          fi
+
+      - name: Put this version in place
+        env:
+          CHANNEL: ${{ needs.build.outputs.channel }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: >
+          python3 scripts/docs_site.py publish --site site
+          --channel "$CHANNEL" --version "$VERSION"
+          --build builds/version --root-build builds/root
+
+      - name: Keep it
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          CHANNEL: ${{ needs.build.outputs.channel }}
+        run: |
+          cd site
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing changed"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit --quiet -m "Docs: $CHANNEL $VERSION"
+          git push --quiet origin docs-site
+
+      # upload-pages-artifact leaves .git out of the upload.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - id: deployment
         uses: actions/deploy-pages@v4

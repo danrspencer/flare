@@ -65,7 +65,9 @@ project exists, why the day is divided into four named phases
 (Morning/Day/Evening/Night) rather than a single continuous
 sun-elevation curve the way most adaptive-lighting tools work - plus
 links onward. Everything else lives in `docs/` and is published to
-<https://danrspencer.github.io/flare/>: `installation.md` (quickstart),
+<https://danrspencer.github.io/flare/> (the latest release's docs; each
+release is kept at `/v/<version>/` and the newest beta at `/beta/`, see
+"Versioned docs" under Deployment): `installation.md` (quickstart),
 the `playground.html` interactive curve, `dashboard.md`, then two
 sections. `docs/guides/` ("Guides") is how to do more: `examples.md`
 (automations using only ordinary HA actions, each run against a real
@@ -1623,6 +1625,18 @@ caught.
   automated releases. That is fine and deliberate: its checks police a
   tag typed by hand, and the script's tags agree with their manifests
   by construction. Don't "fix" it with a PAT to make it run.
+- **Versioned docs**, at the user's direction: every release's docs are
+  kept and selectable, the latest release is the default (`/flare/`, so
+  existing links land on it), and the newest beta's are published but
+  never the default, overwritten until a release. Pages serves one upload,
+  so the built versions live on the `docs-site` branch;
+  `scripts/docs_site.py` updates it and the whole branch is uploaded.
+  `cut-beta.yml` and `promote.yml` call `docs.yml` after pushing their
+  tag (a push to main starting docs.yml itself raced the tag, labelling
+  the beta with the previous number). The picker is added to pages at
+  assembly, not in the Jekyll source, so a stored old version gets
+  today's picker; it lives in `docs/_versions/`, which Jekyll skips.
+  Beta-before-release: the beta is the root until the first release.
 - **`git push origin dev:main` must be a fast-forward.** `main`'s
   ruleset requires linear history, so a pull request's squash or rebase
   would give `main` commits `dev` never sees.

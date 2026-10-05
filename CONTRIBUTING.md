@@ -131,8 +131,18 @@ shape a live Home Assistant would. Build the site locally (below) to exercise a 
 
 Everything except `README.md` lives here, published at
 <https://danrspencer.github.io/flare/> from `docs/` and built with Jekyll and the `just-the-docs`
-theme by `.github/workflows/docs.yml`. Pull requests build the site but don't publish it; only a push to `main`
-deploys.
+theme by `.github/workflows/docs.yml`. Pull requests build the site but don't publish it.
+
+The site keeps a version of the docs per release, with a picker in the header:
+
+- `/flare/` is the latest release, published by `promote.yml` along with the release, which is also kept
+  at `/flare/v/<version>/`.
+- `/flare/beta/` is the newest beta, published by `cut-beta.yml` on every push to `main`, and offered only
+  while it's newer than the latest release. Until the first release it's the root too.
+
+Each version is built once and kept, built, on the `docs-site` branch; `scripts/docs_site.py` puts a new
+build in place and adds the picker (`docs/_versions/picker.js`) to every page, and the whole branch is
+what Pages serves. To republish a release's docs, run the docs workflow by hand with its tag.
 
 ```bash
 cd docs && bundle install && bundle exec jekyll build
@@ -161,14 +171,14 @@ Two things about it are less obvious than they look:
   behind the sliders is `docs/assets/js/curve.js`, a port of `curve.py`; `tests/test_curve_js_parity.py` runs
   both it and the card itself under node against a grid of inputs and fails if either drifts from `curve.py`.
 
-- **A hidden trace report is published at `/trace-report/`, main builds only.** `.github/workflows/docs.yml`
+- **A hidden trace report is published at `/trace-report/`, beta builds only.** `.github/workflows/docs.yml`
   runs `tests/behaviour` fresh for the commit being built, then `scripts/trace_viewer.py --export
   docs/trace-report` (also runnable locally as `mise run trace-export`) writes a static snapshot of the
   interactive trace viewer — no Python server needed, since the exported `index.html` fetches its data as
   plain files (`api/yaml`, `api/traces`, `api/trace/*.json`) relative to its own location rather than from
   a live server. It carries no nav entry, isn't in the search index, and nothing else on the site links to
-  it — reachable only to someone who already has the URL. Gated to `push` on `main` (the same condition
-  `deploy` uses below) so a PR's docs preview build doesn't pay for a full
+  it — reachable only to someone who already has the URL. Beta builds only, so a PR's docs build doesn't pay
+  for a full
   `pytest-homeassistant-custom-component` install just to produce a page that build never serves anyway.
 
 Every page needs front matter — Jekyll only renders a file as a *page* if it has a literal front matter block,
