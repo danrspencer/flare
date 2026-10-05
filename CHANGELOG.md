@@ -80,7 +80,7 @@ CI — see `.github/workflows/release.yml`.
 - **A redesigned Zones view.** The house's totals at the top, then each zone by floor and
   area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
   off" and the zone's counts where that has lights, and an Activity feed beside them like
-  the Security dashboard's.
+  the Security dashboard's. A zone's Overridden count turns amber while it has lights.
 - **A zone's Activity says what it's doing.** "Kitchen now controlling 6 lights"
   (`flare_lights_controlled`) when a zone takes its lights, once per room coming on rather
   than per bulb, and "Kitchen cleared 6 lights" (`flare_lights_released`) when it lets them

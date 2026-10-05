@@ -309,6 +309,8 @@ export function zoneCards(hass, zone, title) {
     },
     { type: 'custom:flare-clear-card', entity: clear, visibility: [LARGE_SCREEN], grid_options: { columns: 3, rows: 1 } },
   ];
+  // Overridden is amber while it has lights, so the zone stands out.
+  const anyOverridden = { condition: 'numeric_state', entity: overridden, above: 0 };
   // The counts share one card, so they stay beside Clear: a tile is never
   // narrower than half a 12-column section.
   const counts = (columns, visibility) => ({
@@ -317,7 +319,14 @@ export function zoneCards(hass, zone, title) {
     square: false,
     cards: [
       { type: 'tile', entity: controlled, name: 'Controlled' },
-      { type: 'tile', entity: overridden, name: 'Overridden' },
+      { type: 'tile', entity: overridden, name: 'Overridden', color: 'amber', visibility: [anyOverridden] },
+      {
+        type: 'tile',
+        entity: overridden,
+        name: 'Overridden',
+        color: 'grey',
+        visibility: [{ condition: 'not', conditions: [anyOverridden] }],
+      },
     ],
     grid_options: { columns },
     visibility: [visibility],
@@ -330,7 +339,7 @@ export function zoneCards(hass, zone, title) {
     content:
       `{% set lights = expand(state_attr('${overridden}', 'lights') or []) %}` +
       `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
-    visibility: [{ condition: 'numeric_state', entity: overridden, above: 0 }],
+    visibility: [anyOverridden],
   });
   return cards;
 }
