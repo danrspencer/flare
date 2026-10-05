@@ -38,6 +38,8 @@ jobs:
     permissions:
       contents: write
       issues: read
+    outputs:
+      tag: ${{ steps.cut.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,3 +85,16 @@ jobs:
           # nearly the same code, and the notes would come out empty.
           previous=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v -e -beta | grep -vx "$TAG" | head -1)
           gh release create "$TAG" --title "$TAG" --generate-notes ${previous:+--notes-start-tag "$previous"}
+
+  # The release's docs become the site's default. In this run, because a
+  # tag pushed with GITHUB_TOKEN starts no other workflow.
+  docs:
+    needs: promote
+    if: needs.promote.outputs.tag != ''
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    with:
+      tag: ${{ needs.promote.outputs.tag }}

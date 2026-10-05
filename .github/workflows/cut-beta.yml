@@ -58,3 +58,14 @@ jobs:
         run: |
           git push origin "refs/tags/$TAG"
           gh release create "$TAG" --title "$TAG" --generate-notes --prerelease
+
+  # The beta's docs. Also when nothing shipped changed and no beta was
+  # cut: a docs-only push still updates them, under the newest beta's
+  # number.
+  docs:
+    needs: beta
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
