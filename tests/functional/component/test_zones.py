@@ -291,12 +291,15 @@ async def test_a_light_back_online_is_not_shown_overridden_while_it_settles(hass
 
 async def test_a_light_still_overridden_once_settled_is_announced_and_counted(hass: HomeAssistant):
     _tracker, events, overridden = await _back_online_at_a_stale_level(hass)
+    refreshed: list = []
+    async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
     later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
     with freeze_time(later, real_asyncio=True):
         async_fire_time_changed(hass, later)
         await hass.async_block_till_done()
         assert overridden.native_value == 1
+    assert refreshed, "the count sensors are told to refresh"
 
     assert [e.data["light"] for e in events] == ["light.a"]
 
