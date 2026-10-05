@@ -1879,6 +1879,14 @@ caught.
   logbook leaves their own state changes out - and, for the same reason,
   drops them from a logbook card's entity list, which is why the Zones
   view has its own Activity card (see the Zones view Activity notes).
+- **A light back online that reads overridden shows as `settling`** in
+  the sensors (`_classify_tracked`) for `RECONNECT_SETTLE`: in neither
+  count, and not announced. Its first report after a reconnect is often
+  stale (seen live after a restart: 10/8130 on a bulb at 204/8105,
+  corrected 0.4s later), and announcing on it logged overrides that never
+  were. The zone rechecks once it settles. Display only, at the user's
+  direction: `classify_state`, and so the services, still read it
+  overridden, which is the reconnect rule's job.
 - **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
   before firing, because a room's bulbs confirm one by one and each
   confirmation is a separate status refresh (announced per light it was
