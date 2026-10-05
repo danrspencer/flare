@@ -1,4 +1,4 @@
-"""When a room re-checks its lights: on the Tick of the zone it picks,
+"""When a room re-checks its lights: on the tick of the zone it picks,
 spaced a gap from every other zone's.
 
 A light left on in an empty room is the probe: self-heal turns it off on
@@ -7,6 +7,7 @@ room ticked. The clock starts at 19:00:02, and zones are spaced 10s apart
 so every check sits well clear of a tick."""
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
 
 from tests.functional.behaviour.harness import (
@@ -125,3 +126,31 @@ async def test_the_interval_is_set_on_the_entry(hass: HomeAssistant, add_bulbs, 
 
     await at(hass, frozen_time, 19, 2, 5)
     assert is_off(hass, bulbs)
+
+
+async def test_a_tick_is_a_plain_event_naming_the_zones_device(hass: HomeAssistant, frozen_time) -> None:
+    """Not an entity, so ticks never show in Activity, history or the logbook."""
+    await setup_zones(hass, ["lounge"])
+    device = zone_device(hass, "lounge")
+    ticks: list = []
+    hass.bus.async_listen("flare_tick", ticks.append)
+
+    await at(hass, frozen_time, 19, 1, 1)
+
+    assert [t.data for t in ticks] == [{"device_id": device}]
+    flare_events = [e.entity_id for e in er.async_get(hass).entities.values() if e.platform == "flare" and e.domain == "event"]
+    assert [e for e in flare_events if "tick" in e] == []
+
+
+async def test_an_old_tick_entity_is_removed(hass: HomeAssistant, frozen_time) -> None:
+    """From an install made when the Tick was an entity."""
+    await setup_zones(hass, ["lounge"])
+    entry = next(e for e in hass.config_entries.async_entries("flare") if e.data.get("entry_type") == "tracking")
+    (subentry_id,) = entry.subentries
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create("event", "flare", f"{subentry_id}_tick", config_entry=entry).entity_id
+
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert registry.async_get(old) is None

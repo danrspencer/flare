@@ -23,6 +23,7 @@ import {
   zoneDevices,
 } from './flare-section.js';
 import './flare-clear-card.js';
+import './flare-activity-card.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
 
@@ -69,9 +70,9 @@ customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrate
 
 /**
  * The zone view: the totals, then every zone laid out by floor and area
- * like Home Assistant's Light dashboard, and an Activity sidebar: the
- * zones' devices' logbook, so it matches each zone's own Activity, as HA's
- * Security dashboard does it.
+ * like Home Assistant's Light dashboard, and an Activity sidebar, as HA's
+ * Security dashboard has: the zones' devices' logbook, the same entries
+ * as each zone's own page (flare-activity-card.js).
  *
  *   views:
  *     - title: Zones
@@ -102,12 +103,7 @@ class FlareZoneViewStrategy extends HTMLElement {
             type: 'grid',
             cards: [
               { type: 'heading', heading: 'Activity', heading_style: 'title' },
-              {
-                type: 'logbook',
-                target: { device_id: devices },
-                hours_to_show: 24,
-                grid_options: { columns: 12 },
-              },
+              { type: 'custom:flare-activity-card', device_id: devices, hours_to_show: 24 },
             ],
           },
         ],

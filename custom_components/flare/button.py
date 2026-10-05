@@ -57,7 +57,7 @@ class _ZoneClearButton(ButtonEntity):
         return sorted(self._registry.records_for_zone(self._instance.subentry_id))
 
     async def async_press(self) -> None:
-        await self._registry.async_clear(self._instance.subentry_id, self._tracked())
+        await self._registry.async_clear(self._instance.subentry_id, self._tracked(), announce=True)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

@@ -120,22 +120,39 @@ def test_clear_sits_where_the_light_dashboard_has_all_off(view):
 
     assert clear["type"] == "custom:flare-clear-card"
     assert clear["visibility"] == [{"condition": "view_columns", "min": 2}]
-    assert clear["grid_options"] == {"columns": 4, "rows": 1}
+    assert clear["grid_options"] == {"columns": 3, "rows": 1}
     assert heading["badges"][0]["tap_action"] == press
     assert heading["badges"][0]["visibility"] == [{"condition": "view_columns", "max": 1}]
 
 
 def test_a_zones_row_is_clear_then_its_two_counts(view):
+    """The counts share one card, so on wide screens they fill the rest of
+    Clear's row rather than wrapping under it."""
     downstairs = view["sections"][1]
     start = next(i for i, c in enumerate(downstairs["cards"]) if c.get("heading") == "Kitchen Main")
-    row = [c.get("entity") or c["type"] for c in downstairs["cards"][start + 1 :]]
+    clear, wide, narrow, names = downstairs["cards"][start + 1 : start + 5]
+    counts = ["sensor.kitchen_main_flare_controlled", "sensor.kitchen_main_flare_overridden"]
 
-    assert row == [
-        "button.kitchen_main_flare_clear",
-        "sensor.kitchen_main_flare_controlled",
-        "sensor.kitchen_main_flare_overridden",
-        "markdown",
-    ]
+    assert clear["entity"] == "button.kitchen_main_flare_clear"
+    assert clear["grid_options"]["columns"] + wide["grid_options"]["columns"] == 12
+    assert [c["entity"] for c in wide["cards"]] == [counts[0], counts[0], counts[1], counts[1]]
+    assert wide["visibility"] == [{"condition": "view_columns", "min": 2}]
+    assert narrow["cards"] == wide["cards"]
+    assert narrow["grid_options"] == {"columns": "full"}
+    assert narrow["visibility"] == [{"condition": "view_columns", "max": 1}]
+    assert names["type"] == "markdown"
+
+
+@pytest.mark.parametrize(("status", "color", "first"), [("controlled", "blue", 0), ("overridden", "amber", 2)])
+def test_a_count_is_coloured_only_while_it_has_lights(view, status, color, first):
+    """One of each pair is shown at a time, so the counts still fill the row."""
+    downstairs = view["sections"][1]
+    counts = next(c for c in downstairs["cards"] if c["type"] == "grid")
+    coloured, grey = counts["cards"][first : first + 2]
+    some = {"condition": "numeric_state", "entity": f"sensor.kitchen_island_flare_{status}", "above": 0}
+
+    assert (coloured["color"], coloured["visibility"]) == (color, [some])
+    assert (grey["color"], grey["visibility"]) == ("grey", [{"condition": "not", "conditions": [some]}])
 
 
 def test_the_heading_opens_the_zones_device_page(view):

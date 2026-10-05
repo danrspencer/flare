@@ -16,14 +16,24 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, EVENT_LIGHT_OVERRIDDEN
+from .const import (
+    CONF_ENTRY_TYPE,
+    DOMAIN,
+    ENTRY_TYPE_ZONES,
+    EVENT_LIGHT_OVERRIDDEN,
+    EVENT_LIGHTS_CONTROLLED,
+    EVENT_LIGHTS_RELEASED,
+)
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .zone.override_protection import classify_state
+from .zone.override_protection import RECONNECT_SETTLE, classify_state
 from .zone.instance import ZoneInstance, zone_instances
 from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry, reconnected_at
 
@@ -52,10 +62,20 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected_at(hass, entity_id))
+    reconnected = reconnected_at(hass, entity_id)
+    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected)
     # "untracked" shows as "controlled": either way, not excluded.
-    return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
+    status = "controlled" if raw_status == "untracked" else raw_status
+    # A light just back online reports stale values before FLARE's resend
+    # lands, so it isn't shown as overridden until it has settled.
+    if status == "overridden" and reconnected is not None and dt_util.utcnow() < reconnected + RECONNECT_SETTLE:
+        status = "settling"
+    return status, matched_via, live_context_id
 
+
+
+# How long a zone gathers lights it has taken before announcing them.
+CONTROLLED_GATHER_SECONDS = 3
 
 
 class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
@@ -77,6 +97,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self._instance = instance
         self.claims: dict[str, dict] = {}
         self._last_statuses: dict[str, str] | None = None
+        self._newly_controlled: set[str] = set()
+        self._announce_later = None
+        self._recheck_later = None
         self._attr_unique_id = f"{instance.subentry_id}_claims"
         self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
@@ -98,6 +121,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         self._registry.unregister(self._instance.subentry_id)
+        for cancel in (self._announce_later, self._recheck_later):
+            if cancel is not None:
+                cancel()
 
     @callback
     def async_claims_changed(self) -> None:
@@ -112,39 +138,53 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
     @callback
     def _refresh_statuses(self) -> None:
         """Fires EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the
-        claims and live values at that moment. Not in extra_state_attributes,
-        which HA reads on every state write."""
+        claims and live values at that moment, and EVENT_LIGHTS_CONTROLLED
+        when the zone takes lights it wasn't setting. A light becoming
+        controlled again is churn, not news, so it's silent. Not in
+        extra_state_attributes, which HA reads on every state write."""
         statuses = {}
         for entity_id, record in self.claims.items():
             status, _via, live_context_id = _classify_tracked(self.hass, entity_id, record)
             statuses[entity_id] = status
+            if status == "settling":
+                self._recheck_after_settling()
             if self._last_statuses is None:
                 continue
-            if status == "overridden" and self._last_statuses.get(entity_id) != "overridden":
-                self._fire_overridden(entity_id, record, self._last_statuses.get(entity_id), live_context_id)
+            previous = self._last_statuses.get(entity_id)
+            if status == "overridden" and previous != "overridden":
+                self._fire_overridden(entity_id, record, previous, live_context_id)
+            # Not back from overridden (churn), nor from unavailable or
+            # settling (every light, after a restart), which were already
+            # the zone's.
+            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "settling"):
+                self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
+
+    @callback
+    def _recheck_after_settling(self) -> None:
+        if self._recheck_later is None:
+            self._recheck_later = async_call_later(
+                self.hass, RECONNECT_SETTLE.total_seconds() + 1, self._recheck
+            )
+
+    @callback
+    def _recheck(self, _now) -> None:
+        self._recheck_later = None
+        self._refresh_statuses()
+        # The counts settle too.
+        async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
     def _fire_overridden(
         self, entity_id: str, record: dict, previous: str | None, live_context_id: str | None
     ) -> None:
         state = self.hass.states.get(entity_id)
-        # Identifiers are only unique per config entry.
-        device = None
-        if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
-            identifier = next(iter(self._instance.device_info["identifiers"]))
-            device = dr.async_get(self.hass).async_get_device_by_identifier(
-                identifier, self.registry_entry.config_entry_id
-            )
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
-                "entity_id": entity_id,
-                # device_id puts the event in the device's Activity; omitted, not None,
-                # if the device isn't registered.
-                "zone": self._instance.title,
-                **({"device_id": device.id} if device else {}),
+                "light": entity_id,
+                **self._zone_data("overridden"),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
                 "live": {
@@ -157,6 +197,64 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 "latest": record.get("latest"),
             },
         )
+
+    @callback
+    def _controlled_soon(self, entity_id: str) -> None:
+        """A room's lights report back one by one, so they're gathered for
+        a moment and announced together."""
+        self._newly_controlled.add(entity_id)
+        if self._announce_later is None:
+            self._announce_later = async_call_later(self.hass, CONTROLLED_GATHER_SECONDS, self._announce_controlled)
+
+    @callback
+    def _announce_controlled(self, _now) -> None:
+        """Only lights that are on: a turn-off claims lights too, and taking a
+        room's lights to switch them off isn't taking control of them."""
+        self._announce_later = None
+        gathered, self._newly_controlled = self._newly_controlled, set()
+        statuses = self._last_statuses or {}
+        lit = sorted(e for e, status in statuses.items() if status == "controlled" and self._is_on(e))
+        lights = [e for e in lit if e in gathered]
+        if not lights:
+            return
+        self.hass.bus.async_fire(
+            EVENT_LIGHTS_CONTROLLED,
+            {"lights": lights, "controlled": len(lit), **self._zone_data("controlled")},
+        )
+
+    @callback
+    def async_announce_released(self, entity_ids: list[str]) -> None:
+        """The zone let these go: dark, or Clear."""
+        if not entity_ids:
+            return
+        self.hass.bus.async_fire(
+            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data("controlled")}
+        )
+
+    def _is_on(self, entity_id: str) -> bool:
+        state = self.hass.states.get(entity_id)
+        return state is not None and state.state == "on"
+
+    def _zone_data(self, status: str) -> dict[str, str]:
+        """Files an event under the zone: entity_id is the zone's count
+        sensor for `status`, which puts it in a logbook card targeting the
+        zone, and device_id puts it in the zone's own Activity (omitted, not
+        None, if the device isn't registered)."""
+        entity_id = er.async_get(self.hass).async_get_entity_id(
+            "sensor", DOMAIN, f"{self._instance.subentry_id}_{status}"
+        ) or f"sensor.{self._instance.prefix}flare_{status}"
+        # Identifiers are only unique per config entry.
+        device = None
+        if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
+            identifier = next(iter(self._instance.device_info["identifiers"]))
+            device = dr.async_get(self.hass).async_get_device_by_identifier(
+                identifier, self.registry_entry.config_entry_id
+            )
+        return {
+            "entity_id": entity_id,
+            "zone": self._instance.title,
+            **({"device_id": device.id} if device else {}),
+        }
 
     @property
     def native_value(self) -> int:

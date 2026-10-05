@@ -11,9 +11,11 @@ from pathlib import Path
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -26,6 +28,7 @@ from .const import (
     DOMAIN,
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_ZONES,
+    EVENT_TYPE_TICK,
     LEGACY_ENTRY_TITLES,
 )
 from homeassistant.helpers.start import async_at_started
@@ -34,15 +37,15 @@ from .blueprint_check import async_check as async_check_blueprint
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
-from .event import ticks_key
 from .flares.instance import flare_instances
+from .zone.instance import ZoneInstance, zone_instances
 from .zone.ticker import TickScheduler
 from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
-ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON, Platform.EVENT]
+ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 FLARE_PLATFORMS = [Platform.LIGHT]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -148,9 +151,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             int(entry.options.get(CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL)),
             float(entry.options.get(CONF_TICK_GAP, DEFAULT_TICK_GAP)),
         )
-        hass.data[DOMAIN][ticks_key(entry)] = scheduler
         entry.async_on_unload(scheduler.stop)
+
+        @callback
+        def _stop_ticking(_event: Event) -> None:
+            scheduler.stop()
+
+        entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
         await hass.config_entries.async_forward_entry_setups(entry, ZONE_PLATFORMS)
+        for zone in zone_instances(entry):
+            _remove_tick_entity(hass, zone)
+            entry.async_on_unload(scheduler.register(zone.subentry_id, zone.title, _ticker(hass, entry, zone)))
         return True
 
     instances = schedule_instances(entry)
@@ -179,6 +190,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await hass.data[DOMAIN][instance.subentry_id].async_refresh()
 
     return True
+
+
+def _ticker(hass: HomeAssistant, entry: ConfigEntry, zone: ZoneInstance):
+    """Fires the zone's tick: a plain event naming its device, so it never
+    shows in Activity, history or the logbook."""
+
+    @callback
+    def _fire() -> None:
+        device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, zone.subentry_id), entry.entry_id)
+        if device is not None:
+            hass.bus.async_fire(EVENT_TYPE_TICK, {"device_id": device.id})
+
+    return _fire
+
+
+@callback
+def _remove_tick_entity(hass: HomeAssistant, zone: ZoneInstance) -> None:
+    """The Tick was an event entity, logged every minute. Gone in 1.0.0."""
+    registry = er.async_get(hass)
+    if entity_id := registry.async_get_entity_id("event", DOMAIN, f"{zone.subentry_id}_tick"):
+        registry.async_remove(entity_id)
 
 
 _RELOADS_QUEUED = "reloads_queued"
@@ -211,7 +243,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_unload_services(hass)
         unloaded = await hass.config_entries.async_unload_platforms(entry, ZONE_PLATFORMS)
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-        hass.data.get(DOMAIN, {}).pop(ticks_key(entry), None)
         return unloaded
 
     instances = schedule_instances(entry)

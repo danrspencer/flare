@@ -84,6 +84,9 @@ class ClaimStore(Protocol):
     def async_claims_changed(self) -> None:
         """Publish the mutated claims as the entity's own state."""
 
+    def async_announce_released(self, entity_ids: list[str]) -> None:
+        """Say the zone let these lights go."""
+
 
 class ClaimRegistry:
     """Routes each light to the zone that holds its claims. Holds no claims
@@ -157,15 +160,18 @@ class ClaimRegistry:
             store.async_claims_changed()
         async_dispatcher_send(self._hass, SIGNAL_CLAIMS_UPDATED)
 
-    async def async_clear(self, subentry_id: str | None, entity_ids: list[str]) -> None:
+    async def async_clear(self, subentry_id: str | None, entity_ids: list[str], *, announce: bool = False) -> None:
         """Discards claims in one zone - behind claims_clear, the escape hatch for
-        a light stuck "overridden". No-op without a zone or a record."""
+        a light stuck "overridden", and the Clear button, which announces it.
+        No-op without a zone or a record."""
         store = self._stores.get(subentry_id)
         if store is None:
             return
-        # Not any(...pop...): any() short-circuits and would stop popping.
-        popped = [store.claims.pop(entity_id, None) for entity_id in entity_ids]
-        if any(value is not None for value in popped):
+        # A list, not any(...pop...): any() short-circuits and would stop popping.
+        cleared = [entity_id for entity_id in entity_ids if store.claims.pop(entity_id, None) is not None]
+        if cleared:
+            if announce:
+                store.async_announce_released(sorted(cleared))
             self._notify([store])
 
     async def async_override(self, subentry_id: str | None, entity_ids: list[str]) -> None:
@@ -317,7 +323,9 @@ class ClaimRegistry:
             state = self._hass.states.get(entity_id)
             if state is not None and state.state == "on":
                 return
+        released = sorted(store.claims)
         store.claims.clear()
+        store.async_announce_released(released)
 
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
         """One listener for every tracked light:

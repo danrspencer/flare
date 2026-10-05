@@ -4,6 +4,8 @@ saves and restores for an entity that's genuinely added."""
 
 from datetime import timedelta
 
+from freezegun import freeze_time
+
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant, State
 from homeassistant.util import dt as dt_util
@@ -19,6 +21,7 @@ from custom_components.flare.zone.instance import zone_instances
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.claims import ClaimRegistry
+from custom_components.flare.zone.override_protection import RECONNECT_SETTLE
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -132,7 +135,9 @@ async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: H
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
     await hass.async_block_till_done()
 
-    assert _status(hass, tracker, "light.a") == "overridden"
+    assert _status(hass, tracker, "light.a") == "settling"
+    with freeze_time(dt_util.utcnow() + RECONNECT_SETTLE, real_asyncio=True):
+        assert _status(hass, tracker, "light.a") == "overridden"
     unsub()
 
 

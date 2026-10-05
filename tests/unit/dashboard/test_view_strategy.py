@@ -406,8 +406,8 @@ def test_the_zone_view_has_an_activity_feed_of_the_zones_devices(result):
 
     assert result["zoneDevices"] == ["attic_zone", "bedroom_zone"]
     assert heading["heading"] == "Activity"
-    assert logbook["type"] == "logbook"
-    assert logbook["target"] == {"device_id": ["attic_zone", "bedroom_zone"]}
+    assert logbook["type"] == "custom:flare-activity-card"
+    assert logbook["device_id"] == ["attic_zone", "bedroom_zone"]
     assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Zones", "Activity")
 
 

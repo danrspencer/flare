@@ -169,8 +169,8 @@ Blueprint input mechanics worth knowing:
   device's one `sensor` in `variables:`. A trigger can't do that lookup
   (trigger templates can't read the registry, and a `state` trigger only
   takes entity IDs), which is why each schedule has a Phase `event`
-  entity: `phase_change` is `event.received` on the device, like the
-  Tick. There is no "bring your own sensor": anyone wanting something
+  entity: `phase_change` is `event.received` on the device. There is no
+  "bring your own sensor": anyone wanting something
   different builds their own automation on the services.
 - **Input renames are breaking.** A stored input simply stops matching
   any input the blueprint declares, so every already-migrated room
@@ -198,8 +198,8 @@ blueprint in this repo. Keep them that way.
 
 **Everything is an entity or an action, so a default can be replaced
 rather than configured.** Schedule settings are `time`/`number` entities,
-FLARE's live state is sensors and events (phase, Tick, counts, the override
-event), and everything it does is a service. That is the answer to most
+FLARE's live state is sensors and events (phase, tick, counts, the
+zone events), and everything it does is a service. That is the answer to most
 "can it do X differently?" requests: an automation changing an entity, or
 calling a service, needs no new option. Keep new behaviour in that shape -
 an entity or a service before a config field - and the docs homepage's
@@ -798,10 +798,9 @@ run again for the odd ones out. Things worth knowing:
   comments in the file, exactly as the editor does.
 - **The zone's device is created by `area_setup`, not by the entry's
   reload**, because the automation needs its id now; the reload finds it
-  by its identifiers. Nothing waits for that reload: `event.received`
-  re-resolves its target on registry changes
-  (`helpers/target.py`'s `TargetEntityChangeTracker`), so the automation
-  picks up the Tick when it appears.
+  by its identifiers. Nothing waits for that reload: the tick trigger
+  matches `flare_tick` on the device id alone, so the automation works
+  before the zone's entities exist.
 - **"Already set up" means a zone with the area's name exists**, and it
   only unticks the area; every area with lights is always listed. At the
   user's direction, after reading automations' Lights & Occupancy proved
@@ -1109,7 +1108,7 @@ would otherwise permanently fail the condition.
 
 **Triggers:** `phase_change` (`event.received` on the Schedule device's
 Phase), `tick`
-(`event.received` on the Zone device's Tick), `extra`, `motion_on` /
+(an `event` trigger on `flare_tick` with the Zone's `device_id`), `extra`, `motion_on` /
 `motion_off` (`occupancy.detected`/`cleared`), `recovered`.
 
 **Zone ticks exist to stop every room writing in the same second.**
@@ -1117,24 +1116,28 @@ Observed 2026-09-27: all rooms' `time_pattern` fired within ~0.2s of
 :00, and Z2M's `ROUTE_ERROR_MANY_TO_ONE_ROUTE_FAILURE`s clustered in
 seconds 0-4 of the minute (90 vs 10-30 in any other 5s window), with
 command timeouts landing at :10 - sent at :00. `zone/ticker.py`
-fires each zone's `event.<slug>_flare_tick` a gap apart (title order),
+fires each zone's `flare_tick` bus event a gap apart (title order),
 starting on each interval boundary; the blueprint's decision still
 happens fresh at trigger time, so this is NOT the jitter that was
 removed (see Standing decisions). Every room has a zone, so there is no
 `time_pattern` fallback.
 
-- **The Tick has no `entity_category` and must not be hidden.** The
-  trigger targets the zone's *device*, and HA expands a device target to
-  entities with no category and not hidden (`helpers/target.py`,
-  `_primary_entities_only`; same rule in 2026.4.0, checked). A user
-  hiding the Tick silently stops the room's ticks; the docs say not to.
-- **Lights & Occupancy's selector has no device filter or `event`
-  entry**, so the zone can't be picked there: the frontend only lists a
-  device in a target picker if it ALSO has an entity passing the entity
-  filter (`getDevices` in `src/data/device/device_picker.ts`), which
-  would make the Tick pickable too. Hence the separate Zone input.
-- The Tick is one recorder row per zone per interval. Accepted: the
-  schedule sensor already writes one per minute.
+- **The tick is a plain bus event, `flare_tick` with `{"device_id": ...}`,
+  not an entity** (`__init__.py`'s `_ticker`), at the user's direction:
+  as an event entity it logged every minute in every zone's Activity and
+  history, burying the events that matter. Undescribed bus events never
+  reach the logbook. It was an event entity (`event.<slug>_flare_tick`)
+  until 1.0.0; setup deletes any left in the registry. With no entity,
+  nothing cancels the scheduler at shutdown, hence the explicit
+  `EVENT_HOMEASSISTANT_STOP` listener - without it the tests fail on
+  lingering timers.
+- **Lights & Occupancy's selector has no device filter**, so the zone
+  can't be picked there: the frontend only lists a device in a target
+  picker if it ALSO has an entity passing the entity filter
+  (`getDevices` in `src/data/device/device_picker.ts`). Hence the
+  separate Zone input.
+- A tick is still one recorder row per zone per interval, in the events
+  table. Accepted: the schedule sensor already writes one per minute.
 
 - `phase_change` is the schedule's Phase event, which `event.py` fires
   only when the phase actually changes (a manual override included) and
@@ -1837,25 +1840,39 @@ caught.
   distinguishing attribute (`points` / `claims`) so a name alone is
   never enough.
 - **The Zones view has an Activity sidebar**, copied from HA's Security
-  dashboard (`security-view-strategy.ts`): a `logbook` card in the
-  sections view's `sidebar`, targeting every zone's device. **Open
-  problem:** the card resolves a device target to the device's entities
-  and asks for those only (`hui-logbook-card.ts` passes `entityIds`, never
+  dashboard (`security-view-strategy.ts`), but not its `logbook` card:
+  that card resolves a device target to the device's entities and asks
+  for those only (`hui-logbook-card.ts` passes `entityIds`, never
   `deviceIds`, in 2026.9, 2026.10 and the frontend's dev branch), and the
   logbook server drops "continuous" sensors (any with a unit or state
-  class) from that list (`logbook/helpers.py`, `async_filter_entities`).
-  So a zone event filed under a count sensor shows on the zone's device
-  page (which asks by device) but not here; only Clear presses do.
-  Options weighed with the user: a FLARE card around `ha-logbook` passing
-  `deviceIds` (as the device page does); filing events under the Clear
-  button (the zone page then labels every entry "Clear"); or the claims
-  sensor with a fixed-word state. Undecided.
+  class) from that list (`logbook/helpers.py`, `async_filter_entities`),
+  so the zone events filed under a count sensor never showed - only
+  Clear presses did. `custom:flare-activity-card`
+  (`www/flare-activity-card.js`) renders the frontend's own `ha-logbook`
+  with the zones' entities AND `deviceIds`, exactly as a device page
+  does. `ha-logbook` is lazy-loaded, so the card has `loadCardHelpers`
+  create a built-in logbook card first, which imports it. Depending on
+  `ha-logbook` is an accepted risk, like `ha-control-slider`: if it
+  breaks, follow what `ha-config-device-page.ts` does next. Also
+  weighed with the user and not taken: filing events under the Clear
+  button (the zone page then labels every entry "Clear"), or the claims
+  sensor with a fixed-word state.
 - **The Zones view copies HA's Light dashboard** (`light-view-strategy.ts`,
   the user's screenshot): a section per floor (`column_span: 2`, by level),
-  a subtitle heading per zone, and on wide screens Clear in the left third
+  a subtitle heading per zone, and on wide screens Clear on the left
   where that has "All off", with the zone's Controlled and Overridden
   tiles beside it where that has the lights (the screenshot was for layout
-  only: lights there were a misreading, built and removed). Clear is
+  only: lights there were a misreading, built and removed). The two tiles
+  share one `grid` card: the sidebar takes one of `max_columns: 2`, so a
+  zone section is always 12 columns, and a tile's `min_columns` is 6, so
+  loose tiles wrapped under Clear (HA's view has 24 columns to work with).
+  Each count is two tiles - Controlled blue, Overridden amber, while the
+  count is above zero, and grey otherwise - one shown at a time, since a
+  tile's `color` takes no template; it is how a zone with overrides is
+  spotted. Also weighed and
+  left for later, at the user's direction, to let the view settle: a
+  list of overridden lights under the totals, tiles for the lights
+  themselves, and a Clear per light. Clear is
   FLARE's own `custom:flare-clear-card` (`www/flare-clear-card.js`), drawn
   like the "All off" `toggle-group` card: no card around it, a round icon
   and a label. A tile was tried and looked like one more tile in the grid;
@@ -1867,6 +1884,37 @@ caught.
   the top are a markdown template summing the zones' counts, at the
   user's direction: a stacked statistics graph was tried and dropped as
   ugly, and so were total sensors.
+- **FLARE's zone events** (`flare_lights_controlled`,
+  `flare_lights_released`, `flare_light_overridden`) carry one of the
+  zone's count sensors as `entity_id` and the zone's `device_id`, with the
+  light(s) in `light`/`lights`, so they show on the zone's device page,
+  labelled Controlled or Overridden. At the user's direction the zone
+  speaks in whole-room terms - "now controlling 7 lights", "cleared 7
+  lights" (`flare_lights_released`: dark release or the Clear button, not
+  the `claims_clear` service, which the blueprint runs as bookkeeping) -
+  and only an override names one light. A light becoming controlled
+  again after an override is silent: a `flare_light_reclaimed` event was
+  built and removed as churn. The logbook matches events to entities only
+  through `entity_id`, so they can't also stay on the light's own
+  timeline; the user chose the zone. The count sensors have units, so the
+  logbook leaves their own state changes out - and, for the same reason,
+  drops them from a logbook card's entity list, which is why the Zones
+  view has its own Activity card (see the Zones view Activity notes).
+- **A light back online that reads overridden shows as `settling`** in
+  the sensors (`_classify_tracked`) for `RECONNECT_SETTLE`: in neither
+  count, and not announced. Its first report after a reconnect is often
+  stale (seen live after a restart: 10/8130 on a bulb at 204/8105,
+  corrected 0.4s later), and announcing on it logged overrides that never
+  were. The zone rechecks once it settles. Display only, at the user's
+  direction: `classify_state`, and so the services, still read it
+  overridden, which is the reconnect rule's job.
+- **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
+  before firing, because a room's bulbs confirm one by one and each
+  confirmation is a separate status refresh (announced per light it was
+  one entry per bulb), and names only lights that are on: a turn-off
+  claims lights too, and announced it read "now setting 0 lights". A
+  light coming back from unavailable isn't taken either, or every room
+  announced itself after a restart.
 - **The chart is one filled path, not a bar per sample.** It used to
   draw a `<rect>` per five-minute sample, which made every ramp a
   staircase. `curveFillSvg`/`simplifyPolyline`/`roundedTopEdge` in the

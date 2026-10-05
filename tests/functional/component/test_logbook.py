@@ -1,0 +1,97 @@
+"""How FLARE's zone events read in the logbook: filed under the zone's
+sensor, naming the light."""
+
+from homeassistant.core import Event, HomeAssistant
+
+from custom_components.flare.logbook import async_describe_events
+
+
+def _describers(hass: HomeAssistant) -> dict:
+    found = {}
+    async_describe_events(hass, lambda domain, event_type, describe: found.__setitem__(event_type, describe))
+    return found
+
+
+async def test_each_event_names_its_zone_and_is_filed_under_the_zones_sensor(hass: HomeAssistant):
+    """Taking lights and clearing them are one entry per zone; only an
+    override names a light."""
+    hass.states.async_set("light.k1", "on", {"friendly_name": "Kitchen 1"})
+    describe = _describers(hass)
+
+    overridden = describe["flare_light_overridden"](
+        Event(
+            "flare_light_overridden",
+            {
+                "light": "light.k1",
+                "entity_id": "sensor.kitchen_flare_overridden",
+                "zone": "Kitchen",
+                "live": {"brightness": 12, "color_temp_kelvin": 6500},
+                "latest": {"target": {"brightness": 255, "color_temp_kelvin": 4100}},
+            },
+        )
+    )
+    released = describe["flare_lights_released"](
+        Event(
+            "flare_lights_released",
+            {"lights": ["light.k1", "light.k2"], "entity_id": "sensor.kitchen_flare_controlled", "zone": "Kitchen"},
+        )
+    )
+    controlled = describe["flare_lights_controlled"](
+        Event(
+            "flare_lights_controlled",
+            {"lights": ["light.k1"], "controlled": 6, "entity_id": "sensor.kitchen_flare_controlled", "zone": "Kitchen"},
+        )
+    )
+
+    assert overridden == {
+        "name": "Kitchen",
+        "message": "released Kitchen 1 to something else (last asked for 255/4100, found 12/6500)",
+        "entity_id": "sensor.kitchen_flare_overridden",
+    }
+    assert controlled == {"name": "Kitchen", "message": "now controlling 6 lights", "entity_id": "sensor.kitchen_flare_controlled"}
+    assert released == {"name": "Kitchen", "message": "cleared 2 lights", "entity_id": "sensor.kitchen_flare_controlled"}
+
+
+async def test_a_release_with_nothing_asked_for_has_no_comparison(hass: HomeAssistant):
+    describe = _describers(hass)
+
+    released = describe["flare_light_overridden"](
+        Event("flare_light_overridden", {"light": "light.gone", "entity_id": "sensor.k_flare_overridden", "zone": "Kitchen", "latest": {}})
+    )
+
+    assert released["message"] == "released light.gone to something else"
+
+
+async def test_events_recorded_before_1_0_still_read(hass: HomeAssistant):
+    """The logbook reads back what's already in the database."""
+    hass.states.async_set("light.k1", "on", {"friendly_name": "Kitchen 1"})
+    describe = _describers(hass)
+
+    overridden = describe["flare_light_overridden"](
+        Event("flare_light_overridden", {"entity_id": "light.k1", "zone": "Kitchen", "latest": {}})
+    )
+    controlled = describe["flare_lights_controlled"](
+        Event("flare_lights_controlled", {"entity_ids": ["light.k1"], "controlled": 1, "zone": "Kitchen"})
+    )
+
+    assert overridden == {"name": "Kitchen", "message": "released Kitchen 1 to something else", "entity_id": "light.k1"}
+    assert controlled == {"name": "Kitchen", "message": "now controlling 1 light"}
+
+
+async def test_an_rgb_request_is_compared_with_the_lights_rgb(hass: HomeAssistant):
+    """Not with its colour temperature, which a bulb reports alongside."""
+    describe = _describers(hass)
+
+    overridden = describe["flare_light_overridden"](
+        Event(
+            "flare_light_overridden",
+            {
+                "light": "light.k1",
+                "zone": "Study",
+                "live": {"brightness": 180, "color_temp_kelvin": 2702, "rgb_color": [255, 167, 88]},
+                "latest": {"target": {"brightness": 180, "rgb_color": [255, 184, 123]}},
+            },
+        )
+    )
+
+    assert overridden["message"].endswith("(last asked for 180/[255, 184, 123], found 180/[255, 167, 88])")
