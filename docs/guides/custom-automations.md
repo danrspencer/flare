@@ -53,8 +53,7 @@ actions:
 ```
 
 It runs on the kitchen zone's [tick](../../reference/zones/#when-zones-tick) and only passes
-lights that are on, since `apply_lighting`
-turns on everything it's given. Turning the room on and off is left to you.
+lights that are on, since `apply_lighting` turns on everything it's given. Turning the room on and off is left to you.
 
 ## Sending the commands yourself
 

@@ -160,8 +160,9 @@ changed.
 
 ## Updating the blueprint
 
-When a FLARE update includes a new blueprint, a repair appears under **Settings → System →
-Repairs**. Press **Fix** to install it; your automations keep their settings. If you've edited
+The blueprint comes with FLARE, so after each FLARE update a repair appears under **Settings →
+System → Repairs** offering the new copy. Press **Fix** to install it; your automations keep
+their settings. If you've edited
 your own copy, ignore the repair, because installing replaces the file.
 
 The [test trace reports](../../trace-report/) show runs of the blueprint from its tests, with

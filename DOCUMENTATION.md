@@ -168,9 +168,9 @@ starting from scratch, is not.
 | the curve | external | The day's brightness and colour over time. Not "the schedule" — see below. |
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
-| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose Tick tells the room's automation when to update. Not *tracking scope*. |
+| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose tick tells the room's automation when to update. Not *tracking scope*. |
 | flare | external | A light over an automation, for voice assistants and HomeKit: `light.<name>_flare`. Lower case in running prose; **Flares** when naming the entry. |
-| Tick | external | A zone's `event.<name>_flare_tick` entity. Capitalised: it's the entity's name. The update it causes is still *the regular update*. |
+| tick | external | A zone's `flare_tick` event, fired once per update interval. Lower case: it's an event, not an entity. The update it causes is still *the regular update*. |
 
 ### Behaviour
 
@@ -181,12 +181,12 @@ starting from scratch, is not.
 | claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public); avoid on mainstream pages, where "what FLARE is driving" reads better. |
 | scene handoff | external | Letting a scene own part or all of a room. |
 | self-healing | external | Retrying a command that didn't land. |
-| two-step transition | both | Sending brightness and colour separately. Users meet it via the label and the repair. |
-| brightness multiplier | external | The per-light scaling factor. |
+| two-step transition | both | Sending brightness and colour separately. Users meet it via the **Two-step bulb models** option and the `no_combined_transition` label. |
+| brightness level | external | A light's own brightness, 0–255, from Brightness Template or an idle brightness. Not a *multiplier*: levels are absolute. |
 | ~~adaptive tick~~ | internal | Say *the regular update* or *the next update*. |
 | ~~adaptive step~~ | internal | Say *when FLARE next sets the lights*. |
 | ~~dispatch~~ | internal | As a noun for FLARE's own sending step. The ordinary verb (*issue the calls yourself*) is fine in `docs/reference/`. |
-| ~~bucket~~ / ~~bucketing~~ | internal | Grouping lights by multiplier. Never in `docs/`. |
+| ~~bucket~~ / ~~bucketing~~ | internal | Grouping lights by brightness. Never in `docs/`. |
 | ~~the recovered trigger~~ | internal | Say *when a light comes back online*. |
 | ~~grouping~~ | internal | The module. Users see its effects, never its name. |
 | ~~write tracking~~ | internal | Say *override protection*. |
@@ -208,10 +208,12 @@ Never paraphrase these. They are what the user types or clicks.
   quoting the label, drop it in running prose.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
   `flare.compute_curve`, `flare.compute_scene_coverage`,
-  `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`.
+  `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`,
+  `flare.claims_override`, `flare.export_schedule`, `flare.import_schedule`.
 - **Config entries** — Schedules, Zones, Flares, under FLARE. Write the path as
   **FLARE → Zones**.
-- **Dashboard views** — `custom:flare-schedule`, `custom:flare-zone`.
+- **Dashboard** — **FLARE Lighting** (`custom:flare`), and its views `custom:flare-schedule`
+  and `custom:flare-zone`.
 
 ## Keeping this honest
 

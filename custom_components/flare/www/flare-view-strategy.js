@@ -47,7 +47,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
     if (!all.length) {
       return notice(
         'No FLARE schedules found yet.\n\nAdd one under **Settings → Devices & ' +
-          'Services → FLARE → Add schedule sensor**, and it will appear here automatically.'
+          'Services → FLARE → Add schedule**, and it will appear here automatically.'
       );
     }
 
