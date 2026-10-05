@@ -22,6 +22,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_ENTRY_TYPE,
@@ -32,7 +33,7 @@ from .const import (
     EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .zone.override_protection import classify_state
+from .zone.override_protection import RECONNECT_SETTLE, classify_state
 from .zone.instance import ZoneInstance, zone_instances
 from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry, reconnected_at
 
@@ -92,6 +93,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self._last_statuses: dict[str, str] | None = None
         self._newly_controlled: set[str] = set()
         self._announce_later = None
+        self._recheck_later = None
         self._attr_unique_id = f"{instance.subentry_id}_claims"
         self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
@@ -113,8 +115,9 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         self._registry.unregister(self._instance.subentry_id)
-        if self._announce_later is not None:
-            self._announce_later()
+        for cancel in (self._announce_later, self._recheck_later):
+            if cancel is not None:
+                cancel()
 
     @callback
     def async_claims_changed(self) -> None:
@@ -141,13 +144,35 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 continue
             previous = self._last_statuses.get(entity_id)
             if status == "overridden" and previous != "overridden":
-                self._fire_overridden(entity_id, record, previous, live_context_id)
+                # A light just back online reports stale values before
+                # FLARE's resend lands; judged again once it has settled.
+                if self._settling(entity_id):
+                    statuses[entity_id] = previous
+                    self._recheck_after_settling()
+                else:
+                    self._fire_overridden(entity_id, record, previous, live_context_id)
             # Not back from overridden (churn), nor from unavailable (every
             # light, after a restart), which were already the zone's.
             elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable"):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
+
+    def _settling(self, entity_id: str) -> bool:
+        reconnected = reconnected_at(self.hass, entity_id)
+        return reconnected is not None and dt_util.utcnow() < reconnected + RECONNECT_SETTLE
+
+    @callback
+    def _recheck_after_settling(self) -> None:
+        if self._recheck_later is None:
+            self._recheck_later = async_call_later(
+                self.hass, RECONNECT_SETTLE.total_seconds() + 1, self._recheck
+            )
+
+    @callback
+    def _recheck(self, _now) -> None:
+        self._recheck_later = None
+        self._refresh_statuses()
 
     @callback
     def _fire_overridden(

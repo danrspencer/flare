@@ -4,6 +4,8 @@ zone is whichever one a caller names, never resolved from its area."""
 
 from datetime import timedelta
 
+from freezegun import freeze_time
+
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
@@ -27,7 +29,8 @@ from custom_components.flare.schedule.coordinator import ScheduleCoordinator, sc
 from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.instance import zone_instances
-from custom_components.flare.zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
+from custom_components.flare.zone.claims import RECONNECTS, SIGNAL_CLAIMS_UPDATED, ClaimRegistry
+from custom_components.flare.zone.override_protection import RECONNECT_SETTLE
 from tests.support.claims import claim_field
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
@@ -257,6 +260,55 @@ async def test_the_override_event_is_filed_under_the_zone(hass: HomeAssistant):
     assert events[0].data["zone"] == "Kitchen"
     assert events[0].data["live"]["brightness"] == 12
     assert events[0].data["latest"]["target"] == ASKED
+
+
+async def _back_online_at_a_stale_level(hass: HomeAssistant):
+    """A zone with one light just back online, reporting a stale level
+    before FLARE's resend lands."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    events: list = []
+    hass.bus.async_listen("flare_light_overridden", events.append)
+    _light(hass, "light.a", area_id=area.id, state="unavailable")
+    await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
+    tracker._refresh_statuses()
+    hass.states.async_set("light.a", "on", {"brightness": 10, "color_temp_kelvin": 6500}, context=Context())
+    hass.data.setdefault(RECONNECTS, {})["light.a"] = hass.states.get("light.a").last_changed
+    tracker._refresh_statuses()
+    await hass.async_block_till_done()
+    return tracker, events
+
+
+async def test_a_light_back_online_is_not_announced_overridden_while_it_settles(hass: HomeAssistant):
+    tracker, events = await _back_online_at_a_stale_level(hass)
+
+    assert events == []
+    await tracker.async_will_remove_from_hass()  # cancels its recheck
+
+
+async def test_a_light_still_overridden_once_settled_is_announced(hass: HomeAssistant):
+    _tracker, events = await _back_online_at_a_stale_level(hass)
+
+    later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
+    with freeze_time(later, real_asyncio=True):
+        async_fire_time_changed(hass, later)
+        await hass.async_block_till_done()
+
+    assert [e.data["light"] for e in events] == ["light.a"]
+
+
+async def test_a_light_that_settles_to_what_flare_asked_for_is_never_announced(hass: HomeAssistant):
+    tracker, events = await _back_online_at_a_stale_level(hass)
+    hass.states.async_set("light.a", "on", ASKED, context=Context())
+    tracker._refresh_statuses()
+
+    later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
+    with freeze_time(later, real_asyncio=True):
+        async_fire_time_changed(hass, later)
+        await hass.async_block_till_done()
+
+    assert events == []
 
 
 async def test_a_light_set_again_after_an_override_is_not_announced(hass: HomeAssistant):
