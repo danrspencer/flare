@@ -64,13 +64,7 @@ With all three, that's everything a room needs. The automation is an ordinary on
 > A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
 > off by itself.
 
-## Step 3 — use your flares (optional)
-
-Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs, so "Hey Siri,
-turn on the kitchen" brings the kitchen up the way FLARE would. See
-[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/) for how.
-
-## Step 4 — add the dashboard (optional)
+## Step 3 — add the dashboard (optional)
 
 **Settings → Dashboards → Add dashboard**, and pick **FLARE Lighting**. It's a dashboard
 with a view for each schedule and one for your zones, and it keeps up as you add more. See
@@ -100,5 +94,5 @@ The other buttons there add one thing at a time: **Add schedule**, **Add zone** 
   [Why didn't my light change?]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
 - Want it to behave differently — a weekend lie-in, a holiday schedule?
   [Examples]({{ site.baseurl }}/guides/examples/).
-- What each voice command does to a room:
-  [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#what-each-command-does).
+- Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs.  See
+[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#exposing-flares-instead-of-your-bulbs) for how.
