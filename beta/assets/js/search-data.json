@@ -64,7 +64,7 @@
   },"9": {
     "doc": "Blueprint",
     "title": "Updating the blueprint",
-    "content": "When a FLARE update includes a new blueprint, a repair appears under Settings → System → Repairs. Press Fix to install it; your automations keep their settings. If you’ve edited your own copy, ignore the repair, because installing replaces the file. The test trace reports show runs of the blueprint from its tests, with each step matched to the line of the blueprint it comes from. ",
+    "content": "The blueprint comes with FLARE, so after each FLARE update a repair appears under Settings → System → Repairs offering the new copy. Press Fix to install it; your automations keep their settings. If you’ve edited your own copy, ignore the repair, because installing replaces the file. The test trace reports show runs of the blueprint from its tests, with each step matched to the line of the blueprint it comes from. ",
     "url": "/flare/beta/reference/blueprint/#updating-the-blueprint",
     
     "relUrl": "/reference/blueprint/#updating-the-blueprint"
@@ -92,473 +92,466 @@
   },"13": {
     "doc": "Dashboard",
     "title": "Dashboard",
-    "content": "FLARE comes with a ready-made dashboard, which builds itself from your schedules and zones: a view for each schedule and one for your zones. A schedule or zone you add later appears without you touching it. Add it from Settings → Dashboards → Add dashboard: pick FLARE Lighting, then give it a name and an icon. FLARE’s logo is in the icon picker as flare:logo. It’s a dashboard whose whole YAML is: . strategy: type: custom:flare . ",
+    "content": "FLARE comes with a ready-made dashboard: a view for each schedule, and one for your zones. It builds itself from your schedules and zones each time it loads, so one you add later appears on its own. Add it from Settings → Dashboards → Add dashboard: pick FLARE Lighting, then give it a name and an icon. FLARE’s logo is in the icon picker as flare:logo. | A schedule’s view shows the day’s curve and every schedule and curve setting. | Zones shows how many lights FLARE is driving across the house and how many something else has taken over. Below that is each zone, by floor and area, laid out like Home Assistant’s Lights dashboard: its controlled and overridden counts, which lights are overridden, and a Clear button to hand them back. A zone’s name opens its device page. Beside the zones, Activity lists the last 24 hours of their events, as each zone’s device page does. On a narrow screen, Activity is a separate tab. | . ",
     "url": "/flare/beta/dashboard/",
     
     "relUrl": "/dashboard/"
   },"14": {
     "doc": "Dashboard",
     "title": "Adding the views to another dashboard",
-    "content": "The views it’s made of can also go in a dashboard of your own. Open it, then Edit dashboard → the three-dot menu → Raw configuration editor, and add: . views: - title: Lighting strategy: type: custom:flare-schedule - title: Zones strategy: type: custom:flare-zone . | Lighting — the day’s curve and every schedule and curve setting, one section per schedule sensor. | Zones — how many lights FLARE is driving across the house and how many something else has taken over, then each zone by floor and area, laid out like Home Assistant’s Lights dashboard: its controlled and overridden counts, a Clear button to hand its lights back, and which are overridden. A zone’s name opens its device page. Beside them, Activity is the last 24 hours of the zones’ Activity. On a narrow screen it’s a tab. | . There’s nothing to fill in: both views find their own entities, and a schedule sensor or zone you add later appears without you touching the dashboard again. ",
+    "content": "The same views can go in a dashboard of your own. Open it, then Edit dashboard → the three-dot menu → Raw configuration editor, and add: . views: - title: Lighting strategy: type: custom:flare-schedule - title: Zones strategy: type: custom:flare-zone . Like the ready-made dashboard, both views find their own entities each time they load. custom:flare-schedule shows every schedule, one after another. To give each schedule its own view instead, add sensor:: . views: - title: Downstairs strategy: type: custom:flare-schedule sensor: downstairs - title: Upstairs strategy: type: custom:flare-schedule sensor: upstairs . sensor is the part before _flare in the schedule sensor’s entity ID, such as downstairs for sensor.downstairs_flare, though the full entity ID works too. If you name one that doesn’t exist, the view says so and lists the schedules you do have. ",
     "url": "/flare/beta/dashboard/#adding-the-views-to-another-dashboard",
     
     "relUrl": "/dashboard/#adding-the-views-to-another-dashboard"
   },"15": {
-    "doc": "Dashboard",
-    "title": "One schedule per view",
-    "content": "Once you have more than one schedule, a view each often reads better than all of them stacked. Add sensor: to pick one: . views: - title: Downstairs strategy: type: custom:flare-schedule sensor: downstairs - title: Upstairs strategy: type: custom:flare-schedule sensor: upstairs . sensor is the part before _flare in the schedule sensor’s entity ID, such as downstairs for sensor.downstairs_flare, though the full entity ID works too. If you name one that doesn’t exist, the view says so and lists the schedules you do have. ",
-    "url": "/flare/beta/dashboard/#one-schedule-per-view",
-    
-    "relUrl": "/dashboard/#one-schedule-per-view"
-  },"16": {
     "doc": "Dashboard",
     "title": "Just the chart",
     "content": "To put the curve chart on a dashboard of your own: on Home Assistant 2026.6 or newer, add a card, open the By entity tab and pick your schedule sensor — FLARE Curve appears under Community with a preview. On older versions, add a Manual card: . type: custom:flare-curve-card sensor: home . sensor is the part before _flare in the schedule sensor’s entity ID. ",
     "url": "/flare/beta/dashboard/#just-the-chart",
     
     "relUrl": "/dashboard/#just-the-chart"
+  },"16": {
+    "doc": "Dashboard",
+    "title": "Reading a schedule’s view",
+    "content": "Twenty-five near-identical controls is a lot to scan, so two things are colour-coded: . | Colour is the phase — Morning blue, Day yellow, Evening orange, Night indigo, wherever that phase appears. | Icon is the channel — brightness, colour temperature, or an hourglass for transitions. | . Each Curve row is a colour temperature and a brightness, in that order, and together they preview what the light will look like: both sliders are painted in the colour that phase sets, and how far the brightness one fills is how bright it will be. It’s the same idea as Home Assistant’s own brightness slider for a light. Copy or paste, at the bottom of each schedule, copies that schedule as text, or applies one you paste in, so a schedule can be backed up, shared, or copied onto another. See copying a schedule. ",
+    "url": "/flare/beta/dashboard/#reading-a-schedules-view",
+    
+    "relUrl": "/dashboard/#reading-a-schedules-view"
   },"17": {
     "doc": "Dashboard",
-    "title": "Reading the Lighting view",
-    "content": "Twenty-five near-identical controls is a lot to scan, so two things are colour-coded: . | Colour is the phase — Morning blue, Day yellow, Evening orange, Night indigo, wherever that phase appears. | Icon is the channel — brightness, colour temperature, or an hourglass for transitions. | . Each Curve row is a colour temperature and a brightness, in that order, and together they preview what the light will look like: both sliders are painted in the colour that phase sets, and how far the brightness one fills is how bright it will be. It’s the same idea as Home Assistant’s own brightness slider for a light. Copy or paste, at the bottom of each schedule, copies that schedule as text, or applies one you paste in, so a schedule can be backed up, shared, or copied onto another. See copying a schedule. ",
-    "url": "/flare/beta/dashboard/#reading-the-lighting-view",
-    
-    "relUrl": "/dashboard/#reading-the-lighting-view"
-  },"18": {
-    "doc": "Dashboard",
     "title": "Changing it",
-    "content": "Both views rebuild themselves each time they load, so they pick up changes to FLARE and new schedules or zones on their own. If you’d rather own the layout and edit it by hand, use Take control from the dashboard’s three-dot menu. Take control is one-way. Once you’ve taken control a view stops picking up changes to FLARE’s layout, and newly added schedule sensors or zones won’t appear on their own. ",
+    "content": "If you’d rather own the layout and edit it by hand, use Take control from the dashboard’s three-dot menu. Take control is one-way. Once you’ve taken control, the dashboard no longer rebuilds itself, so it won’t pick up changes to FLARE’s layout, and schedules or zones you add later won’t appear on their own. ",
     "url": "/flare/beta/dashboard/#changing-it",
     
     "relUrl": "/dashboard/#changing-it"
-  },"19": {
+  },"18": {
     "doc": "Examples",
     "title": "Examples",
     "content": "Almost everything in FLARE is an ordinary Home Assistant entity or event. That means you can trigger your own automations from it, or use automations to change it. These are starting points: each one is a complete automation to paste in and adjust. They use a schedule called Home, so its entities are time.home_…, number.home_… and sensor.home_flare. Swap in your own schedule’s name, and your own rooms, lights and sensors. On this page . | A weekend lie-in | A holiday schedule | Movie night | Keeping a room lit regardless of motion | Lighting a room from a remote | Something else at a phase change | Being told when a light is taken over | . ",
     "url": "/flare/beta/guides/examples/",
     
     "relUrl": "/guides/examples/"
-  },"20": {
+  },"19": {
     "doc": "Examples",
     "title": "A weekend lie-in",
     "content": "Morning starts later on Saturday and Sunday. alias: Weekend lie-in triggers: - trigger: state entity_id: event.home_flare_phase conditions: - condition: template value_template: \"{{ trigger.to_state.attributes.event_type == 'Night' }}\" actions: # Friday and Saturday nights set up a lie-in for the next morning; # every other night sets the weekday times back. - variables: lie_in: \"{{ now().weekday() in [4, 5] }}\" - action: time.set_value target: entity_id: time.home_morning_time data: time: \"{{ '08:00:00' if lie_in else '06:00:00' }}\" - action: time.set_value target: entity_id: time.home_day_time data: time: \"{{ '09:30:00' if lie_in else '08:00:00' }}\" . The schedule only checks Morning’s start time when the morning comes round, so the trick is to change it the night before. This runs when Night starts: after today’s morning, and before tomorrow’s. | It runs every night, not just at the weekend, so the weekday times come back on Sunday night without a second automation. | Day moves with Morning. Morning lasts until Day starts, so moving Morning to 08:00 while Day still starts at 08:00 would leave no Morning at all. | If your Night starts after midnight, use [5, 6]: by then it’s already Saturday. | . ",
     "url": "/flare/beta/guides/examples/#a-weekend-lie-in",
     
     "relUrl": "/guides/examples/#a-weekend-lie-in"
-  },"21": {
+  },"20": {
     "doc": "Examples",
     "title": "A holiday schedule",
     "content": "Switch the whole house to a holiday schedule, with later mornings and later nights, from a toggle, and back again when the holiday’s over. First create a Toggle helper called Holiday mode (Settings → Devices &amp; Services → Helpers → Create helper → Toggle). Then: . alias: Holiday schedule triggers: - trigger: state entity_id: input_boolean.holiday_mode actions: - if: \"{{ is_state('input_boolean.holiday_mode', 'on') }}\" then: - action: flare.import_schedule data: schedule_device_id: \"{{ device_id('sensor.home_flare') }}\" schedule: | morning: time: \"08:30\" day: time: \"10:00\" night: time: \"23:30\" else: - action: flare.import_schedule data: schedule_device_id: \"{{ device_id('sensor.home_flare') }}\" schedule: | morning: time: \"06:00\" day: time: \"08:00\" night: time: \"22:00\" . Each schedule lists only what changes; everything else stays as it is. A schedule can hold any of its settings, so for bigger changes, set your schedule up the way you want it, press Copy in its dashboard section, and paste the result in. ",
     "url": "/flare/beta/guides/examples/#a-holiday-schedule",
     
     "relUrl": "/guides/examples/#a-holiday-schedule"
-  },"22": {
+  },"21": {
     "doc": "Examples",
     "title": "Movie night",
     "content": "Hold the house at Night while the TV is on, and hand back to the schedule when it goes off. alias: Movie night triggers: - trigger: state entity_id: media_player.living_room_tv to: playing id: start - trigger: state entity_id: media_player.living_room_tv from: playing id: stop actions: - action: select.select_option target: entity_id: select.home_flare_phase data: option: \"{{ 'Night' if trigger.id == 'start' else 'Auto' }}\" . The phase override applies to every room on that schedule. To dim one room only, give it a schedule of its own, or use the blueprint’s Brightness Template instead. ",
     "url": "/flare/beta/guides/examples/#movie-night",
     
     "relUrl": "/guides/examples/#movie-night"
-  },"23": {
+  },"22": {
     "doc": "Examples",
     "title": "Keeping a room lit regardless of motion",
     "content": "Keep the landing lit at the full curve for as long as a toggle is on, whatever the motion sensor says. template: - binary_sensor: - name: \"Landing kept lit\" device_class: occupancy state: \"{{ is_state('input_boolean.keep_landing_lit', 'on') }}\" . This goes in configuration.yaml. Then add binary_sensor.landing_kept_lit to the landing automation’s Lights &amp; Occupancy, where the blueprint treats it as one more occupancy sensor. A room only counts as empty once all of its sensors are clear, so the room stays lit while the toggle is on. ",
     "url": "/flare/beta/guides/examples/#keeping-a-room-lit-regardless-of-motion",
     
     "relUrl": "/guides/examples/#keeping-a-room-lit-regardless-of-motion"
-  },"24": {
+  },"23": {
     "doc": "Examples",
     "title": "Lighting a room from a remote",
     "content": "Turn the hall lights on from a button on a remote, at the right level for the time of day. alias: Hall lights from the remote triggers: - trigger: state entity_id: event.hall_remote_action conditions: - condition: template value_template: \"{{ trigger.to_state.attributes.event_type == 'on' }}\" actions: - action: automation.trigger target: entity_id: automation.hallway_lights . If the hall has a flare, you can turn that on instead, like any other light. It runs the room’s automation in the same way: . actions: - action: light.turn_on target: entity_id: light.hallway_lights_flare . ",
     "url": "/flare/beta/guides/examples/#lighting-a-room-from-a-remote",
     
     "relUrl": "/guides/examples/#lighting-a-room-from-a-remote"
-  },"25": {
+  },"24": {
     "doc": "Examples",
     "title": "Something else at a phase change",
     "content": "Close the blinds when Night starts. alias: Blinds at Night triggers: - trigger: state entity_id: event.home_flare_phase conditions: - condition: template value_template: \"{{ trigger.to_state.attributes.event_type == 'Night' }}\" actions: - action: cover.close_cover target: area_id: living_room . The Phase event fires each time the phase changes, including a manual override, with the new phase as its event_type. ",
     "url": "/flare/beta/guides/examples/#something-else-at-a-phase-change",
     
     "relUrl": "/guides/examples/#something-else-at-a-phase-change"
-  },"26": {
+  },"25": {
     "doc": "Examples",
     "title": "Being told when a light is taken over",
     "content": "A notification when FLARE stops driving a light because something else changed it. alias: Tell me when FLARE lets go of a light triggers: - trigger: event event_type: flare_light_overridden actions: - action: notify.notify data: message: &gt; {{ state_attr(trigger.event.data.light, 'friendly_name') }} in {{ trigger.event.data.zone }} was changed by something else, so FLARE has stopped driving it until the room goes dark. The event also carries what FLARE last asked for and what the light was actually showing — see the zone’s events. ",
     "url": "/flare/beta/guides/examples/#being-told-when-a-light-is-taken-over",
     
     "relUrl": "/guides/examples/#being-told-when-a-light-is-taken-over"
-  },"27": {
+  },"26": {
     "doc": "Voice assistants and HomeKit",
     "title": "Voice assistants and HomeKit",
     "content": "A flare is a light for a whole room. Turning it on runs the room’s automation, so “Hey Siri, turn on the kitchen” brings the kitchen up the way FLARE would have, at the curve’s brightness and colour, rather than at whatever the bulbs last had. On this page . | Adding flares for your rooms . | Name it the way you’ll say it | . | What each command does | Exposing flares instead of your bulbs . | HomeKit | Alexa and Google Assistant | Assist | . | A flare for your own automation | . ",
     "url": "/flare/beta/guides/flares/",
     
     "relUrl": "/guides/flares/"
-  },"28": {
+  },"27": {
     "doc": "Voice assistants and HomeKit",
     "title": "Adding flares for your rooms",
     "content": "Every area set up with Set up area, including when you first add FLARE, already has a flare, named after the area. For a room automation you made yourself, go to Settings → Devices &amp; Services → FLARE → Add flare and choose Rooms from the FLARE blueprint. Every room automation that doesn’t have a flare yet is listed and ticked, so you can add a flare for every room at once, or untick the ones you don’t want. Each one is named after its automation. A flare is placed in its automation’s area. It appears as light.&lt;name&gt;_flare and always has the same lights as its room’s automation, so if you add a bulb to the room’s area, it joins the flare too. Name it the way you’ll say it . A flare’s name is what Siri, Alexa and Google hear. Automations often have names like “Kitchen lighting” or “Garden Lights Adaptive”, which nobody says out loud, so rename a flare named after one to the room’s plain name, “Kitchen” or “Garden”, with Reconfigure in the flare’s three-dot menu. Renaming a flare doesn’t change its entity ID. If the flare is already in the Home app or the Alexa app, rename it there too, because they can keep the name they first saw. ",
     "url": "/flare/beta/guides/flares/#adding-flares-for-your-rooms",
     
     "relUrl": "/guides/flares/#adding-flares-for-your-rooms"
-  },"29": {
+  },"28": {
     "doc": "Voice assistants and HomeKit",
     "title": "What each command does",
     "content": "| You say or tap | What happens | . | “Turn on the kitchen” | The room’s automation runs, and the room comes on the way it normally would. | . | “Set the kitchen to 30%”, or a colour | Every light in the room is set to that. FLARE leaves them there until the room is empty and dark. | . | “Turn on the kitchen” again | The room goes back to FLARE: the automation runs, and every light returns to the curve. | . | “Turn off the kitchen” | Every light in the room turns off, and stays off until the room’s sensors next detect motion. | . ",
     "url": "/flare/beta/guides/flares/#what-each-command-does",
     
     "relUrl": "/guides/flares/#what-each-command-does"
-  },"30": {
+  },"29": {
     "doc": "Voice assistants and HomeKit",
     "title": "Exposing flares instead of your bulbs",
     "content": "Expose each room’s flare and stop exposing its bulbs. If you expose both, every room shows up twice, and “turn on the kitchen” may go to the bulbs, which come on at whatever they last had instead of following the room. The bulbs keep working in Home Assistant either way. HomeKit . FLARE names every flare light.&lt;name&gt;_flare, so if your HomeKit Bridge is set up in YAML, one pattern exports every flare, including ones you add later: . homekit: filter: include_entity_globs: - light.*_flare . Leave out include_domains: light if you have it, or the bulbs are exported as well. Home Assistant reads this when it starts, so restart after changing it. If you set the bridge up from the UI instead, use Configure on the HomeKit Bridge integration, choose to include entities, and pick the flares. HomeKit doesn’t use Home Assistant’s areas, so put each flare in its room in the Home app. If the bridge used to export your bulbs, they stay in the Home app as “Not Responding” until you remove the bridge from the Home app and pair it again. Alexa and Google Assistant . With Home Assistant Cloud, go to Settings → Voice assistants → Expose, expose the flares and un-expose the bulbs. If Expose new entities is on, the flares are already exposed, but so is every bulb. Google Assistant puts each flare in the room matching its Home Assistant area. Alexa doesn’t use areas, so put each flare in a group for its room in the Alexa app. If you set up exposure in YAML instead, the same include_entity_globs pattern works in the filter: under cloud: alexa:, cloud: google_actions: and a manual alexa: smart_home:. A manual google_assistant: setup has no filter, so expose the flares there with entity_config instead. Assist . Assist uses the same Expose list. Expose the flares and un-expose the bulbs, and “turn on the kitchen” turns on the flare. If you’d rather keep the flare’s name as it is, add the room’s name as an alias on the flare instead, under Voice assistants in its settings. ",
     "url": "/flare/beta/guides/flares/#exposing-flares-instead-of-your-bulbs",
     
     "relUrl": "/guides/flares/#exposing-flares-instead-of-your-bulbs"
-  },"31": {
+  },"30": {
     "doc": "Voice assistants and HomeKit",
     "title": "A flare for your own automation",
-    "content": "Any automation can have a flare. Choose Another automation when adding one: . | If the automation is built from a blueprint, pick the input that holds its lights and, if it has one, the input that holds its FLARE zone. Without a zone, FLARE can take over a light you changed from the flare if it wasn’t already driving it. | If it isn’t, pick its lights directly. | . Turning the flare on runs that automation. The other commands work the same as above. The Flares reference lists every setting. ",
+    "content": "Any automation can have a flare. Choose Another automation when adding one: . | If the automation is built from a blueprint, pick the input that holds its lights and, if it has one, the input that holds its FLARE zone. Without a zone, a brightness or colour you set from the flare isn’t protected: if FLARE wasn’t already driving a light, the automation’s next update can set it back. | If it isn’t, pick its lights directly. | . Turning the flare on runs that automation. The other commands work the same as above. The Flares reference lists every setting. ",
     "url": "/flare/beta/guides/flares/#a-flare-for-your-own-automation",
     
     "relUrl": "/guides/flares/#a-flare-for-your-own-automation"
-  },"32": {
+  },"31": {
     "doc": "Flares",
     "title": "Flares",
     "content": "A flare is a light entity that sits over an automation. Flares are under Settings → Devices &amp; Services → FLARE → Flares. For setting one up for a voice assistant, see Voice assistants and HomeKit. On this page . | Settings | The flare’s light | Flares and the room’s automation | . ",
     "url": "/flare/beta/reference/flares/",
     
     "relUrl": "/reference/flares/"
-  },"33": {
+  },"32": {
     "doc": "Flares",
     "title": "Settings",
-    "content": "| Setting | Description | . | Automation | The automation that turning the flare on runs. If the automation is deleted, the flare is unavailable. | . | Lights input | For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it’s used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is Lights &amp; Occupancy. | . | Zone input | Optional. For an automation built from a blueprint: the input that holds its FLARE zone, where the flare marks its lights as changed by you. For an automation from the FLARE blueprint this is Zone. Without one, FLARE may take over lights it wasn’t already driving. | . | Lights | For an automation not built from a blueprint: the lights, picked directly. | . | Area | Only when adding: the area the flare’s device starts in, which defaults to the automation’s area. After that, the device’s area is set the usual way. | . Set up area creates a flare for each area, named after it. Adding flares from Rooms from the FLARE blueprint creates one for each room picked, named after its automation. Either way, the flare starts in the automation’s area. Reconfigure names the automation, and changes the name, and the lights or the lights and zone inputs. The automation can’t be changed: add a new flare instead. ",
+    "content": "| Setting | Description | . | Automation | The automation that turning the flare on runs. If the automation is deleted, the flare is unavailable. | . | Lights input | For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it’s used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is Lights &amp; Occupancy. | . | Zone input | Optional. For an automation built from a blueprint: the input that holds its FLARE zone, where the flare marks its lights as changed by you. For an automation from the FLARE blueprint this is Zone. Without one, FLARE may take over lights it wasn’t already driving. | . | Lights | For an automation not built from a blueprint: the lights, picked directly. | . | Area | Only when adding: the area the flare’s device starts in, which defaults to the automation’s area. After that, the device’s area is set the usual way. | . Set up area creates a flare for each area, named after it. Adding flares from Rooms from the FLARE blueprint creates one for each room picked, named after its automation. Either way, the flare starts in the automation’s area. Reconfigure shows which automation the flare runs, and changes the flare’s name and its lights, or its lights and zone inputs. It can’t change the automation, so to use a different one, add a new flare. ",
     "url": "/flare/beta/reference/flares/#settings",
     
     "relUrl": "/reference/flares/#settings"
-  },"34": {
+  },"33": {
     "doc": "Flares",
     "title": "The flare’s light",
     "content": "light.&lt;name&gt;_flare reports the combined state of its lights, as a Home Assistant light group does: on if any of them is on, with their average brightness and colour. Its entity_id attribute lists the lights. | Call | What it does | . | light.turn_on with no brightness, colour or effect | Runs the automation, as Run actions does. A transition on its own is ignored. | . | light.turn_on with a brightness, colour or effect | Marks every light as overridden in the zone with flare.claims_override, then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark. | . | light.turn_off | Marks every light as overridden in the same way, then turns them off. They stay off until the room’s automation next turns them on, such as when it detects motion. | . The flare’s lights are found the way a service call’s target is. A light that is hidden, or belongs to another flare, isn’t one of them. ",
     "url": "/flare/beta/reference/flares/#the-flares-light",
     
     "relUrl": "/reference/flares/#the-flares-light"
-  },"35": {
+  },"34": {
     "doc": "Flares",
     "title": "Flares and the room’s automation",
     "content": "A flare’s own light is never one of a room’s lights: the FLARE blueprint and FLARE’s services skip it, even when it sits in the room’s area. ",
     "url": "/flare/beta/reference/flares/#flares-and-the-rooms-automation",
     
     "relUrl": "/reference/flares/#flares-and-the-rooms-automation"
-  },"36": {
+  },"35": {
     "doc": "Guides",
     "title": "Guides",
     "content": "How to do more with FLARE once a room is running. | Examples — automations that change or build on FLARE: a weekend lie-in, a holiday schedule, movie night, and more. | Templates — the blueprint’s Brightness, Idle Brightness and Scene templates, with worked examples. | Scenes — handing a room to a scene, and getting it back. | Voice assistants and HomeKit — a light for each room that runs its automation, for Siri, Alexa, Google and HomeKit. | Building without the blueprint — driving FLARE from your own automations instead. | . ",
     "url": "/flare/beta/guides/",
     
     "relUrl": "/guides/"
-  },"37": {
+  },"36": {
     "doc": "Reference",
     "title": "Reference",
     "content": "The technical documentation: the blueprint’s inputs, and every entity and service FLARE creates. | Blueprint — every input to the room automation, and how a room behaves. | Schedules — a schedule’s entities, the curve’s transitions, and copying a schedule. | Zones — a zone’s entities, override protection, and when zones tick. | Flares — a flare’s settings, and what each light command does. | Services — each service, its fields and what it returns. | . ",
     "url": "/flare/beta/reference/",
     
     "relUrl": "/reference/"
-  },"38": {
+  },"37": {
     "doc": "Home",
     "title": "FLARE",
     "content": "Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in. Quickstart (5 mins) Curve playground GitHub . ",
     "url": "/flare/beta/#flare",
     
     "relUrl": "/#flare"
-  },"39": {
+  },"38": {
     "doc": "Home",
     "title": "What it does",
     "content": "FLARE sets your lights through the day, and leaves alone any light you change yourself. | It keeps every light on the curve. Every minute it checks each light, and corrects any that have drifted or missed a command. | It works with lights on a physical wall switch. If you cut the power to a room and restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home Assistant again, instead of leaving it at whatever it powered up as. | Each room can be different. Give a light its own brightness, hand the room to a scene in any phase, or use a template when a fixed value isn’t enough. | It can leave a nightlight on. When a room empties it can dim to a low level instead of going dark. | It leaves your changes alone. If you change a light yourself, from an app, a wall switch or another automation, FLARE stops setting it until the room next goes dark. | It works with Siri, Alexa and Google. Each room gets a single light to expose to them, so “turn on the kitchen” lights the kitchen the way FLARE would, rather than at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone. | It’s gentle on your Zigbee network. Rooms update one after another rather than all at once, and changes too small to see aren’t sent. | . ",
     "url": "/flare/beta/#what-it-does",
     
     "relUrl": "/#what-it-does"
-  },"40": {
+  },"39": {
     "doc": "Home",
     "title": "Four phases, not one curve",
     "content": "Most adaptive lighting follows the sun’s position. That means evening lighting at 4pm in winter, and bright light until 9pm in summer, whatever time you actually get up and go to bed. FLARE works from your schedule instead, dividing the day into four named phases. With the default settings: . | Phase | What it’s for | . | Morning | Bright and cold — enough eyeball caffeine to get you as far as the coffee machine, with some research to back it up. | . | Day | Bright, easing steadily from Morning’s colour toward Evening’s across the whole afternoon. | . | Evening | Dimming and warming, anchored to your actual sunset. | . | Night | Warm and low, flat until morning. | . Each boundary has its own transition: how long beforehand to start easing into the next phase, so the new values land exactly as it begins. If you set a transition to zero, the lights step straight to the new values instead. Morning, Day and Night start at fixed times of day. Only Evening tracks the sun, and it’s kept between an earliest and a latest time, so it moves with the season without drifting into the small hours. Play with the curve to see how each setting shapes the day. ",
     "url": "/flare/beta/#four-phases-not-one-curve",
     
     "relUrl": "/#four-phases-not-one-curve"
-  },"41": {
+  },"40": {
     "doc": "Home",
     "title": "Home Assistant native",
     "content": "Every schedule setting is an ordinary Home Assistant entity, and the room automation is an ordinary automation, so when a default isn’t what you want, you change it with the tools you already use. For example: . | A weekend lie-in, by an automation that moves Morning later on Friday and Saturday evenings. | A holiday schedule, switched on and off with a toggle. | A room lit by a button on a remote, not just by occupancy. | Blinds that close when Night starts. | . See the examples → . ",
     "url": "/flare/beta/#home-assistant-native",
     
     "relUrl": "/#home-assistant-native"
-  },"42": {
+  },"41": {
     "doc": "Home",
     "title": "Home",
     "content": " ",
     "url": "/flare/beta/",
     
     "relUrl": "/"
-  },"43": {
+  },"42": {
     "doc": "Quickstart",
     "title": "Quickstart",
     "content": "Five minutes to a room running on the curve. Prerequisites — Home Assistant 2026.4.0 or newer, HACS installed, and your lights assigned to areas, so FLARE can set itself up room by room. | Step 1 — install via HACS | Step 2 — restart, then add FLARE | Step 3 — add the dashboard (optional) | Adding a room later | What now | . ",
     "url": "/flare/beta/installation/",
     
     "relUrl": "/installation/"
-  },"44": {
+  },"43": {
     "doc": "Quickstart",
     "title": "Step 1 — install via HACS",
     "content": ". The button opens FLARE in HACS on your Home Assistant, where you can download it. Or add it by hand: HACS → three-dot menu → Custom repositories. Add: . https://github.com/danrspencer/flare . with type Integration. Then find FLARE in the HACS list and download it. ",
     "url": "/flare/beta/installation/#step-1--install-via-hacs",
     
     "relUrl": "/installation/#step-1--install-via-hacs"
-  },"45": {
+  },"44": {
     "doc": "Quickstart",
     "title": "Step 2 — restart, then add FLARE",
-    "content": "Restart Home Assistant, then Settings → Devices &amp; Services → Add Integration → FLARE. It asks: . | How many schedules, and their names. A schedule is the day’s lighting: when each phase starts, and how bright and warm it is. One for the whole house is fine to start with; use more if parts of the house should differ, such as one per floor. Pick names you’re happy to keep: they become part of each schedule’s entity IDs. | What to set up for each area, and which areas. Every area with lights is listed and ticked. With more than one schedule, you pick the schedule each area follows instead. | . Each area you set up gets up to three things, named after it. All three is the default, and what most rooms want: . |   | What it does | . | A zone | Keeps track of which lights FLARE is driving there, so it leaves alone a light you’ve changed yourself. | . | A room automation | Built from the FLARE blueprint, with the area as its Lights &amp; Occupancy: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called “Area Lighting”. | . | A flare | A light for the whole room, for voice assistants and HomeKit. | . The zone is always set up. Leave out the flare if you don’t use voice assistants or HomeKit, or the automation too if you’d rather build the room’s automation yourself. With all three, that’s everything a room needs. The automation is an ordinary one in Settings → Automations &amp; Scenes, so change any of its other inputs there. A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or off by itself. ",
+    "content": "Restart Home Assistant, then Settings → Devices &amp; Services → Add Integration → FLARE. It asks: . | How many schedules, and their names. A schedule is the day’s lighting: when each phase starts, and how bright and warm it is. One for the whole house is fine to start with; use more if parts of the house should differ, such as one per floor. Pick names you’re happy to keep: they become part of each schedule’s entity IDs. | What to set up for each area, and which areas. Every area with lights is listed and ticked. With more than one schedule, you pick the schedule each area follows instead. | . Each area you set up gets up to three things, named after it. All three is the default, and what most rooms want: . |   | What it does | . | A zone | Keeps track of which lights FLARE is driving there, so it leaves alone a light you’ve changed yourself. | . | A room automation | Built from the FLARE blueprint, with the area as its Lights &amp; Occupancy: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called “Area Lighting”. | . | A flare | A light for the whole room, for voice assistants and HomeKit. | . The zone is always set up. Leave out the flare if you don’t use voice assistants and don’t want a light for the whole room. Leave out the automation if you’d rather build it yourself. The flare is left out with it, because a flare runs the room’s automation. With all three, the room is ready to use. The automation is an ordinary one in Settings → Automations &amp; Scenes, so you can change its inputs there. A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or off by itself. ",
     "url": "/flare/beta/installation/#step-2--restart-then-add-flare",
     
     "relUrl": "/installation/#step-2--restart-then-add-flare"
-  },"46": {
+  },"45": {
     "doc": "Quickstart",
     "title": "Step 3 — add the dashboard (optional)",
     "content": "Settings → Dashboards → Add dashboard, and pick FLARE Lighting. It’s a dashboard with a view for each schedule and one for your zones, and it keeps up as you add more. See Dashboard. ",
     "url": "/flare/beta/installation/#step-3--add-the-dashboard-optional",
     
     "relUrl": "/installation/#step-3--add-the-dashboard-optional"
-  },"47": {
+  },"46": {
     "doc": "Quickstart",
     "title": "Adding a room later",
     "content": "Settings → Devices &amp; Services → FLARE → Set up area. It lists every area with lights, and ticks the ones without a zone yet. An area that already has a zone isn’t ticked: setting it up again keeps its zone but gives it another automation and flare, so only tick it if it doesn’t have them. The other buttons there add one thing at a time: Add schedule, Add zone and Add flare. A bug in Home Assistant 2026.9 and earlier makes Add schedule, Add zone and Add flare ask you to pick between Schedules, Zones and Flares first. Pick the one that matches what you’re adding; Home Assistant 2026.10 fixes this. ",
     "url": "/flare/beta/installation/#adding-a-room-later",
     
     "relUrl": "/installation/#adding-a-room-later"
-  },"48": {
+  },"47": {
     "doc": "Quickstart",
     "title": "What now",
-    "content": ". | Every blueprint input, with defaults: Blueprint. | A light not doing what you expect? Why didn’t my light change? | Want it to behave differently — a weekend lie-in, a holiday schedule? Examples. | Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs. See Voice assistants and HomeKit for how. | . ",
+    "content": ". | Every blueprint input, with defaults: Blueprint. | A light not doing what you expect? Why didn’t my light change? | Want it to behave differently — a weekend lie-in, a holiday schedule? Examples. | Using HomeKit, Alexa or Google Assistant? Expose the flares instead of your bulbs: Voice assistants and HomeKit. | . ",
     "url": "/flare/beta/installation/#what-now",
     
     "relUrl": "/installation/#what-now"
-  },"49": {
+  },"48": {
     "doc": "Curve playground",
     "title": "Curve playground",
     "content": "Move any setting and the chart shows the day it makes, exactly as it appears on your dashboard. Four phases, not one curve explains what each phase is for. The chart's height is brightness and its colour is the colour temperature at that moment. The vertical line is \"now\" — drag Time of day to move it. Defaults Winter sunset Midsummer sunset Late riser Very warm night Copy link to these settings Copy schedule . Time of day . Moves the \"now\" marker. Nothing about the schedule changes — this is just where you're standing in the day. Time of day Schedule . When each phase begins. Every one of these is a time entity on the schedule you add in Home Assistant — except sunset, which comes from sun.sun. Brightness . Each phase's brightness. Evening's is a starting point rather than a hold: it fades toward Night's value over the run-up to Night Start. Colour temperature . Each phase holds its own colour and eases to the next one over that phase's transition, below. Transitions . How long before each phase ends to start easing toward the next one — so the new phase's values have arrived exactly as it begins. Set one to zero for a deliberate, visible change at that boundary. Anything longer than the phase it runs in simply covers the whole phase, which is why Day's colour transition defaults to a full day: it slides from Morning's colour to Evening's across the entire afternoon. Load a schedule . Paste a schedule copied from Home Assistant (its Copy button on the schedule dashboard, or the schedule's Reconfigure) to see its curve here. Copy schedule above goes the other way: paste the result into Home Assistant to use these settings. Anything a schedule leaves out keeps its value here. Load . | ",
     "url": "/flare/beta/playground/",
     
     "relUrl": "/playground/"
-  },"50": {
+  },"49": {
     "doc": "Scenes",
     "title": "Scenes",
     "content": "A room can follow a scene of yours instead of the curve: one per phase, or one chosen by a template. FLARE applies the scene, lights anything it doesn’t cover from the curve, and takes the room back when the scene no longer applies. On this page . | Handing a room to a scene | When the scene is applied | . ",
     "url": "/flare/beta/guides/scenes/",
     
     "relUrl": "/guides/scenes/"
-  },"51": {
+  },"50": {
     "doc": "Scenes",
     "title": "Handing a room to a scene",
     "content": "If you pick a scene in the blueprint’s Night Scene (or whichever phase), the room uses it instead of the curve during that phase. For anything a phase can’t express — a different scene while the TV is on — use Scene Template, which wins over the per-phase pickers whenever it returns a scene. A scene is only used if every entity it touches is in the room. A scene that reaches into another room, or doesn’t exist, is ignored and the room follows the curve. Lights in the room that the scene doesn’t cover carry on following the curve, so a scene naming half the room leaves the other half to FLARE. ",
     "url": "/flare/beta/guides/scenes/#handing-a-room-to-a-scene",
     
     "relUrl": "/guides/scenes/#handing-a-room-to-a-scene"
-  },"52": {
+  },"51": {
     "doc": "Scenes",
     "title": "When the scene is applied",
     "content": "The scene is applied when the room’s automation runs for a phase change, for motion, for an Additional Trigger, when you run it by hand, or when a light comes back online — but not on the regular update. Re-applying it every minute would undo anything you changed by hand while it was on. Like the curve, a scene never lights an empty room. If the phase changes while nobody’s there, the scene is applied when someone next walks in. ",
     "url": "/flare/beta/guides/scenes/#when-the-scene-is-applied",
     
     "relUrl": "/guides/scenes/#when-the-scene-is-applied"
-  },"53": {
+  },"52": {
     "doc": "Schedules",
     "title": "Schedules",
     "content": "A schedule sets when each of the four phases starts, and the brightness and colour temperature in each phase. Adding FLARE creates your schedules. You can add more, for example for rooms that need different timing, with Settings → Devices &amp; Services → FLARE → Add schedule. On this page . | A schedule’s entities | The schedule sensor | Transitions | Copying a schedule | . ",
     "url": "/flare/beta/reference/schedules/",
     
     "relUrl": "/reference/schedules/"
-  },"54": {
+  },"53": {
     "doc": "Schedules",
     "title": "A schedule’s entities",
     "content": "| Entity | Description | . | sensor.&lt;name&gt;_flare | The current phase, brightness and colour. See the schedule sensor. | . | event.&lt;name&gt;_flare_phase | Fires when the phase changes, including a manual override. The event type is the new phase’s name. | . | select.&lt;name&gt;_flare_phase | Overrides the phase. Auto (the default) follows the schedule; choosing a phase holds it until the schedule reaches its next phase. | . | switch.&lt;name&gt;_sticky_phase_override | When on, an override stays until you set the phase back to Auto. | . | time.&lt;name&gt;_morning_time, day_time, night_time | When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. | . | time.&lt;name&gt;_evening_earliest_time, evening_latest_time | Evening starts at sunset, but no earlier or later than these. Defaults: 17:00, 20:00. | . | number.&lt;name&gt;_&lt;phase&gt;_brightness | The phase’s brightness, 0–255. At 0, the phase turns the lights off. | . | number.&lt;name&gt;_&lt;phase&gt;_kelvin | The phase’s colour temperature, 1000–10000 K. | . | number.&lt;name&gt;_&lt;phase&gt;_brightness_transition, _kelvin_transition | The phase’s transitions, in minutes. See transitions. | . A change to any of these takes effect within a few seconds. To remove a schedule, delete its device. ",
     "url": "/flare/beta/reference/schedules/#a-schedules-entities",
     
     "relUrl": "/reference/schedules/#a-schedules-entities"
-  },"55": {
+  },"54": {
     "doc": "Schedules",
     "title": "The schedule sensor",
     "content": "| Attribute | Description | . | state | The phase: Morning, Day, Evening or Night. | . | brightness | The current brightness, 0–255. | . | color_temp | The current colour temperature, in Kelvin. | . | rgb_color | The current colour temperature as [r, g, b]. | . | morning_start, day_start, evening_start, night_start | Today’s phase start times, as timestamps. | . | evening_earliest, evening_latest | Today’s earliest and latest Evening start, as timestamps. | . | points | The whole day as 289 {t, brightness, kelvin} samples, used by the chart. | . The sensor updates every minute. While the phase is overridden, every attribute except points follows the overridden phase. ",
     "url": "/flare/beta/reference/schedules/#the-schedule-sensor",
     
     "relUrl": "/reference/schedules/#the-schedule-sensor"
-  },"56": {
+  },"55": {
     "doc": "Schedules",
     "title": "Transitions",
     "content": "A phase’s transition is how long before the phase ends its brightness or colour starts changing to the next phase’s. The change finishes when the next phase starts: if Morning starts at 06:00, the lights reach Morning’s values at 06:00. For example, day_kelvin_transition is how long before the end of Day the colour starts changing to Evening’s. | A transition of 0 switches at the boundary. | A transition longer than its phase covers the whole phase. | . Brightness and colour have separate transitions. By default, Day’s colour transition is 1440 minutes, so its colour changes across the whole of Day, while its brightness changes only in roughly the last hour. Night runs past midnight, so its transition is in the minutes before Morning starts. ",
     "url": "/flare/beta/reference/schedules/#transitions",
     
     "relUrl": "/reference/schedules/#transitions"
-  },"57": {
+  },"56": {
     "doc": "Schedules",
     "title": "Copying a schedule",
     "content": "A schedule’s settings can be copied as YAML: . morning: time: \"06:00\" brightness: 255 kelvin: 6667 brightness_transition: 30 kelvin_transition: 30 evening: earliest: \"17:00\" latest: \"20:00\" brightness: 180 night: kelvin: 2000 . Each phase takes brightness, kelvin, brightness_transition and kelvin_transition, and a start time. Evening takes earliest and latest instead of time. When you apply a schedule, settings it leaves out keep their current values. To copy or apply a schedule, use any of: . | Copy and Paste at the bottom of each schedule on the dashboard. | Reconfigure in the schedule’s three-dot menu under FLARE → Schedules, which shows the schedule as text that you can replace and submit. | The services flare.export_schedule and flare.import_schedule. | Copy schedule and Load in the curve playground. | . A schedule with an error in it, such as an unknown setting, an invalid time or a value out of range, isn’t applied. The error message says what’s wrong. ",
     "url": "/flare/beta/reference/schedules/#copying-a-schedule",
     
     "relUrl": "/reference/schedules/#copying-a-schedule"
-  },"58": {
+  },"57": {
     "doc": "Services",
     "title": "Services",
     "content": "FLARE’s services are Home Assistant actions that any automation or script can call, and the blueprint is built on them. Developer Tools → Actions shows the same fields as this page. | Service | Description | . | flare.apply_lighting | Sets lights to a brightness and colour, leaving alone any that someone else has changed | . | flare.turn_off | Turns lights off, recording that FLARE did it | . | flare.compute_lighting_groups | Works out what apply_lighting would send, without sending it | . | flare.compute_curve | The curve’s brightness and colour for any moment | . | flare.claims_check | Whether FLARE would leave each light alone | . | flare.claims_record | Records a change you’re about to make as FLARE’s | . | flare.claims_clear | Discards claims, so FLARE sets the lights again | . | flare.claims_override | Marks lights as changed by someone else, so FLARE leaves them alone | . | flare.compute_scene_coverage | Which of a room’s lights a scene sets | . | flare.export_schedule | A schedule’s settings as YAML | . | flare.import_schedule | Sets a schedule from YAML | . In the field tables, a zone or schedule is passed as its device ID. In a template, device_id() of any of its entities gives you that, such as device_id('sensor.kitchen_flare_claims') for the Kitchen zone or device_id('sensor.home_flare') for the Home schedule. On this page . | flare.apply_lighting . | Fields | Brightness levels | Response data | . | flare.turn_off . | Fields | Good to know | . | flare.compute_lighting_groups . | Response data | . | flare.compute_curve . | Fields | Response data | . | flare.claims_check . | Fields | Response data | . | flare.claims_record . | Fields | Response data | Good to know | . | flare.claims_clear . | Fields | Response data | . | flare.claims_override . | Fields | Response data | . | flare.compute_scene_coverage . | Fields | Response data | . | flare.export_schedule . | Fields | Response data | . | flare.import_schedule . | Fields | Good to know | . | Two-step bulbs | . ",
     "url": "/flare/beta/reference/services/",
     
     "relUrl": "/reference/services/"
-  },"59": {
+  },"58": {
     "doc": "Services",
     "title": "flare.apply_lighting",
     "content": "Use this action to set lights to a brightness and colour temperature, turning on any that are off. It skips lights that are unavailable, already close to the target, or changed by something else (see override protection). action: flare.apply_lighting data: entities: [light.kitchen_1, light.kitchen_2] brightness: \"{{ state_attr('sensor.home_flare', 'brightness') }}\" color_temp_kelvin: \"{{ state_attr('sensor.home_flare', 'color_temp') }}\" transition: 2 brightness_levels: { light.kitchen_2: 60 } zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . This sets both kitchen lights to the Home schedule’s current colour temperature, with light.kitchen_1 at the schedule’s brightness and light.kitchen_2 at 60. Fields . | Field | Required | Description | . | brightness0–255 | unless every light has a level | The brightness for every light that isn’t in brightness_levels. 0 turns the lights off, as it does for light.turn_on. | . | brightness_levelsmap of entity ID to level | no | A brightness for individual lights, in place of brightness. See brightness levels. | . | brightness_tolerance0–50; default 2 | no | A light within this much of the target brightness isn’t sent anything. | . | color_temp_kelvinKelvin | yes | The colour temperature. | . | color_temp_toleranceKelvin, 0–500; default 10 | no | A light within this many Kelvin of the target isn’t sent anything. Two values that convert to the same mired always count as a match. | . | entitieslist of light entity IDs | yes | The lights to set. | . | forceboolean; default false | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE’s. | . | min_brightness_changepercent, 0–25; default 5, from FLARE → Zones → Configure | no | A light within this percentage of the target brightness isn’t sent anything. It’s never smaller than brightness_tolerance. | . | min_color_temp_changemireds, 0–50; default 5, from FLARE → Zones → Configure | no | A light within this many mireds of the target colour temperature isn’t sent anything. | . | prefer_rgb_colorboolean; default false | no | Sends rgb_color instead of color_temp_kelvin to lights that support RGB. | . | rgb_color[r, g, b] or null | no | The colour for RGB lights when prefer_rgb_color is on. The schedule sensor’s rgb_color attribute is the colour temperature converted to RGB. Ignored if prefer_rgb_color is off. | . | rgb_color_tolerance0–100; default 10 | no | A light within this much of rgb_color on every channel isn’t sent anything. | . | transitionseconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. | . | two_step_labellabel ID; default no_combined_transition | no | Lights or devices with this label are sent two commands. See two-step bulbs. | . | zone_device_idzone device ID | no | The zone to record the change in. Without it, FLARE records nothing and doesn’t leave any light alone. | . Brightness levels . | Value | Effect | . | 1–255 | Sets the light to this brightness. | . | 0 | Turns the light off. | . | null or false | Leaves the light alone, whether it’s on or off. | . Response data . Optional. With response_variable, the response is what was sent, in the same shape as compute_lighting_groups returns. ",
     "url": "/flare/beta/reference/services/#flareapply_lighting",
     
     "relUrl": "/reference/services/#flareapply_lighting"
-  },"60": {
+  },"59": {
     "doc": "Services",
     "title": "flare.turn_off",
     "content": "Use this action to turn lights off and record that FLARE did it, so FLARE doesn’t treat them as changed by someone else. action: flare.turn_off data: entities: [light.kitchen_1, light.kitchen_2] transition: 15 zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . Fields . | Field | Required | Description | . | entitieslist of light entity IDs | yes | The lights to turn off. | . | transitionseconds, 0–300; default 0 | no | How long the change takes. | . | zone_device_idzone device ID | no | The zone to record the turn-off in. Without it, FLARE records nothing. | . Good to know . | It turns off every light it’s given, including lights someone else has changed. To turn off only the lights FLARE is still setting, call claims_check first. | Use it rather than light.turn_off, which records nothing, so FLARE would treat the lights as switched off by someone else. | . ",
     "url": "/flare/beta/reference/services/#flareturn_off",
     
     "relUrl": "/reference/services/#flareturn_off"
-  },"61": {
+  },"60": {
     "doc": "Services",
     "title": "flare.compute_lighting_groups",
     "content": "Use this action to find out what apply_lighting would send, without sending it. It takes the same fields as apply_lighting, except transition. action: flare.compute_lighting_groups data: entities: [light.kitchen_1, light.kitchen_2] brightness: 200 color_temp_kelvin: 3200 brightness_levels: { light.kitchen_2: 100 } response_variable: plan . Response data . groups is a list with one entry for each brightness being sent, and each entry has these fields: . | brightness: The brightness the group’s lights are sent, or 0 for lights being turned off. | needing_off: Lights that need turning off. | combined: Lights sent brightness and colour temperature in one command. | two_step: Lights sent brightness and colour temperature as two commands. | combined_rgb, two_step_rgb: The same, for lights sent rgb_color. | . Lights that are unavailable, already close to the target, or changed by someone else aren’t in any list. groups: - brightness: 200 needing_off: [] combined: [light.kitchen_1] two_step: [] combined_rgb: [] two_step_rgb: [] - brightness: 100 needing_off: [] combined: [] two_step: [light.kitchen_2] combined_rgb: [] two_step_rgb: [] . ",
     "url": "/flare/beta/reference/services/#flarecompute_lighting_groups",
     
     "relUrl": "/reference/services/#flarecompute_lighting_groups"
-  },"62": {
+  },"61": {
     "doc": "Services",
     "title": "flare.compute_curve",
     "content": "Use this action to work out the curve’s phase, brightness and colour at any moment, for phase start times and curve settings you give it, without needing a schedule. action: flare.compute_curve data: morning: \"{{ today_at('06:00') | as_timestamp }}\" day: \"{{ today_at('08:00') | as_timestamp }}\" evening: \"{{ today_at('18:00') | as_timestamp }}\" night: \"{{ today_at('22:00') | as_timestamp }}\" evening_brightness: 150 at: \"{{ today_at('20:00') | as_timestamp }}\" response_variable: curve . Fields . | Field | Required | Description | . | atUnix timestamp; default now | no | The moment to work out the values for. | . | day, evening, morning, nightUnix timestamp | yes | When each phase starts today. | . | &lt;phase&gt;_brightness0–255; default Morning 255, Day 255, Evening 180, Night 80 | no | The phase’s brightness. | . | &lt;phase&gt;_brightness_transitionminutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30 | no | How long before the phase ends its brightness starts changing to the next phase’s. | . | &lt;phase&gt;_kelvinKelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700 | no | The phase’s colour temperature. | . | &lt;phase&gt;_kelvin_transitionminutes, 0–1440; default Morning 60, Day 1440, Evening 60, Night 30 | no | How long before the phase ends its colour temperature starts changing to the next phase’s. | . &lt;phase&gt; is morning, day, evening or night, so evening_brightness is Evening’s brightness. The defaults are the values a new schedule starts with, and transitions explains how a transition shapes the curve. Response data . | phase: Morning, Day, Evening or Night. | brightness: The brightness, 0–255. | kelvin: The colour temperature, in Kelvin. | rgb_color: The colour temperature converted to RGB, as [r, g, b]. | . phase: Evening brightness: 150 kelvin: 3200 rgb_color: [255, 184, 123] . ",
     "url": "/flare/beta/reference/services/#flarecompute_curve",
     
     "relUrl": "/reference/services/#flarecompute_curve"
-  },"63": {
+  },"62": {
     "doc": "Services",
     "title": "flare.claims_check",
     "content": "Use this action to find out whether FLARE would leave each light alone, for lights you set yourself with override protection. It changes nothing. action: flare.claims_check data: entities: [light.kitchen_1] zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" response_variable: check . Fields . | Field | Required | Description | . | brightness_tolerance0–50; default 2 | no | A light within this much of a claimed brightness matches it. | . | color_temp_toleranceKelvin, 0–500; default 10 | no | A light within this many Kelvin of a claimed colour temperature matches it. | . | entitieslist of entity IDs | yes | The entities to check. | . | rgb_color_tolerance0–100; default 10 | no | A light within this much of a claimed RGB colour on every channel matches it. | . | zone_device_idzone device ID | yes | The zone whose claims to check against. | . Response data . results is keyed by entity ID, and each entry has these fields: . | blocked: true if FLARE would leave the entity alone. | status: controlled, overridden, untracked, off or unavailable. See inspecting tracked state. | matched_via: Which claim the entity matched, and how: latest-context, latest-value, observed-context or observed-value. null if it matched neither. | zone: The zone’s name. | . results: light.kitchen_1: blocked: false status: controlled matched_via: latest-context zone: Kitchen . ",
     "url": "/flare/beta/reference/services/#flareclaims_check",
     
     "relUrl": "/reference/services/#flareclaims_check"
-  },"64": {
+  },"63": {
     "doc": "Services",
     "title": "flare.claims_record",
     "content": "Use this action to record a change you’re about to make, so a later claims_check treats it as FLARE’s. Call it just before you change the entities, with the values you’re about to send. action: flare.claims_record data: entities: [light.kitchen_1] zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" targets: light.kitchen_1: { brightness: 200, color_temp_kelvin: 3000 } . Fields . | Field | Required | Description | . | entitieslist of entity IDs | yes | The entities you’re about to change. | . | targetsmap of entity ID to values | no | What you’re about to send each entity: brightness and either color_temp_kelvin or rgb_color. | . | zone_device_idzone device ID | yes | The zone to record the claim in. | . Response data . Optional. recorded lists the entities a claim was recorded for. Good to know . | Without targets, FLARE can only match the change by its context, which Home Assistant drops after five seconds. A bulb that’s slower than that to report back is then treated as changed by someone else. | A light running an effect that keeps changing its colour won’t match its claim. Use a scene for it instead, or hand it over with a null brightness in the blueprint. | . ",
     "url": "/flare/beta/reference/services/#flareclaims_record",
     
     "relUrl": "/reference/services/#flareclaims_record"
-  },"65": {
+  },"64": {
     "doc": "Services",
     "title": "flare.claims_clear",
     "content": "Use this action to discard claims, so FLARE sets the entities again on its next update. It’s for a light that’s overridden in a room that never goes fully dark. A zone’s Clear button does the same for every light in the zone. action: flare.claims_clear data: entities: [light.kitchen_1] zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . Fields . | Field | Required | Description | . | entitieslist of entity IDs | yes | The entities to clear. | . | zone_device_idzone device ID | yes | The zone to clear them from. | . Response data . Optional. cleared lists the entities passed in. ",
     "url": "/flare/beta/reference/services/#flareclaims_clear",
     
     "relUrl": "/reference/services/#flareclaims_clear"
-  },"66": {
+  },"65": {
     "doc": "Services",
     "title": "flare.claims_override",
-    "content": "Use this action to mark lights as changed by someone else, so FLARE leaves them alone. You don’t usually need it. When something other than FLARE changes a light that FLARE is driving, FLARE notices on its own and leaves the light alone. It’s for lights FLARE isn’t driving yet, such as when your automation turns lights on in a dark room and you want FLARE to leave them as they are. Without it, the room’s FLARE automation sets those lights back to the curve on its next update. It marks each entity whatever it’s set to. A light marked this way stays overridden until its zone goes dark, its claims are cleared, or a forced flare.apply_lighting takes it back. Flares call it before turning a room off or setting it to a brightness or colour. action: flare.claims_override data: entities: [light.kitchen_1] zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . Fields . | Field | Required | Description | . | entitieslist of entity IDs | yes | The entities to mark. | . | zone_device_idzone device ID | yes | The zone to mark them in. | . Response data . Optional. overridden lists the entities passed in. ",
+    "content": "Use this action to mark lights as changed by someone else, so FLARE leaves them alone. You don’t usually need it. When something other than FLARE changes a light that FLARE is driving, FLARE notices on its own and leaves the light alone. It’s for lights FLARE isn’t driving yet, such as when your automation turns lights on in a dark room and you want FLARE to leave them as they are. Without it, the room’s FLARE automation sets those lights back to the curve on its next update. It marks each entity whether it’s on or off. A light marked this way stays overridden until its zone goes dark, its claims are cleared, or a forced flare.apply_lighting takes it back. Flares call it before turning a room off or setting it to a brightness or colour. action: flare.claims_override data: entities: [light.kitchen_1] zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . Fields . | Field | Required | Description | . | entitieslist of entity IDs | yes | The entities to mark. | . | zone_device_idzone device ID | yes | The zone to mark them in. | . Response data . Optional. overridden lists the entities passed in. ",
     "url": "/flare/beta/reference/services/#flareclaims_override",
     
     "relUrl": "/reference/services/#flareclaims_override"
-  },"67": {
+  },"66": {
     "doc": "Services",
     "title": "flare.compute_scene_coverage",
     "content": "Use this action to find out which of a set of lights a scene sets, so you can apply the scene and set the other lights yourself. action: flare.compute_scene_coverage data: scene_entity_id: scene.kitchen_night scope_entities: [light.kitchen_1, light.kitchen_2, light.kitchen_strip] target_entities: [light.kitchen_1, light.kitchen_2] response_variable: coverage . Fields . | Field | Required | Description | . | scene_entity_idscene entity ID | yes | The scene to check. | . | scope_entitieslist of entity IDs | yes | Every entity the scene is allowed to set, usually the room’s lights and other entities on the same devices. | . | target_entitieslist of entity IDs | yes | The lights to check. | . Response data . | scene_valid: true if the scene exists and every entity it sets is in scope_entities. | scene_active: The same as scene_valid. | covered_entities: The entities the scene sets. | uncovered_entities: The entries in target_entities that the scene doesn’t set. If scene_valid is false, this is all of them. | . scene_active: true scene_valid: true covered_entities: [light.kitchen_1] uncovered_entities: [light.kitchen_2] . ",
     "url": "/flare/beta/reference/services/#flarecompute_scene_coverage",
     
     "relUrl": "/reference/services/#flarecompute_scene_coverage"
-  },"68": {
+  },"67": {
     "doc": "Services",
     "title": "flare.export_schedule",
     "content": "Use this action to get a schedule’s settings as YAML, in the format described under copying a schedule. action: flare.export_schedule data: schedule_device_id: \"{{ device_id('sensor.home_flare') }}\" response_variable: exported . Fields . | Field | Required | Description | . | schedule_device_idschedule device ID | yes | The schedule to export. | . Response data . | schedule: The schedule as YAML text, keyed by phase. | . ",
     "url": "/flare/beta/reference/services/#flareexport_schedule",
     
     "relUrl": "/reference/services/#flareexport_schedule"
-  },"69": {
+  },"68": {
     "doc": "Services",
     "title": "flare.import_schedule",
     "content": "Use this action to set a schedule from YAML, in the format described under copying a schedule. action: flare.import_schedule data: schedule_device_id: \"{{ device_id('sensor.home_flare') }}\" schedule: night: time: \"23:00\" . This moves the start of Night to 23:00 and leaves every other setting as it is. Fields . | Field | Required | Description | . | scheduleYAML text, or YAML written in the call | yes | The settings to apply, keyed by phase. Any setting it leaves out keeps its current value. | . | schedule_device_idschedule device ID | yes | The schedule to set. | . Good to know . | If any part of schedule has an error, such as an unknown setting, an invalid time or a value out of range, none of it is applied, and the error message says what’s wrong. | . ",
     "url": "/flare/beta/reference/services/#flareimport_schedule",
     
     "relUrl": "/reference/services/#flareimport_schedule"
-  },"70": {
+  },"69": {
     "doc": "Services",
     "title": "Two-step bulbs",
     "content": "Some bulbs can’t change brightness and colour temperature in one command: they jump to the new value, or ignore one of the two. FLARE sends these bulbs two commands, brightness first and then colour, each taking half the transition. It recognises them in two ways: . | By make and model, from the Two-step bulb models field under FLARE → Zones → Configure. It holds one pattern per line, matched case-insensitively against \"&lt;manufacturer&gt; &lt;model&gt;\", and * matches anything, so *TRADFRI bulb* and IKEA* both work. The field is pre-filled with FLARE’s default patterns. Your saved list replaces those defaults entirely, so you can remove a pattern as well as add one. If you save the field empty, FLARE uses the defaults again. | By label: give the light or its device a label created with the name no_combined_transition. FLARE matches the label’s ID, which comes from the name it was created with, so renaming another label to this won’t work. | . Once you’ve saved your own list, a later FLARE release that adds a pattern won’t change it, so you’ll need to add new bulbs yourself. Keep patterns specific, because a bulb that doesn’t need two commands transitions less smoothly when it gets them. ",
     "url": "/flare/beta/reference/services/#two-step-bulbs",
     
     "relUrl": "/reference/services/#two-step-bulbs"
-  },"71": {
+  },"70": {
     "doc": "Templates",
     "title": "Templates",
     "content": "The blueprint’s three template inputs cover what its other settings can’t: a light that depends on something other than the phase, or a single light treated differently from the rest of the room. This page covers how each one works, with examples. The Blueprint page lists what each one accepts. On this page . | Brightness Template . | Dimming a light while the TV is on | Dimming some lights in the evening | Leaving a light to another automation | One level for the whole room | A level that follows the curve | 0 or null? | . | Idle Brightness Template . | One lamp as the nightlight | A whole-room nightlight | A nightlight that follows the sun | . | Scene Template | . ",
     "url": "/flare/beta/guides/templates/",
     
     "relUrl": "/guides/templates/"
-  },"72": {
+  },"71": {
     "doc": "Templates",
     "title": "Brightness Template",
     "content": "Returns the brightness each light should sit at, as a mapping from entity ID to a level: . | Value | Effect | . | 1–255 | The light sits at this brightness, on the same scale as the phase brightnesses | . | 0 | The light is turned off | . | null or false | FLARE leaves the light alone entirely, on or off | . A light the template doesn’t mention follows the curve as usual, so return {} when the template has nothing to change. Dimming a light while the TV is on . {{ {'light.lounge_ceiling': 40} if is_state('media_player.tv', 'playing') else {} }} . While the TV plays, the ceiling light sits at 40 and the rest of the room follows the curve. Add media_player.tv to Additional Triggers so the room changes as soon as the TV starts or stops, rather than at the next update. Dimming some lights in the evening . {% set phase = states('sensor.home_flare') %} {% if phase == 'Evening' %} {{ {'light.kitchen_1': 20, 'light.kitchen_2': 20} }} {% elif phase == 'Night' %} {{ {'light.kitchen_1': 5, 'light.kitchen_2': 5} }} {% else %} {{ {} }} {% endif %} . The rest of the kitchen follows the curve; these two sit lower once Evening starts. Leaving a light to another automation . {{ {'light.kitchen_strip': none} if states('sensor.home_flare') in ['Evening', 'Night'] else {} }} . In the evening another automation runs a gradient on the kitchen strip, so this hands the strip over during Evening and Night and FLARE leaves it alone. FLARE won’t turn it off when the room empties either; the other automation needs to do that. One level for the whole room . A single number applies to every light in the room: . {{ 40 if is_state('media_player.tv', 'playing') else none }} . none here means “no opinion”, so the room follows the curve when the TV is off. A level that follows the curve . A level is fixed: the light stays at it for as long as the template returns it, whatever the time of day. To keep a light at, say, half the room’s brightness, read the curve and scale it: . {{ {'light.lounge_ceiling': state_attr('sensor.home_flare', 'brightness') | int * 0.5} }} . 0 or null? . 0 turns the light off but keeps it FLARE’s, so it comes back on with the rest of the room. null hands the light over completely: FLARE doesn’t touch it at all, so it isn’t turned off when the room empties either, and whatever controls it has to do that instead. The template wins over the Lights Off During lists for any light it names. ",
     "url": "/flare/beta/guides/templates/#brightness-template",
     
     "relUrl": "/guides/templates/#brightness-template"
-  },"73": {
+  },"72": {
     "doc": "Templates",
     "title": "Idle Brightness Template",
     "content": "Returns what each light dims to when the room is empty, instead of going dark. It takes the same values as Brightness Template, and wins over the per-phase Idle Brightness settings for any light it names. One lamp as the nightlight . {{ {'light.landing_lamp': 20} }} . With the phase settings at 0, this lamp stays at 20 when the landing empties and every other light goes out. When a phase’s setting is 0, only the lights the template names have an idle brightness in that phase. So a template naming one lamp makes that lamp the room’s only nightlight, even if you only meant to give it a different level from the rest. To keep the rest dim too, set the phase’s Idle Brightness as well, and use the template for the one light. A whole-room nightlight . A single number applies to every light in the room: . {{ 20 }} . A nightlight that follows the sun . The Night phase starts at a fixed time, not at dark. For a hall that stays dimly lit whenever it’s dark outside, leave the four phase settings at 0 and use the sun: . {{ 10 if is_state('sun.sun', 'below_horizon') else {} }} . {} means “no opinion”, so the hall goes fully dark while the sun is up. The hall picks up the change at the next update after sunset, which can be up to a minute later. Don’t add sun.sun to Additional Triggers to make it immediate: at sunrise that would bring the lights up to the curve instead of turning them off. ",
     "url": "/flare/beta/guides/templates/#idle-brightness-template",
     
     "relUrl": "/guides/templates/#idle-brightness-template"
-  },"74": {
+  },"73": {
     "doc": "Templates",
     "title": "Scene Template",
     "content": "Returns a scene’s entity ID, to hand the room to that scene instead of the curve. It wins over the per-phase scene pickers whenever it returns a scene that exists. {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }} . Return '' for no scene. See Scenes for how a room shares itself with a scene. ",
     "url": "/flare/beta/guides/templates/#scene-template",
     
     "relUrl": "/guides/templates/#scene-template"
-  },"75": {
+  },"74": {
     "doc": "Zones",
     "title": "Zones",
     "content": "A zone records which lights FLARE has set, usually for one room. FLARE uses it to tell its own changes from anyone else’s, so it can leave alone a light you’ve changed yourself. Zones are under Settings → Devices &amp; Services → FLARE → Zones. On this page . | A zone’s entities | Override protection . | The two claims | Turning a light off counts | When FLARE sets a light again | One zone per light | . | The zone’s events | Inspecting tracked state | When zones tick | . ",
     "url": "/flare/beta/reference/zones/",
     
     "relUrl": "/reference/zones/"
-  },"76": {
+  },"75": {
     "doc": "Zones",
     "title": "A zone’s entities",
     "content": "| Entity | Description | . | sensor.&lt;name&gt;_flare_claims | Where FLARE stores the zone’s claims. The state is the number of lights tracked; the claims attribute has each light’s claims. Don’t disable it: without it the zone can’t record anything. | . | sensor.&lt;name&gt;_flare_controlled | The number of the zone’s lights FLARE is setting. For information only. | . | sensor.&lt;name&gt;_flare_overridden | The number of the zone’s lights something else has changed. For information only. | . | button.&lt;name&gt;_flare_clear | Discards every claim in the zone. | . The two counts are recorded in history, with long-term statistics, but the claims attribute isn’t. A light that’s unavailable or has no claim isn’t included in either count. Clear discards every claim in the zone, not only for the overridden lights. FLARE then sets all of the zone’s lights again on their next update. ",
     "url": "/flare/beta/reference/zones/#a-zones-entities",
     
     "relUrl": "/reference/zones/#a-zones-entities"
-  },"77": {
+  },"76": {
     "doc": "Zones",
     "title": "Override protection",
     "content": "When flare.apply_lighting or flare.turn_off changes a light, it records a claim on the light in the zone the call names. On the next update, FLARE compares the light with its claim. If the light still shows what FLARE set, FLARE carries on setting it. If it doesn’t, something else has changed it, and FLARE leaves it alone. The blueprint passes its Zone input with every call. If you call the services yourself, pass the zone as zone_device_id: . action: flare.apply_lighting data: entities: [light.kitchen_1, light.kitchen_2] brightness: 200 color_temp_kelvin: 3200 transition: 2 zone_device_id: \"{{ device_id('sensor.kitchen_flare_claims') }}\" . | Without zone_device_id, apply_lighting, turn_off and compute_lighting_groups set the lights but record nothing, and don’t leave any light alone. | claims_check, claims_record, claims_clear and claims_override require zone_device_id. | A zone_device_id that isn’t one of your zones is an error. | Calls naming the same zone share its claims. To keep two automations’ lights separate, give them different zones. | force: true sets lights even if something else has changed them, and records the claim. | A light FLARE has no claim on is free for FLARE to set, so a change your own automation makes to one isn’t left alone unless you mark it with flare.claims_override. | . The two claims . Each tracked light has two claims: . | latest: the last change FLARE sent to the light. | observed: a change FLARE has seen the light report. On its next update, if the light reports latest’s context, FLARE promotes latest to observed. | . A light matching either claim is FLARE’s. So a change that never reaches the light, such as a dropped Zigbee command, doesn’t make FLARE treat the light as changed by someone else; the light still matches observed. A light matches a claim if it reports the context of that claim’s change, or the values in it. Values are needed because Home Assistant drops a change’s context after five seconds, and some bulbs take longer than that to report back. Claims are kept across a restart. After a restart every light has a new context, so restored claims are matched by values only: a light still showing what FLARE set is FLARE’s, and any other light is left alone. Turning a light off counts . Turning a light off yourself counts as changing it, so FLARE doesn’t turn it back on. FLARE’s own turn-offs record a claim of {\"state\": \"off\"}, which is how FLARE tells them apart from yours. When FLARE sets a light again . A zone discards all its claims when none of its lights are on. This is what normally ends an override: once the room is dark, FLARE sets every light in it again. | A light that isn’t in the zone doesn’t count. | A light that’s unavailable counts as off, so one dead bulb can’t keep the zone’s claims. | . A light also loses its claim when it goes unavailable, and you can discard a zone’s claims by hand with its Clear button. A light that has just come back online, say switched on at the wall, starts at whatever it powers up as, and may miss a command sent while it boots. That isn’t counted as someone changing it: FLARE sends it again until it takes. Something changing it afterwards is. One zone per light . If two zones set the same light, each treats the other’s changes as someone else’s, and the light stops following either. When this happens, FLARE shows a notification naming the light and the zones. It shows this once for each light, and doesn’t show it again for that light until Home Assistant restarts. ",
     "url": "/flare/beta/reference/zones/#override-protection",
     
     "relUrl": "/reference/zones/#override-protection"
-  },"78": {
+  },"77": {
     "doc": "Zones",
     "title": "The zone’s events",
     "content": "A zone says when it takes its lights, when it lets them go, and when something else changes one of them. Each event is filed under the zone: entity_id is one of the zone’s count sensors and device_id its device, so they appear in the zone’s Activity, on its device page. FLARE adjusting lights it already has isn’t announced. When a zone starts controlling lights it wasn’t, such as when a room comes on, FLARE fires flare_lights_controlled once for them all, a few seconds after the first, since the bulbs report back one by one: . lights: [light.kitchen_1, light.kitchen_2] # the lights it took controlled: 6 # how many it's controlling now entity_id: sensor.kitchen_flare_controlled zone: Kitchen device_id: ... # the zone's device . Kitchen now controlling 6 lights . When a zone lets its lights go, because the room went dark or you pressed Clear, FLARE fires flare_lights_released: . lights: [light.kitchen_1, light.kitchen_2] entity_id: sensor.kitchen_flare_controlled zone: Kitchen device_id: ... Kitchen cleared 6 lights . When something else changes one of a zone’s lights, FLARE fires flare_light_overridden for that light: . light: light.kitchen_1 entity_id: sensor.kitchen_flare_overridden zone: Kitchen # the zone that lost the light device_id: ... previous_status: controlled live_context_id: 01M11... live: { state: on, brightness: 12, color_temp_kelvin: 6500, rgb_color: null } observed: { context_id: ..., target: {...}, recorded_at: ... } latest: { context_id: ..., target: {...}, recorded_at: ... } . Kitchen released Kitchen 1 to something else (last asked for 255/6667, found 12/6500) . It fires once when the light changes hands, not again while the light stays overridden, and not for lights that were already overridden before a restart. To trigger an automation on it: . triggers: - trigger: event event_type: flare_light_overridden . Changed in 1.0.0 — flare_light_overridden’s light is in light; entity_id is now the zone’s sensor. An automation reading trigger.event.data.entity_id for the light needs trigger.event.data.light instead. ",
     "url": "/flare/beta/reference/zones/#the-zones-events",
     
     "relUrl": "/reference/zones/#the-zones-events"
-  },"79": {
+  },"78": {
     "doc": "Zones",
     "title": "Inspecting tracked state",
     "content": "flare.claims_check returns each light’s status: . | Status | Meaning | . | controlled | FLARE is setting it: it matches one of its claims. | . | overridden | It matches neither claim, so something else has changed it. | . | untracked | It’s on, and has no claim, or only one FLARE hasn’t seen the light report yet. FLARE sets it as usual. | . | off | It’s off and has no claim. A light FLARE turned off is controlled; one someone else turned off is overridden. | . | unavailable | Home Assistant can’t reach it, so its claims aren’t checked. It isn’t blocked. | . matched_via says which claim matched, and how: latest-context, latest-value, observed-context or observed-value. Each claim has a recorded_at time and a context_id, which you can use to find the change in Home Assistant’s logbook. Claims that haven’t changed for a day are discarded, so a light deleted from Home Assistant stops being tracked. ",
     "url": "/flare/beta/reference/zones/#inspecting-tracked-state",
     
     "relUrl": "/reference/zones/#inspecting-tracked-state"
-  },"80": {
+  },"79": {
     "doc": "Zones",
     "title": "When zones tick",
     "content": "Each zone fires a flare_tick event once per update interval, carrying the zone’s device as device_id. Zones fire one after another, in name order, a gap apart, so rooms don’t all send commands at the same time. A tick is a plain event, not an entity, so it never appears in Activity, history or the logbook. You can set the interval and the gap under FLARE → Zones → Configure: . | Option | Default | Description | . | Update interval | 1 minute | How often each zone ticks, from 1 to 60 minutes. | . | Gap between zones | 1 second | Reduced automatically when the zones wouldn’t otherwise fit in the interval. | . To run an automation on a zone’s tick: . triggers: - trigger: event event_type: flare_tick event_data: device_id: \"&lt;the zone's device ID&gt;\" . The zone’s device ID is in the address of its device page, or {{ device_id('sensor.kitchen_flare_claims') }} in the template editor. Changed in 1.0.0 — the tick was an entity, event.&lt;name&gt;_flare_tick, which is removed. An automation triggering on it needs the trigger above instead. ",

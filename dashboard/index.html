@@ -234,18 +234,25 @@
 </h1>
     
 
-<p>FLARE comes with a ready-made dashboard, which builds itself from your schedules and zones:
-a view for each schedule and one for your zones. A schedule or zone you add later appears
-without you touching it.</p>
+<p>FLARE comes with a ready-made dashboard: a view for each schedule, and one for your zones. It
+builds itself from your schedules and zones each time it loads, so one you add later appears on
+its own.</p>
 
 <p>Add it from <strong>Settings → Dashboards → Add dashboard</strong>: pick <strong>FLARE Lighting</strong>, then give it a
 name and an icon. FLARE’s logo is in the icon picker as <code class="language-plaintext highlighter-rouge">flare:logo</code>.</p>
 
-<p>It’s a dashboard whose whole YAML is:</p>
+<ul>
+  <li><strong>A schedule’s view</strong> shows the day’s curve and every schedule and curve setting.</li>
+  <li><strong>Zones</strong> shows how many lights FLARE is driving across the house and how many something
+else has taken over. Below that is each zone, by floor and area, laid out like Home
+Assistant’s Lights dashboard: its controlled and overridden counts, which lights are
+overridden, and a <strong>Clear</strong> button to hand them back. A zone’s name opens its device page.
+Beside the zones, <strong>Activity</strong> lists the last 24 hours of their events, as each zone’s device
+page does. On a narrow screen, Activity is a separate tab.</li>
+</ul>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">strategy</span><span class="pi">:</span>
-  <span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare</span>
-</code></pre></div></div>
+<p><img src="/flare/assets/img/dashboard-section.png" alt="A schedule's view: the day's curve, a phase override, the schedule times, and
+the curve and transition values for each phase" /></p>
 <h2 id="adding-the-views-to-another-dashboard">
   
   
@@ -255,8 +262,8 @@ name and an icon. FLARE’s logo is in the icon picker as <code class="language-
 </h2>
     
 
-<p>The views it’s made of can also go in a dashboard of your own. Open it, then <strong>Edit
-dashboard</strong> → the three-dot menu → <strong>Raw configuration editor</strong>, and add:</p>
+<p>The same views can go in a dashboard of your own. Open it, then <strong>Edit dashboard</strong> → the
+three-dot menu → <strong>Raw configuration editor</strong>, and add:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">views</span><span class="pi">:</span>
   <span class="pi">-</span> <span class="na">title</span><span class="pi">:</span> <span class="s">Lighting</span>
@@ -267,34 +274,9 @@ dashboard</strong> → the three-dot menu → <strong>Raw configuration editor</
       <span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare-zone</span>
 </code></pre></div></div>
 
-<ul>
-  <li><strong>Lighting</strong> — the day’s curve and every schedule and curve setting, one section per
-schedule sensor.</li>
-  <li><strong>Zones</strong> — how many lights FLARE is driving across the house and how many something
-else has taken over, then each zone by floor and area, laid out like Home Assistant’s
-Lights dashboard: its controlled and overridden counts, a Clear button to hand its lights
-back, and which are overridden.
-A zone’s name opens its device page.
-Beside them, <strong>Activity</strong> is the last 24 hours of the zones’ Activity.
-On a narrow screen it’s a tab.</li>
-</ul>
-
-<p>There’s nothing to fill in: both views find their own entities, and a schedule sensor or zone
-you add later appears without you touching the dashboard again.</p>
-
-<p><img src="/flare/assets/img/dashboard-section.png" alt="The FLARE Lighting view: the day's curve, a phase override, the schedule times, and
-the curve and transition values for each phase" /></p>
-<h2 id="one-schedule-per-view">
-  
-  
-    <a href="#one-schedule-per-view" class="anchor-heading" aria-labelledby="one-schedule-per-view"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> One schedule per view
-  
-  
-</h2>
-    
-
-<p>Once you have more than one schedule, a view each often reads better than all of them
-stacked. Add <code class="language-plaintext highlighter-rouge">sensor:</code> to pick one:</p>
+<p>Like the ready-made dashboard, both views find their own entities each time they load.
+<code class="language-plaintext highlighter-rouge">custom:flare-schedule</code> shows every schedule, one after another. To give each schedule its own
+view instead, add <code class="language-plaintext highlighter-rouge">sensor:</code>:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">views</span><span class="pi">:</span>
   <span class="pi">-</span> <span class="na">title</span><span class="pi">:</span> <span class="s">Downstairs</span>
@@ -328,10 +310,10 @@ under <em>Community</em> with a preview. On older versions, add a <strong>Manual
 </code></pre></div></div>
 
 <p><code class="language-plaintext highlighter-rouge">sensor</code> is the part before <code class="language-plaintext highlighter-rouge">_flare</code> in the schedule sensor’s entity ID.</p>
-<h2 id="reading-the-lighting-view">
+<h2 id="reading-a-schedules-view">
   
   
-    <a href="#reading-the-lighting-view" class="anchor-heading" aria-labelledby="reading-the-lighting-view"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Reading the Lighting view
+    <a href="#reading-a-schedules-view" class="anchor-heading" aria-labelledby="reading-a-schedules-view"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Reading a schedule’s view
   
   
 </h2>
@@ -363,13 +345,13 @@ one you paste in, so a schedule can be backed up, shared, or copied onto another
 </h2>
     
 
-<p>Both views rebuild themselves each time they load, so they pick up changes to FLARE and new
-schedules or zones on their own. If you’d rather own the layout and edit it by hand, use
-<strong>Take control</strong> from the dashboard’s three-dot menu.</p>
+<p>If you’d rather own the layout and edit it by hand, use <strong>Take control</strong> from the dashboard’s
+three-dot menu.</p>
 
 <blockquote class="note">
-  <p>Take control is one-way. Once you’ve taken control a view stops picking up changes to
-FLARE’s layout, and newly added schedule sensors or zones won’t appear on their own.</p>
+  <p>Take control is one-way. Once you’ve taken control, the dashboard no longer rebuilds itself,
+so it won’t pick up changes to FLARE’s layout, and schedules or zones you add later won’t
+appear on their own.</p>
 </blockquote>
 
           
