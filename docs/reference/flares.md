@@ -33,8 +33,9 @@ A flare is a light entity that sits over an automation. Flares are under **Setti
 the FLARE blueprint** creates one for each room picked, named after its automation. Either way,
 the flare starts in the automation's area.
 
-Reconfigure names the automation, and changes the name, and the lights or the lights and zone
-inputs. The automation can't be changed: add a new flare instead.
+**Reconfigure** shows which automation the flare runs, and changes the flare's name and its
+lights, or its lights and zone inputs. It can't change the automation, so to use a different
+one, add a new flare.
 
 ## The flare's light
 

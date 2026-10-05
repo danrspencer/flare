@@ -23,8 +23,8 @@ The quickest way to see what this actually does is the
 **[interactive curve playground](https://danrspencer.github.io/flare/playground/)**: move the schedule and
 curve settings around and watch the day's lighting change.
 
-- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — HACS, the blueprint, flares, and the dashboard
-- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the two ready-made views, added with a few lines of config
+- **[Quickstart](https://danrspencer.github.io/flare/installation/)** — installing FLARE and setting up your rooms
+- **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the ready-made dashboard, and its views for a dashboard of your own
 - **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, scenes, voice assistants and HomeKit, and building your own automations
 - **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule, zone and flare entity, and service
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite

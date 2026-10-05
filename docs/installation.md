@@ -54,11 +54,12 @@ what most rooms want:
 | A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting". |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
-The zone is always set up. Leave out the flare if you don't use voice assistants or HomeKit,
-or the automation too if you'd rather build the room's automation yourself.
+The zone is always set up. Leave out the flare if you don't use voice assistants and don't
+want a light for the whole room. Leave out the automation if you'd rather build it yourself.
+The flare is left out with it, because a flare runs the room's automation.
 
-With all three, that's everything a room needs. The automation is an ordinary one in **Settings → Automations
-& Scenes**, so change any of its other inputs there.
+With all three, the room is ready to use. The automation is an ordinary one in **Settings →
+Automations & Scenes**, so you can change its inputs there.
 
 {: .note }
 > A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
@@ -94,5 +95,5 @@ The other buttons there add one thing at a time: **Add schedule**, **Add zone** 
   [Why didn't my light change?]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
 - Want it to behave differently — a weekend lie-in, a holiday schedule?
   [Examples]({{ site.baseurl }}/guides/examples/).
-- Expose the flares to HomeKit, Alexa or Google Assistant instead of your bulbs.  See
-[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#exposing-flares-instead-of-your-bulbs) for how.
+- Using HomeKit, Alexa or Google Assistant? Expose the flares instead of your bulbs:
+  [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#exposing-flares-instead-of-your-bulbs).

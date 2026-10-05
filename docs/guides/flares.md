@@ -102,8 +102,9 @@ name as an alias on the flare instead, under **Voice assistants** in its setting
 Any automation can have a flare. Choose **Another automation** when adding one:
 
 - If the automation is built from a blueprint, pick the input that holds its lights and, if
-  it has one, the input that holds its FLARE zone. Without a zone, FLARE can take over a light
-  you changed from the flare if it wasn't already driving it.
+  it has one, the input that holds its FLARE zone. Without a zone, a brightness or colour you
+  set from the flare isn't protected: if FLARE wasn't already driving a light, the
+  automation's next update can set it back.
 - If it isn't, pick its lights directly.
 
 Turning the flare on runs that automation. The other commands work the same as above. The
