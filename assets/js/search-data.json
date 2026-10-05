@@ -169,7 +169,7 @@
   },"24": {
     "doc": "Examples",
     "title": "Lighting a room from a remote",
-    "content": "Turn the hall lights on from a button on a remote, at the right level for the time of day. alias: Hall lights from the remote triggers: - trigger: state entity_id: event.hall_remote_action conditions: - condition: template value_template: \"{{ trigger.to_state.attributes.event_type == 'on' }}\" actions: - action: automation.trigger target: entity_id: automation.hallway_lights . Additional Triggers can’t do this, because they only adjust lights that are already on. Running the room’s automation from another automation counts as running it by hand, which can switch lights on, but it also brings back to the curve any light in the room that someone set themselves. If the hall has a flare, you can turn that on instead, like any other light. It runs the room’s automation in the same way: . actions: - action: light.turn_on target: entity_id: light.hallway_lights_flare . ",
+    "content": "Turn the hall lights on from a button on a remote, at the right level for the time of day. alias: Hall lights from the remote triggers: - trigger: state entity_id: event.hall_remote_action conditions: - condition: template value_template: \"{{ trigger.to_state.attributes.event_type == 'on' }}\" actions: - action: automation.trigger target: entity_id: automation.hallway_lights . If the hall has a flare, you can turn that on instead, like any other light. It runs the room’s automation in the same way: . actions: - action: light.turn_on target: entity_id: light.hallway_lights_flare . ",
     "url": "/flare/guides/examples/#lighting-a-room-from-a-remote",
     
     "relUrl": "/guides/examples/#lighting-a-room-from-a-remote"
