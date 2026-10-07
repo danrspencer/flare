@@ -258,7 +258,6 @@ sensors.</p>
   <li><a href="#a-weekend-lie-in" id="markdown-toc-a-weekend-lie-in">A weekend lie-in</a></li>
   <li><a href="#a-holiday-schedule" id="markdown-toc-a-holiday-schedule">A holiday schedule</a></li>
   <li><a href="#movie-night" id="markdown-toc-movie-night">Movie night</a></li>
-  <li><a href="#keeping-a-room-lit-regardless-of-motion" id="markdown-toc-keeping-a-room-lit-regardless-of-motion">Keeping a room lit regardless of motion</a></li>
   <li><a href="#lighting-a-room-from-a-remote" id="markdown-toc-lighting-a-room-from-a-remote">Lighting a room from a remote</a></li>
   <li><a href="#something-else-at-a-phase-change" id="markdown-toc-something-else-at-a-phase-change">Something else at a phase change</a></li>
   <li><a href="#being-told-when-a-light-is-taken-over" id="markdown-toc-being-told-when-a-light-is-taken-over">Being told when a light is taken over</a></li>
@@ -392,29 +391,6 @@ off.</p>
 <p>The phase override applies to <strong>every room on that schedule</strong>. To dim one room only, give
 it a schedule of its own, or use the blueprint’s
 <a href="../templates/#brightness-template">Brightness Template</a> instead.</p>
-<h2 id="keeping-a-room-lit-regardless-of-motion">
-  
-  
-    <a href="#keeping-a-room-lit-regardless-of-motion" class="anchor-heading" aria-labelledby="keeping-a-room-lit-regardless-of-motion"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Keeping a room lit regardless of motion
-  
-  
-</h2>
-    
-
-<p>Keep the landing lit at the full curve for as long as a toggle is on, whatever the motion
-sensor says.</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">template</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">binary_sensor</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s2">"</span><span class="s">Landing</span><span class="nv"> </span><span class="s">kept</span><span class="nv"> </span><span class="s">lit"</span>
-        <span class="na">device_class</span><span class="pi">:</span> <span class="s">occupancy</span>
-        <span class="na">state</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">is_state('input_boolean.keep_landing_lit',</span><span class="nv"> </span><span class="s">'on')</span><span class="nv"> </span><span class="s">}}"</span>
-</code></pre></div></div>
-
-<p>This goes in <code class="language-plaintext highlighter-rouge">configuration.yaml</code>. Then add <code class="language-plaintext highlighter-rouge">binary_sensor.landing_kept_lit</code> to the landing
-automation’s <strong>Lights &amp; Occupancy</strong>, where the blueprint treats it as one more occupancy sensor.
-A room only counts as empty once all of its sensors are clear, so the room stays lit while the
-toggle is on.</p>
 <h2 id="lighting-a-room-from-a-remote">
   
   
