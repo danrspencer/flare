@@ -138,24 +138,6 @@ The phase override applies to **every room on that schedule**. To dim one room o
 it a schedule of its own, or use the blueprint's
 [Brightness Template](../templates/#brightness-template) instead.
 
-## Keeping a room lit regardless of motion
-
-Keep the landing lit at the full curve for as long as a toggle is on, whatever the motion
-sensor says.
-
-```yaml
-template:
-  - binary_sensor:
-      - name: "Landing kept lit"
-        device_class: occupancy
-        state: "{{ is_state('input_boolean.keep_landing_lit', 'on') }}"
-```
-
-This goes in `configuration.yaml`. Then add `binary_sensor.landing_kept_lit` to the landing
-automation's **Lights & Occupancy**, where the blueprint treats it as one more occupancy sensor.
-A room only counts as empty once all of its sensors are clear, so the room stays lit while the
-toggle is on.
-
 ## Lighting a room from a remote
 
 Turn the hall lights on from a button on a remote, at the right level for the time of day.
