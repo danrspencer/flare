@@ -141,3 +141,24 @@ async def test_reconfigure_explains_a_mistake_and_changes_nothing(entry, hass: H
     assert result["errors"] == {"schedule": "invalid_schedule"}
     assert "evening.time" in result["description_placeholders"]["error"]
     assert await _export(hass, _device(hass, entry, "Downstairs")) == before
+
+
+async def test_a_renamed_entity_is_still_the_schedules(entry, hass: HomeAssistant):
+    """Found by its unique ID, for export, import and the schedule itself."""
+    from homeassistant.helpers import entity_registry as er
+    from homeassistant.util import dt as dt_util
+
+    registry = er.async_get(hass)
+    registry.async_update_entity("time.downstairs_morning_time", new_entity_id="time.wake_up")
+    registry.async_update_entity("number.downstairs_night_kelvin", new_entity_id="number.bedtime_warmth")
+    await hass.async_block_till_done()
+    device = _device(hass, entry, "Downstairs")
+
+    await _import(hass, device, {"morning": {"time": "05:30"}, "night": {"kelvin": 2100}})
+    await hass.data[DOMAIN][_subentry(entry, "Downstairs")].async_refresh()
+
+    assert hass.states.get("time.wake_up").state == "05:30:00"
+    assert 'morning:\n  time: "05:30"' in await _export(hass, device)
+    assert "2100" in await _export(hass, device)
+    morning = dt_util.as_local(dt_util.utc_from_timestamp(hass.states.get("sensor.downstairs_flare").attributes["morning_start"]))
+    assert (morning.hour, morning.minute) == (5, 30)
