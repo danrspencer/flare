@@ -58,10 +58,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
-- **The Zones view's Activity is coloured and filterable.** Blue when a zone takes its
-  lights, amber when something else overrides one, grey when a zone lets them go, and buttons
-  at the top to show one kind at a time, and selecting an entry opens that zone's device
-  page.
+- **The Zones view's Activity is coloured and filterable.** Each entry's dot is blue when a
+  zone takes its lights, amber when something else overrides one, and grey when a zone lets
+  them go; buttons at the top show one kind at a time; and selecting an entry opens that
+  zone's device page. The entries are Home Assistant's own logbook rows.
 - **An All zones row at the top of the Zones view**, laid out like each zone's, with a
   **Clear** for every zone at once. Its counts are two new sensors,
   `sensor.flare_controlled_lights` and `sensor.flare_overridden_lights`, totalling every zone.

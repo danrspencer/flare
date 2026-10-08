@@ -4,6 +4,11 @@
  * the zone entity it's filed under (sensor.py's _zone_data): its
  * Controlled or Overridden count, or Clear for a release.
  *
+ * Each row is Home Assistant's own `ha-logbook-entry`, with its dot in the
+ * kind's colour (`nodeColor`, HA 2026.10), so the card looks like HA's
+ * logbook. The list around the rows - day headings and a scrolling box -
+ * copies `ha-logbook-renderer`, which can't colour rows individually.
+ *
  *   type: custom:flare-activity-card
  *   device_id: [<zone device id>, ...]
  *   hours_to_show: 24   # optional
@@ -46,8 +51,43 @@ export function visibleEntries(entries, kinds, chosen, since) {
     .sort((a, b) => b.when - a.when);
 }
 
-const escape = (text) =>
-  String(text ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const dayOf = (when) => new Date(when * 1000).setHours(0, 0, 0, 0);
+
+/**
+ * The list as `ha-logbook-renderer` lays it out: a heading before each
+ * day's first entry, and each entry told whether it's first or last of its
+ * day (which trims the timeline's rail), with its kind's colour.
+ */
+export function plan(entries, kinds) {
+  const colour = Object.fromEntries(KINDS.map((k) => [k.key, k.color]));
+  const rows = [];
+  entries.forEach((item, index) => {
+    const firstOfDay = index === 0 || dayOf(item.when) !== dayOf(entries[index - 1].when);
+    const lastOfDay = index === entries.length - 1 || dayOf(item.when) !== dayOf(entries[index + 1].when);
+    if (firstOfDay) rows.push({ day: item.when });
+    const { kind, device } = kinds[item.entity_id];
+    rows.push({ item, device, nodeColor: colour[kind], firstOfDay, lastOfDay });
+  });
+  return rows;
+}
+
+/** "Today · 8 October 2026", as `ha-logbook-renderer` heads a day. */
+export function dayHeading(when, language) {
+  const date = new Date(when * 1000);
+  const full = date.toLocaleDateString(language, { day: 'numeric', month: 'long', year: 'numeric' });
+  const diffDays = Math.round((dayOf(Date.now() / 1000) - dayOf(when)) / 86400000);
+  if (diffDays !== 0 && diffDays !== 1) return full;
+  const relative = new Intl.RelativeTimeFormat(language, { numeric: 'auto' }).format(-diffDays, 'day');
+  return `${relative[0].toUpperCase()}${relative.slice(1)} · ${full}`;
+}
+
+// ha-logbook-entry is loaded with the built-in logbook card, not up front.
+async function loadLogbookEntry() {
+  if (customElements.get('ha-logbook-entry')) return;
+  const helpers = await window.loadCardHelpers();
+  helpers.createCardElement({ type: 'logbook', target: { entity_id: [] } });
+  await customElements.whenDefined('ha-logbook-entry');
+}
 
 function readFilter() {
   try {
@@ -65,11 +105,33 @@ function saveFilter(value) {
   }
 }
 
+const STYLE = `
+  :host { display: block; height: 100%; }
+  ha-card { display: flex; flex-direction: column; height: 100%; }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--ha-space-2, 8px); padding: var(--ha-space-3, 12px) var(--ha-space-4, 16px) 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    font: inherit; font-size: var(--ha-font-size-s, 12px); padding: 4px 12px; border-radius: 16px;
+    border: 1px solid var(--divider-color); background: none; color: var(--primary-text-color);
+  }
+  .chip[aria-pressed="true"] { background: rgba(var(--rgb-primary-color), 0.15); border-color: var(--primary-color); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  /* ha-logbook-renderer's container and day heading. */
+  .list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: var(--ha-space-4, 16px); }
+  .date {
+    margin: var(--ha-space-2, 8px) 0 0;
+    padding: var(--ha-space-2, 8px) var(--logbook-horizontal-padding, var(--ha-space-4, 16px)) 0;
+    font-weight: var(--ha-font-weight-medium, 500);
+  }
+  .empty { padding: var(--ha-space-4, 16px); text-align: center; color: var(--secondary-text-color); }
+`;
+
 class FlareActivityCard extends HTMLElement {
   constructor() {
     super();
     this._entries = [];
     this._filter = readFilter();
+    this._rows = [];
   }
 
   setConfig(config) {
@@ -84,9 +146,10 @@ class FlareActivityCard extends HTMLElement {
   set hass(hass) {
     const first = !this._hass;
     this._hass = hass;
+    for (const row of this._rows) row.hass = hass;
     if (first) {
       this._subscribe();
-      this._render();
+      this._loading = loadLogbookEntry().then(() => this._render());
     }
   }
 
@@ -129,97 +192,82 @@ class FlareActivityCard extends HTMLElement {
     this._render();
   }
 
-  _formatTime(when) {
-    const language = this._hass && this._hass.locale && this._hass.locale.language;
-    return new Date(when * 1000).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
-  }
-
-  _formatDay(when) {
-    const language = this._hass && this._hass.locale && this._hass.locale.language;
-    const date = new Date(when * 1000);
-    const day = date.toLocaleDateString(language, { day: 'numeric', month: 'long' });
-    return date.toDateString() === new Date().toDateString() ? `Today · ${day}` : day;
+  _skeleton() {
+    if (this.shadowRoot) return;
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card><div class="chips"></div><div class="list"></div></ha-card>`;
+    this.shadowRoot.addEventListener('click', (ev) => this._chipClicked(ev));
+    // A row fires this when selected, as it does inside HA's logbook.
+    this.shadowRoot.addEventListener('logbook-entry-selected', (ev) => this._entrySelected(ev));
   }
 
   _render() {
-    if (!this._config || !this._hass) return;
-    if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
-      this.shadowRoot.addEventListener('click', (ev) => this._clicked(ev));
-    }
+    if (!this._config || !this._hass || !customElements.get('ha-logbook-entry')) return;
+    this._skeleton();
+    const language = this._hass.locale && this._hass.locale.language;
     const kinds = entityKinds(this._hass, this._config.device_id);
     const since = Date.now() / 1000 - this._hours() * 3600;
-    const entries = visibleEntries(this._entries, kinds, this._filter, since);
-    const colour = Object.fromEntries(KINDS.map((k) => [k.key, k.color]));
+    this._kinds = kinds;
 
-    const chips = [{ key: 'all', label: 'All' }, ...KINDS]
+    const chips = this.shadowRoot.querySelector('.chips');
+    chips.innerHTML = [{ key: 'all', label: 'All' }, ...KINDS]
       .map(
         (k) =>
           `<button class="chip" data-filter="${k.key}" aria-pressed="${this._filter === k.key}">` +
           (k.color ? `<span class="dot" style="background:${k.color}"></span>` : '') +
-          `${escape(k.label)}</button>`
+          `${k.label}</button>`
       )
       .join('');
 
-    let day = null;
-    const rows = entries
-      .map((e) => {
-        const thisDay = this._formatDay(e.when);
-        const header = thisDay !== day ? `<h4 class="day">${escape(thisDay)}</h4>` : '';
-        day = thisDay;
-        const { kind, device } = kinds[e.entity_id];
-        return (
-          `${header}<div class="entry" role="link" tabindex="0" data-device="${escape(device)}">` +
-          `<span class="dot" style="background:${colour[kind]}"></span>` +
-          `<span class="text"><b>${escape(e.name)}</b> ${escape(e.message)}</span>` +
-          `<time>${escape(this._formatTime(e.when))}</time></div>`
-        );
-      })
-      .join('');
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host { display: block; height: 100%; }
-        ha-card { display: flex; flex-direction: column; height: 100%; }
-        .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 4px; }
-        .chip {
-          display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-          font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 16px;
-          border: 1px solid var(--divider-color); background: none; color: var(--primary-text-color);
-        }
-        .chip[aria-pressed="true"] { background: rgba(var(--rgb-primary-color), 0.15); border-color: var(--primary-color); }
-        .list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 0 12px; }
-        .day { margin: 12px 16px 4px; font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
-        .entry { display: flex; align-items: baseline; gap: 10px; padding: 6px 16px; cursor: pointer; border-radius: 8px; }
-        .entry:hover { background: rgba(var(--rgb-primary-text-color), 0.04); }
-        .entry:focus-visible { outline: 2px solid var(--primary-color); }
-        .dot { flex: none; width: 10px; height: 10px; border-radius: 50%; }
-        .entry .dot { transform: translateY(1px); }
-        .text { flex: 1; color: var(--primary-text-color); }
-        time { flex: none; font-size: 12px; color: var(--secondary-text-color); }
-        .empty { padding: 16px; color: var(--secondary-text-color); }
-      </style>
-      <ha-card>
-        <div class="chips">${chips}</div>
-        <div class="list">${rows || `<div class="empty">Nothing in the last ${this._hours()} hours.</div>`}</div>
-      </ha-card>
-    `;
-  }
-
-  _clicked(ev) {
-    const path = ev.composedPath ? ev.composedPath() : [ev.target];
-    const chip = path.find((el) => el && el.dataset && el.dataset.filter);
-    if (chip) {
-      this._filter = chip.dataset.filter;
-      saveFilter(this._filter);
-      this._render();
+    const list = this.shadowRoot.querySelector('.list');
+    list.replaceChildren();
+    this._rows = [];
+    const rows = plan(visibleEntries(this._entries, kinds, this._filter, since), kinds);
+    if (!rows.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = this._hass.localize('ui.components.logbook.entries_not_found');
+      list.append(empty);
       return;
     }
-    const entry = path.find((el) => el && el.dataset && el.dataset.device);
-    if (entry) {
-      window.history.pushState(null, '', `/config/devices/device/${entry.dataset.device}`);
-      window.dispatchEvent(new CustomEvent('location-changed'));
+    for (const row of rows) {
+      if (row.day !== undefined) {
+        const heading = document.createElement('h4');
+        heading.className = 'date';
+        heading.textContent = dayHeading(row.day, language);
+        list.append(heading);
+        continue;
+      }
+      const entry = document.createElement('ha-logbook-entry');
+      Object.assign(entry, {
+        hass: this._hass,
+        item: row.item,
+        narrow: true,
+        noIcon: true,
+        nodeColor: row.nodeColor,
+        firstOfDay: row.firstOfDay,
+        lastOfDay: row.lastOfDay,
+      });
+      list.append(entry);
+      this._rows.push(entry);
     }
+  }
+
+  _chipClicked(ev) {
+    const chip = ev.composedPath().find((el) => el && el.dataset && el.dataset.filter);
+    if (!chip) return;
+    this._filter = chip.dataset.filter;
+    saveFilter(this._filter);
+    this._render();
+  }
+
+  _entrySelected(ev) {
+    ev.stopPropagation();
+    const item = ev.detail && ev.detail.item;
+    const zone = item && this._kinds && this._kinds[item.entity_id];
+    if (!zone) return;
+    window.history.pushState(null, '', `/config/devices/device/${zone.device}`);
+    window.dispatchEvent(new CustomEvent('location-changed'));
   }
 }
 

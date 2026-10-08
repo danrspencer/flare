@@ -1037,26 +1037,27 @@ beside it.
   tiles, and a Clear card pressing every zone's Clear button at once (the
   card takes a list). A markdown line of sums came first, and a stacked
   statistics graph before that was dropped as ugly.
-- **The Activity sidebar is `custom:flare-activity-card`**, rendering the
-  entries itself from the logbook's public `logbook/event_stream`
-  subscription for the zones' devices, so it can colour them by kind (the
-  tiles' blue/amber/grey) and filter by kind, at the user's request.
-  HA's own pieces can't: the logbook card asks for a device target's
-  entities only, never `deviceIds` (`hui-logbook-card.ts`), and the
-  logbook server drops sensors with a unit from that list
-  (`async_filter_entities`), so zone events never showed; and
-  `ha-logbook-entry` colours a dot from the entry's category alone, with
-  no per-entry colour its renderer passes through. An event's kind is the
-  zone entity it's filed under (below). The card shows only entries with a
-  message, which leaves out the Clear button's own state change.
-  It relies only on the logbook's websocket feed rather than the internal
-  `ha-logbook`, so its look doesn't follow HA's logbook automatically.
-  **It should still look like HA's logbook** (user's call): visual drift
-  is a bug to fix, not an accepted cost. When HA restyles its logbook
-  (`ha-logbook-renderer.ts`, `ha-logbook-entry.ts`: date headers, row
-  spacing, the dot, fonts), bring this card's styles back in line. Don't
-  move it back onto `ha-logbook` without a way to keep the colours and
-  filter.
+- **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
+  to the logbook's `logbook/event_stream` for the zones' devices itself,
+  filters by kind, and renders each entry as HA's own `ha-logbook-entry`
+  with `nodeColor` (2026.10+) set to the kind's colour (the tiles'
+  blue/amber/grey), so rows look exactly like HA's logbook. Only the list
+  around them - day headings and the scrolling box - is ours, copied from
+  `ha-logbook-renderer`, which can't colour rows individually. Selecting a
+  row (`logbook-entry-selected`) opens the zone's device page. An event's
+  kind is the zone entity it's filed under (below); entries without a
+  message, i.e. the Clear button's own state change, are left out.
+  - Why not HA's logbook card, as the Security dashboard uses: it asks for
+    a device target's entities only, never `deviceIds`
+    (`hui-logbook-card.ts`), and the logbook server drops sensors with a
+    unit from that list (`async_filter_entities`), so zone events never
+    showed; and it can't colour or filter rows.
+  - `ha-logbook-entry` is a frontend internal, lazy-loaded (the card has
+    `loadCardHelpers` create a logbook card first, which imports it). An
+    accepted risk like `ha-control-slider`; its properties were the same
+    from 2026.9 to dev apart from `nodeColor`, new in 2026.10. **It should
+    look like HA's logbook** (user's call): if HA restyles
+    `ha-logbook-renderer`'s day headings or container, follow them.
 
 **Zone events** (`flare_lights_controlled`, `flare_lights_released`,
 `flare_light_overridden`) carry a zone entity as `entity_id` - the
