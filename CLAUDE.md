@@ -433,6 +433,8 @@ dropdown; Set up area can just be run again).
   file, and the original text is restored byte for byte. An unreadable
   file (not YAML, or not a list) is left alone with its own message. A
   successful write drops comments in the file, as the editor does.
+- **Each automation gets the "FLARE" label** (created the first time), at
+  the user's request, so they're easy to find and manage.
 - **Not yet handled: a failure partway leaves what was created.** Zones
   (and on first setup the entries) exist before automations.yaml is
   written. Deliberately left for a decision of its own.
@@ -1023,23 +1025,33 @@ beside it.
   counts. On narrow screens it's a button badge on the heading.
 - A zone's area is its device's, else the area named after it; it takes
   the area's name unless two zones share the area.
-- The totals are a markdown template over the zones' counts. A stacked
-  statistics graph and total sensors were both tried and dropped.
-- **The Activity sidebar is `custom:flare-activity-card`**, not HA's
-  logbook card. That card asks for a device target's entities only, never
-  `deviceIds` (`hui-logbook-card.ts`, 2026.9 to dev), and the logbook
-  server drops sensors with a unit or state class from that list
-  (`async_filter_entities`), so zone events filed under the count sensors
-  never showed. FLARE's card renders the frontend's own `ha-logbook` with
-  the zones' entities and `deviceIds`, as a device page does. `ha-logbook`
-  is lazy-loaded, so the card has `loadCardHelpers` create a logbook card
-  first. An accepted risk like `ha-control-slider`; if it breaks, follow
-  `ha-config-device-page.ts`.
+- **The totals are an "All zones" row built like a zone's**, at the
+  user's direction: the Zones entry's device-less total sensors
+  (`sensor.flare_{controlled,overridden}_lights`, translation keys
+  `all_controlled`/`all_overridden`, found by `flareTotals()`) as its
+  tiles, and a Clear card pressing every zone's Clear button at once (the
+  card takes a list). A markdown line of sums came first, and a stacked
+  statistics graph before that was dropped as ugly.
+- **The Activity sidebar is `custom:flare-activity-card`**, rendering the
+  entries itself from the logbook's public `logbook/event_stream`
+  subscription for the zones' devices, so it can colour them by kind (the
+  tiles' blue/amber/grey) and filter by kind, at the user's request.
+  HA's own pieces can't: the logbook card asks for a device target's
+  entities only, never `deviceIds` (`hui-logbook-card.ts`), and the
+  logbook server drops sensors with a unit from that list
+  (`async_filter_entities`), so zone events never showed; and
+  `ha-logbook-entry` colours a dot from the entry's category alone, with
+  no per-entry colour its renderer passes through. An event's kind is the
+  zone entity it's filed under (below). The card shows only entries with a
+  message, which leaves out the Clear button's own state change. It fills
+  the window height rather than a fixed 385px.
 
 **Zone events** (`flare_lights_controlled`, `flare_lights_released`,
-`flare_light_overridden`) carry one of the zone's count sensors as
-`entity_id` and its `device_id`, with the lights in `light`/`lights`, so
-they show on the zone's device page and in its Activity. The logbook
+`flare_light_overridden`) carry a zone entity as `entity_id` - the
+Controlled count, the Overridden count, or the Clear button for a release
+(`_zone_data`) - and the zone's `device_id`, with the lights in
+`light`/`lights`, so they show on the zone's device page and in its
+Activity, and the Activity card can tell the three apart. The logbook
 matches events to entities only through `entity_id`, so they can't also
 be on each light's timeline; the user chose the zone.
 

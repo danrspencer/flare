@@ -51,7 +51,7 @@ what most rooms want:
 | | What it does |
 |---|---|
 | A [zone]({{ site.baseurl }}/reference/zones/) | Keeps track of which lights FLARE is driving there, so it leaves alone a light you've changed yourself. |
-| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting". |
+| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting", with a **FLARE** label so you can find them. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
 The zone is always set up. Leave out the flare if you don't use voice assistants and don't

@@ -54,6 +54,14 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **The Zones view's Activity is coloured and filterable.** Blue when a zone takes its
+  lights, amber when something else overrides one, grey when a zone lets them go, and buttons
+  at the top to show one kind at a time. It's also as tall as the window, and selecting an
+  entry opens that zone's device page.
+- **An All zones row at the top of the Zones view**, laid out like each zone's, with a
+  **Clear** for every zone at once. Its counts are two new sensors,
+  `sensor.flare_controlled_lights` and `sensor.flare_overridden_lights`, totalling every zone.
+- **Room automations that setup creates carry a FLARE label**, so they're easy to find.
 - **Flares: a light for each room, for voice assistants and HomeKit.** A flare is a light
   entity over an automation. Turning it on runs the automation, so "turn on the kitchen"
   brings the room up the way FLARE would; turning it on with a brightness or colour sets
@@ -135,6 +143,8 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **`flare_lights_released` is filed under the zone's Clear button** (`entity_id:
+  button.<zone>_flare_clear`) rather than its Controlled count.
 - **A light that has just come back online reads `settling`**, for 30 seconds, rather than
   `overridden`. Its first reports are often out of date, so it isn't counted or announced as
   overridden until it has had time to report properly. FLARE leaves it alone meanwhile, and
