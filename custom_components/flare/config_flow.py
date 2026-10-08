@@ -152,7 +152,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         counts = {"zones": result.zones, "automations": result.automations, "flares": result.flares}
         placeholders = {key: str(count) for key, count in counts.items()}
         if first_setup:
-            placeholders |= {"schedule_count": str(len(self._new_schedules)), "schedules": ", ".join(self._new_schedules)}
+            placeholders["schedules"] = ", ".join(self._new_schedules)
         return self.async_abort(
             reason="setup_complete" if first_setup else "areas_set_up", description_placeholders=placeholders
         )

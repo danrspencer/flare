@@ -205,9 +205,11 @@ may use everything. `tests/checks/test_layering.py` enforces it.
 
 **`strings.json` is the source and `translations/en.json` a copy**, which
 is what HA shows for a custom integration. They had drifted;
-`tests/checks/test_translations.py` keeps them identical. Setup's
-summaries use ICU plurals (`{zones, plural, one {# zone} other {# zones}}`),
-which HA's frontend formats with `intl-messageformat`.
+`tests/checks/test_translations.py` keeps them identical. **Placeholders
+must be plain `{name}`s**: hassfest parses each string with Python's
+formatter and rejects ICU plurals, though HA's frontend would format them.
+The same test applies hassfest's rule, so word a count so it needs no
+plural form ("Flares added: {count}").
 
 ### Services
 
