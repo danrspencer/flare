@@ -1044,10 +1044,14 @@ beside it.
   no per-entry colour its renderer passes through. An event's kind is the
   zone entity it's filed under (below). The card shows only entries with a
   message, which leaves out the Clear button's own state change.
-  **The trade-off was weighed and accepted** (user's call): it relies only
-  on the logbook's websocket feed rather than the internal `ha-logbook`,
-  but its look won't follow HA's logbook as that's restyled. Don't move
-  it back onto `ha-logbook` without a way to keep the colours and filter.
+  It relies only on the logbook's websocket feed rather than the internal
+  `ha-logbook`, so its look doesn't follow HA's logbook automatically.
+  **It should still look like HA's logbook** (user's call): visual drift
+  is a bug to fix, not an accepted cost. When HA restyles its logbook
+  (`ha-logbook-renderer.ts`, `ha-logbook-entry.ts`: date headers, row
+  spacing, the dot, fonts), bring this card's styles back in line. Don't
+  move it back onto `ha-logbook` without a way to keep the colours and
+  filter.
 
 **Zone events** (`flare_lights_controlled`, `flare_lights_released`,
 `flare_light_overridden`) carry a zone entity as `entity_id` - the
