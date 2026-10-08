@@ -169,16 +169,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **A light no longer stops following the schedule after an update is cut short.**
   If a room's automation was restarted part-way through changing its lights - a new
   motion event arriving while a two-step bulb was between its two steps, or one
@@ -201,16 +191,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **Leaving a phase that had an idle brightness no longer turns the lights
   up.** A hall set to a 10% nightlight overnight went to full brightness at
   the morning boundary, and only switched off a minute later. The lights
@@ -387,16 +367,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **The integration's icon had a white square behind it.** The PNGs Home
   Assistant serves were rendered by a thumbnailer that composites onto
   white, so the rounded tile's corners were opaque white instead of
@@ -514,16 +484,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - The **Curve playground** link on the documentation home page was dead —
   the page had no permalink, so it only answered at `/playground.html`.
 - The home page's description of what "reconciliation" means described
@@ -536,16 +496,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **A stale browser cache could serve an old card or feature after an
   update**, showing "Configuration error" where a FLARE card should be
   until the cache expired on its own. The front-end files are now served
@@ -705,16 +655,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **The colour-temperature slider's drag handle is no longer invisible at
   pale settings.** Home Assistant's slider draws its handle in white,
   which works against a warm fill but disappears once the colour
@@ -836,16 +776,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **A card added from the picker's "By card" tab pointed at a sensor
   that no longer exists.** With no configuration the card fell back to
   `sensor.default_flare` — the auto-seeded "Default" sensor the config
@@ -887,16 +817,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **Overriding the day phase now shows that phase's own values, not the
   next phase's.** `_value_at()`'s ramp-easing math computed the
   interpolation factor from the real clock relative to the requested
@@ -914,16 +834,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **The per-scope Clear button now clears every light in one press.**
   `async_clear` built its "did anything change" check as
   `any(store.claims.pop(...) is not None for ...)` - `any()` short-circuits
@@ -937,16 +847,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - **The curve card's "now" marker is legible against any colour.** It
   used to be a filled dot on the chart itself, which all but vanished
   whenever the current colour temperature came out pale - a cold white
@@ -1043,16 +943,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - `overridden` now has an automatic way out. Previously only the Clear
   button or a device drop could end it.
 
@@ -1067,16 +957,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - Documentation: seven broken links, entity ids in the reference table
   that still carried the old domain (`sensor.<name_>adaptive_lighting`
   rather than `sensor.<name>_flare`), and a copy-paste dashboard
@@ -1100,16 +980,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - The repository had no description, which is exactly what HACS shows
   under a store listing's name. Set, along with topics.
 
@@ -1123,16 +993,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - The sixteen curve defaults live in `curve.py`, `curve.js` and
   `services.yaml`, and nothing compared the three. Both copies are now
   pinned against `curve.py`, so a stale playground default or a stale
@@ -1142,16 +1002,6 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - The dashboard card's default title was still "Adaptive Lighting".
 - The curve playground drew nothing: its `buildPoints` still called
   `targetsForPhase` with the pre-transitions signature, so every point
@@ -1192,16 +1042,6 @@ special case.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - Every GitHub and documentation-site URL now points at the renamed
   `danrspencer/flare` repository, including the HACS custom-repository
   URL and the blueprint import badge. The site is published at
@@ -1276,16 +1116,6 @@ Both halves — integration and blueprint — must be deployed together.
 
 ### Fixed
 
-- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
-  time or curve value's old entity ID and quietly fell back to its default, and the
-  dashboard lost renamed entities. Both now find them however they're named. The cards'
-  `sensor:` option takes the full entity ID of a renamed schedule sensor.
-- **Setup says so when automations.yaml can't be read**, rather than blaming
-  configuration.yaml.
-- **A light switched on at the wall now follows the schedule.** It used to boot at its own
-  default while FLARE's first command was lost, and FLARE then treated it as changed by
-  hand and left it alone. A light that has just come back online is now sent the command
-  again until it takes.
 - `record_write` reported every entity passed in as recorded, including
   ones skipped for matching no scope.
 - Kelvin churn on bulbs whose advertised colour-temperature range is
