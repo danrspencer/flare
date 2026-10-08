@@ -487,12 +487,6 @@ for lights that were already overridden before a restart. To trigger an automati
   <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">event</span>
     <span class="na">event_type</span><span class="pi">:</span> <span class="s">flare_light_overridden</span>
 </code></pre></div></div>
-
-<blockquote class="note">
-  <p><strong>Changed in 1.0.0</strong> — <code class="language-plaintext highlighter-rouge">flare_light_overridden</code>’s light is in <code class="language-plaintext highlighter-rouge">light</code>; <code class="language-plaintext highlighter-rouge">entity_id</code> is now the
-zone’s sensor. An automation reading <code class="language-plaintext highlighter-rouge">trigger.event.data.entity_id</code> for the light needs
-<code class="language-plaintext highlighter-rouge">trigger.event.data.light</code> instead.</p>
-</blockquote>
 <h2 id="inspecting-tracked-state">
   
   
@@ -593,11 +587,6 @@ Configure</strong>:</p>
 
 <p>The zone’s device ID is in the address of its device page, or
 <code class="language-plaintext highlighter-rouge">{{ device_id('sensor.kitchen_flare_claims') }}</code> in the template editor.</p>
-
-<blockquote class="note">
-  <p><strong>Changed in 1.0.0</strong> — the tick was an entity, <code class="language-plaintext highlighter-rouge">event.&lt;name&gt;_flare_tick</code>, which is removed.
-An automation triggering on it needs the trigger above instead.</p>
-</blockquote>
 
           
 
