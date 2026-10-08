@@ -9,8 +9,11 @@ code itself.
 custom_components/flare/
     __init__.py, config_flow.py, repairs.py, logbook.py, const.py
                    the integration itself: setting up the three config
-                   entries, the blueprint-update repair, the
-                   logbook description, the dashboard front-end files
+                   entries, the blueprint repairs, the logbook
+                   descriptions, the dashboard front-end files
+    subentry_flows.py, options_flow.py
+                   adding and reconfiguring schedules, zones and
+                   flares; the Zones entry's options
     area_setup.py  setting up an area: a zone, a room automation written
                    to automations.yaml, and a flare
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
@@ -26,14 +29,15 @@ custom_components/flare/
         transfer.py      a schedule as YAML, for export and import
     zone/          zones: who owns a light, and when each zone ticks
         override_protection.py
-                         classify(): off / untracked / controlled / overridden
+                         classify_state(): controlled / overridden /
+                         settling / untracked / off / unavailable
         claims.py
                          the claims: what context.id and target this
                          integration last wrote each light with. They live
                          on each zone's entity and are restored across a
                          restart
         instance.py      the zone device itself (one per room, usually)
-        ticker.py        fires each zone's Tick in turn, a gap apart
+        ticker.py        fires each zone's tick in turn, a gap apart
     flares/        flares: a light over each room's automation (the entity
                    itself is light.py)
         automation.py    reads an automation's lights and zone from its
@@ -42,7 +46,8 @@ custom_components/flare/
                          automation
         instance.py      the flare device itself
     services/      the services, and the planning behind them
-        handlers.py      the nine zone services, registered against real HA state
+        handlers.py      the zone services (lighting and claims), registered
+                         against real HA state
         schedules.py     export_schedule / import_schedule, registered for the
                          domain rather than by either entry
         grouping.py      reachability, brightness bucketing, tolerance checks,
@@ -64,9 +69,11 @@ custom_components/flare/
                    the integration's icon (256/512, alpha) - HA reads
                    this directly from the integration's own folder
                    (since HA 2026.3.0), no external submission needed
-    www/           the dashboard: the curve card, the slider card features,
-                   the view and dashboard strategies, and the flare:logo
-                   sidebar icon. Served and auto-loaded by
+    www/           the dashboard: the strategies and the sections they
+                   build, the curve, Clear, Activity and transfer cards,
+                   the slider card features, and the flare:logo sidebar
+                   icon. Entities are found by device and role (their
+                   translation keys), never by entity ID. Served and auto-loaded by
                    the integration itself (see __init__.py's async_setup),
                    so it ships and updates with the integration with no
                    manual Lovelace resource registration
