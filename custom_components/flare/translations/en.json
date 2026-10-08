@@ -31,10 +31,11 @@
       }
     },
     "abort": {
-      "setup_complete": "FLARE is set up: {created}.",
-      "areas_set_up": "Set up {created}.",
+      "setup_complete": "FLARE is set up with {schedule_count, plural, one {the schedule} other {the schedules}} {schedules}, and added {zones, plural, one {# zone} other {# zones}}, {automations, plural, one {# room automation} other {# room automations}} and {flares, plural, one {# flare} other {# flares}}.",
+      "areas_set_up": "Added {zones, plural, one {# zone} other {# zones}}, {automations, plural, one {# room automation} other {# room automations}} and {flares, plural, one {# flare} other {# flares}}.",
       "no_schedules": "Add a schedule first: an area's automation needs one to follow.",
       "automations_not_loaded": "The zones are set up, but the room automations couldn't be: Home Assistant isn't loading automations.yaml, the file its automation editor saves to. Add `automation: !include automations.yaml` to configuration.yaml, restart, then use Set up area again.",
+      "automations_invalid": "The zones are set up, but the room automations couldn't be: automations.yaml isn't a list of automations Home Assistant can read. Fix the file, then use Set up area again.",
       "setup_failed": "Setting up the areas failed. Home Assistant's log has the reason.",
       "no_areas": "No area has any lights. Put your lights in areas, then try again."
     },
@@ -184,7 +185,7 @@
         "no_room_automations": "No automation uses the FLARE blueprint yet. Create one first, or add the flare as another automation.",
         "no_light_inputs": "That automation's blueprint has no input that picks lights, areas or devices.",
         "reconfigure_successful": "Flare updated",
-        "flares_added": "Added {count} flares.",
+        "flares_added": "Added {count, plural, one {# flare} other {# flares}}.",
         "every_room_has_a_flare": "Every room automation from the FLARE blueprint already has a flare."
       }
     }
