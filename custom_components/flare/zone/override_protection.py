@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, TypedDict
 
 # HA's own conversions, so they match what devices actually report.
+from homeassistant.util import dt as dt_util
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
 
@@ -237,19 +238,23 @@ def classify_state(
     Without this it stays overridden at its power-on default. Only writes
     after the reconnect count, so a light someone changed before it dropped
     out stays theirs; and claims.py forgets the reconnect once a write from
-    FLARE lands, so a change after that is an override as usual."""
+    FLARE lands, so a change after that is an override as usual.
+
+    Otherwise a light that came back online less than RECONNECT_SETTLE ago
+    and doesn't match is "settling": its first reports are often stale, so
+    it isn't called overridden yet, but it's blocked as one."""
     if state is None or state.state in ("unavailable", "unknown"):
         return "unavailable", None
     status, matched_via = _classify_live(
         state, record or {}, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance
     )
-    if (
-        status == "overridden"
-        and reconnected_at is not None
-        and state.last_updated <= reconnected_at + RECONNECT_SETTLE
-        and _written_since(record or {}, reconnected_at)
-    ):
+    if status != "overridden" or reconnected_at is None:
+        return status, matched_via
+    settles_at = reconnected_at + RECONNECT_SETTLE
+    if state.last_updated <= settles_at and _written_since(record or {}, reconnected_at):
         return "untracked", None
+    if dt_util.utcnow() < settles_at:
+        return "settling", None
     return status, matched_via
 
 
@@ -287,4 +292,4 @@ def is_blocked(status: str, force: bool = False) -> bool:
     the same zone share its claims. `force` bypasses."""
     if force:
         return False
-    return status == "overridden"
+    return status in ("overridden", "settling")

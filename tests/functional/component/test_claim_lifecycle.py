@@ -315,3 +315,30 @@ async def test_a_change_soon_after_flares_write_landed_still_counts_as_an_overri
     await hass.async_block_till_done()
 
     assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
+
+
+async def _back_online_at_a_stale_level(hass: HomeAssistant) -> None:
+    """A claim kept across a restart, and the light back online reporting
+    something else before FLARE has written to it."""
+    set_light(hass, "light.a", "unknown", supported_color_modes=CT)
+    await claims_record(hass, ["light.a"], targets={"light.a": {"brightness": 180, "color_temp_kelvin": 3200}})
+    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=10, color_temp_kelvin=6500)
+    await hass.async_block_till_done()
+
+
+async def test_a_light_back_online_settles_before_it_counts_as_an_override(setup_integration: HomeAssistant):
+    """Blocked meanwhile, like an override, so nothing writes over it."""
+    hass = setup_integration
+    await _back_online_at_a_stale_level(hass)
+
+    result = (await claims_check(hass, ["light.a"]))["light.a"]
+    assert (result["status"], result["blocked"]) == ("settling", True)
+    assert await _groups(hass) == []
+
+
+async def test_a_light_still_changed_once_settled_is_overridden(setup_integration: HomeAssistant):
+    hass = setup_integration
+    await _back_online_at_a_stale_level(hass)
+
+    with freeze_time(dt_util.utcnow() + timedelta(seconds=31), real_asyncio=True):
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
