@@ -61,7 +61,3 @@ EVENT_TYPE_TICK = "flare_tick"
 SCHEDULES_ENTRY_TITLE = "Schedules"
 ZONES_ENTRY_TITLE = "Zones"
 FLARES_ENTRY_TITLE = "Flares"
-
-# Titles entries were created with before the prefix was dropped. Renamed
-# at setup unless the user changed them.
-LEGACY_ENTRY_TITLES = {"FLARE Schedules": SCHEDULES_ENTRY_TITLE, "FLARE Zones": ZONES_ENTRY_TITLE}

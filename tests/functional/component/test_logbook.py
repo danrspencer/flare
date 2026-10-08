@@ -62,20 +62,15 @@ async def test_a_release_with_nothing_asked_for_has_no_comparison(hass: HomeAssi
     assert released["message"] == "released light.gone to something else"
 
 
-async def test_events_recorded_before_1_0_still_read(hass: HomeAssistant):
-    """The logbook reads back what's already in the database."""
-    hass.states.async_set("light.k1", "on", {"friendly_name": "Kitchen 1"})
+async def test_an_event_missing_its_fields_still_reads(hass: HomeAssistant):
+    """One describer raising breaks the whole logbook."""
     describe = _describers(hass)
 
-    overridden = describe["flare_light_overridden"](
-        Event("flare_light_overridden", {"entity_id": "light.k1", "zone": "Kitchen", "latest": {}})
-    )
-    controlled = describe["flare_lights_controlled"](
-        Event("flare_lights_controlled", {"entity_ids": ["light.k1"], "controlled": 1, "zone": "Kitchen"})
-    )
+    overridden = describe["flare_light_overridden"](Event("flare_light_overridden", {}))
+    released = describe["flare_lights_released"](Event("flare_lights_released", {}))
 
-    assert overridden == {"name": "Kitchen", "message": "released Kitchen 1 to something else", "entity_id": "light.k1"}
-    assert controlled == {"name": "Kitchen", "message": "now controlling 1 light"}
+    assert overridden == {"name": "FLARE", "message": "released a light to something else"}
+    assert released == {"name": "FLARE", "message": "cleared 0 lights"}
 
 
 async def test_an_rgb_request_is_compared_with_the_lights_rgb(hass: HomeAssistant):
