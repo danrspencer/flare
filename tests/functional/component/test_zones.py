@@ -357,7 +357,7 @@ async def test_a_zone_going_dark_says_it_cleared_its_lights(hass: HomeAssistant)
     unsub()
 
     assert [(e.data["lights"], e.data["zone"], e.data["entity_id"]) for e in events] == [
-        (["light.a", "light.b"], "Kitchen", "sensor.kitchen_flare_controlled")
+        (["light.a", "light.b"], "Kitchen", "button.kitchen_flare_clear")
     ]
 
 
@@ -569,3 +569,21 @@ class TestALightInTwoZones:
         await _record(registry, _zone_id(entry, "Hall"), "light.h", "ctx-3", ASKED)
 
         assert _notifications(hass) == {}
+
+
+async def test_the_totals_count_every_zones_lights(hass: HomeAssistant):
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"), _zone("Hall"))
+    totals = {e.entity_id: e for e in added if e.entity_id in ("sensor.flare_controlled_lights", "sensor.flare_overridden_lights")}
+
+    _light(hass, "light.a", area_id=area.id)
+    _light(hass, "light.b", area_id=area.id)
+    _light(hass, "light.c", area_id=area.id)
+    await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-a", ASKED)
+    await _record(registry, _zone_id(entry, "Hall"), "light.b", "ctx-b", ASKED)
+    await _record(registry, _zone_id(entry, "Hall"), "light.c", "ctx-c", ASKED)
+    hass.states.async_set("light.c", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
+
+    controlled, overridden = totals["sensor.flare_controlled_lights"], totals["sensor.flare_overridden_lights"]
+    assert (controlled.native_value, overridden.native_value) == (2, 1)
+    assert overridden.extra_state_attributes["lights"] == ["light.c"]

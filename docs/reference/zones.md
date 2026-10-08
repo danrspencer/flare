@@ -120,8 +120,9 @@ Assistant restarts.
 ## The zone's events
 
 A zone says when it takes its lights, when it lets them go, and when something else changes one
-of them. Each event is filed under the zone: `entity_id` is one of the zone's count sensors and
-`device_id` its device, so they appear in the zone's Activity, on its device page. FLARE
+of them. Each event is filed under the zone: `entity_id` is one of the zone's entities (its
+**Controlled** or **Overridden** count, or **Clear** for a release) and `device_id` its device,
+so they appear in the zone's Activity, on its device page. FLARE
 adjusting lights it already has isn't announced.
 
 When a zone starts controlling lights it wasn't, such as when a room comes on, FLARE fires
@@ -143,7 +144,7 @@ fires `flare_lights_released`:
 
 ```yaml
 lights: [light.kitchen_1, light.kitchen_2]
-entity_id: sensor.kitchen_flare_controlled
+entity_id: button.kitchen_flare_clear
 zone: Kitchen
 device_id: ...
 ```
