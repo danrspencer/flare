@@ -20,6 +20,7 @@ from homeassistant.components.automation.config import async_validate_config_ite
 from homeassistant.config import AUTOMATION_CONFIG_PATH
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -58,6 +59,10 @@ LEVELS = (ZONE, AUTOMATION, FLARE)
 
 class AutomationsNotLoaded(Exception):
     """configuration.yaml doesn't load automations.yaml."""
+
+
+class AutomationsFileInvalid(Exception):
+    """automations.yaml isn't a list of automations."""
 
 
 @dataclass(frozen=True)
@@ -173,7 +178,8 @@ def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: st
 async def async_add_automations(hass: HomeAssistant, configs: list[dict[str, Any]]) -> list[str]:
     """Appends the automations to automations.yaml, reloads, and returns
     their entity_ids. Each is validated first, so nothing is written unless
-    all of them are valid."""
+    all of them are valid. Raises AutomationsFileInvalid, writing nothing,
+    if the file can't be read as a list of automations."""
     for config in configs:
         await async_validate_config_item(hass, config["id"], config)
 
@@ -202,11 +208,14 @@ def _read_text(path: str) -> str | None:
 
 
 def _read_items(path: str) -> list:
-    items = load_yaml(path) if os.path.isfile(path) else None
+    try:
+        items = load_yaml(path) if os.path.isfile(path) else None
+    except HomeAssistantError as err:
+        raise AutomationsFileInvalid from err
     if items is None:
         return []
     if not isinstance(items, list):
-        raise AutomationsNotLoaded
+        raise AutomationsFileInvalid
     return items
 
 
