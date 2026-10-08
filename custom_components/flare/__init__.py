@@ -55,8 +55,8 @@ STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
 ICON_JS_PATH = "flare-icon.js"
-# flare-section.js and flare-value-slider.js register nothing; the modules
-# above import them.
+# flare-entities.js, flare-section.js, flare-zone-section.js and
+# flare-value-slider.js register nothing; the modules above import them.
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
