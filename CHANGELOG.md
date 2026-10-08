@@ -11,6 +11,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Breaking
 
+- **Needs Home Assistant 2026.10.0 or newer.** Earlier versions ask you to pick between
+  Schedules, Zones and Flares whenever you add a schedule, zone or flare, which is a Home
+  Assistant bug fixed in 2026.10, and the Zones view's Activity uses 2026.10's logbook. HACS
+  won't offer this release to an older Home Assistant.
 - **Every blueprint automation needs a Zone.** The blueprint has a new required
   **Zone** input: the FLARE zone the room belongs to. It decides which lights FLARE
   remembers driving, and the room's regular update follows the zone's Tick, replacing

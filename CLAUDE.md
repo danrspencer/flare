@@ -876,6 +876,11 @@ files, and a symlink once wrote junk blueprints into the repo.
   releases. That's deliberate; don't "fix" it with a PAT.
 - **`git push origin dev:main` must be a fast-forward**: `main` requires
   linear history.
+- **The integration needs HA 2026.10.0** (`hacs.json`'s `homeassistant`):
+  earlier releases make every subentry's Add button ask which entry type
+  first, a frontend bug that would read as ours, and the Activity card
+  needs 2026.10's `ha-logbook-entry`. The blueprint's own floor stays at
+  what it needs.
 - `tests/checks/test_versions.py` pins the placeholder and a parseable
   changelog heading. Full flow in CONTRIBUTING.md.
 
