@@ -94,6 +94,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self._announce_later = None
         self._recheck_later = None
         self._attr_unique_id = f"{instance.subentry_id}_claims"
+        self._attr_translation_key = "claims"
         self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
 
@@ -277,6 +278,7 @@ class _ZoneCountSensor(SensorEntity):
         self._status = status
         self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
         self._attr_unique_id = f"{instance.subentry_id}_{status}"
+        self._attr_translation_key = status
         self.entity_id = f"sensor.{instance.prefix}flare_{status}"
         self._attr_name = status.title()
         self._attr_device_info = instance.device_info
@@ -319,6 +321,7 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_flare"
+        self._attr_translation_key = "schedule"
         self.entity_id = f"sensor.{instance.prefix}flare"
         self._attr_device_info = instance.device_info
 

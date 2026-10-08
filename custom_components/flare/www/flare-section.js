@@ -74,25 +74,26 @@ const pairGrid = (cards) => ({
 });
 
 /**
- * The section for one schedule. `slug` is the sensor's entity_id minus
- * `sensor.` and `_flare`.
+ * The section for one schedule, from scheduleSensors(): its title and its
+ * entities by role.
  */
-export function sectionConfig(slug, title) {
+export function sectionConfig({ title, entities }) {
+  const id = (role) => entities[role];
   const curve = pairGrid(
     PHASES.flatMap((p) => [
       tile({
-        entity: `number.${slug}_${p.key}_kelvin`,
+        entity: id(`${p.key}_kelvin`),
         name: `${p.label} colour temp`,
         icon: KELVIN_ICON,
         color: p.color,
         features: KELVIN_SLIDER,
       }),
       tile({
-        entity: `number.${slug}_${p.key}_brightness`,
+        entity: id(`${p.key}_brightness`),
         name: `${p.label} brightness`,
         icon: BRIGHTNESS_ICON,
         color: p.color,
-        features: brightnessSlider(`number.${slug}_${p.key}_kelvin`),
+        features: brightnessSlider(id(`${p.key}_kelvin`)),
       }),
     ])
   );
@@ -102,13 +103,13 @@ export function sectionConfig(slug, title) {
   const transitions = pairGrid(
     PHASES.flatMap((p) => [
       tile({
-        entity: `number.${slug}_${p.key}_kelvin_transition`,
+        entity: id(`${p.key}_kelvin_transition`),
         name: `${p.label} colour`,
         icon: TRANSITION_ICON,
         color: p.color,
       }),
       tile({
-        entity: `number.${slug}_${p.key}_brightness_transition`,
+        entity: id(`${p.key}_brightness_transition`),
         name: `${p.label} brightness`,
         icon: TRANSITION_ICON,
         color: p.color,
@@ -118,7 +119,7 @@ export function sectionConfig(slug, title) {
 
   const times = SCHEDULE_TIMES.map((t) =>
     tile({
-      entity: `time.${slug}_${t.entity}`,
+      entity: id(t.entity),
       name: t.name,
       icon: phase(t.phase).icon,
       color: phase(t.phase).color,
@@ -126,8 +127,8 @@ export function sectionConfig(slug, title) {
     })
   );
 
-  const sensor = `sensor.${slug}_flare`;
-  const select = `select.${slug}_flare_phase`;
+  const sensor = id('schedule');
+  const select = id('phase_override');
 
   return {
     type: 'grid',
@@ -162,11 +163,11 @@ export function sectionConfig(slug, title) {
           },
         ],
       }),
-      { type: 'custom:flare-curve-card', sensor: slug, grid_options: { columns: 'full' }, title: '' },
+      { type: 'custom:flare-curve-card', sensor, grid_options: { columns: 'full' }, title: '' },
       heading('Override', 'subtitle'),
       tile({ entity: select, name: 'Phase', columns: 6, features: [{ type: 'select-options' }] }),
       tile({
-        entity: `switch.${slug}_sticky_phase_override`,
+        entity: id('sticky_phase_override'),
         name: 'Sticky',
         columns: 6,
         features: [{ type: 'toggle' }],
@@ -179,14 +180,13 @@ export function sectionConfig(slug, title) {
       { type: 'markdown', text_only: true, grid_options: { columns: 'full' }, content: TRANSITIONS_NOTE },
       transitions,
       heading('Copy or paste', 'subtitle'),
-      { type: 'custom:flare-schedule-transfer-card', sensor: slug },
+      { type: 'custom:flare-schedule-transfer-card', sensor },
     ],
   };
 }
 
 const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
-// Also ends with SCHEDULE_SUFFIX plus more, hence the exact suffix test.
 const CLAIMS_SUFFIX = '_flare_claims';
 
 // Only when a sensor has no friendly_name.
@@ -211,50 +211,54 @@ export function normaliseSlug(value) {
   return slug || null;
 }
 
+// A sensor's entity_id minus `sensor.` and, if it has it, `suffix`.
+function slugOfSensor(entityId, suffix) {
+  const name = entityId.slice(SENSOR_PREFIX.length);
+  return name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
+}
+
 /**
- * Every schedule sensor as {slug, title}, in a stable order. Identified by
- * the name suffix and the `points` attribute.
+ * Each FLARE device's entities by role: device_id -> {role: entity_id}.
+ * The role is the entity's translation key, which a rename leaves alone.
  */
+export function flareDevices(hass) {
+  const devices = new Map();
+  for (const entry of Object.values((hass && hass.entities) || {})) {
+    if (entry.platform !== 'flare' || !entry.device_id || !entry.translation_key) continue;
+    if (!devices.has(entry.device_id)) devices.set(entry.device_id, {});
+    devices.get(entry.device_id)[entry.translation_key] = entry.entity_id;
+  }
+  return devices;
+}
+
+// Every FLARE device with an entity in `role`, as {slug, title, device,
+// entities}, sorted by title.
+function devicesWith(hass, role, suffix, title) {
+  const states = (hass && hass.states) || {};
+  return [...flareDevices(hass)]
+    .filter(([, entities]) => entities[role])
+    .map(([device, entities]) => {
+      const sensor = entities[role];
+      const slug = slugOfSensor(sensor, suffix);
+      const friendly = states[sensor]?.attributes?.friendly_name;
+      return { slug, title: title(friendly) || titleCase(slug), device, entities };
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/** Every schedule, by its sensor. */
 export function scheduleSensors(hass) {
-  const states = (hass && hass.states) || {};
-  return Object.keys(states)
-    .filter((id) => id.startsWith(SENSOR_PREFIX) && id.endsWith(SCHEDULE_SUFFIX))
-    .filter((id) => states[id] && states[id].attributes && 'points' in states[id].attributes)
-    .map((id) => {
-      const slug = id.slice(SENSOR_PREFIX.length, -SCHEDULE_SUFFIX.length);
-      const friendly = states[id].attributes.friendly_name;
-      return { slug, title: friendly || titleCase(slug) };
-    })
-    .filter((s) => s.slug)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  return devicesWith(hass, 'schedule', SCHEDULE_SUFFIX, (friendly) => friendly);
 }
 
-
-/**
- * Every zone as {slug, title}, identified by the `claims`
- * attribute. The title drops the trailing "Claims".
- */
+/** Every zone, by its claims sensor. The title drops the trailing "Claims". */
 export function listZones(hass) {
-  const states = (hass && hass.states) || {};
-  return Object.keys(states)
-    .filter((id) => id.startsWith(SENSOR_PREFIX) && id.endsWith(CLAIMS_SUFFIX))
-    .filter((id) => states[id] && states[id].attributes && 'claims' in states[id].attributes)
-    .map((id) => {
-      const slug = id.slice(SENSOR_PREFIX.length, -CLAIMS_SUFFIX.length);
-      const friendly = states[id].attributes.friendly_name || '';
-      const title = friendly.replace(/\s*Claims$/, '') || titleCase(slug);
-      return { slug, title };
-    })
-    .filter((s) => s.slug)
-    .sort((a, b) => a.title.localeCompare(b.title));
+  return devicesWith(hass, 'claims', CLAIMS_SUFFIX, (friendly) => (friendly || '').replace(/\s*Claims$/, ''));
 }
 
-/** Each zone's device, as its claims sensor names it. */
+/** Each zone's device. */
 export function zoneDevices(hass, zones = listZones(hass)) {
-  const entities = (hass && hass.entities) || {};
-  return zones
-    .map(({ slug }) => entities[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id)
-    .filter(Boolean);
+  return zones.map((zone) => zone.device);
 }
 
 // Home Assistant's slugify, near enough for area names.
@@ -275,13 +279,12 @@ const pressClear = (clear) => ({
 });
 
 /** A zone's area: its device's, or else the area named after it. */
-export function zoneArea(hass, { slug }) {
-  const entities = (hass && hass.entities) || {};
+export function zoneArea(hass, zone) {
   const devices = (hass && hass.devices) || {};
   const areas = (hass && hass.areas) || {};
-  const device = devices[entities[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id];
+  const device = devices[zone.device];
   if (device?.area_id && areas[device.area_id]) return areas[device.area_id];
-  return Object.values(areas).find((area) => slugOf(area.name) === slug) || null;
+  return Object.values(areas).find((area) => slugOf(area.name) === slugOf(zone.title)) || null;
 }
 
 /**
@@ -291,18 +294,14 @@ export function zoneArea(hass, { slug }) {
  * narrow ones Clear as a button on the heading. The overridden lights are
  * named underneath while there are any.
  */
-export function zoneCards(hass, zone, title) {
-  const { slug } = zone;
-  const controlled = `sensor.${slug}_flare_controlled`;
-  const clear = `button.${slug}_flare_clear`;
-  const overridden = `sensor.${slug}_flare_overridden`;
-  const device = ((hass && hass.entities) || {})[`${SENSOR_PREFIX}${slug}${CLAIMS_SUFFIX}`]?.device_id;
+export function zoneCards(zone, title) {
+  const { controlled, overridden, clear } = zone.entities;
   const cards = [
     {
       type: 'heading',
       heading: title,
       heading_style: 'subtitle',
-      ...(device ? { tap_action: { action: 'navigate', navigation_path: `/config/devices/device/${device}` } } : {}),
+      tap_action: { action: 'navigate', navigation_path: `/config/devices/device/${zone.device}` },
       badges: [
         { type: 'button', icon: 'mdi:backup-restore', text: 'Clear', tap_action: pressClear(clear), visibility: [SMALL_SCREEN] },
       ],
@@ -344,7 +343,7 @@ export function zoneCards(hass, zone, title) {
 /** The house's totals, from every zone's counts. */
 export function zoneTotalsSection(zones) {
   const sum = (status) =>
-    `{{ ${JSON.stringify(zones.map(({ slug }) => `sensor.${slug}_flare_${status}`)).replace(/"/g, "'")}` +
+    `{{ ${JSON.stringify(zones.map(({ entities }) => entities[status])).replace(/"/g, "'")}` +
     ` | map('states') | map('int', 0) | sum }}`;
   return {
     type: 'grid',
@@ -380,7 +379,7 @@ export function zoneSections(hass, zones) {
       .sort((a, b) => a.area.name.localeCompare(b.area.name))
       .flatMap(({ area, zones: inArea }) =>
         inArea.flatMap((zone) =>
-          zoneCards(hass, zone, inArea.length === 1 ? area.name : zone.title)
+          zoneCards(zone, inArea.length === 1 ? area.name : zone.title)
         )
       );
   const section = (heading, icon, cards) => ({
@@ -403,7 +402,7 @@ export function zoneSections(hass, zones) {
       section(
         'Other zones',
         null,
-        unplaced.sort((a, b) => a.title.localeCompare(b.title)).flatMap((zone) => zoneCards(hass, zone, zone.title))
+        unplaced.sort((a, b) => a.title.localeCompare(b.title)).flatMap((zone) => zoneCards(zone, zone.title))
       )
     );
   }
