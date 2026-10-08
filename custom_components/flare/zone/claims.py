@@ -355,15 +355,13 @@ class ClaimRegistry:
             if new is not None and _context_matches(store.claims[entity_id].get("latest"), new.context.id):
                 # FLARE's write landed: the light has settled under FLARE.
                 reconnects.pop(entity_id, None)
-            old_state = event.data["old_state"]
-            new_state = event.data["new_state"]
-            old_available = old_state is not None and old_state.state not in ("unavailable", "unknown")
+            old_available = old is not None and old.state not in ("unavailable", "unknown")
             # Explicitly unavailable, not removed: every entity is removed across a
             # restart.
-            new_explicitly_unavailable = new_state is not None and new_state.state in ("unavailable", "unknown")
+            new_explicitly_unavailable = new is not None and new.state in ("unavailable", "unknown")
             dropped = old_available and new_explicitly_unavailable
             # Not unknown -> off, which is a light reconnecting.
-            went_off = old_available and new_state is not None and new_state.state == "off"
+            went_off = old_available and new is not None and new.state == "off"
 
             if dropped:
                 store.claims.pop(entity_id, None)
