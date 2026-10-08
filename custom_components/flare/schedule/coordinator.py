@@ -15,6 +15,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
@@ -81,10 +82,30 @@ class ScheduleInstance:
         )
 
     def time_entity_id(self, key: str) -> str:
+        """The ID it's created with; read it through time_entity()."""
         return f"time.{self.prefix}{key}"
 
     def number_entity_id(self, key: str) -> str:
+        """The ID it's created with; read it through number_entity()."""
         return f"number.{self.prefix}{key}"
+
+    def current_id(self, hass: HomeAssistant, entity_id: str, key: str) -> str:
+        """The entity's ID now, found by its unique ID so one the user renamed
+        is still read. `entity_id` until it's registered."""
+        domain = entity_id.split(".", 1)[0]
+        return er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{self.subentry_id}_{key}") or entity_id
+
+    def time_entity(self, hass: HomeAssistant, key: str) -> str:
+        return self.current_id(hass, self.time_entity_id(key), key)
+
+    def number_entity(self, hass: HomeAssistant, key: str) -> str:
+        return self.current_id(hass, self.number_entity_id(key), key)
+
+    def override_entity(self, hass: HomeAssistant) -> str:
+        return self.current_id(hass, self.override_entity_id, "phase_override")
+
+    def sticky_entity(self, hass: HomeAssistant) -> str:
+        return self.current_id(hass, self.sticky_entity_id, "sticky_phase_override")
 
 
 def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
@@ -110,7 +131,7 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
 def _curve_kwargs(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, int]:
     kwargs: dict[str, int] = {}
     for key in CURVE_KEYS:
-        state = hass.states.get(instance.number_entity_id(key))
+        state = hass.states.get(instance.number_entity(hass, key))
         if state is None or state.state in ("unknown", "unavailable"):
             continue
         try:
@@ -135,7 +156,7 @@ def _time_ts(hass: HomeAssistant, instance: ScheduleInstance, key: str) -> float
     """Today's timestamp for one boundary, never None: falls back to the
     default when the entity doesn't exist yet or is unavailable, as it is
     during a reload. None would crash phase_at() and wedge setup."""
-    state = hass.states.get(instance.time_entity_id(key))
+    state = hass.states.get(instance.time_entity(hass, key))
     ts = _time_str_to_today_timestamp(state.state) if state is not None else None
     if ts is None:
         default_hour = DEFAULT_SCHEDULE_HOURS[key[: -len("_time")]]
@@ -200,8 +221,8 @@ def _compute_curve_points(boundaries: dict[str, float], curve_kwargs: dict[str, 
     return points
 
 
-def _phase_override(hass: HomeAssistant, override_entity_id: str) -> str | None:
-    state = hass.states.get(override_entity_id)
+def _phase_override(hass: HomeAssistant, instance: ScheduleInstance) -> str | None:
+    state = hass.states.get(instance.override_entity(hass))
     if state is None or state.state in ("Auto", "unknown", "unavailable"):
         return None
     return state.state
@@ -217,7 +238,7 @@ class ScheduleCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         curve_kwargs = _curve_kwargs(self.hass, self._instance)
         now_ts = time.time()
         computed_phase = phase_at(now_ts, boundaries["morning_ts"], boundaries["day_ts"], boundaries["evening_ts"], boundaries["night_ts"])
-        phase = _phase_override(self.hass, self._instance.override_entity_id) or computed_phase
+        phase = _phase_override(self.hass, self._instance) or computed_phase
         targets = targets_for_phase(
             phase,
             now_ts,
