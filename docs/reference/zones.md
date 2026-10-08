@@ -176,11 +176,6 @@ triggers:
     event_type: flare_light_overridden
 ```
 
-{: .note }
-> **Changed in 1.0.0** — `flare_light_overridden`'s light is in `light`; `entity_id` is now the
-> zone's sensor. An automation reading `trigger.event.data.entity_id` for the light needs
-> `trigger.event.data.light` instead.
-
 ## Inspecting tracked state
 
 `flare.claims_check` returns each light's status:
@@ -226,7 +221,3 @@ triggers:
 
 The zone's device ID is in the address of its device page, or
 `{{ device_id('sensor.kitchen_flare_claims') }}` in the template editor.
-
-{: .note }
-> **Changed in 1.0.0** — the tick was an entity, `event.<name>_flare_tick`, which is removed.
-> An automation triggering on it needs the trigger above instead.
