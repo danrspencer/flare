@@ -110,6 +110,22 @@ async def test_first_setup_gives_every_area_with_lights_a_zone_automation_and_fl
     assert sorted(f.title for f in flares.subentries.values()) == ["Hall", "Kitchen"]
 
 
+async def test_its_automations_carry_a_flare_label(stub_entry_setup, automations_file, hass: HomeAssistant):
+    """Created once, and reused by a later run."""
+    from homeassistant.helpers import label_registry as lr
+
+    kitchen = _area(hass, "Kitchen", "light.k")
+    hall = _area(hass, "Hall", "light.h")
+    await _submit(hass, await _first_setup(hass, ["Home"]), {"areas": [kitchen]})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    await _submit(hass, result, {"set_up": "automation", "areas": [hall]})
+
+    (label,) = [l for l in lr.async_get(hass).async_list_labels() if l.name == "FLARE"]
+    registry = er.async_get(hass)
+    assert label.label_id in registry.async_get("automation.kitchen_lighting").labels
+    assert label.label_id in registry.async_get("automation.hall_lighting").labels
+
+
 async def test_each_area_can_follow_its_own_schedule(stub_entry_setup, automations_file, hass: HomeAssistant):
     """With more than one schedule, each area picks one, or isn't set up."""
     _area(hass, "Kitchen", "light.k")
