@@ -56,7 +56,8 @@ views:
 ```
 
 `sensor` is the part before `_flare` in the schedule sensor's entity ID, such as
-`downstairs` for `sensor.downstairs_flare`, though the full entity ID works too. If you name
+`downstairs` for `sensor.downstairs_flare`, or the full entity ID, which is what to use if you've
+renamed it. If you name
 one that doesn't exist, the view says so and lists the schedules you do have.
 
 ## Just the chart
@@ -70,7 +71,8 @@ type: custom:flare-curve-card
 sensor: home
 ```
 
-`sensor` is the part before `_flare` in the schedule sensor's entity ID.
+`sensor` is the part before `_flare` in the schedule sensor's entity ID, or the full entity
+ID, which is what to use if you've renamed it.
 
 ## Reading a schedule's view
 
