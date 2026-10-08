@@ -113,6 +113,12 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
+- **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
+  time or curve value's old entity ID and quietly fell back to its default, and the
+  dashboard lost renamed entities. Both now find them however they're named. The cards'
+  `sensor:` option takes the full entity ID of a renamed schedule sensor.
+- **Setup says so when automations.yaml can't be read**, rather than blaming
+  configuration.yaml.
 - **A light switched on at the wall now follows the schedule.** It used to boot at its own
   default while FLARE's first command was lost, and FLARE then treated it as changed by
   hand and left it alone. A light that has just come back online is now sent the command
@@ -129,6 +135,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **A light that has just come back online reads `settling`**, for 30 seconds, rather than
+  `overridden`. Its first reports are often out of date, so it isn't counted or announced as
+  overridden until it has had time to report properly. FLARE leaves it alone meanwhile, and
+  `flare.claims_check` reports the new status.
 - **FLARE's entries are called Schedules, Zones and Flares**, without the "FLARE" in front.
   Entries still carrying the old default names are renamed; one you renamed yourself keeps
   its name.

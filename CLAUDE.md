@@ -461,6 +461,13 @@ and they match the two config entries, Schedules and Zones.
   folder here. `services.yaml` must stay at the root too. `www/` is the
   dashboard.
 
+**`strings.json` is the source and `translations/en.json` a copy**, which
+is what HA shows for a custom integration. They had drifted;
+`tests/checks/test_translations.py` keeps them identical. **Placeholders
+must be plain `{name}`s**: hassfest parses each string with Python's
+formatter and rejects ICU plurals, and the same test applies its rule, so
+word a count so it needs no plural form ("Flares added: {count}").
+
 **Dependencies run one way**: `schedule/`, `zone/` and `flares/` import
 only `const.py`; `services/` may use `schedule/` and `zone/`; the root may
 use everything.
@@ -997,7 +1004,18 @@ was rejected: every subentry data change triggers a full entry reload,
 recreating every coordinator and entity just to tweak one number. A
 genuinely-missing entity falls back to the same default the entity
 itself will report moments later, so `phase_at()` never sees a missing
-boundary.
+boundary. **Entities are read by unique ID** (`ScheduleInstance.current_id()`
+and its wrappers), never by the ID they were created with, so one the user
+renamed isn't silently replaced by its default.
+
+**Every FLARE entity's translation key is its role** (its unique ID's
+suffix: `schedule`, `morning_time`, `night_kelvin`, `claims`, `clear`
+...). The dashboard finds entities by device and role through it
+(`flareDevices()` over `hass.entities`, which carries each entry's
+platform and translation key), so renamed entities still show. The cards'
+`sensor:` option takes the short name or any entity ID.
+`tests/functional/component/test_entity_roles.py` ties the keys to the
+roles the dashboard's test fixtures (`tests/support/registry.py`) assume.
 
 ### Curve math (`curve.py`)
 
@@ -1833,12 +1851,8 @@ caught.
   apart because a house has one zone per room against a handful of
   schedules, so merging would bury the schedules, and they answer
   different questions - what a light should be doing versus who
-  currently owns it. **The suffix test matters**: a zone's sensor is
-  `sensor.<slug>_flare_claims`, which ends with `_flare` *plus more*,
-  so `endsWith('_flare')` is load-bearing - `includes('_flare')` would
-  put every zone in the schedule view. Both enumerators also require a
-  distinguishing attribute (`points` / `claims`) so a name alone is
-  never enough.
+  currently owns it. Both find their devices by role (the `schedule` and
+  `claims` translation keys), never by entity ID.
 - **The Zones view has an Activity sidebar**, copied from HA's Security
   dashboard (`security-view-strategy.ts`), but not its `logbook` card:
   that card resolves a device target to the device's entities and asks
@@ -1900,14 +1914,14 @@ caught.
   logbook leaves their own state changes out - and, for the same reason,
   drops them from a logbook card's entity list, which is why the Zones
   view has its own Activity card (see the Zones view Activity notes).
-- **A light back online that reads overridden shows as `settling`** in
-  the sensors (`_classify_tracked`) for `RECONNECT_SETTLE`: in neither
-  count, and not announced. Its first report after a reconnect is often
-  stale (seen live after a restart: 10/8130 on a bulb at 204/8105,
+- **A light back online that would read overridden is `settling`** for
+  `RECONNECT_SETTLE` (`classify_state`): blocked like an override, but in
+  neither count and not announced. Its first report after a reconnect is
+  often stale (seen live after a restart: 10/8130 on a bulb at 204/8105,
   corrected 0.4s later), and announcing on it logged overrides that never
-  were. The zone rechecks once it settles. Display only, at the user's
-  direction: `classify_state`, and so the services, still read it
-  overridden, which is the reconnect rule's job.
+  were. The claims sensor rechecks once it settles. It's a status of
+  `classify_state`, so `claims_check` and `apply_lighting` agree with the
+  sensors.
 - **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**
   before firing, because a room's bulbs confirm one by one and each
   confirmation is a separate status refresh (announced per light it was
