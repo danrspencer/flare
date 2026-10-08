@@ -51,6 +51,7 @@ class _CurveNumber(RestoreNumber, NumberEntity):
         self._coordinator = coordinator
         self._key = key
         self._attr_unique_id = f"{instance.subentry_id}_{key}"
+        self._attr_translation_key = key
         self.entity_id = instance.number_entity_id(key)
         self._attr_device_info = instance.device_info
         self._attr_name = _LABELS[key]

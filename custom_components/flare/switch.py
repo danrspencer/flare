@@ -27,6 +27,7 @@ class _StickyOverrideSwitch(SwitchEntity, RestoreEntity):
 
     def __init__(self, instance: ScheduleInstance) -> None:
         self._attr_unique_id = f"{instance.subentry_id}_sticky_phase_override"
+        self._attr_translation_key = "sticky_phase_override"
         self.entity_id = instance.sticky_entity_id
         self._attr_device_info = instance.device_info
         self._attr_is_on = False

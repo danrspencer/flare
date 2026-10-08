@@ -6,6 +6,7 @@ import pytest
 from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
+from tests.support.registry import flare_entities, schedule_entities, zone_entities
 
 pytestmark = requires_node
 
@@ -34,9 +35,24 @@ STATES = {
     # A zone's count sensors, which aren't zones themselves.
     "sensor.bedroom_flare_controlled": {"attributes": {"lights": []}},
     "sensor.bedroom_flare_overridden": {"attributes": {"lights": []}},
-    # Contrived: claims-shaped but carrying `points`. The only case testing
-    # the `_flare` suffix check independently of the attribute check.
-    "sensor.hallway_flare_claims": {"attributes": {"points": []}},
+}
+
+# The registry is what says which are FLARE's, and what each one is.
+ENTITIES = {
+    **schedule_entities("downstairs_schedule", "downstairs"),
+    **schedule_entities("upstairs_schedule", "upstairs"),
+    **schedule_entities("loft_schedule", "loft"),
+    **zone_entities("bedroom_zone", "bedroom"),
+    **zone_entities("dining_room_zone", "dining_room"),
+    **zone_entities("utility_zone", "utility"),
+}
+GROUND_FLOOR = {e["translation_key"]: e["entity_id"] for e in schedule_entities("ground", "ground_floor").values()}
+
+# A schedule whose entities were all renamed.
+RENAMED_ROLES = {e["translation_key"]: e["entity_id"].replace("garden", "outside") for e in schedule_entities("garden", "garden").values()}
+RENAMED = {
+    "states": {"sensor.outside_flare": {"attributes": {"points": [], "friendly_name": "Garden"}}},
+    "entities": flare_entities("garden", RENAMED_ROLES),
 }
 
 
@@ -47,10 +63,7 @@ ACTIVITY = {
         "sensor.bedroom_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Bedroom Claims"}},
         "sensor.attic_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Attic Claims"}},
     },
-    "entities": {
-        "sensor.bedroom_flare_claims": {"entity_id": "sensor.bedroom_flare_claims", "device_id": "bedroom_zone"},
-        "sensor.attic_flare_claims": {"entity_id": "sensor.attic_flare_claims", "device_id": "attic_zone"},
-    },
+    "entities": {**zone_entities("bedroom_zone", "bedroom"), **zone_entities("attic_zone", "attic")},
     "config": {"components": ["logbook"]},
 }
 
@@ -71,31 +84,46 @@ await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
 const Zone = defined['ll-strategy-view-flare-zone'];
 const Dashboard = defined['ll-strategy-dashboard-flare'];
-const schedulesOnly = Object.fromEntries(Object.entries(input.states).filter(([id, s]) => !('claims' in s.attributes)));
-const generate = async (states, config = {{}}) => (Strategy ? await Strategy.generate(config, {{ states }}) : null);
+const hass = {{ states: input.states, entities: input.entities }};
+const zoneRoles = ['claims', 'controlled', 'overridden', 'clear'];
+const schedulesOnly = {{
+  states: input.states,
+  entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => !zoneRoles.includes(e.translation_key))),
+}};
+const empty = {{ states: {{}}, entities: {{}} }};
+const generate = async (h, config = {{}}) => (Strategy ? await Strategy.generate(config, h) : null);
 return {{
-  section: sectionConfig('ground_floor', 'Ground Floor'),
-  sensors: scheduleSensors({{ states: input.states }}),
+  section: sectionConfig({{ title: 'Ground Floor', entities: input.groundFloor }}),
+  sensors: scheduleSensors(hass),
   registeredAs: Object.keys(defined),
-  view: await generate(input.states),
-  emptyView: await generate({{}}),
-  bySlug: await generate(input.states, {{ sensor: 'upstairs' }}),
-  byEntityId: await generate(input.states, {{ sensor: 'sensor.upstairs_flare' }}),
-  unknown: await generate(input.states, {{ sensor: 'nosuchroom' }}),
-  blankSensor: await generate(input.states, {{ sensor: '   ' }}),
+  view: await generate(hass),
+  emptyView: await generate(empty),
+  bySlug: await generate(hass, {{ sensor: 'upstairs' }}),
+  byEntityId: await generate(hass, {{ sensor: 'sensor.upstairs_flare' }}),
+  renamed: await generate(input.renamed),
+  renamedByEntityId: await generate(input.renamed, {{ sensor: 'sensor.outside_flare' }}),
+  unknown: await generate(hass, {{ sensor: 'nosuchroom' }}),
+  blankSensor: await generate(hass, {{ sensor: '   ' }}),
   slugs: input.slugCases.map(normaliseSlug),
-  zones: listZones({{ states: input.states }}),
-  zone: Zone ? await Zone.generate({{}}, {{ states: input.states }}) : null,
-  emptyZones: Zone ? await Zone.generate({{}}, {{ states: {{}} }}) : null,
-  dashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: input.states }}) : null,
-  dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, {{ states: schedulesOnly }}) : null,
-  emptyDashboard: Dashboard ? await Dashboard.generate({{}}, {{ states: {{}} }}) : null,
+  zones: listZones(hass),
+  zone: Zone ? await Zone.generate({{}}, hass) : null,
+  emptyZones: Zone ? await Zone.generate({{}}, empty) : null,
+  dashboard: Dashboard ? await Dashboard.generate({{}}, hass) : null,
+  dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
+  emptyDashboard: Dashboard ? await Dashboard.generate({{}}, empty) : null,
   customStrategies: globalThis.window.customStrategies,
   zoneDevices: zoneDevices(input.activity),
   activityView: Zone ? await Zone.generate({{}}, input.activity) : null,
   noLogbookView: Zone ? await Zone.generate({{}}, {{ ...input.activity, config: {{ components: [] }} }}) : null,
 }};""",
-        {"states": STATES, "slugCases": SLUG_CASES, "activity": ACTIVITY},
+        {
+            "states": STATES,
+            "entities": ENTITIES,
+            "groundFloor": GROUND_FLOOR,
+            "renamed": RENAMED,
+            "slugCases": SLUG_CASES,
+            "activity": ACTIVITY,
+        },
     )
 
 
@@ -133,7 +161,7 @@ def test_sections_are_named_and_ordered_by_the_sensors_own_name(result):
 
 
 def test_only_schedule_sensors_become_sections(result):
-    """Not the claims sensors, and not someone else's sensor.solar_flare."""
+    """Not the zones' sensors, and not someone else's sensor.solar_flare."""
     slugs = [s["slug"] for s in result["sensors"]]
 
     assert slugs == ["downstairs", "loft", "upstairs"]
@@ -201,19 +229,30 @@ def test_every_schedule_time_and_curve_entity_is_present(result):
 
 def test_a_schedule_can_be_copied_or_pasted_from_its_section(result):
     cards = [c for c in _cards(result["section"]) if c.get("type") == "custom:flare-schedule-transfer-card"]
-    assert [c["sensor"] for c in cards] == ["ground_floor"]
+    assert [c["sensor"] for c in cards] == ["sensor.ground_floor_flare"]
 
 
-def test_the_slug_reaches_every_entity(result):
+def test_every_entity_is_the_schedules_own(result):
     for tile in _tiles(result["section"]):
-        assert "ground_floor" in tile["entity"], f"{tile['entity']} does not carry the slug"
+        assert tile["entity"] in GROUND_FLOOR.values(), tile["entity"]
+
+
+def test_a_schedule_whose_entities_were_renamed_still_has_its_section(result):
+    """Found by device and role, not by its entity IDs."""
+    (section,) = result["renamed"]["sections"]
+    entities = {t["entity"] for t in _tiles(section)}
+
+    assert section["cards"][0]["heading"] == "Garden"
+    assert entities <= set(RENAMED_ROLES.values())
+    assert "time.outside_morning_time" in entities
+    assert result["renamedByEntityId"] == result["renamed"]
 
 
 def test_the_curve_card_spans_the_section(result):
     """A card in a sections view doesn't inherit the section's width."""
     card = next(c for c in _cards(result["section"]) if c.get("type") == "custom:flare-curve-card")
 
-    assert card["sensor"] == "ground_floor"
+    assert card["sensor"] == "sensor.ground_floor_flare"
     assert card["grid_options"] == {"columns": "full"}
 
 
@@ -346,15 +385,11 @@ def test_the_count_sensors_do_not_become_zones_of_their_own(result):
 
 
 def test_the_two_strategies_do_not_claim_each_others_sensors(result):
-    """`sensor.x_flare_claims` ends with `_flare` plus more, so the schedule
-    check must be endsWith, not includes."""
     schedule_slugs = {s["slug"] for s in result["sensors"]}
     zone_slugs = {s["slug"] for s in result["zones"]}
 
     assert schedule_slugs == {"downstairs", "loft", "upstairs"}
     assert zone_slugs == {"bedroom", "dining_room", "utility"}
-    assert not schedule_slugs & zone_slugs
-    assert not any("hallway" in slug for slug in schedule_slugs | zone_slugs)
 
 
 def test_no_zones_explains_itself_rather_than_rendering_blank(result):

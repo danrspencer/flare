@@ -158,16 +158,19 @@ const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
 
 /**
- * The slug of a FLARE schedule sensor, or null. The `points` attribute is
- * what identifies one; the exact `_flare` suffix makes the slug slice
- * correct (`_flare_claims` must not match).
+ * A schedule sensor's entity_id from a `sensor:` option: the entity_id
+ * itself, or the slug in sensor.<slug>_flare. null if empty.
  */
-export function scheduleSensorSlug(hass, entityId) {
-  if (typeof entityId !== 'string') return null;
-  if (!entityId.startsWith(SENSOR_PREFIX) || !entityId.endsWith(SCHEDULE_SUFFIX)) return null;
-  const state = hass && hass.states && hass.states[entityId];
-  if (!state || !state.attributes || !('points' in state.attributes)) return null;
-  return entityId.slice(SENSOR_PREFIX.length, -SCHEDULE_SUFFIX.length) || null;
+export function scheduleSensorId(sensor) {
+  if (typeof sensor !== 'string' || !sensor.trim()) return null;
+  const value = sensor.trim();
+  return value.includes('.') ? value : `${SENSOR_PREFIX}${value}${SCHEDULE_SUFFIX}`;
+}
+
+/** Whether an entity is a FLARE schedule sensor, renamed or not. */
+export function isScheduleSensor(hass, entityId) {
+  const entry = hass && hass.entities && hass.entities[entityId];
+  return Boolean(entry && entry.platform === 'flare' && entry.translation_key === 'schedule');
 }
 
 /**
@@ -176,12 +179,11 @@ export function scheduleSensorSlug(hass, entityId) {
  * section's width.
  */
 export function entitySuggestion(hass, entityId) {
-  const slug = scheduleSensorSlug(hass, entityId);
-  if (!slug) return null;
+  if (!isScheduleSensor(hass, entityId)) return null;
   return {
     config: {
       type: 'custom:flare-curve-card',
-      sensor: slug,
+      sensor: entityId,
       grid_options: { columns: 'full' },
     },
   };
@@ -276,10 +278,8 @@ export function curveFillSvg(samples, xOf, hOf, dayStart, span, gradientId) {
 class FlareCurveCard extends HTMLElement {
   // Points a new card at a schedule sensor that exists.
   static getStubConfig(hass) {
-    const entityId = Object.keys((hass && hass.states) || {}).find((id) =>
-      scheduleSensorSlug(hass, id)
-    );
-    return entityId ? { sensor: scheduleSensorSlug(hass, entityId) } : {};
+    const entityId = Object.keys((hass && hass.entities) || {}).find((id) => isScheduleSensor(hass, id));
+    return entityId ? { sensor: entityId } : {};
   }
 
   setConfig(config) {
@@ -289,7 +289,7 @@ class FlareCurveCard extends HTMLElement {
       this._instanceId = _instanceCount;
     }
     // `sensor: living_room` names sensor.living_room_flare.
-    this._sensorId = `sensor.${this._config.sensor}_flare`;
+    this._sensorId = scheduleSensorId(this._config.sensor);
     this._cacheKey = null;
     this._samples = [];
     if (!this.shadowRoot) {

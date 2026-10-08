@@ -30,6 +30,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_phase_override"
+        self._attr_translation_key = "phase_override"
         self.entity_id = f"select.{instance.prefix}flare_phase"
         self._attr_device_info = instance.device_info
         self._attr_current_option = "Auto"
