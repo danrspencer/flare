@@ -79,7 +79,8 @@ def result():
 // Record registrations, which the shim otherwise drops.
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ sectionConfig, scheduleSensors, normaliseSlug, listZones, zoneDevices }} = await import({js_path(WWW / "flare-section.js")});
+const {{ scheduleSensors, normaliseSlug, listZones, zoneDevices }} = await import({js_path(WWW / "flare-entities.js")});
+const {{ sectionConfig }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
 const Zone = defined['ll-strategy-view-flare-zone'];

@@ -26,10 +26,6 @@ from custom_components.flare.services.two_step import DEFAULT_TWO_STEP_MODEL_PAT
 from custom_components.flare.zone.instance import zone_instances
 
 
-def _entry_of_type(hass: HomeAssistant, entry_type: str):
-    return next(e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == entry_type)
-
-
 @pytest.fixture(autouse=True)
 async def config_flow_loaded(hass: HomeAssistant) -> None:
     """An entry only reports its subentry types and options once FLARE's
@@ -153,18 +149,6 @@ async def test_only_the_zones_entry_has_options(stub_entry_setup, hass: HomeAssi
     assert (schedules.supports_options, zones.supports_options) == (False, True)
 
 
-async def test_an_install_from_before_flares_gets_a_flares_entry_at_startup(stub_entry_setup, hass: HomeAssistant):
-    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES):
-        MockConfigEntry(
-            domain=DOMAIN, data={CONF_ENTRY_TYPE: entry_type}, unique_id=f"{DOMAIN}_{entry_type}", version=3
-        ).add_to_hass(hass)
-
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-
-    assert _entry_of_type(hass, ENTRY_TYPE_FLARES).title == "Flares"
-
-
 async def test_a_new_install_gets_no_entries_at_startup(stub_entry_setup, hass: HomeAssistant):
     """Adding FLARE is still the user's choice."""
     assert await async_setup_component(hass, DOMAIN, {})
@@ -173,32 +157,3 @@ async def test_a_new_install_gets_no_entries_at_startup(stub_entry_setup, hass: 
     assert hass.config_entries.async_entries(DOMAIN) == []
 
 
-async def test_entries_still_titled_the_old_way_lose_the_prefix(stub_entry_setup, hass: HomeAssistant):
-    old = {
-        ENTRY_TYPE_SCHEDULES: ("FLARE Schedules", "Schedules"),
-        ENTRY_TYPE_ZONES: ("FLARE Zones", "Zones"),
-    }
-    for entry_type, (title, _) in old.items():
-        MockConfigEntry(
-            domain=DOMAIN, title=title, data={CONF_ENTRY_TYPE: entry_type}, unique_id=f"{DOMAIN}_{entry_type}", version=3
-        ).add_to_hass(hass)
-
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-
-    assert {t: _entry_of_type(hass, t).title for t in old} == {t: new for t, (_, new) in old.items()}
-
-
-async def test_an_entry_the_user_renamed_keeps_its_name(stub_entry_setup, hass: HomeAssistant):
-    MockConfigEntry(
-        domain=DOMAIN,
-        title="Rooms",
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
-        unique_id=f"{DOMAIN}_{ENTRY_TYPE_ZONES}",
-        version=3,
-    ).add_to_hass(hass)
-
-    assert await async_setup_component(hass, DOMAIN, {})
-    await hass.async_block_till_done()
-
-    assert _entry_of_type(hass, ENTRY_TYPE_ZONES).title == "Rooms"

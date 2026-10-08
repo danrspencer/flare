@@ -10,12 +10,11 @@ from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -29,7 +28,6 @@ from .const import (
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_ZONES,
     EVENT_TYPE_TICK,
-    LEGACY_ENTRY_TITLES,
 )
 from homeassistant.helpers.start import async_at_started
 
@@ -57,8 +55,8 @@ STRATEGY_JS_PATH = "flare-view-strategy.js"
 BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
 TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
 ICON_JS_PATH = "flare-icon.js"
-# flare-section.js and flare-value-slider.js register nothing; the modules
-# above import them.
+# flare-entities.js, flare-section.js, flare-zone-section.js and
+# flare-value-slider.js register nothing; the modules above import them.
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -75,7 +73,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for js in (ICON_JS_PATH, CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
     async_setup_schedule_services(hass)
-    _ensure_flares_entry(hass)
     return True
 
 
@@ -89,22 +86,7 @@ def www_fingerprint(directory: Path) -> str:
     return digest.hexdigest()[:12]
 
 
-@callback
-def _ensure_flares_entry(hass: HomeAssistant) -> None:
-    """Creates the Flares entry for an install set up before it existed."""
-    types = {entry.data.get(CONF_ENTRY_TYPE) for entry in hass.config_entries.async_entries(DOMAIN)}
-    if types and ENTRY_TYPE_FLARES not in types:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": SOURCE_IMPORT}, data={CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES}
-            )
-        )
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    if (title := LEGACY_ENTRY_TITLES.get(entry.title)) is not None:
-        hass.config_entries.async_update_entry(entry, title=title)
-
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
         entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
         # Only with flares, so an empty entry doesn't load the light platform.
@@ -160,7 +142,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
         await hass.config_entries.async_forward_entry_setups(entry, ZONE_PLATFORMS)
         for zone in zone_instances(entry):
-            _remove_tick_entity(hass, zone)
             entry.async_on_unload(scheduler.register(zone.subentry_id, zone.title, _ticker(hass, entry, zone)))
         return True
 
@@ -203,14 +184,6 @@ def _ticker(hass: HomeAssistant, entry: ConfigEntry, zone: ZoneInstance):
             hass.bus.async_fire(EVENT_TYPE_TICK, {"device_id": device.id})
 
     return _fire
-
-
-@callback
-def _remove_tick_entity(hass: HomeAssistant, zone: ZoneInstance) -> None:
-    """The Tick was an event entity, logged every minute. Gone in 1.0.0."""
-    registry = er.async_get(hass)
-    if entity_id := registry.async_get_entity_id("event", DOMAIN, f"{zone.subentry_id}_tick"):
-        registry.async_remove(entity_id)
 
 
 _RELOADS_QUEUED = "reloads_queued"
