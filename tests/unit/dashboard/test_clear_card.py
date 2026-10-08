@@ -27,9 +27,16 @@ card.setConfig({{ entity: 'button.kitchen_flare_clear' }});
 const calls = [];
 card.hass = {{ callService: (...args) => calls.push(args) }};
 card._handlers.click();
+const all = new Card();
+all.setConfig({{ entity: ['button.kitchen_flare_clear', 'button.hall_flare_clear'] }});
+const allCalls = [];
+all.hass = {{ callService: (...args) => allCalls.push(args) }};
+all._handlers.click();
 let refused = null;
 try {{ new Card().setConfig({{}}); }} catch (err) {{ refused = err.message; }}
-return {{ calls, html: card.shadowRoot.innerHTML, grid: card.getGridOptions(), refused }};
+let refusedEmpty = null;
+try {{ new Card().setConfig({{ entity: [] }}); }} catch (err) {{ refusedEmpty = err.message; }}
+return {{ calls, allCalls, html: card.shadowRoot.innerHTML, grid: card.getGridOptions(), refused, refusedEmpty }};
 """,
     )
 
@@ -49,3 +56,14 @@ def test_it_takes_a_quarter_of_the_row(result):
 
 def test_it_needs_an_entity(result):
     assert result["refused"] == "entity is required"
+
+
+def test_a_list_of_clear_buttons_is_pressed_together(result):
+    """The Zones view's All zones row."""
+    assert result["allCalls"] == [
+        ["button", "press", {"entity_id": ["button.kitchen_flare_clear", "button.hall_flare_clear"]}]
+    ]
+
+
+def test_an_empty_list_is_refused(result):
+    assert result["refusedEmpty"] == "entity is required"

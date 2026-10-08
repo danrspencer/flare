@@ -6,7 +6,7 @@ import pytest
 
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
-from tests.support.registry import zone_entities
+from tests.support.registry import totals_entities, zone_entities
 
 pytestmark = requires_node
 
@@ -59,6 +59,7 @@ HOUSE = {
         **zone_entities("zone_kitchen_island", "kitchen_island"),
         **zone_entities("zone_study", "study"),
         **zone_entities("zone_attic", "attic"),
+        **totals_entities(),
         "light.bed_lamp": {"entity_id": "light.bed_lamp", "device_id": "bed_lamp_device"},
         "light.bed_ceiling": {"entity_id": "light.bed_ceiling", "area_id": "bedroom"},
         "light.k1": {"entity_id": "light.k1", "area_id": "kitchen"},
@@ -89,13 +90,16 @@ def _headings(section, style=None):
     return [c["heading"] for c in section["cards"] if c["type"] == "heading" and c.get("heading_style") == style]
 
 
-def test_the_totals_come_first(view):
+def test_the_totals_come_first_as_a_row_like_each_zones(view):
     totals = view["sections"][0]
-    content = totals["cards"][1]["content"]
+    title, heading, clear = totals["cards"][:3]
+    tiles = [t["entity"] for card in totals["cards"] if card["type"] == "grid" for t in card["cards"]]
 
-    assert totals["column_span"] == 2
-    assert "sensor.attic_flare_controlled" in content and "sensor.bedroom_flare_overridden" in content
-    assert "lights controlled" in content and "overridden" in content
+    assert (title["heading"], heading["heading"]) == ("Zones", "All zones")
+    assert "tap_action" not in heading, "no device page for all zones"
+    assert clear["type"] == "custom:flare-clear-card"
+    assert sorted(clear["entity"]) == sorted(f"button.{z}_flare_clear" for z in ("attic", "bedroom", "kitchen_island", "kitchen_main", "study"))
+    assert set(tiles) == {"sensor.flare_controlled_lights", "sensor.flare_overridden_lights"}
 
 
 def test_zones_are_grouped_by_floor_then_area(view):

@@ -5,12 +5,13 @@
  * its icon is always the power symbol and its text always on/off counts.
  *
  *   type: custom:flare-clear-card
- *   entity: button.kitchen_flare_clear
+ *   entity: button.kitchen_flare_clear   # or a list, pressed together
  */
 
 class FlareClearCard extends HTMLElement {
   setConfig(config) {
-    if (!config || !config.entity) throw new Error('entity is required');
+    const entity = config && config.entity;
+    if (!entity || (Array.isArray(entity) && !entity.length)) throw new Error('entity is required');
     this._config = config;
     this._render();
   }

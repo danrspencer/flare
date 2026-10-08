@@ -49,6 +49,20 @@ export function flareDevices(hass) {
   return devices;
 }
 
+/**
+ * The totals across every zone, which belong to no device:
+ * {controlled, overridden}, each an entity_id or undefined.
+ */
+export function flareTotals(hass) {
+  const totals = {};
+  for (const entry of Object.values((hass && hass.entities) || {})) {
+    if (entry.platform !== 'flare') continue;
+    if (entry.translation_key === 'all_controlled') totals.controlled = entry.entity_id;
+    if (entry.translation_key === 'all_overridden') totals.overridden = entry.entity_id;
+  }
+  return totals;
+}
+
 // Every FLARE device with an entity in `role`, as {slug, title, device,
 // entities}, sorted by title.
 function devicesWith(hass, role, suffix, title) {
