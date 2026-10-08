@@ -13,15 +13,9 @@
  * every load, so layout changes arrive with an update.
  */
 
-import {
-  sectionConfig,
-  scheduleSensors,
-  normaliseSlug,
-  zoneSections,
-  zoneTotalsSection,
-  listZones,
-  zoneDevices,
-} from './flare-section.js';
+import { scheduleSensors, normaliseSlug, listZones, zoneDevices } from './flare-entities.js';
+import { sectionConfig } from './flare-section.js';
+import { zoneSections, zoneTotalsSection } from './flare-zone-section.js';
 import './flare-clear-card.js';
 import './flare-activity-card.js';
 
