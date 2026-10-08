@@ -56,8 +56,8 @@ CI — see `.github/workflows/release.yml`.
 
 - **The Zones view's Activity is coloured and filterable.** Blue when a zone takes its
   lights, amber when something else overrides one, grey when a zone lets them go, and buttons
-  at the top to show one kind at a time. It's also as tall as the window, and selecting an
-  entry opens that zone's device page.
+  at the top to show one kind at a time, and selecting an entry opens that zone's device
+  page.
 - **An All zones row at the top of the Zones view**, laid out like each zone's, with a
   **Clear** for every zone at once. Its counts are two new sensors,
   `sensor.flare_controlled_lights` and `sensor.flare_overridden_lights`, totalling every zone.

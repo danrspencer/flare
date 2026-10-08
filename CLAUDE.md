@@ -1043,8 +1043,7 @@ beside it.
   `ha-logbook-entry` colours a dot from the entry's category alone, with
   no per-entry colour its renderer passes through. An event's kind is the
   zone entity it's filed under (below). The card shows only entries with a
-  message, which leaves out the Clear button's own state change. It fills
-  the window height rather than a fixed 385px.
+  message, which leaves out the Clear button's own state change.
 
 **Zone events** (`flare_lights_controlled`, `flare_lights_released`,
 `flare_light_overridden`) carry a zone entity as `entity_id` - the

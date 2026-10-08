@@ -98,9 +98,8 @@ class FlareActivityCard extends HTMLElement {
     this._unsubscribe();
   }
 
-  // Fills the space it's given; rows: 'auto' leaves the height to its CSS.
   getGridOptions() {
-    return { columns: 12, rows: 'auto' };
+    return { columns: 12, rows: 6, min_rows: 3 };
   }
 
   _hours() {
@@ -180,11 +179,8 @@ class FlareActivityCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
-        ha-card {
-          display: flex; flex-direction: column;
-          height: max(385px, calc(100vh - var(--header-height, 56px) - 120px));
-        }
+        :host { display: block; height: 100%; }
+        ha-card { display: flex; flex-direction: column; height: 100%; }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 4px; }
         .chip {
           display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
