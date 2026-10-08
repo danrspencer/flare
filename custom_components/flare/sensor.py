@@ -22,7 +22,6 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_ENTRY_TYPE,
@@ -62,15 +61,9 @@ def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tupl
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    reconnected = reconnected_at(hass, entity_id)
-    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected)
+    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected_at(hass, entity_id))
     # "untracked" shows as "controlled": either way, not excluded.
-    status = "controlled" if raw_status == "untracked" else raw_status
-    # A light just back online reports stale values before FLARE's resend
-    # lands, so it isn't shown as overridden until it has settled.
-    if status == "overridden" and reconnected is not None and dt_util.utcnow() < reconnected + RECONNECT_SETTLE:
-        status = "settling"
-    return status, matched_via, live_context_id
+    return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
 
 
@@ -101,6 +94,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         self._announce_later = None
         self._recheck_later = None
         self._attr_unique_id = f"{instance.subentry_id}_claims"
+        self._attr_translation_key = "claims"
         self.entity_id = f"sensor.{instance.prefix}flare_claims"
         self._attr_device_info = instance.device_info
 
@@ -284,6 +278,7 @@ class _ZoneCountSensor(SensorEntity):
         self._status = status
         self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
         self._attr_unique_id = f"{instance.subentry_id}_{status}"
+        self._attr_translation_key = status
         self.entity_id = f"sensor.{instance.prefix}flare_{status}"
         self._attr_name = status.title()
         self._attr_device_info = instance.device_info
@@ -326,6 +321,7 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_flare"
+        self._attr_translation_key = "schedule"
         self.entity_id = f"sensor.{instance.prefix}flare"
         self._attr_device_info = instance.device_info
 

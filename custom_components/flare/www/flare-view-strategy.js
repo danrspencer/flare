@@ -51,9 +51,11 @@ class FlareScheduleViewStrategy extends HTMLElement {
       );
     }
 
-    if (!wanted) return view(all.map(({ slug, title }) => sectionConfig(slug, title)));
+    if (!wanted) return view(all.map(sectionConfig));
 
-    const match = all.find((s) => s.slug === wanted);
+    // The slug, or the sensor's entity_id, renamed or not.
+    const asGiven = typeof config.sensor === 'string' ? config.sensor.trim() : null;
+    const match = all.find((s) => s.slug === wanted || s.entities.schedule === asGiven);
     if (!match) {
       // List the slugs that exist, so a typo is fixable.
       const available = all.map((s) => `- \`${s.slug}\``).join('\n');
@@ -62,7 +64,7 @@ class FlareScheduleViewStrategy extends HTMLElement {
       );
     }
 
-    return view([sectionConfig(match.slug, match.title)]);
+    return view([sectionConfig(match)]);
   }
 }
 

@@ -47,11 +47,11 @@ def read_schedule(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, 
     """The schedule's current values, skipping any entity not yet available."""
     values: dict[str, str | int] = {}
     for key in TIME_KEYS:
-        state = hass.states.get(instance.time_entity_id(key))
+        state = hass.states.get(instance.time_entity(hass, key))
         if state is not None and state.state not in ("unknown", "unavailable"):
             values[key] = state.state
     for key in CURVE_KEYS:
-        state = hass.states.get(instance.number_entity_id(key))
+        state = hass.states.get(instance.number_entity(hass, key))
         if state is not None and state.state not in ("unknown", "unavailable"):
             values[key] = round(float(state.state))
     return values
@@ -64,9 +64,9 @@ async def async_apply_schedule(
     validated, so nothing is set unless all of it can be."""
     for key, value in values.items():
         if key in TIME_KEYS:
-            domain, entity_id, data = "time", instance.time_entity_id(key), {"time": value}
+            domain, entity_id, data = "time", instance.time_entity(hass, key), {"time": value}
         else:
-            domain, entity_id, data = "number", instance.number_entity_id(key), {"value": value}
+            domain, entity_id, data = "number", instance.number_entity(hass, key), {"value": value}
         await hass.services.async_call(
             domain, "set_value", {"entity_id": entity_id, **data}, blocking=True, context=context
         )

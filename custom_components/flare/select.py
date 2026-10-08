@@ -30,10 +30,11 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_phase_override"
+        self._attr_translation_key = "phase_override"
         self.entity_id = f"select.{instance.prefix}flare_phase"
         self._attr_device_info = instance.device_info
         self._attr_current_option = "Auto"
-        self._sticky_entity_id = instance.sticky_entity_id
+        self._instance = instance
         # computed_phase when the override was set; once it moves on, the
         # override clears. None while Auto.
         self._baseline_phase: str | None = None
@@ -52,7 +53,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
 
     @property
     def _sticky(self) -> bool:
-        state = self.hass.states.get(self._sticky_entity_id)
+        state = self.hass.states.get(self._instance.sticky_entity(self.hass))
         return state is not None and state.state == "on"
 
     def _handle_coordinator_update(self) -> None:

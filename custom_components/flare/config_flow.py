@@ -26,6 +26,7 @@ from .area_setup import (
     FLARE,
     LEVELS,
     Area,
+    AutomationsFileInvalid,
     AutomationsNotLoaded,
     SetupResult,
     areas_with_lights,
@@ -168,7 +169,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
         chosen = _chosen(user_input or {}, areas, schedules)
-        created = await self._create_entries()
+        await self._create_entries()
         schedule_ids = self._schedule_ids()
         plan = {area: schedule_ids[key] for area, key in chosen.items()}
         try:
@@ -176,14 +177,18 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0, 0)
         except AutomationsNotLoaded:
             return self.async_abort(reason="automations_not_loaded")
+        except AutomationsFileInvalid:
+            return self.async_abort(reason="automations_invalid")
         except Exception:  # noqa: BLE001 - reported in the summary, details in the log
             _LOGGER.exception("Could not set up %s", ", ".join(area.name for area in plan))
             return self.async_abort(reason="setup_failed")
 
-        summary = [*created, *_counts(result)]
+        counts = {"zones": result.zones, "automations": result.automations, "flares": result.flares}
+        placeholders = {key: str(count) for key, count in counts.items()}
+        if first_setup:
+            placeholders["schedules"] = ", ".join(self._new_schedules)
         return self.async_abort(
-            reason="setup_complete" if first_setup else "areas_set_up",
-            description_placeholders={"created": _join(summary) if summary else "nothing new"},
+            reason="setup_complete" if first_setup else "areas_set_up", description_placeholders=placeholders
         )
 
     def _configured(self) -> set[str]:
@@ -208,19 +213,15 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _entry(self, entry_type: str) -> ConfigEntry | None:
         return next((e for e in self._async_current_entries() if e.data.get(CONF_ENTRY_TYPE) == entry_type), None)
 
-    async def _create_entries(self) -> list[str]:
-        """Creates whichever entries are missing; returns what to report."""
+    async def _create_entries(self) -> None:
+        """Creates whichever entries are missing."""
         configured = self._configured()
-        created = []
         if ENTRY_TYPE_SCHEDULES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES, "schedules": self._new_schedules})
-            names = self._new_schedules
-            created.append(f"a schedule called {names[0]}" if len(names) == 1 else f"schedules called {_join(names)}")
         if ENTRY_TYPE_ZONES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES})
         if ENTRY_TYPE_FLARES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES})
-        return created
 
     async def _import(self, data: dict[str, Any]) -> None:
         await self.hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_IMPORT}, data=data)
@@ -311,18 +312,6 @@ def _chosen(user_input: dict[str, Any], areas: list[Area], schedules: list[tuple
         return {area: schedules[0][0] for area in areas if area.area_id in picked}
     keys = {key for key, _ in schedules}
     return {area: user_input[area.name] for area in areas if user_input.get(area.name) in keys}
-
-
-def _counts(result: SetupResult) -> list[str]:
-    counts = []
-    for count, noun in ((result.zones, "zone"), (result.automations, "room automation"), (result.flares, "flare")):
-        if count:
-            counts.append(f"{count} {noun}{'' if count == 1 else 's'}")
-    return counts
-
-
-def _join(items: list[str]) -> str:
-    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
 
 
 class FlareOptionsFlow(config_entries.OptionsFlow):

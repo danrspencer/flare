@@ -6,6 +6,7 @@ import pytest
 
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
+from tests.support.registry import zone_entities
 
 pytestmark = requires_node
 
@@ -53,9 +54,11 @@ HOUSE = {
         "bed_lamp_device": {"area_id": "bedroom"},
     },
     "entities": {
-        "sensor.bedroom_flare_claims": {"entity_id": "sensor.bedroom_flare_claims", "device_id": "zone_bedroom"},
-        "sensor.kitchen_main_flare_claims": {"entity_id": "sensor.kitchen_main_flare_claims", "device_id": "zone_kitchen_main"},
-        "sensor.kitchen_island_flare_claims": {"entity_id": "sensor.kitchen_island_flare_claims", "device_id": "zone_kitchen_island"},
+        **zone_entities("zone_bedroom", "bedroom"),
+        **zone_entities("zone_kitchen_main", "kitchen_main"),
+        **zone_entities("zone_kitchen_island", "kitchen_island"),
+        **zone_entities("zone_study", "study"),
+        **zone_entities("zone_attic", "attic"),
         "light.bed_lamp": {"entity_id": "light.bed_lamp", "device_id": "bed_lamp_device"},
         "light.bed_ceiling": {"entity_id": "light.bed_ceiling", "area_id": "bedroom"},
         "light.k1": {"entity_id": "light.k1", "area_id": "kitchen"},

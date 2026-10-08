@@ -189,6 +189,7 @@ triggers:
 |---|---|
 | `controlled` | FLARE is setting it: it matches one of its claims. |
 | `overridden` | It matches neither claim, so something else has changed it. |
+| `settling` | It came back online less than 30 seconds ago and doesn't match yet. A light's first reports after reconnecting are often out of date, so it isn't counted or announced as overridden until it has had time to report properly. It's blocked meanwhile. |
 | `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
 | `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
 | `unavailable` | Home Assistant can't reach it, so its claims aren't checked. It isn't blocked. |

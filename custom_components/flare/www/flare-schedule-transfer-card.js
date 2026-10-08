@@ -4,15 +4,17 @@
  * flare.import_schedule, so the card holds no copy of the format.
  *
  *   type: custom:flare-schedule-transfer-card
- *   sensor: downstairs   # the schedule sensor's slug
+ *   sensor: downstairs   # or the schedule sensor's entity_id
  *
  * Pasting goes through a text box rather than reading the clipboard,
  * which browsers only allow over HTTPS.
  */
 
+import { scheduleSensorId } from './flare-curve-card.js';
+
 /** The schedule's device, through its sensor's registry entry. */
-export function scheduleDeviceId(hass, slug) {
-  const entry = hass && hass.entities && hass.entities[`sensor.${slug}_flare`];
+export function scheduleDeviceId(hass, sensor) {
+  const entry = hass && hass.entities && hass.entities[scheduleSensorId(sensor)];
   return (entry && entry.device_id) || null;
 }
 
@@ -131,7 +133,7 @@ class FlareScheduleTransferCard extends HTMLElement {
 
   _deviceId() {
     const id = scheduleDeviceId(this._hass, this._config.sensor);
-    if (!id) this._status(`No FLARE schedule called sensor.${this._config.sensor}_flare.`, true);
+    if (!id) this._status(`No FLARE schedule sensor ${scheduleSensorId(this._config.sensor)}.`, true);
     return id;
   }
 
