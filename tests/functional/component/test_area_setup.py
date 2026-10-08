@@ -90,7 +90,7 @@ async def test_first_setup_gives_every_area_with_lights_a_zone_automation_and_fl
 
     assert result["reason"] == "setup_complete"
     assert result["description_placeholders"] == {
-        "schedule_count": "1", "schedules": "Home", "zones": "2", "automations": "2", "flares": "2"
+        "schedules": "Home", "zones": "2", "automations": "2", "flares": "2"
     }
     zones = {z.title: z.subentry_id for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))}
     assert set(zones) == {"Hall", "Kitchen"}
@@ -123,7 +123,7 @@ async def test_each_area_can_follow_its_own_schedule(stub_entry_setup, automatio
     result = await _submit(hass, result, {"Bedroom": "schedule_2", "Kitchen": "schedule_1", "Loft": "skip"})
 
     assert result["description_placeholders"] == {
-        "schedule_count": "2", "schedules": "Downstairs, Upstairs", "zones": "2", "automations": "2", "flares": "2"
+        "schedules": "Downstairs, Upstairs", "zones": "2", "automations": "2", "flares": "2"
     }
     schedules = {s.title: s.subentry_id for s in schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES))}
     followed = {a["alias"]: a["use_blueprint"]["input"]["schedule"] for a in _automations(automations_file)}
@@ -147,7 +147,7 @@ async def test_a_house_with_no_lights_in_areas_still_gets_its_schedule(
     result = await _first_setup(hass, ["Home"])
 
     assert result["reason"] == "setup_complete"
-    assert result["description_placeholders"] == {"schedule_count": "1", "schedules": "Home", "zones": "0", "automations": "0", "flares": "0"}
+    assert result["description_placeholders"] == {"schedules": "Home", "zones": "0", "automations": "0", "flares": "0"}
     assert len(hass.config_entries.async_entries(DOMAIN)) == 3
     assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
 
@@ -231,7 +231,7 @@ async def test_an_area_can_get_just_a_zone(stub_entry_setup, automations_file, h
 
     result = await _submit(hass, await _first_setup(hass, ["Home"]), {"set_up": "zone", "areas": [kitchen]})
 
-    assert result["description_placeholders"] == {"schedule_count": "1", "schedules": "Home", "zones": "1", "automations": "0", "flares": "0"}
+    assert result["description_placeholders"] == {"schedules": "Home", "zones": "1", "automations": "0", "flares": "0"}
     assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
     assert _automations(automations_file) == []
     result = await _start(hass)
@@ -246,7 +246,7 @@ async def test_an_area_can_get_a_zone_and_automation_without_a_flare(
 
     result = await _submit(hass, await _first_setup(hass, ["Home"]), {"set_up": "automation", "areas": [kitchen]})
 
-    assert result["description_placeholders"] == {"schedule_count": "1", "schedules": "Home", "zones": "1", "automations": "1", "flares": "0"}
+    assert result["description_placeholders"] == {"schedules": "Home", "zones": "1", "automations": "1", "flares": "0"}
     assert hass.states.get("automation.kitchen_lighting") is not None
     assert _entry_of_type(hass, ENTRY_TYPE_FLARES).subentries == {}
 
