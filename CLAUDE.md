@@ -199,9 +199,22 @@ claims are each exposed through both.
   dashboard.
 
 **Dependencies run one way**: `schedule/`, `zone/` and `flares/` import
-only `const.py`; `services/` may use `schedule/` and `zone/`; the root
-may use everything. `tests/checks/test_layering.py` enforces it.
+only `const.py`; `services/` may use `schedule/`, `zone/` and
+`flares/identity.py` (which lights are flares); the root may use
+everything. `tests/checks/test_layering.py` enforces it.
 `services/__init__.py` holds no imports.
+
+**One definition each, shared rather than copied** - copies drifted
+before each of these was pulled together, and a check test fails on a new
+copy where one is practical:
+
+- Reachability: `const.is_reachable()` (`test_one_reachability_check.py`).
+  A light with no state was reachable to grouping and unavailable to
+  override protection.
+- What a light shows: `zone/matching.py` (`test_one_value_matcher.py`).
+- Which lights are flares: `flares/identity.py`.
+- A schedule's values: `schedule/coordinator.read_schedule()`, used by
+  the curve (which defaults what's missing) and export (which omits it).
 
 **`strings.json` is the source and `translations/en.json` a copy**, which
 is what HA shows for a custom integration. They had drifted;
@@ -542,7 +555,7 @@ leaves the room wherever the bulbs restored to.
 - **A flare must never be one of a room's lights**, or the room's tick
   would send it the curve and it would pass that on as an override.
   Three layers: the blueprint rejects `integration_entities('flare')`,
-  the services drop flare lights (`_without_flares`), and a flare's own
+  the services drop flare lights (`flares/identity.without_flares`), and a flare's own
   filter drops other flares (or it recurses forever). Blueprint tests need
   a real `MockEntityPlatform` entity for `integration_entities`
   (`add_flare_light`).
