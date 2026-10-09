@@ -9,6 +9,8 @@ UNREACHABLE = {"unavailable", "unknown"}
 
 
 def _compares_a_state_with_unreachable(node: ast.AST) -> bool:
+    if isinstance(node, ast.Call) and getattr(node.func, "attr", None) == "is_state":
+        return any(isinstance(a, ast.Constant) and a.value in UNREACHABLE for a in node.args)
     if not isinstance(node, ast.Compare):
         return False
     sides = [node.left, *node.comparators]
@@ -34,5 +36,5 @@ def test_only_const_decides_reachability():
 
 
 def test_the_check_sees_a_comparison():
-    tree = ast.parse('state.state in ("unavailable", "unknown")\nnew.state == "unknown"')
-    assert sum(_compares_a_state_with_unreachable(n) for n in ast.walk(tree)) == 2
+    tree = ast.parse('state.state in ("unavailable", "unknown")\nnew.state == "unknown"\nlookup.is_state(e, "unavailable")')
+    assert sum(_compares_a_state_with_unreachable(n) for n in ast.walk(tree)) == 3
