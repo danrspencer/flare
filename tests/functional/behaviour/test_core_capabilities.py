@@ -155,6 +155,27 @@ async def test_the_periodic_tick_leaves_a_fitting_someone_else_changed(
     )
 
 
+async def test_without_a_zone_the_tick_puts_a_changed_fitting_back(
+    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+) -> None:
+    """Zone left empty: nothing is tracked, so the curve wins."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    occupancy(hass, HALL_SENSOR, "off")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], zone=None)
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+
+    await hass.services.async_call(
+        "light", "turn_on", {"entity_id": bulbs[0].entity_id, "brightness": 5}, blocking=True
+    )
+    await let_time_pass(hass, frozen_time, 60)
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}, (
+        "a room without a zone should follow the curve whatever else changes it"
+    )
+
+
 async def test_a_room_settles_to_its_idle_level_instead_of_going_dark(
     hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
 ) -> None:

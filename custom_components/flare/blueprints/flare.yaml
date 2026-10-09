@@ -31,8 +31,12 @@ blueprint:
       name: Zone
       description: >
         The FLARE zone this room belongs to. It records which lights FLARE
-        is driving, so a light someone else changes is left alone.
+        is driving, so a light someone else changes is left alone. Leave it
+        empty to turn that off for this room.
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+      # Optional: without a zone the room isn't tracked, and ticks on the
+      # minute instead of the zone's spaced tick.
+      default: null
       selector:
         device:
           filter:
@@ -283,6 +287,7 @@ max_exceeded: silent
 # Available to triggers and conditions, unlike variables:.
 trigger_variables:
   room_target: !input room_target
+  zone: !input zone
 
 trigger:
   # The schedule's Phase, which fires on a real phase change (and once at
@@ -304,6 +309,13 @@ trigger:
     event_type: flare_tick
     event_data:
       device_id: !input zone
+    enabled: "{{ zone is not none }}"
+  # Without a zone, the same tick on the minute. Every zone-less room
+  # writes in the same second, which is what zone ticks spread out.
+  - id: tick
+    trigger: time_pattern
+    minutes: "*"
+    enabled: "{{ zone is none }}"
   - id: extra
     platform: state
     entity_id: !input extra_triggers
@@ -761,9 +773,9 @@ action:
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template
-            alias: "There are lights to release"
+            alias: "There are lights to release, in a zone"
             value_template: >-
-              {{ handed_off_entities | length > 0 }}
+              {{ zone is not none and handed_off_entities | length > 0 }}
         then:
           - action: flare.claims_clear
             data:
