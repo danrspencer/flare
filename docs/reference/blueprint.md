@@ -36,6 +36,12 @@ behaves.
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
 
+The room's lights are the ones an action such as `light.turn_on` would reach on the same target.
+An entity you pick directly is always included. An entity reached through an area, floor,
+device or label is left out if it's hidden, and also if it's a configuration or diagnostic entity
+(such as a switch's indicator light), unless the label is on that entity itself. The room's
+[flare](../flares/) has the same lights.
+
 Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
 other binary sensors in the target are ignored. A room can mix both kinds.
 
@@ -157,6 +163,9 @@ changed.
 - **It's unavailable.** FLARE sets it once it comes back online.
 - **A scene has it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).
+- **It isn't one of the room's lights.** A hidden light, or a configuration or diagnostic
+  light, isn't included through an area, floor, device or label. Pick it directly in
+  **Lights & Occupancy** to include it. See [Room](#room).
 
 ## Updating the blueprint
 

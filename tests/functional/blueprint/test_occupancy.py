@@ -32,6 +32,18 @@ class TestOccupancyDrivenOnOff:
         calls = apply_lighting_calls
         assert calls and calls[-1].data["entities"] == ["light.a"]
 
+    async def test_occupancy_detected_in_a_fully_lit_room_sends_nothing(self, hass, apply_lighting_calls):
+        occupancy(hass, "binary_sensor.occ", "off")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]})
+
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls == []
+
     async def test_the_turn_off_names_the_rooms_zone(self, hass, turn_off_calls):
         """Otherwise every emptied room's turn-off reads as an override."""
         zone = add_zone(hass)

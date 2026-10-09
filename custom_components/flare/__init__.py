@@ -35,6 +35,7 @@ from .blueprint_check import async_check as async_check_blueprint
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
+from .services.targets import async_setup_target_services
 from .flares.instance import flare_instances
 from .zone.instance import ZoneInstance, zone_instances
 from .zone.ticker import TickScheduler
@@ -61,7 +62,7 @@ ICON_JS_PATH = "flare-icon.js"
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve www/, load the front-end modules on every page, and register
-    the schedule services, which belong to neither entry.
+    the schedule and target services, which belong to neither entry.
 
     The URL carries a fingerprint of the files and is cached hard, so any
     change to them is a new URL. A path segment, not `?v=`: the modules
@@ -73,6 +74,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     for js in (ICON_JS_PATH, CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
         add_extra_js_url(hass, f"{base}/{js}")
     async_setup_schedule_services(hass)
+    async_setup_target_services(hass)
     return True
 
 

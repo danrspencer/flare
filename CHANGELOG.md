@@ -58,6 +58,8 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **`flare.resolve_target`** returns the entities a target reaches, chosen as Home Assistant
+  chooses them for an action.
 - **The Zones view's Activity is coloured and filterable.** Each entry's dot is blue when a
   zone takes its lights, amber when something else overrides one, and grey when a zone lets
   them go; buttons at the top show one kind at a time; and selecting an entry opens that
@@ -155,6 +157,12 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **A room's lights are the ones Home Assistant would pick for the same target.** Through an
+  area, floor, device or label, the blueprint now leaves out hidden lights and configuration or
+  diagnostic lights (such as a switch's indicator light), as `light.turn_on` with that target
+  does, and a light on a child device is now included. **A hidden light in a room's area is no
+  longer driven**: pick it directly in **Lights & Occupancy** to keep it. A room's flare already
+  chose its lights this way, so the two now always agree.
 - **`flare_lights_released` is filed under the zone's Clear button** (`entity_id:
   button.<zone>_flare_clear`) rather than its Controlled count.
 - **A light only counts as overridden once it has stayed changed for 30 seconds.** Until then

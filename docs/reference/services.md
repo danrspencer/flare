@@ -29,6 +29,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | [`flare.claims_clear`](#flareclaims_clear) | Discards claims, so FLARE sets the lights again |
 | [`flare.claims_override`](#flareclaims_override) | Marks lights as changed by someone else, so FLARE leaves them alone |
 | [`flare.compute_scene_coverage`](#flarecompute_scene_coverage) | Which of a room's lights a scene sets |
+| [`flare.resolve_target`](#flareresolve_target) | The entities a target reaches |
 | [`flare.export_schedule`](#flareexport_schedule) | A schedule's settings as YAML |
 | [`flare.import_schedule`](#flareimport_schedule) | Sets a schedule from YAML |
 
@@ -386,6 +387,36 @@ scene_active: true
 scene_valid: true
 covered_entities: [light.kitchen_1]
 uncovered_entities: [light.kitchen_2]
+```
+
+## `flare.resolve_target`
+
+Use this action to get the list of entities that an action on a target would reach, such as
+the lights in an area.
+
+```yaml
+action: flare.resolve_target
+target:
+  area_id: kitchen
+response_variable: kitchen
+```
+
+### Fields
+
+It takes a target, as an action such as `light.turn_on` does: any mix of `entity_id`,
+`device_id`, `area_id`, `floor_id` and `label_id`.
+
+### Response data
+
+- `entities`: Every entity the target reaches, of any domain, sorted. Home Assistant decides
+  which entities those are, in the same way as when you call an action on that target:
+  - An entity you name directly is always included.
+  - An entity reached through a device, area, floor or label is left out if it's hidden.
+  - An entity reached through a device, area or floor is also left out if it's a
+    configuration or diagnostic entity. If a label is on the entity itself, it's kept.
+
+```yaml
+entities: [binary_sensor.kitchen_motion, light.kitchen_1, light.kitchen_2]
 ```
 
 ## `flare.export_schedule`

@@ -1,6 +1,7 @@
 """Flares: a light over the room's automation, for voice assistants,
 HomeKit and dashboards, asserted on the state the bulbs end up in."""
 
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -322,3 +323,24 @@ async def test_a_room_flare_had_never_driven_stays_off_when_an_update_lands_mid_
     await hass.async_block_till_done()
 
     assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}
+
+
+async def test_a_flare_and_its_room_leave_out_the_same_hidden_and_categorised_lights(
+    hass: HomeAssistant, add_bulbs, setup_room, zone
+) -> None:
+    """Room Target names an area, so Home Assistant's rule decides both."""
+    lamp, hidden, indicator = await add_bulbs("hall_lamp", "hall_hidden", "hall_indicator", area_id=zone)
+    registry = er.async_get(hass)
+    registry.async_update_entity(hidden.entity_id, hidden_by=er.RegistryEntryHider.USER)
+    registry.async_update_entity(indicator.entity_id, entity_category=EntityCategory.CONFIG)
+    await setup_room(lights=[], room_target={"area_id": zone})
+    flare = await add_flare(hass)
+
+    await _turn_on(hass, flare)
+
+    assert room_brightness(hass, [lamp, hidden, indicator]) == {
+        lamp.entity_id: CURVE_BRIGHTNESS,
+        hidden.entity_id: "off",
+        indicator.entity_id: "off",
+    }
+    assert hass.states.get(flare).attributes["entity_id"] == [lamp.entity_id]
