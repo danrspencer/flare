@@ -463,7 +463,8 @@ fires <code class="language-plaintext highlighter-rouge">flare_lights_released</
   <p><strong>Kitchen</strong> cleared 6 lights</p>
 </blockquote>
 
-<p>When something else changes one of a zone’s lights, FLARE fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code> for that
+<p>When something else changes one of a zone’s lights, and it stays changed for 30 seconds, FLARE
+fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code> for that
 light:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">light</span><span class="pi">:</span> <span class="s">light.kitchen_1</span>
@@ -513,11 +514,11 @@ for lights that were already overridden before a restart. To trigger an automati
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
-      <td>It matches neither claim, so something else has changed it.</td>
+      <td>It has matched neither claim for at least 30 seconds, so something else has changed it.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">settling</code></td>
-      <td>It came back online less than 30 seconds ago and doesn’t match yet. A light’s first reports after reconnecting are often out of date, so it isn’t counted or announced as overridden until it has had time to report properly. It’s blocked meanwhile.</td>
+      <td><code class="language-plaintext highlighter-rouge">mismatched</code></td>
+      <td>It has matched neither claim for less than 30 seconds. Usually it’s FLARE’s own change still arriving, or a light just back online reporting late, so it isn’t counted or announced as overridden yet. It’s left alone meanwhile, the same as an overridden light.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">untracked</code></td>
