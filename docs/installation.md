@@ -42,8 +42,11 @@ It asks:
   is the day's lighting: when each phase starts, and how bright and warm it is. One for the
   whole house is fine to start with; use more if parts of the house should differ, such as one
   per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
-- **What to set up for each area**, and **which areas**. Every area with lights is listed and
-  ticked. With more than one schedule, you pick the schedule each area follows instead.
+- **What to set up for each area**, and **which areas**. Every area with lights is picked to
+  start with. With more than one schedule, there's an area picker for each schedule, and an
+  area starts under the schedule with the same name as its floor. An area on a floor that
+  doesn't match a schedule's name starts unpicked, so add it to the schedule it should follow.
+  An area can only be under one schedule.
 
 Each area you set up gets up to three things, named after it. All three is the default, and
 what most rooms want:
@@ -73,10 +76,9 @@ with a view for each schedule and one for your zones, and it keeps up as you add
 
 ## Adding a room later
 
-**Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights, and
-ticks the ones without a zone yet. An area that already has a zone isn't ticked: setting it up
-again keeps its zone but gives it another automation and flare, so only tick it if it doesn't
-have them.
+**Settings → Devices & Services → FLARE → Set up area**. The areas that don't have a zone yet
+are already picked. An area that already has a zone isn't: setting it up again keeps its zone
+but gives it another automation and flare, so only pick it if it doesn't have them.
 
 The other buttons there add one thing at a time: **Add schedule**, **Add zone** and
 **Add flare**.

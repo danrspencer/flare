@@ -259,6 +259,19 @@ async def test_an_existing_zone_with_the_areas_name_is_reused(stub_entry_setup, 
     assert written["use_blueprint"]["input"]["zone"] == _device(hass, zone.subentry_id)
 
 
+async def test_an_area_can_get_just_a_zone(stub_entry_setup, automations_file, hass: HomeAssistant):
+    """It starts unpicked next time, but can still be picked for the rest."""
+    kitchen = _area(hass, "Kitchen", "light.k")
+
+    result = await _submit(hass, await _first_setup(hass, ["Home"]), {"set_up": "zone", "areas": [kitchen]})
+
+    assert result["description_placeholders"] == {"schedules": "Home", "zones": "1", "automations": "0", "flares": "0"}
+    assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
+    assert _automations(automations_file) == []
+    result = await _start(hass)
+    assert result["data_schema"]({})["areas"] == []
+
+
 async def test_an_area_can_get_a_zone_and_automation_without_a_flare(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):

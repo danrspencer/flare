@@ -21,8 +21,8 @@ from homeassistant.helpers import selector
 from homeassistant.util import slugify
 
 from .area_setup import (
-    AUTOMATION,
     FLARE,
+    LEVELS,
     Area,
     AutomationsFileInvalid,
     AutomationsNotLoaded,
@@ -264,7 +264,7 @@ def _areas_schema(
     fields: dict = {
         vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
             selector.SelectSelectorConfig(
-                options=[AUTOMATION, FLARE], translation_key="set_up", mode=selector.SelectSelectorMode.LIST
+                options=list(LEVELS), translation_key="set_up", mode=selector.SelectSelectorMode.DROPDOWN
             )
         )
     }
