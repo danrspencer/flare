@@ -505,13 +505,14 @@ it is). Set up area can just be run again.
   only unticks the area; every area with lights is listed (user's call,
   after reading automations' targets proved unreliable). Re-running an
   area reuses its zone but adds another automation and flare.
-- **Each schedule is a checkbox list of areas named after it** (the
-  dialog falls back to a field's name when it has no translation, the
-  only way to label fields made at runtime). An area starts ticked under
-  the schedule named like its floor; one ticked under two schedules is
-  refused on Submit, since the form can't untick it live. Tried and
-  dropped: a dropdown per area, and HA's area picker (it closes after
-  every pick).
+- **Each area is a dropdown named after it** - "-- Don't set up --", set apart so it
+  can't be mistaken for a schedule, then each schedule (the dialog falls
+  back to a field's name when it has no translation, the only way to
+  label fields made at runtime). It starts on the schedule named like the
+  area's floor, else the first. One field per area so it can't be set up
+  wrong. Tried and dropped: radios (three rows per area), HA's area
+  picker (closes after every pick), and a checkbox list per schedule
+  (always expanded, and an area could be ticked under two schedules).
 - **The flare is part of the default**, the one exception to "nothing
   creates flares automatically" - the user is choosing to set the area up.
 
