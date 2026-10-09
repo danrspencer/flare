@@ -36,11 +36,14 @@ class _ContextClaim(TypedDict):
     target: Optional[dict]
 
 
-class _WriteRecord(TypedDict):
+class _WriteRecord(TypedDict, total=False):
     observed: Optional[_ContextClaim]
     latest: Optional[_ContextClaim]
     # ISO 8601 last write, for pruning only.
     last_seen: Optional[str]
+    # ISO 8601: when the light first stopped matching its claims, kept by
+    # claims.py. Absent while it matches.
+    mismatch_since: Optional[str]
 
 
 def _as_int(value, default: int) -> int:
@@ -218,6 +221,11 @@ def classify(
 # settling (Zigbee2MQTT sends the attributes some seconds after the state).
 RECONNECT_SETTLE = timedelta(seconds=30)
 
+# How long a light can disagree with its claims before it counts as
+# overridden: long enough for FLARE's own write to land, a bulb back online
+# to report properly, or a room switched off light by light to go dark.
+MISMATCH_GRACE = timedelta(seconds=30)
+
 
 def classify_state(
     state: Optional["State"],
@@ -226,6 +234,7 @@ def classify_state(
     color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     reconnected_at: Optional[datetime] = None,
+    now: Optional[datetime] = None,
 ) -> tuple[str, Optional[str]]:
     """classify() for a live HA state and its claim record (None if
     untracked). "unavailable" for a light HA can't reach or doesn't know,
@@ -240,22 +249,40 @@ def classify_state(
     out stays theirs; and claims.py forgets the reconnect once a write from
     FLARE lands, so a change after that is an override as usual.
 
-    Otherwise a light that came back online less than RECONNECT_SETTLE ago
-    and doesn't match is "settling": its first reports are often stale, so
-    it isn't called overridden yet, but it's blocked as one."""
+    Otherwise a light that doesn't match is "mismatched" until its record's
+    `mismatch_since` (kept by claims.py) is MISMATCH_GRACE old, and only
+    then "overridden": most mismatches are FLARE's own write still landing
+    or a bulb reporting late. A mismatched light is blocked like an
+    overridden one, so a real change is never written over meanwhile."""
     if state is None or state.state in ("unavailable", "unknown"):
         return "unavailable", None
     status, matched_via = _classify_live(
         state, record or {}, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance
     )
-    if status != "overridden" or reconnected_at is None:
+    if status != "overridden":
         return status, matched_via
-    settles_at = reconnected_at + RECONNECT_SETTLE
-    if state.last_updated <= settles_at and _written_since(record or {}, reconnected_at):
+    if (
+        reconnected_at is not None
+        and state.last_updated <= reconnected_at + RECONNECT_SETTLE
+        and _written_since(record or {}, reconnected_at)
+    ):
         return "untracked", None
-    if dt_util.utcnow() < settles_at:
-        return "settling", None
+    since = _parse((record or {}).get("mismatch_since"))
+    if since is None or (now or dt_util.utcnow()) < since + MISMATCH_GRACE:
+        return "mismatched", None
     return status, matched_via
+
+
+def disagrees(status: str) -> bool:
+    """Whether a status means the light doesn't match its claims."""
+    return status in ("mismatched", "overridden")
+
+
+def _parse(value: Optional[str]) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(value) if value else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _written_since(record: _WriteRecord, when: datetime) -> bool:
@@ -292,4 +319,4 @@ def is_blocked(status: str, force: bool = False) -> bool:
     the same zone share its claims. `force` bypasses."""
     if force:
         return False
-    return status in ("overridden", "settling")
+    return disagrees(status)

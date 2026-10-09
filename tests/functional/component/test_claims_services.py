@@ -7,6 +7,7 @@ import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 
 from custom_components.flare.const import DOMAIN
+from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,
     claim_registry,
@@ -64,7 +65,7 @@ async def test_claims_check_and_claims_record_round_trip(setup_integration: Home
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=40, color_temp_kelvin=6000)
 
     results = await claims_check(hass, ["light.a"])
-    assert results["light.a"] == {"blocked": True, "status": "overridden", "matched_via": None, "zone": "Test Zone"}
+    assert results["light.a"] == {"blocked": True, "status": "mismatched", "matched_via": None, "zone": "Test Zone"}
 
     # Any caller naming the same zone shares its claims.
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000, context=our_context)
@@ -135,7 +136,8 @@ async def test_claims_clear_frees_a_light_stuck_overridden(setup_integration: Ho
     await claims_record(hass, ["light.a"], context=our_context)
     # Different value, different context: overridden.
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=40, color_temp_kelvin=6000)
-    results = await claims_check(hass, ["light.a"])
+    with after_the_grace():
+        results = await claims_check(hass, ["light.a"])
     assert results["light.a"]["status"] == "overridden"
 
     await hass.services.async_call(

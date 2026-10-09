@@ -37,7 +37,7 @@ restart."""
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Optional, Protocol
 
 from homeassistant.components import persistent_notification
@@ -50,16 +50,20 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
 from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
-from .override_protection import _context_matches, _ContextClaim, _WriteRecord
+from .override_protection import (
+    MISMATCH_GRACE,
+    _context_matches,
+    _ContextClaim,
+    _WriteRecord,
+    classify_state,
+    disagrees,
+)
 
 # Pruning early is harmless: a light with no record is simply free to
 # manage.
 STALE_RECORD_MAX_AGE_DAYS = 1
 
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
-
-# Where each light last came back online, for classify_state.
-RECONNECTS = f"{DOMAIN}_reconnected_at"
 
 # Fired whenever any zone's claims change, so the count sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
@@ -68,11 +72,6 @@ SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 # holds a claim on the same light. Each zone then reads the other's writes
 # as overrides, so the light quietly stops following either.
 NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
-
-
-def reconnected_at(hass: HomeAssistant, entity_id: str):
-    """When the light last came back online this run, or None."""
-    return hass.data.get(RECONNECTS, {}).get(entity_id)
 
 
 class ClaimStore(Protocol):
@@ -99,6 +98,36 @@ class ClaimRegistry:
         # Lights already warned about this run, so a dismissed warning stays
         # dismissed rather than returning on the next write.
         self._warned: set[str] = set()
+        # Where each light last came back online, tracked or not: its claim
+        # was dropped when it went, so the next write may come after.
+        self._reconnects: dict[str, datetime] = {}
+
+    def reconnected_at(self, entity_id: str) -> datetime | None:
+        """When the light last came back online this run, or None."""
+        return self._reconnects.get(entity_id)
+
+    @callback
+    def note_mismatch(self, store: ClaimStore, entity_id: str) -> bool:
+        """Keeps the record's `mismatch_since`: set when the light first
+        stops matching its claims, cleared when it matches again or can't be
+        reached. True if it changed."""
+        record = store.claims.get(entity_id)
+        if record is None:
+            return False
+        status, _via = classify_state(
+            self._hass.states.get(entity_id), record, reconnected_at=self.reconnected_at(entity_id)
+        )
+        if disagrees(status) and not record.get("mismatch_since"):
+            record["mismatch_since"] = dt_util.utcnow().isoformat()
+            return True
+        if not disagrees(status) and record.pop("mismatch_since", None) is not None:
+            return True
+        return False
+
+    @callback
+    def note_mismatches(self, store: ClaimStore) -> bool:
+        """note_mismatch for every light the zone holds. True if any changed."""
+        return any([self.note_mismatch(store, entity_id) for entity_id in list(store.claims)])
 
     @callback
     def register(self, subentry_id: str, store: ClaimStore) -> None:
@@ -184,6 +213,8 @@ class ClaimRegistry:
         if store is None or not entity_ids:
             return
         now = dt_util.utcnow().isoformat()
+        # Someone said so, so there's nothing to wait for.
+        overridden_since = (dt_util.utcnow() - MISMATCH_GRACE).isoformat()
         for entity_id in entity_ids:
             store.claims[entity_id] = {
                 "observed": {
@@ -194,6 +225,7 @@ class ClaimRegistry:
                 },
                 "latest": None,
                 "last_seen": now,
+                "mismatch_since": overridden_since,
             }
         self._notify([store])
 
@@ -257,6 +289,8 @@ class ClaimRegistry:
                 },
                 "last_seen": dt_util.utcnow().isoformat(),
             }
+            # A new write starts afresh: a mismatch now is the write landing.
+            self.note_mismatch(store, entity_id)
         self._notify([store])
         for entity_id in entity_ids:
             others = [sid for sid, other in self._stores.items() if sid != subentry_id and entity_id in other.claims]
@@ -333,9 +367,10 @@ class ClaimRegistry:
         - Back online (unavailable/unknown -> on/off), any light:
           noted for classify_state, tracked or not, since a claim may come
           after it. Forgotten once a write from FLARE is seen landing.
+        - Any change to a tracked light: its `mismatch_since` kept.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
         - Off (on/off -> off): releases the zone if it has gone dark."""
-        reconnects = hass.data.setdefault(RECONNECTS, {})
+        reconnects = self._reconnects
 
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
@@ -365,11 +400,10 @@ class ClaimRegistry:
 
             if dropped:
                 store.claims.pop(entity_id, None)
-            elif not went_off:
-                return
-
-            self._release_if_dark(store)
-
-            self._notify([store])
+            changed = self.note_mismatch(store, entity_id)
+            if dropped or went_off:
+                self._release_if_dark(store)
+            if dropped or went_off or changed:
+                self._notify([store])
 
         return hass.bus.async_listen("state_changed", _on_state_changed)

@@ -32,9 +32,9 @@ from .const import (
     EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .zone.override_protection import RECONNECT_SETTLE, classify_state
+from .zone.override_protection import MISMATCH_GRACE, classify_state
 from .zone.instance import ZoneInstance, zone_instances
-from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry, reconnected_at
+from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -57,12 +57,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         )
 
 
-def _classify_tracked(hass: HomeAssistant, entity_id: str, record: dict) -> tuple[str, Any, Any]:
+def _classify_tracked(
+    hass: HomeAssistant, registry: ClaimRegistry, entity_id: str, record: dict
+) -> tuple[str, Any, Any]:
     """One light's status, shared by every sensor here so they agree.
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record, reconnected_at=reconnected_at(hass, entity_id))
+    raw_status, matched_via = classify_state(state, record, reconnected_at=registry.reconnected_at(entity_id))
     # "untracked" shows as "controlled": either way, not excluded.
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
@@ -137,30 +139,33 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         when the zone takes lights it wasn't setting. A light becoming
         controlled again is churn, not news, so it's silent. Not in
         extra_state_attributes, which HA reads on every state write."""
+        # Also catches a mismatch nothing has noted yet, such as a restored
+        # claim's.
+        self._registry.note_mismatches(self)
         statuses = {}
         for entity_id, record in self.claims.items():
-            status, _via, live_context_id = _classify_tracked(self.hass, entity_id, record)
+            status, _via, live_context_id = _classify_tracked(self.hass, self._registry, entity_id, record)
             statuses[entity_id] = status
-            if status == "settling":
-                self._recheck_after_settling()
+            if status == "mismatched":
+                self._recheck_after_grace()
             if self._last_statuses is None:
                 continue
             previous = self._last_statuses.get(entity_id)
             if status == "overridden" and previous != "overridden":
                 self._fire_overridden(entity_id, record, previous, live_context_id)
             # Not back from overridden (churn), nor from unavailable or
-            # settling (every light, after a restart), which were already
+            # mismatched (every light, after a restart), which were already
             # the zone's.
-            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "settling"):
+            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "mismatched"):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
 
     @callback
-    def _recheck_after_settling(self) -> None:
+    def _recheck_after_grace(self) -> None:
         if self._recheck_later is None:
             self._recheck_later = async_call_later(
-                self.hass, RECONNECT_SETTLE.total_seconds() + 1, self._recheck
+                self.hass, MISMATCH_GRACE.total_seconds() + 1, self._recheck
             )
 
     @callback
@@ -302,7 +307,7 @@ class _ZoneCountSensor(SensorEntity):
         lights: list[str] = []
         records = self._records()
         for entity_id, record in records.items():
-            status, _via, _ctx = _classify_tracked(self.hass, entity_id, record)
+            status, _via, _ctx = _classify_tracked(self.hass, self._registry, entity_id, record)
             if status == self._status:
                 lights.append(entity_id)
         return sorted(lights), len(records)
