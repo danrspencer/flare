@@ -23,9 +23,10 @@
       },
       "areas": {
         "title": "Set up areas",
-        "description": "Each area you set up gets a zone, which keeps track of the lights FLARE is driving there. With it, you can have a room automation from the FLARE blueprint, which drives them, and a flare over that automation: a light for the whole room, for voice assistants and HomeKit.\n\nEach area starts on the schedule named like its floor. Areas that already have a zone start as Don't set up: setting one up again gives it another automation and flare.",
+        "description": "Each area you set up gets a zone, which keeps track of the lights FLARE is driving there. With it, you can have a room automation from the FLARE blueprint, which drives them, and a flare over that automation: a light for the whole room, for voice assistants and HomeKit.\n\nAreas that don't have a zone yet are already picked. Setting up an area again gives it another automation and flare.",
         "data": {
-          "set_up": "For each area, set up"
+          "set_up": "For each area, set up",
+          "areas": "Areas"
         }
       }
     },
@@ -40,7 +41,8 @@
     },
     "error": {
       "invalid_name": "Give the schedule a name with at least one letter or number",
-      "duplicate_name": "Two schedules can't share a name"
+      "duplicate_name": "Two schedules can't share a name",
+      "area_in_two_schedules": "Pick each area under one schedule only: {areas}"
     }
   },
   "config_subentries": {
@@ -246,11 +248,6 @@
         "zone": "A zone",
         "automation": "A zone and a room automation",
         "flare": "A zone, a room automation and a flare"
-      }
-    },
-    "area_schedule": {
-      "options": {
-        "skip": "Don't set up"
       }
     }
   }
