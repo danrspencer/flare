@@ -662,6 +662,7 @@ async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant
     await _record(registry, zone, "light.a", "ctx-second", later)
     assert claim_field(registry, zone, "light.a", "latest", "context_id") == "ctx-second"
     assert registry.record(zone, "light.a").get("mismatch_since"), "noted while the write is in flight"
+    tracker._refresh_statuses()
     hass.states.async_set("light.a", "on", later, context=Context(id="ctx-second"))
     await hass.async_block_till_done()
     with after_the_grace():
