@@ -15,12 +15,14 @@ CI — see `.github/workflows/release.yml`.
   Schedules, Zones and Flares whenever you add a schedule, zone or flare, which is a Home
   Assistant bug fixed in 2026.10, and the Zones view's Activity uses 2026.10's logbook. HACS
   won't offer this release to an older Home Assistant.
-- **Every blueprint automation needs a Zone.** The blueprint has a new required
+- **Each blueprint automation should pick a Zone.** The blueprint has a new
   **Zone** input: the FLARE zone the room belongs to. It decides which lights FLARE
-  remembers driving, and the room's regular update follows the zone's Tick, replacing
-  the guess the blueprint used to make from areas. Until one is picked, an automation
-  stops with "Missing input zone". **Update Interval** is gone; the zone's timing
-  replaces it. **Lights & Occupancy** is now required too.
+  remembers driving, and the room's regular update follows the zone's tick, replacing
+  the guess the blueprint used to make from areas. An automation without a Zone has no
+  override protection: FLARE sets its lights on every update, every minute on the minute.
+  Leaving it empty is a way to turn override protection off for a room whose bulbs report
+  something other than what they're showing. **Update Interval** is gone; the zone's timing
+  replaces it. **Lights & Occupancy** is now required.
 - **Schedule is now a device, and "bring your own sensor" is gone.** The blueprint's
   **Schedule** input (the `schedule` key, was `adaptive_sensor`) picks a FLARE schedule's
   device rather than its sensor, the same way **Zone** does. A sensor from elsewhere can

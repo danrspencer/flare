@@ -695,6 +695,15 @@ the zone's `device_id`), `extra`, `motion_on` / `motion_off`, and
 - **The zone is its own input**: Lights & Occupancy's target picker lists
   a device only if it has an entity passing the light/sensor filter
   (`getDevices`), which a zone doesn't.
+- **Zone is optional** (`default: null`, at the user's request): the
+  escape hatch for a room whose bulbs report something other than what
+  they show. `null` rather than `""`, so `zone_device_id: !input zone`
+  passes None, which `apply_lighting`/`turn_off` take as "track nothing".
+  Without one the zone tick is disabled and a `time_pattern` with the
+  same `tick` id takes over, chosen by trigger `enabled:` templates on the
+  `zone` trigger variable, so a zoned room never runs the fallback. The
+  `claims_clear` step is skipped, as it requires a zone. Area setup still
+  always creates one.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
 - `recovered` arms on "at least one of our lights is reachable". The

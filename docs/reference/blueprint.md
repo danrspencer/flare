@@ -30,7 +30,7 @@ behaves.
 | Input | Default | Description |
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
-| **Zone** | required | The FLARE zone the room belongs to. |
+| **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
@@ -132,7 +132,8 @@ on from something else, see
 
 A room updates straight away when the phase changes, a sensor detects someone, an Additional
 Trigger changes, or one of its lights comes back online. Between those, it updates on its zone's
-[tick](../zones/#when-zones-tick), which is every minute by default.
+[tick](../zones/#when-zones-tick), which is every minute by default. A room without a **Zone**
+updates every minute, on the minute.
 
 ### When lights turn on and off
 
@@ -166,6 +167,33 @@ changed.
 - **It isn't one of the room's lights.** A hidden light, or a configuration or diagnostic
   light, isn't included through an area, floor, device or label. Pick it directly in
   **Lights & Occupancy** to include it. See [Room](#room).
+
+## Turning override protection off
+
+Override protection works by reading back what each light reports, and checking it against what
+FLARE last sent. Bulbs don't always report what they're actually showing. Some send an old value
+for a moment after they reconnect, some report a colour in a different form from the one they
+were sent, and some settle on a colour outside the range they say they support. When a bulb
+reports something FLARE didn't send, it reads as overridden even though nobody touched it, and
+FLARE leaves it alone until every light in the room is off.
+
+If a room's lights keep getting stuck like this, you can leave **Zone** empty in the room's
+automation. FLARE then sets the room's lights on every update without checking what they report,
+which also means:
+
+- A light someone else changes, from a wall switch, an app or another automation, goes back to
+  the curve at the next update.
+- A light switched off by hand comes back on at the next update while the room is occupied.
+- If you set the room's [flare](../flares/) to a brightness or colour, for example by asking a
+  voice assistant for 100%, the room goes back to the curve at the next update. Turning the flare
+  on and off works as usual.
+
+A room without a zone updates every minute, on the minute, and doesn't appear in the
+[Zones view](../../dashboard/).
+
+If you turn override protection off because of your bulbs, please
+[open an issue](https://github.com/danrspencer/flare/issues) with their make and model, so FLARE
+can learn to read them properly.
 
 ## Updating the blueprint
 

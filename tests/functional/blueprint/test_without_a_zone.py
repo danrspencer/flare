@@ -1,5 +1,5 @@
 """A room with Zone left empty: no override protection, and a tick on the
-minute in place of the zone's. docs/reference/blueprint.md#without-a-zone"""
+minute in place of the zone's. docs/reference/blueprint.md#turning-override-protection-off"""
 
 from __future__ import annotations
 
