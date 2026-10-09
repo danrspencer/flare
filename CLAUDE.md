@@ -62,9 +62,11 @@ structure. The reason is lesson 1: a `condition:` cannot call a service,
 so anything a condition needs must be a template or a native condition.
 These parts also get real value from HA's trace UI.
 
-- Scene compatibility (`scene_active`/`scene_valid`) also exists as the
-  `compute_scene_coverage` service, but the blueprint keeps its own Jinja
-  copy because a `condition:` reads it. See "Parked: scene handling".
+- Scene coverage is the `compute_scene_coverage` service, called in
+  `default:` only when a scene is chosen (`scene_entity_id` is required).
+  Choosing the scene (`desired_scene`) and its scope (`scope_entities`)
+  stay in the blueprint: they're input and target resolution. Nothing
+  before `action:` reads coverage. See "Parked: scene handling".
 - Override protection is in Python, re-checked against live state on
   every call, never a one-shot trigger check (lesson 2).
 - **The blueprint knows phase names in three inputs** - `rgb_phases`,
@@ -793,10 +795,11 @@ Other blueprint facts:
 
 Not built; recorded so it isn't re-derived.
 
-1. **Straight port**: `apply_lighting` takes `scene_entity_id` /
-   `scope_entities`, calls `compute_scene_coverage`, then `scene.turn_on`
-   plus dispatch on the uncovered lights. Cost: the tick no longer stops
-   at `condition:` while a scene owns the room. Accepted if picked up.
+1. **Folding activation in**: `apply_lighting` takes `scene_entity_id` /
+   `scope_entities` and does the coverage, `scene.turn_on` and dispatch on
+   the uncovered lights itself. The blueprint already gets coverage from
+   the service, so this only moves `scene.turn_on`; it would need a way to
+   skip re-activation on a tick (`scene_recheck_due`).
 2. **Bigger**: feed a scene's stored values through the grouping
    pipeline, so a level could scale a scene. But a scene captures
    whichever colour mode was active (`xy`/`hs`/`color_temp`), may carry
