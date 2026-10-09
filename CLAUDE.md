@@ -55,12 +55,23 @@ for going cooler.
 
 ## The architectural split
 
-**In the blueprint (Jinja/YAML):** triggers, conditions, target
-resolution (`resolved_entities`), occupancy (`occupied` and the native
-`occupancy.*`/`motion.*` triggers and conditions) and the action
-structure. The reason is lesson 1: a `condition:` cannot call a service,
-so anything a condition needs must be a template or a native condition.
-These parts also get real value from HA's trace UI.
+**In the blueprint (Jinja/YAML):** triggers, conditions, occupancy
+(`occupied` and the native `occupancy.*`/`motion.*` triggers and
+conditions) and the action structure. The reason is lesson 1: a
+`condition:` cannot call a service, so anything a condition needs must be
+a template or a native condition. These parts also get real value from
+HA's trace UI.
+
+- **Which entities are the room's is HA's rule, through
+  `flare.resolve_target`** (`helpers/target.py`, as `light.turn_on
+  area_id:` and a flare's membership use it). Templates can't apply it:
+  they can see `is_hidden_entity` but not `entity_category`, and
+  `device_entities()` misses child devices. So the action's first step
+  calls the service, and everything built from the room's entities is an
+  action-level `variables:` step after it; the blueprint has no top-level
+  `condition:`. The `recovered` trigger keeps a plain Jinja expansion (it
+  only makes a room catch up early, so close enough is fine - user's
+  call).
 
 - Scene compatibility (`scene_active`/`scene_valid`) also exists as the
   `compute_scene_coverage` service, but the blueprint keeps its own Jinja
@@ -213,11 +224,14 @@ plural form ("Flares added: {count}").
 
 ### Services
 
-Eleven, all tested. Field contracts are in `docs/reference/services.md`
+Twelve, all tested. Field contracts are in `docs/reference/services.md`
 and `services.yaml`, not repeated here.
 
 - `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
   - pure planners.
+- `resolve_target` - a target's entities by HA's own rule. Registered in
+  `async_setup`, like the schedule services. `expand_group=False`, as a
+  flare's tracker uses.
 - `apply_lighting` - writes. Takes `brightness`/`color_temp_kelvin`/
   `rgb_color` as **plain values**, not a sensor, so any source works;
   don't move the sensor read into the service.
@@ -524,8 +538,10 @@ leaves the room wherever the bulbs restored to.
   `DeviceInfo.suggested_area`, which is deprecated.
 - **Membership is `async_track_target_selector_state_change_event`**,
   re-resolved on registry changes, `automation_reloaded` and HA start
-  (automations load after FLARE). It skips hidden and categorised lights,
-  unlike the blueprint's `area_entities`.
+  (automations load after FLARE). The same HA rule as
+  `flare.resolve_target`, so a flare's members are its room's lights;
+  `test_a_flare_and_its_room_leave_out_the_same_hidden_and_categorised_lights`
+  pins it.
 - **A flare must never be one of a room's lights**, or the room's tick
   would send it the curve and it would pass that on as an override.
   Three layers: the blueprint rejects `integration_entities('flare')`,
@@ -610,22 +626,24 @@ a custom integration's blueprints. It has no `source_url`, so HA's
 
 **Every `condition:` and every `choose:` branch has an `alias:`**, so the
 trace viewer has something readable to show (HA accepts `alias` on all of
-them). The top-level `condition:` uses the explicit form
-(`condition: or`, `conditions: [...]`), not the `or:` shorthand: the
-viewer's `resolveYamlPath()` recognises shorthand as a single-key map, so
-an `alias` beside it would break path resolution.
+them). Use the explicit form (`condition: or`, `conditions: [...]`), not
+the `or:` shorthand: the viewer's `resolveYamlPath()` recognises
+shorthand as a single-key map, so an `alias` beside it would break path
+resolution.
 
 **`room_target`** is one entity/device/area/floor/label target doing
 double duty: lights in it are controlled, and occupancy- and motion-class
 `binary_sensor`s in it drive occupancy through HA's native `occupancy`
 and `motion` triggers (each filters by its own device class, so there's
 a detected and a cleared trigger for each, sharing the `motion_on` /
-`motion_off` ids). It's resolved once into `target_named_entities` and
-`target_expanded_entities`, kept apart because a directly named light
-pulls in its device's siblings for scene scope while the expanded half
-already holds them. Floors resolve to areas, labels to their entities,
-devices and areas. The `recovered` trigger repeats the resolution, since
-a trigger template can't read `variables:`.
+`motion_off` ids). `flare.resolve_target` resolves it once, into
+`room_entities` (every domain); `resolved_entities` is its lights minus
+flares. Scene scope is those entities plus every entity on each light's
+device. Through an area, device, floor or label, a hidden or categorised
+light isn't the room's (a breaking change for hidden lights in an area);
+one named directly always is. The `recovered` trigger keeps its own
+Jinja expansion, since a trigger template can't read `variables:` or
+call a service.
 
 `room_occupancy_entities` exists only to know whether the room has a
 sensor at all: `occupancy.is_detected` over zero entities is vacuously
@@ -668,7 +686,7 @@ last light rightly releases every claim, so the only thing saying no is
 `allow_turn_on`, and a delay makes that stale. Pinned by
 `test_nothing_delays_the_action_before_it_decides`.
 
-**`condition:` doesn't check occupancy.** Occupancy's only jobs are
+**Nothing before the action decides on occupancy.** Occupancy's only jobs are
 turning a room on (with `allow_turn_on`) and off; gating ticks on it
 skipped lights that were already on.
 
@@ -709,8 +727,9 @@ unchanged.
   Wait time with flapping PIR sensors.
 - `entities_still_on` excludes idle lights, or self-heal fights the idle
   branch every tick.
-- `condition:`'s motion_on check ("is anything off?") also passes when
-  `idle_entities` is non-empty - **not** `room_is_idle`, which is false
+- The motion_on stop ("is anything off?", an `if`/`stop` after the
+  variables step, since it needs the room's lights) also lets the run
+  through when `idle_entities` is non-empty - **not** `room_is_idle`, which is false
   the instant motion fires. Otherwise motion into an idle room did nothing
   until the next tick. `test_motion_into_an_already_lit_idle_room_brightens_it`
   asserts the transition, which pins which trigger did it.
@@ -761,10 +780,15 @@ Other blueprint facts:
 
 ### Standing decisions - don't re-propose without new information
 
-- **Target resolution as a service or a shared Jinja macro.** Conditions
-  can't call services; a `custom_templates` macro needs a restart and a
-  manual install step (lessons 4-5); a global Jinja function means
-  monkey-patching HA. Deduplicating within `variables:` is what's done.
+- **Target resolution in Jinja, a shared macro or a template function.**
+  Jinja can't see `entity_category`, so it can't match HA's rule; a
+  `custom_templates` macro has the same blind spot and needs a restart
+  and a manual install step (lessons 4-5); a global Jinja function means
+  monkey-patching HA's private template environment. Hence
+  `flare.resolve_target` in the action. The cost, accepted: a motion_on
+  with nothing to do now starts a run (and, under `mode: restart`,
+  cancels one in progress) before it stops, where the old top-level
+  `condition:` dropped it first.
 - **Condition/action selector inputs replacing the template inputs.** A
   blueprint input's default can't reference another input, brightness
   returns a value no selector can produce, and scene handoff would lose
