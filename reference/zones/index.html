@@ -430,8 +430,9 @@ Assistant restarts.</p>
     
 
 <p>A zone says when it takes its lights, when it lets them go, and when something else changes one
-of them. Each event is filed under the zone: <code class="language-plaintext highlighter-rouge">entity_id</code> is one of the zone’s count sensors and
-<code class="language-plaintext highlighter-rouge">device_id</code> its device, so they appear in the zone’s Activity, on its device page. FLARE
+of them. Each event is filed under the zone: <code class="language-plaintext highlighter-rouge">entity_id</code> is one of the zone’s entities (its
+<strong>Controlled</strong> or <strong>Overridden</strong> count, or <strong>Clear</strong> for a release) and <code class="language-plaintext highlighter-rouge">device_id</code> its device,
+so they appear in the zone’s Activity, on its device page. FLARE
 adjusting lights it already has isn’t announced.</p>
 
 <p>When a zone starts controlling lights it wasn’t, such as when a room comes on, FLARE fires
@@ -453,7 +454,7 @@ report back one by one:</p>
 fires <code class="language-plaintext highlighter-rouge">flare_lights_released</code>:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">lights</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
-<span class="na">entity_id</span><span class="pi">:</span> <span class="s">sensor.kitchen_flare_controlled</span>
+<span class="na">entity_id</span><span class="pi">:</span> <span class="s">button.kitchen_flare_clear</span>
 <span class="na">zone</span><span class="pi">:</span> <span class="s">Kitchen</span>
 <span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>
 </code></pre></div></div>
