@@ -35,6 +35,7 @@ from ..zone.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOL
 from ..zone.override_protection import classify_state, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
+from ..flares.identity import without_flares
 from ..zone.claims import ClaimRegistry
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
@@ -217,16 +218,6 @@ def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
     return SceneLookup(exists=exists, covered_entities=covered_entities)
 
 
-def _without_flares(hass: HomeAssistant, entities: list[str]) -> list[str]:
-    """Drops flares' own lights: a flare in its room's area would otherwise
-    be sent the room's values, and pass them on to every light as an override."""
-    registry = er.async_get(hass)
-    return [
-        e for e in entities
-        if not ((entry := registry.async_get(e)) and entry.platform == DOMAIN and entry.domain == "light")
-    ]
-
-
 def _brightness(call: ServiceCall) -> int | None:
     """`brightness`, which is only optional if every light has a level."""
     brightness = call.data.get("brightness")
@@ -294,7 +285,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         rgb_color = call.data.get("rgb_color")
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
-            entities=_without_flares(hass, call.data["entities"]),
+            entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
@@ -342,7 +333,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         lookup = _build_lookup(hass, registry, zone)
         groups = build_groups(
-            entities=_without_flares(hass, call.data["entities"]),
+            entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=brightness,
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
@@ -478,7 +469,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             zone,
             [
                 e
-                for e in _without_flares(hass, call.data["entities"])
+                for e in without_flares(hass, call.data["entities"])
                 if e not in written_entities
                 and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
                 and lookup.claims(e) is None
@@ -495,7 +486,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         One operation so callers can't get the order or the encoding wrong.
         No override protection: it turns off everything it's given."""
-        entities = _without_flares(hass, call.data["entities"])
+        entities = without_flares(hass, call.data["entities"])
         if not entities:
             return
         transition = call.data["transition"]
