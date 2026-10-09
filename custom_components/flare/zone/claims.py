@@ -49,7 +49,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
+from ..const import DOMAIN, SUBENTRY_TYPE_ZONE, UNREACHABLE_STATES, is_reachable
 from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
@@ -410,7 +410,7 @@ class ClaimRegistry:
                 and new is not None
                 and new.state in ("on", "off")
                 and old is not None
-                and old.state in ("unavailable", "unknown")
+                and old.state in UNREACHABLE_STATES
             ):
                 reconnects[entity_id] = new.last_changed
             store = self._store_for(entity_id)
@@ -419,10 +419,10 @@ class ClaimRegistry:
             if new is not None and _context_matches(store.claims[entity_id].get("latest"), new.context.id):
                 # FLARE's write landed: the light has settled under FLARE.
                 reconnects.pop(entity_id, None)
-            old_available = old is not None and old.state not in ("unavailable", "unknown")
+            old_available = is_reachable(old)
             # Explicitly unavailable, not removed: every entity is removed across a
             # restart.
-            new_explicitly_unavailable = new is not None and new.state in ("unavailable", "unknown")
+            new_explicitly_unavailable = new is not None and not is_reachable(new)
             dropped = old_available and new_explicitly_unavailable
             # Not unknown -> off, which is a light reconnecting.
             went_off = old_available and new is not None and new.state == "off"

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Optional, TypedDict
 
 from homeassistant.util import dt as dt_util
 
+from ..const import is_reachable
 from .matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -149,7 +150,7 @@ def classify_state(
     then "overridden": most mismatches are FLARE's own write still landing
     or a bulb reporting late. A mismatched light is blocked like an
     overridden one, so a real change is never written over meanwhile."""
-    if state is None or state.state in ("unavailable", "unknown"):
+    if not is_reachable(state):
         return "unavailable", None
     status, matched_via = classify(
         state.state == "on",

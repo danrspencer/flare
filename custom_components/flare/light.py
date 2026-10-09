@@ -23,6 +23,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.target import TargetStateChangedData, async_track_target_selector_state_change_event
 
 from .const import CONF_AREA, CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FLARES
+from .flares.identity import is_flare_light
 from .flares.automation import automation_entity_id, automation_exists, lights_target, zone_device_id
 from .flares.bare import is_bare_turn_on
 from .flares.instance import FlareInstance, flare_instances
@@ -53,12 +54,6 @@ def _place_in_area(hass: HomeAssistant, entry: ConfigEntry, instance: FlareInsta
     device = devices.async_get_device_by_identifier((DOMAIN, instance.subentry_id), entry.entry_id)
     if device is not None:
         devices.async_update_device(device.id, area_id=area_id)
-
-
-def is_flare_light(hass: HomeAssistant, entity_id: str) -> bool:
-    """True for a flare's own light, which must never be one of a room's lights."""
-    entry = er.async_get(hass).async_get(entity_id)
-    return entry is not None and entry.platform == DOMAIN and entry.domain == "light"
 
 
 class FlareLight(LightGroup):

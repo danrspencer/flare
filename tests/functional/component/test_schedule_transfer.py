@@ -162,3 +162,14 @@ async def test_a_renamed_entity_is_still_the_schedules(entry, hass: HomeAssistan
     assert "2100" in await _export(hass, device)
     morning = dt_util.as_local(dt_util.utc_from_timestamp(hass.states.get("sensor.downstairs_flare").attributes["morning_start"]))
     assert (morning.hour, morning.minute) == (5, 30)
+
+
+async def test_a_value_that_cant_be_read_is_left_out_of_the_export(entry, hass: HomeAssistant):
+    """As the curve leaves it out (and uses its default)."""
+    hass.states.async_set("number.downstairs_morning_kelvin", "not a number")
+    hass.states.async_set("time.downstairs_day_time", "unavailable")
+
+    values = parse(await _export(hass, _device(hass, entry, "Downstairs")))
+
+    assert len(values) == 19
+    assert "morning_kelvin" not in values and "day_time" not in values

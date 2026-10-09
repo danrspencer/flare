@@ -3,7 +3,7 @@
     schedule/  -> const
     zone/  -> const
     flares/  -> const
-    services/  -> schedule/, zone/, const
+    services/  -> schedule/, zone/, flares/identity, const
 
 and none reach back up into the package root. Parsed from the source."""
 
@@ -15,13 +15,17 @@ ALLOWED = {
     "schedule": {"schedule", "const"},
     "zone": {"zone", "const"},
     "flares": {"flares", "const"},
-    "services": {"services", "schedule", "zone", "const"},
+    "services": {"services", "schedule", "zone", "flares.identity", "const"},
 }
 
 
 def _area(module_parts: tuple) -> str:
-    """A package name, or "__init__" for anything at the root."""
-    return module_parts[0] if module_parts else "__init__"
+    """A package name, or "__init__" for anything at the root. A module
+    allowed on its own (flares.identity) is named in full."""
+    if not module_parts:
+        return "__init__"
+    module = ".".join(module_parts[:2])
+    return module if any(module == allowed for areas in ALLOWED.values() for allowed in areas) else module_parts[0]
 
 
 def _imports(package: str):

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
+from ..const import is_reachable
 from ..zone.matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -50,7 +51,7 @@ class EntityLookup:
 
     def reachable(self, entity_id: str) -> bool:
         """False for anything HA knows it can't reach."""
-        return not self.is_state(entity_id, "unavailable") and not self.is_state(entity_id, "unknown")
+        return is_reachable(self.state(entity_id))
 
     def tags(self, entity_id: str) -> list:
         """Labels on the entity itself plus its device (if any)."""
