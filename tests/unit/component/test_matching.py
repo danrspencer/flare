@@ -4,7 +4,7 @@ docstring."""
 
 import pytest
 
-from custom_components.flare.zone.matching import Tolerance, reported_kelvin, shows
+from custom_components.flare.zone.matching import Tolerance, reported_kelvin, shown, shows
 
 KELVIN = {"brightness": 200, "color_temp_kelvin": 3000}
 RGB = {"brightness": 200, "rgb_color": [255, 120, 10]}
@@ -125,3 +125,18 @@ class TestRgb:
     def test_only_an_rgb_target_reads_rgb(self):
         """A Kelvin target never falls back to comparing rgb_color."""
         assert not shows({"brightness": 255, "rgb_color": [255, 255, 252]}, {"brightness": 255, "color_temp_kelvin": 6578})
+
+
+class TestShown:
+    """What a light shows, as a target - what adoption claims."""
+
+    def test_a_white_is_its_kelvin_even_in_xy(self):
+        assert shown(_ct(200, 3000)) == {"brightness": 200, "color_temp_kelvin": 3000}
+        assert shown(_xy(0.3124, 0.3226, rgb_color=[242, 248, 255])) == {"brightness": 255, "color_temp_kelvin": 6575}
+
+    def test_a_colour_is_its_rgb(self):
+        assert shown(_xy(0.17, 0.7, rgb_color=[0, 255, 0])) == {"brightness": 255, "rgb_color": [0, 255, 0]}
+
+    def test_it_shows_itself(self):
+        for attributes in (_ct(200, 3000), _xy(0.3124, 0.3226), _xy(0.17, 0.7, rgb_color=[0, 255, 0])):
+            assert shows(attributes, shown(attributes))
