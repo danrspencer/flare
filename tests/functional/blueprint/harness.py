@@ -20,17 +20,18 @@ async def setup_room_automation(
     *,
     room_target: dict,
     zone: str | None = None,
+    zoned: bool = True,
     schedule: str | None = None,
     entity_id: str = "automation.room",
     alias: str = "room",
     **extra_inputs,
 ):
     """A room automation from the blueprint, following `schedule` (else one
-    carrying SENSOR) in `zone` (else a fresh one)."""
+    carrying SENSOR) in `zone` (else a fresh one, or none if not `zoned`)."""
     input_ = {
         "schedule": schedule or add_schedule(hass),
         "room_target": room_target,
-        "zone": zone or add_zone(hass),
+        **({"zone": zone or add_zone(hass)} if zoned else {}),
         **extra_inputs,
     }
     assert await async_setup_component(
@@ -93,10 +94,10 @@ def add_schedule(hass: HomeAssistant, sensor: str | None = SENSOR, slug: str = "
     return device.id
 
 
-def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room") -> str:
-    """A zone as the blueprint sees it: a FLARE device with model "Zone" and a
-    tick event naming it at the top of every minute, as FLARE's scheduler
-    would. Returns its device_id."""
+def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room", ticks: bool = True) -> str:
+    """A zone as the blueprint sees it: a FLARE device with model "Zone" and
+    (if `ticks`) a tick event naming it at the top of every minute, as FLARE's
+    scheduler would. Returns its device_id."""
     entry = MockConfigEntry(domain="flare")
     entry.add_to_hass(hass)
     device = dr.async_get(hass).async_get_or_create(
@@ -109,7 +110,8 @@ def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room"
     def _tick(now) -> None:
         hass.bus.async_fire("flare_tick", {"device_id": device.id})
 
-    async_track_time_change(hass, _tick, second=0)
+    if ticks:
+        async_track_time_change(hass, _tick, second=0)
     return device.id
 
 
