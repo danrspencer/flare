@@ -263,6 +263,7 @@ behaves.</p>
       <li><a href="#why-didnt-my-light-change" id="markdown-toc-why-didnt-my-light-change">Why didn’t my light change?</a></li>
     </ul>
   </li>
+  <li><a href="#turning-override-protection-off" id="markdown-toc-turning-override-protection-off">Turning override protection off</a></li>
   <li><a href="#updating-the-blueprint" id="markdown-toc-updating-the-blueprint">Updating the blueprint</a></li>
 </ul>
 
@@ -292,8 +293,8 @@ behaves.</p>
     </tr>
     <tr>
       <td><strong>Zone</strong></td>
-      <td>required</td>
-      <td>The FLARE zone the room belongs to.</td>
+      <td>none</td>
+      <td>The FLARE zone the room belongs to. Leave it empty to <a href="#turning-override-protection-off">turn override protection off</a> for the room.</td>
     </tr>
     <tr>
       <td><strong>Lights &amp; Occupancy</strong></td>
@@ -568,7 +569,8 @@ on from something else, see
 
 <p>A room updates straight away when the phase changes, a sensor detects someone, an Additional
 Trigger changes, or one of its lights comes back online. Between those, it updates on its zone’s
-<a href="../zones/#when-zones-tick">tick</a>, which is every minute by default.</p>
+<a href="../zones/#when-zones-tick">tick</a>, which is every minute by default. A room without a <strong>Zone</strong>
+updates every minute, on the minute.</p>
 <h3 id="when-lights-turn-on-and-off">
   
   
@@ -616,6 +618,41 @@ temperature aren’t sent. You can change both limits under <strong>FLARE → Zo
 light, isn’t included through an area, floor, device or label. Pick it directly in
 <strong>Lights &amp; Occupancy</strong> to include it. See <a href="#room">Room</a>.</li>
 </ul>
+<h2 id="turning-override-protection-off">
+  
+  
+    <a href="#turning-override-protection-off" class="anchor-heading" aria-labelledby="turning-override-protection-off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Turning override protection off
+  
+  
+</h2>
+    
+
+<p>Override protection works by reading back what each light reports, and checking it against what
+FLARE last sent. Bulbs don’t always report what they’re actually showing. Some send an old value
+for a moment after they reconnect, some report a colour in a different form from the one they
+were sent, and some settle on a colour outside the range they say they support. When a bulb
+reports something FLARE didn’t send, it reads as overridden even though nobody touched it, and
+FLARE leaves it alone until every light in the room is off.</p>
+
+<p>If a room’s lights keep getting stuck like this, you can leave <strong>Zone</strong> empty in the room’s
+automation. FLARE then sets the room’s lights on every update without checking what they report,
+which also means:</p>
+
+<ul>
+  <li>A light someone else changes, from a wall switch, an app or another automation, goes back to
+the curve at the next update.</li>
+  <li>A light switched off by hand comes back on at the next update while the room is occupied.</li>
+  <li>If you set the room’s <a href="../flares/">flare</a> to a brightness or colour, for example by asking a
+voice assistant for 100%, the room goes back to the curve at the next update. Turning the flare
+on and off works as usual.</li>
+</ul>
+
+<p>A room without a zone updates every minute, on the minute, and doesn’t appear in the
+<a href="../../dashboard/">Zones view</a>.</p>
+
+<p>If you turn override protection off because of your bulbs, please
+<a href="https://github.com/danrspencer/flare/issues">open an issue</a> with their make and model, so FLARE
+can learn to read them properly.</p>
 <h2 id="updating-the-blueprint">
   
   
