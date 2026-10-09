@@ -479,9 +479,10 @@ not tied to an entry, and area setup touches all three.
 
 **Area setup** (`area_setup.py`), per area: a zone (reused if one has
 the area's name), an automation from the blueprint, and a flare named
-after the area. **For each area, set up** picks zone / + automation /
-+ flare for the whole run (per area it would crowd each area's schedule
-dropdown; Set up area can just be run again).
+after the area. **For each area, set up** is one dropdown for the whole
+run: zone / + automation / + flare (radios took three rows, and HA can't
+lay them side by side or disable one checkbox from another, so a dropdown
+it is). Set up area can just be run again.
 
 - **The automation is written to automations.yaml as HA's automation
   editor does** (`components/config/automation.py`): load, append, dump,
@@ -504,9 +505,11 @@ dropdown; Set up area can just be run again).
   only unticks the area; every area with lights is listed (user's call,
   after reading automations' targets proved unreliable). Re-running an
   area reuses its zone but adds another automation and flare.
-- **With several schedules each area is a field named after it**: the
-  dialog falls back to a field's name when it has no translation, the
-  only way to label fields made at runtime.
+- **With several schedules each schedule is an area picker named after
+  it** (the dialog falls back to a field's name when it has no
+  translation, the only way to label fields made at runtime). An area
+  starts under the schedule named like its floor; an area under two
+  schedules is refused before anything is created.
 - **The flare is part of the default**, the one exception to "nothing
   creates flares automatically" - the user is choosing to set the area up.
 
