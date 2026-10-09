@@ -320,6 +320,10 @@ light in the zone the call names. On the next update, FLARE compares the light w
 If the light still shows what FLARE set, FLARE carries on setting it. If it doesn’t, something
 else has changed it, and FLARE leaves it alone.</p>
 
+<p>A light that’s on, has no claim, and already shows what <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> would set isn’t
+changed, so FLARE claims it as it is. After a <strong>Clear</strong>, for example, the zone’s lights are
+claimed again on their next update even if none of them needs changing.</p>
+
 <p>The blueprint passes its <strong>Zone</strong> input with every call. If you call the services yourself,
 pass the zone as <code class="language-plaintext highlighter-rouge">zone_device_id</code>:</p>
 
