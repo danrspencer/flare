@@ -292,6 +292,10 @@ blueprint is built on them. <strong>Developer Tools → Actions</strong> shows t
       <td>Which of a room’s lights a scene sets</td>
     </tr>
     <tr>
+      <td><a href="#flareresolve_target"><code class="language-plaintext highlighter-rouge">flare.resolve_target</code></a></td>
+      <td>The entities a target reaches</td>
+    </tr>
+    <tr>
       <td><a href="#flareexport_schedule"><code class="language-plaintext highlighter-rouge">flare.export_schedule</code></a></td>
       <td>A schedule’s settings as YAML</td>
     </tr>
@@ -356,13 +360,18 @@ blueprint is built on them. <strong>Developer Tools → Actions</strong> shows t
       <li><a href="#response-data-7" id="markdown-toc-response-data-7">Response data</a></li>
     </ol>
   </li>
-  <li><a href="#flareexport_schedule" id="markdown-toc-flareexport_schedule"><code class="language-plaintext highlighter-rouge">flare.export_schedule</code></a>    <ol>
+  <li><a href="#flareresolve_target" id="markdown-toc-flareresolve_target"><code class="language-plaintext highlighter-rouge">flare.resolve_target</code></a>    <ol>
       <li><a href="#fields-8" id="markdown-toc-fields-8">Fields</a></li>
       <li><a href="#response-data-8" id="markdown-toc-response-data-8">Response data</a></li>
     </ol>
   </li>
-  <li><a href="#flareimport_schedule" id="markdown-toc-flareimport_schedule"><code class="language-plaintext highlighter-rouge">flare.import_schedule</code></a>    <ol>
+  <li><a href="#flareexport_schedule" id="markdown-toc-flareexport_schedule"><code class="language-plaintext highlighter-rouge">flare.export_schedule</code></a>    <ol>
       <li><a href="#fields-9" id="markdown-toc-fields-9">Fields</a></li>
+      <li><a href="#response-data-9" id="markdown-toc-response-data-9">Response data</a></li>
+    </ol>
+  </li>
+  <li><a href="#flareimport_schedule" id="markdown-toc-flareimport_schedule"><code class="language-plaintext highlighter-rouge">flare.import_schedule</code></a>    <ol>
+      <li><a href="#fields-10" id="markdown-toc-fields-10">Fields</a></li>
       <li><a href="#good-to-know-2" id="markdown-toc-good-to-know-2">Good to know</a></li>
     </ol>
   </li>
@@ -1126,6 +1135,57 @@ and set the other lights yourself.</p>
 <span class="na">covered_entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">]</span>
 <span class="na">uncovered_entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_2</span><span class="pi">]</span>
 </code></pre></div></div>
+<h2 id="flareresolve_target">
+  
+  
+    <a href="#flareresolve_target" class="anchor-heading" aria-labelledby="flareresolve_target"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>
+  
+  
+</h2>
+    
+
+<p>Use this action to get the list of entities that an action on a target would reach, such as
+the lights in an area.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.resolve_target</span>
+<span class="na">target</span><span class="pi">:</span>
+  <span class="na">area_id</span><span class="pi">:</span> <span class="s">kitchen</span>
+<span class="na">response_variable</span><span class="pi">:</span> <span class="s">kitchen</span>
+</code></pre></div></div>
+<h3 id="fields-8">
+  
+  
+    <a href="#fields-8" class="anchor-heading" aria-labelledby="fields-8"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
+  
+  
+</h3>
+    
+
+<p>It takes a target, as an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> does: any mix of <code class="language-plaintext highlighter-rouge">entity_id</code>,
+<code class="language-plaintext highlighter-rouge">device_id</code>, <code class="language-plaintext highlighter-rouge">area_id</code>, <code class="language-plaintext highlighter-rouge">floor_id</code> and <code class="language-plaintext highlighter-rouge">label_id</code>.</p>
+<h3 id="response-data-8">
+  
+  
+    <a href="#response-data-8" class="anchor-heading" aria-labelledby="response-data-8"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+  
+  
+</h3>
+    
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">entities</code>: Every entity the target reaches, of any domain, sorted. Home Assistant decides
+which entities those are, in the same way as when you call an action on that target:
+    <ul>
+      <li>An entity you name directly is always included.</li>
+      <li>An entity reached through a device, area, floor or label is left out if it’s hidden.</li>
+      <li>An entity reached through a device, area or floor is also left out if it’s a
+configuration or diagnostic entity. If a label is on the entity itself, it’s kept.</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">binary_sensor.kitchen_motion</span><span class="pi">,</span> <span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
+</code></pre></div></div>
 <h2 id="flareexport_schedule">
   
   
@@ -1143,10 +1203,10 @@ and set the other lights yourself.</p>
   <span class="na">schedule_device_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">device_id('sensor.home_flare')</span><span class="nv"> </span><span class="s">}}"</span>
 <span class="na">response_variable</span><span class="pi">:</span> <span class="s">exported</span>
 </code></pre></div></div>
-<h3 id="fields-8">
+<h3 id="fields-9">
   
   
-    <a href="#fields-8" class="anchor-heading" aria-labelledby="fields-8"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
+    <a href="#fields-9" class="anchor-heading" aria-labelledby="fields-9"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
   
   
 </h3>
@@ -1168,10 +1228,10 @@ and set the other lights yourself.</p>
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-8">
+<h3 id="response-data-9">
   
   
-    <a href="#response-data-8" class="anchor-heading" aria-labelledby="response-data-8"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-9" class="anchor-heading" aria-labelledby="response-data-9"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -1201,10 +1261,10 @@ and set the other lights yourself.</p>
 </code></pre></div></div>
 
 <p>This moves the start of Night to 23:00 and leaves every other setting as it is.</p>
-<h3 id="fields-9">
+<h3 id="fields-10">
   
   
-    <a href="#fields-9" class="anchor-heading" aria-labelledby="fields-9"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
+    <a href="#fields-10" class="anchor-heading" aria-labelledby="fields-10"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
   
   
 </h3>

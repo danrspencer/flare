@@ -3,8 +3,8 @@
   "outcome": "passed",
   "traces": [
     {
-      "last_step": "action/0/default/4/if/condition/0",
-      "run_id": "aebae10bd03a45da4e425fbd9e25b7eb",
+      "last_step": "action/3/default/4/if/condition/0",
+      "run_id": "6f6fc31b711effc4c5f5605ce4227bea",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,8 +34,8 @@
                 "last_reported": "2026-10-10T02:00:02+00:00",
                 "last_updated": "2026-10-10T02:00:02+00:00",
                 "context": {
-                  "id": "01M4G1R8SMTRX21PQ6VVCKTDMB",
-                  "parent_id": "01M4HRKS6GXDMJNW35HP9E0AEB",
+                  "id": "01M4G8871JZRJJFM70VB958BMC",
+                  "parent_id": "01M4HRKS6GFQPJ8GVVAHGX4WY1",
                   "user_id": null
                 }
               },
@@ -47,12 +47,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "16e7a8ceccf1cab56f1253018693333c"
+                    "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                   },
                   "origin": "LOCAL",
                   "time_fired": "2026-10-10T02:01:42+00:00",
                   "context": {
-                    "id": "01M4HRPTVGXCQNMWQR73CDVCD5",
+                    "id": "01M4HRPTVGD1591HZWM26E0W3T",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "binary_sensor.hall_doorway_occupancy"
                 ]
               },
-              "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+              "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -84,49 +84,77 @@
               "phase": "Evening",
               "prefer_rgb_color": true,
               "script_transition": 5,
-              "manual_run": false,
-              "target_ids": {
+              "manual_run": false
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-10T02:01:42+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M4G8872G95X5GT54SAW4D7HZ",
+                "parent_id": "01M4HRPTVGD1591HZWM26E0W3T",
+                "user_id": null
+              },
+              "room": {
                 "entities": [
+                  "binary_sensor.hall_doorway_occupancy",
+                  "binary_sensor.hall_occupancy",
+                  "light.hall_lamp",
                   "light.hall_pendant",
                   "light.hall_spot_1",
                   "light.hall_spot_2",
                   "light.hall_spot_3",
-                  "light.hall_spot_4",
-                  "light.hall_lamp",
-                  "binary_sensor.hall_occupancy",
-                  "binary_sensor.hall_doorway_occupancy"
-                ],
-                "devices": [],
-                "areas": []
+                  "light.hall_spot_4"
+                ]
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "flare",
+                "service": "resolve_target",
+                "service_data": {},
+                "target": {
+                  "entity_id": [
+                    "light.hall_pendant",
+                    "light.hall_spot_1",
+                    "light.hall_spot_2",
+                    "light.hall_spot_3",
+                    "light.hall_spot_4",
+                    "light.hall_lamp",
+                    "binary_sensor.hall_occupancy",
+                    "binary_sensor.hall_doorway_occupancy"
+                  ]
+                }
               },
-              "target_named_entities": [
+              "running_script": false
+            }
+          }
+        ],
+        "action/1": [
+          {
+            "path": "action/1",
+            "timestamp": "2026-10-10T02:01:42+00:00",
+            "changed_variables": {
+              "room_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
-              ],
-              "target_expanded_entities": [],
-              "all_target_entities": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "light.hall_spot_4"
               ],
               "resolved_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -154,45 +182,47 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "turn_off_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy"
               ],
               "occupancy_clear_for_wait": false,
               "room_is_idle": false,
               "occupied": true,
               "allow_turn_on": true,
               "entities_still_on": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "scope_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -208,52 +238,44 @@
             }
           }
         ],
-        "condition/0": [
+        "action/2": [
           {
-            "path": "condition/0",
-            "timestamp": "2026-10-10T02:01:42+00:00",
-            "result": {
-              "result": true
-            }
+            "path": "action/2",
+            "timestamp": "2026-10-10T02:01:42+00:00"
           }
         ],
-        "condition/0/conditions/0": [
+        "action/2/if": [
           {
-            "path": "condition/0/conditions/0",
-            "timestamp": "2026-10-10T02:01:42+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "condition/0/conditions/0/conditions/0": [
-          {
-            "path": "condition/0/conditions/0/conditions/0",
+            "path": "action/2/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0": [
+        "action/2/if/condition/0": [
           {
-            "path": "action/0",
+            "path": "action/2/if/condition/0",
+            "timestamp": "2026-10-10T02:01:42+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3": [
+          {
+            "path": "action/3",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "changed_variables": {
-              "context": {
-                "id": "01M4G1R8TPCKCS1JWRQ7CRD7A8",
-                "parent_id": "01M4HRPTVGXCQNMWQR73CDVCD5",
-                "user_id": null
-              },
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             },
             "result": {
@@ -261,45 +283,45 @@
             }
           }
         ],
-        "action/0/choose/0": [
+        "action/3/choose/0": [
           {
-            "path": "action/0/choose/0",
+            "path": "action/3/choose/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/0/conditions/0": [
+        "action/3/choose/0/conditions/0": [
           {
-            "path": "action/0/choose/0/conditions/0",
+            "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1": [
+        "action/3/choose/1": [
           {
-            "path": "action/0/choose/1",
+            "path": "action/3/choose/1",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1/conditions/0": [
+        "action/3/choose/1/conditions/0": [
           {
-            "path": "action/0/choose/1/conditions/0",
+            "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/1/conditions/1": [
+        "action/3/choose/1/conditions/1": [
           {
-            "path": "action/0/choose/1/conditions/1",
+            "path": "action/3/choose/1/conditions/1",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true,
@@ -307,9 +329,9 @@
             }
           }
         ],
-        "action/0/choose/1/conditions/2": [
+        "action/3/choose/1/conditions/2": [
           {
-            "path": "action/0/choose/1/conditions/2",
+            "path": "action/3/choose/1/conditions/2",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false,
@@ -317,24 +339,24 @@
             }
           }
         ],
-        "action/0/default/0": [
+        "action/3/default/0": [
           {
-            "path": "action/0/default/0",
+            "path": "action/3/default/0",
             "timestamp": "2026-10-10T02:01:42+00:00"
           }
         ],
-        "action/0/default/0/if": [
+        "action/3/default/0/if": [
           {
-            "path": "action/0/default/0/if",
+            "path": "action/3/default/0/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/0/if/condition/0": [
+        "action/3/default/0/if/condition/0": [
           {
-            "path": "action/0/default/0/if/condition/0",
+            "path": "action/3/default/0/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false,
@@ -342,42 +364,42 @@
             }
           }
         ],
-        "action/0/default/1": [
+        "action/3/default/1": [
           {
-            "path": "action/0/default/1",
+            "path": "action/3/default/1",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "changed_variables": {
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             }
           }
         ],
-        "action/0/default/2": [
+        "action/3/default/2": [
           {
-            "path": "action/0/default/2",
+            "path": "action/3/default/2",
             "timestamp": "2026-10-10T02:01:42+00:00"
           }
         ],
-        "action/0/default/2/if": [
+        "action/3/default/2/if": [
           {
-            "path": "action/0/default/2/if",
+            "path": "action/3/default/2/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/2/if/condition/0": [
+        "action/3/default/2/if/condition/0": [
           {
-            "path": "action/0/default/2/if/condition/0",
+            "path": "action/3/default/2/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false,
@@ -385,27 +407,27 @@
             }
           }
         ],
-        "action/0/default/3": [
+        "action/3/default/3": [
           {
-            "path": "action/0/default/3",
+            "path": "action/3/default/3",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/if": [
+        "action/3/default/3/if": [
           {
-            "path": "action/0/default/3/if",
+            "path": "action/3/default/3/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/if/condition/0": [
+        "action/3/default/3/if/condition/0": [
           {
-            "path": "action/0/default/3/if/condition/0",
+            "path": "action/3/default/3/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true,
@@ -413,24 +435,24 @@
             }
           }
         ],
-        "action/0/default/3/then/0": [
+        "action/3/default/3/then/0": [
           {
-            "path": "action/0/default/3/then/0",
+            "path": "action/3/default/3/then/0",
             "timestamp": "2026-10-10T02:01:42+00:00"
           }
         ],
-        "action/0/default/3/then/0/if": [
+        "action/3/default/3/then/0/if": [
           {
-            "path": "action/0/default/3/then/0/if",
+            "path": "action/3/default/3/then/0/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/3/then/0/if/condition/0": [
+        "action/3/default/3/then/0/if/condition/0": [
           {
-            "path": "action/0/default/3/then/0/if/condition/0",
+            "path": "action/3/default/3/then/0/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false,
@@ -438,27 +460,27 @@
             }
           }
         ],
-        "action/0/default/3/then/1": [
+        "action/3/default/3/then/1": [
           {
-            "path": "action/0/default/3/then/1",
+            "path": "action/3/default/3/then/1",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/then/1/if": [
+        "action/3/default/3/then/1/if": [
           {
-            "path": "action/0/default/3/then/1/if",
+            "path": "action/3/default/3/then/1/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/then/1/if/condition/0": [
+        "action/3/default/3/then/1/if/condition/0": [
           {
-            "path": "action/0/default/3/then/1/if/condition/0",
+            "path": "action/3/default/3/then/1/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": true,
@@ -466,9 +488,9 @@
             }
           }
         ],
-        "action/0/default/3/then/1/then/0": [
+        "action/3/default/3/then/1/then/0": [
           {
-            "path": "action/0/default/3/then/1/then/0",
+            "path": "action/3/default/3/then/1/then/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "params": {
@@ -476,12 +498,12 @@
                 "service": "apply_lighting",
                 "service_data": {
                   "entities": [
+                    "light.hall_lamp",
                     "light.hall_pendant",
                     "light.hall_spot_1",
                     "light.hall_spot_2",
                     "light.hall_spot_3",
-                    "light.hall_spot_4",
-                    "light.hall_lamp"
+                    "light.hall_spot_4"
                   ],
                   "brightness_levels": {},
                   "brightness": 180,
@@ -493,7 +515,7 @@
                   ],
                   "transition": 5,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                  "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                   "force": false
                 },
                 "target": {}
@@ -502,24 +524,24 @@
             }
           }
         ],
-        "action/0/default/4": [
+        "action/3/default/4": [
           {
-            "path": "action/0/default/4",
+            "path": "action/3/default/4",
             "timestamp": "2026-10-10T02:01:42+00:00"
           }
         ],
-        "action/0/default/4/if": [
+        "action/3/default/4/if": [
           {
-            "path": "action/0/default/4/if",
+            "path": "action/3/default/4/if",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/4/if/condition/0": [
+        "action/3/default/4/if/condition/0": [
           {
-            "path": "action/0/default/4/if/condition/0",
+            "path": "action/3/default/4/if/condition/0",
             "timestamp": "2026-10-10T02:01:42+00:00",
             "result": {
               "result": false,
@@ -546,19 +568,7 @@
           }
         },
         "variables": {
-          "room_target": {
-            "entity_id": [
-              "light.hall_pendant",
-              "light.hall_spot_1",
-              "light.hall_spot_2",
-              "light.hall_spot_3",
-              "light.hall_spot_4",
-              "light.hall_lamp",
-              "binary_sensor.hall_occupancy",
-              "binary_sensor.hall_doorway_occupancy"
-            ]
-          },
-          "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+          "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -571,58 +581,14 @@
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
           "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
-          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
-          "target_ids": "{% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {{ {'entities': ns.entities | unique | list, 'devices': ns.devices | unique | list, 'areas': ns.areas | unique | list} }}\n",
-          "target_named_entities": "{{ target_ids.entities }}",
-          "target_expanded_entities": "{% set ns = namespace(entities=[]) %} {% for d in target_ids.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in target_ids.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {{ ns.entities | unique | list }}\n",
-          "all_target_entities": "{{ (target_named_entities + target_expanded_entities) | unique | list }}\n",
-          "resolved_entities": "{{ all_target_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
-          "template_brightness_levels": "{{ {} }}",
-          "morning_exclude_lights": [],
-          "day_exclude_lights": [],
-          "evening_exclude_lights": [],
-          "night_exclude_lights": [],
-          "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-          "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
-          "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
-          "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
-          "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
-          "template_idle_brightness": "{{ {} }}",
-          "morning_idle_brightness": 0,
-          "day_idle_brightness": 0,
-          "evening_idle_brightness": 0,
-          "night_idle_brightness": 0,
-          "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-          "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-          "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
-          "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
-          "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-          "room_occupancy_entities": "{{ all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
-          "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
-          "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
-          "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-          "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
-          "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
-          "scope_entities": "{% set ns = namespace(entities=target_expanded_entities) %} {% for e in (target_named_entities | select('match', '^light\\\\.') | list) %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
-          "morning_scene": null,
-          "day_scene": null,
-          "evening_scene": null,
-          "night_scene": null,
-          "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
-          "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-          "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
-          "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}"
         },
         "triggers": [
           {
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b0ec4dcc9562fa080e7ad3539ec2b322"
+              "device_id": "ea64f32cf2feb1bdd1788ac9a92cbdc9"
             },
             "options": {
               "event_type": [
@@ -638,7 +604,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "16e7a8ceccf1cab56f1253018693333c"
+              "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
             }
           },
           {
@@ -728,6 +694,89 @@
         ],
         "actions": [
           {
+            "alias": "Find the room's lights and sensors",
+            "action": "flare.resolve_target",
+            "target": {
+              "entity_id": [
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "binary_sensor.hall_occupancy",
+                "binary_sensor.hall_doorway_occupancy"
+              ]
+            },
+            "response_variable": "room"
+          },
+          {
+            "alias": "Work out what the room needs",
+            "variables": {
+              "room_entities": "{{ room.entities }}",
+              "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "template_brightness_levels": "{{ {} }}",
+              "morning_exclude_lights": [],
+              "day_exclude_lights": [],
+              "evening_exclude_lights": [],
+              "night_exclude_lights": [],
+              "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
+              "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
+              "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
+              "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
+              "template_idle_brightness": "{{ {} }}",
+              "morning_idle_brightness": 0,
+              "day_idle_brightness": 0,
+              "evening_idle_brightness": 0,
+              "night_idle_brightness": 0,
+              "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
+              "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
+              "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
+              "room_occupancy_entities": "{{ room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
+              "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
+              "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
+              "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
+              "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
+              "morning_scene": null,
+              "day_scene": null,
+              "evening_scene": null,
+              "night_scene": null,
+              "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
+              "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
+              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+            }
+          },
+          {
+            "alias": "Stop a motion_on run with nothing to turn on",
+            "if": [
+              {
+                "condition": "trigger",
+                "alias": "Triggered by motion_on",
+                "id": "motion_on"
+              },
+              {
+                "condition": "template",
+                "alias": "Nothing in the room is off, and nothing has an idle level",
+                "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count == 0\n   and idle_entities | length == 0 }}"
+              }
+            ],
+            "then": [
+              {
+                "stop": "Nothing to turn on"
+              }
+            ]
+          },
+          {
             "choose": [
               {
                 "alias": "Motion timed out and the room is confirmed empty",
@@ -750,7 +799,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   },
                   {
@@ -772,7 +821,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                         }
                       }
                     ]
@@ -813,7 +862,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -869,7 +918,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -927,7 +976,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -949,40 +998,8 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "conditions": [
-          {
-            "alias": "Every trigger passes except an unproductive motion_on tick",
-            "or": [
-              {
-                "alias": "Not a motion_on run",
-                "not": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  }
-                ]
-              },
-              {
-                "alias": "A motion_on run with something to actually turn on",
-                "and": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  },
-                  {
-                    "condition": "template",
-                    "alias": "Something in the room is off, or has an idle level",
-                    "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0\n   or idle_entities | length > 0 }}"
                   }
                 ]
               }
@@ -998,7 +1015,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+            "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1011,20 +1028,20 @@
                 "binary_sensor.hall_doorway_occupancy"
               ]
             },
-            "zone": "16e7a8ceccf1cab56f1253018693333c",
+            "zone": "ae312c68ebc44781d05f1dd3c82aa726",
             "no_motion_wait": 300
           }
         }
       },
       "context": {
-        "id": "01M4G1R8TPCKCS1JWRQ7CRD7A8",
-        "parent_id": "01M4HRPTVGXCQNMWQR73CDVCD5",
+        "id": "01M4G8872G95X5GT54SAW4D7HZ",
+        "parent_id": "01M4HRPTVGD1591HZWM26E0W3T",
         "user_id": null
       }
     },
     {
-      "last_step": "action/0/default/4/if/condition/0",
-      "run_id": "2c513dd6776847cc613b374a4eab2e2c",
+      "last_step": "action/3/default/4/if/condition/0",
+      "run_id": "50071bf7c28a0914fdd8cdecf2285085",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1054,8 +1071,8 @@
                 "last_reported": "2026-10-10T02:01:42+00:00",
                 "last_updated": "2026-10-10T02:01:42+00:00",
                 "context": {
-                  "id": "01M4G1R8TPCKCS1JWRQ7CRD7A8",
-                  "parent_id": "01M4HRPTVGXCQNMWQR73CDVCD5",
+                  "id": "01M4G8872G95X5GT54SAW4D7HZ",
+                  "parent_id": "01M4HRPTVGD1591HZWM26E0W3T",
                   "user_id": null
                 }
               },
@@ -1076,7 +1093,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6GXPNC2Y51XGGCY9NG",
+                    "id": "01M4HRKS6GCPHB2J2P1AHE8DX6",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1091,7 +1108,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6G79E1XEQ7T4X9JGZR",
+                    "id": "01M4HRKS6G1NWR8DKDNYJN4P7X",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1113,7 +1130,7 @@
                   "binary_sensor.hall_doorway_occupancy"
                 ]
               },
-              "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+              "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -1126,49 +1143,77 @@
               "phase": "Evening",
               "prefer_rgb_color": true,
               "script_transition": 1,
-              "manual_run": false,
-              "target_ids": {
+              "manual_run": false
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M4G887345H4QN2KKH2GT305R",
+                "parent_id": "01M4HRKS6G1NWR8DKDNYJN4P7X",
+                "user_id": null
+              },
+              "room": {
                 "entities": [
+                  "binary_sensor.hall_doorway_occupancy",
+                  "binary_sensor.hall_occupancy",
+                  "light.hall_lamp",
                   "light.hall_pendant",
                   "light.hall_spot_1",
                   "light.hall_spot_2",
                   "light.hall_spot_3",
-                  "light.hall_spot_4",
-                  "light.hall_lamp",
-                  "binary_sensor.hall_occupancy",
-                  "binary_sensor.hall_doorway_occupancy"
-                ],
-                "devices": [],
-                "areas": []
+                  "light.hall_spot_4"
+                ]
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "flare",
+                "service": "resolve_target",
+                "service_data": {},
+                "target": {
+                  "entity_id": [
+                    "light.hall_pendant",
+                    "light.hall_spot_1",
+                    "light.hall_spot_2",
+                    "light.hall_spot_3",
+                    "light.hall_spot_4",
+                    "light.hall_lamp",
+                    "binary_sensor.hall_occupancy",
+                    "binary_sensor.hall_doorway_occupancy"
+                  ]
+                }
               },
-              "target_named_entities": [
+              "running_script": false
+            }
+          }
+        ],
+        "action/1": [
+          {
+            "path": "action/1",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "changed_variables": {
+              "room_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
-              ],
-              "target_expanded_entities": [],
-              "all_target_entities": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "light.hall_spot_4"
               ],
               "resolved_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -1196,45 +1241,47 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "turn_off_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy"
               ],
               "occupancy_clear_for_wait": false,
               "room_is_idle": false,
               "occupied": true,
               "allow_turn_on": true,
               "entities_still_on": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "scope_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -1250,52 +1297,44 @@
             }
           }
         ],
-        "condition/0": [
+        "action/2": [
           {
-            "path": "condition/0",
-            "timestamp": "2026-10-10T02:05:03+00:00",
-            "result": {
-              "result": true
-            }
+            "path": "action/2",
+            "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "condition/0/conditions/0": [
+        "action/2/if": [
           {
-            "path": "condition/0/conditions/0",
-            "timestamp": "2026-10-10T02:05:03+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "condition/0/conditions/0/conditions/0": [
-          {
-            "path": "condition/0/conditions/0/conditions/0",
+            "path": "action/2/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0": [
+        "action/2/if/condition/0": [
           {
-            "path": "action/0",
+            "path": "action/2/if/condition/0",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3": [
+          {
+            "path": "action/3",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "changed_variables": {
-              "context": {
-                "id": "01M4G1R8V86E33Q6GW57N7DEG0",
-                "parent_id": "01M4HRKS6G79E1XEQ7T4X9JGZR",
-                "user_id": null
-              },
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             },
             "result": {
@@ -1303,27 +1342,27 @@
             }
           }
         ],
-        "action/0/choose/0": [
+        "action/3/choose/0": [
           {
-            "path": "action/0/choose/0",
+            "path": "action/3/choose/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/0/conditions/0": [
+        "action/3/choose/0/conditions/0": [
           {
-            "path": "action/0/choose/0/conditions/0",
+            "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/0/conditions/1": [
+        "action/3/choose/0/conditions/1": [
           {
-            "path": "action/0/choose/0/conditions/1",
+            "path": "action/3/choose/0/conditions/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -1331,42 +1370,42 @@
             }
           }
         ],
-        "action/0/choose/1": [
+        "action/3/choose/1": [
           {
-            "path": "action/0/choose/1",
+            "path": "action/3/choose/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1/conditions/0": [
+        "action/3/choose/1/conditions/0": [
           {
-            "path": "action/0/choose/1/conditions/0",
+            "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/0": [
+        "action/3/default/0": [
           {
-            "path": "action/0/default/0",
+            "path": "action/3/default/0",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/0/if": [
+        "action/3/default/0/if": [
           {
-            "path": "action/0/default/0/if",
+            "path": "action/3/default/0/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/0/if/condition/0": [
+        "action/3/default/0/if/condition/0": [
           {
-            "path": "action/0/default/0/if/condition/0",
+            "path": "action/3/default/0/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -1374,42 +1413,42 @@
             }
           }
         ],
-        "action/0/default/1": [
+        "action/3/default/1": [
           {
-            "path": "action/0/default/1",
+            "path": "action/3/default/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "changed_variables": {
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             }
           }
         ],
-        "action/0/default/2": [
+        "action/3/default/2": [
           {
-            "path": "action/0/default/2",
+            "path": "action/3/default/2",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/2/if": [
+        "action/3/default/2/if": [
           {
-            "path": "action/0/default/2/if",
+            "path": "action/3/default/2/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/2/if/condition/0": [
+        "action/3/default/2/if/condition/0": [
           {
-            "path": "action/0/default/2/if/condition/0",
+            "path": "action/3/default/2/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -1417,27 +1456,27 @@
             }
           }
         ],
-        "action/0/default/3": [
+        "action/3/default/3": [
           {
-            "path": "action/0/default/3",
+            "path": "action/3/default/3",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/if": [
+        "action/3/default/3/if": [
           {
-            "path": "action/0/default/3/if",
+            "path": "action/3/default/3/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/if/condition/0": [
+        "action/3/default/3/if/condition/0": [
           {
-            "path": "action/0/default/3/if/condition/0",
+            "path": "action/3/default/3/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true,
@@ -1445,24 +1484,24 @@
             }
           }
         ],
-        "action/0/default/3/then/0": [
+        "action/3/default/3/then/0": [
           {
-            "path": "action/0/default/3/then/0",
+            "path": "action/3/default/3/then/0",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/3/then/0/if": [
+        "action/3/default/3/then/0/if": [
           {
-            "path": "action/0/default/3/then/0/if",
+            "path": "action/3/default/3/then/0/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/3/then/0/if/condition/0": [
+        "action/3/default/3/then/0/if/condition/0": [
           {
-            "path": "action/0/default/3/then/0/if/condition/0",
+            "path": "action/3/default/3/then/0/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -1470,27 +1509,27 @@
             }
           }
         ],
-        "action/0/default/3/then/1": [
+        "action/3/default/3/then/1": [
           {
-            "path": "action/0/default/3/then/1",
+            "path": "action/3/default/3/then/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/then/1/if": [
+        "action/3/default/3/then/1/if": [
           {
-            "path": "action/0/default/3/then/1/if",
+            "path": "action/3/default/3/then/1/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/then/1/if/condition/0": [
+        "action/3/default/3/then/1/if/condition/0": [
           {
-            "path": "action/0/default/3/then/1/if/condition/0",
+            "path": "action/3/default/3/then/1/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true,
@@ -1498,9 +1537,9 @@
             }
           }
         ],
-        "action/0/default/3/then/1/then/0": [
+        "action/3/default/3/then/1/then/0": [
           {
-            "path": "action/0/default/3/then/1/then/0",
+            "path": "action/3/default/3/then/1/then/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "params": {
@@ -1508,12 +1547,12 @@
                 "service": "apply_lighting",
                 "service_data": {
                   "entities": [
+                    "light.hall_lamp",
                     "light.hall_pendant",
                     "light.hall_spot_1",
                     "light.hall_spot_2",
                     "light.hall_spot_3",
-                    "light.hall_spot_4",
-                    "light.hall_lamp"
+                    "light.hall_spot_4"
                   ],
                   "brightness_levels": {},
                   "brightness": 180,
@@ -1525,7 +1564,7 @@
                   ],
                   "transition": 1,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                  "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                   "force": false
                 },
                 "target": {}
@@ -1534,24 +1573,24 @@
             }
           }
         ],
-        "action/0/default/4": [
+        "action/3/default/4": [
           {
-            "path": "action/0/default/4",
+            "path": "action/3/default/4",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/4/if": [
+        "action/3/default/4/if": [
           {
-            "path": "action/0/default/4/if",
+            "path": "action/3/default/4/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/4/if/condition/0": [
+        "action/3/default/4/if/condition/0": [
           {
-            "path": "action/0/default/4/if/condition/0",
+            "path": "action/3/default/4/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -1578,19 +1617,7 @@
           }
         },
         "variables": {
-          "room_target": {
-            "entity_id": [
-              "light.hall_pendant",
-              "light.hall_spot_1",
-              "light.hall_spot_2",
-              "light.hall_spot_3",
-              "light.hall_spot_4",
-              "light.hall_lamp",
-              "binary_sensor.hall_occupancy",
-              "binary_sensor.hall_doorway_occupancy"
-            ]
-          },
-          "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+          "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -1603,58 +1630,14 @@
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
           "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
-          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
-          "target_ids": "{% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {{ {'entities': ns.entities | unique | list, 'devices': ns.devices | unique | list, 'areas': ns.areas | unique | list} }}\n",
-          "target_named_entities": "{{ target_ids.entities }}",
-          "target_expanded_entities": "{% set ns = namespace(entities=[]) %} {% for d in target_ids.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in target_ids.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {{ ns.entities | unique | list }}\n",
-          "all_target_entities": "{{ (target_named_entities + target_expanded_entities) | unique | list }}\n",
-          "resolved_entities": "{{ all_target_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
-          "template_brightness_levels": "{{ {} }}",
-          "morning_exclude_lights": [],
-          "day_exclude_lights": [],
-          "evening_exclude_lights": [],
-          "night_exclude_lights": [],
-          "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-          "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
-          "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
-          "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
-          "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
-          "template_idle_brightness": "{{ {} }}",
-          "morning_idle_brightness": 0,
-          "day_idle_brightness": 0,
-          "evening_idle_brightness": 0,
-          "night_idle_brightness": 0,
-          "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-          "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-          "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
-          "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
-          "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-          "room_occupancy_entities": "{{ all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
-          "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
-          "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
-          "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-          "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
-          "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
-          "scope_entities": "{% set ns = namespace(entities=target_expanded_entities) %} {% for e in (target_named_entities | select('match', '^light\\\\.') | list) %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
-          "morning_scene": null,
-          "day_scene": null,
-          "evening_scene": null,
-          "night_scene": null,
-          "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
-          "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-          "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
-          "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}"
         },
         "triggers": [
           {
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b0ec4dcc9562fa080e7ad3539ec2b322"
+              "device_id": "ea64f32cf2feb1bdd1788ac9a92cbdc9"
             },
             "options": {
               "event_type": [
@@ -1670,7 +1653,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "16e7a8ceccf1cab56f1253018693333c"
+              "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
             }
           },
           {
@@ -1760,6 +1743,89 @@
         ],
         "actions": [
           {
+            "alias": "Find the room's lights and sensors",
+            "action": "flare.resolve_target",
+            "target": {
+              "entity_id": [
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "binary_sensor.hall_occupancy",
+                "binary_sensor.hall_doorway_occupancy"
+              ]
+            },
+            "response_variable": "room"
+          },
+          {
+            "alias": "Work out what the room needs",
+            "variables": {
+              "room_entities": "{{ room.entities }}",
+              "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "template_brightness_levels": "{{ {} }}",
+              "morning_exclude_lights": [],
+              "day_exclude_lights": [],
+              "evening_exclude_lights": [],
+              "night_exclude_lights": [],
+              "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
+              "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
+              "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
+              "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
+              "template_idle_brightness": "{{ {} }}",
+              "morning_idle_brightness": 0,
+              "day_idle_brightness": 0,
+              "evening_idle_brightness": 0,
+              "night_idle_brightness": 0,
+              "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
+              "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
+              "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
+              "room_occupancy_entities": "{{ room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
+              "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
+              "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
+              "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
+              "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
+              "morning_scene": null,
+              "day_scene": null,
+              "evening_scene": null,
+              "night_scene": null,
+              "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
+              "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
+              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+            }
+          },
+          {
+            "alias": "Stop a motion_on run with nothing to turn on",
+            "if": [
+              {
+                "condition": "trigger",
+                "alias": "Triggered by motion_on",
+                "id": "motion_on"
+              },
+              {
+                "condition": "template",
+                "alias": "Nothing in the room is off, and nothing has an idle level",
+                "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count == 0\n   and idle_entities | length == 0 }}"
+              }
+            ],
+            "then": [
+              {
+                "stop": "Nothing to turn on"
+              }
+            ]
+          },
+          {
             "choose": [
               {
                 "alias": "Motion timed out and the room is confirmed empty",
@@ -1782,7 +1848,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   },
                   {
@@ -1804,7 +1870,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                         }
                       }
                     ]
@@ -1845,7 +1911,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -1901,7 +1967,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -1959,7 +2025,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -1981,40 +2047,8 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "conditions": [
-          {
-            "alias": "Every trigger passes except an unproductive motion_on tick",
-            "or": [
-              {
-                "alias": "Not a motion_on run",
-                "not": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  }
-                ]
-              },
-              {
-                "alias": "A motion_on run with something to actually turn on",
-                "and": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  },
-                  {
-                    "condition": "template",
-                    "alias": "Something in the room is off, or has an idle level",
-                    "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0\n   or idle_entities | length > 0 }}"
                   }
                 ]
               }
@@ -2030,7 +2064,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+            "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -2043,20 +2077,20 @@
                 "binary_sensor.hall_doorway_occupancy"
               ]
             },
-            "zone": "16e7a8ceccf1cab56f1253018693333c",
+            "zone": "ae312c68ebc44781d05f1dd3c82aa726",
             "no_motion_wait": 300
           }
         }
       },
       "context": {
-        "id": "01M4G1R8V86E33Q6GW57N7DEG0",
-        "parent_id": "01M4HRKS6G79E1XEQ7T4X9JGZR",
+        "id": "01M4G887345H4QN2KKH2GT305R",
+        "parent_id": "01M4HRKS6G1NWR8DKDNYJN4P7X",
         "user_id": null
       }
     },
     {
-      "last_step": "action/0/default/4/if/condition/0",
-      "run_id": "28bb9bfec112f0850f1b7a85bb85fd2c",
+      "last_step": "action/3/default/4/if/condition/0",
+      "run_id": "6679474d673010ae50b34b87c80f39ab",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -2086,8 +2120,8 @@
                 "last_reported": "2026-10-10T02:05:03+00:00",
                 "last_updated": "2026-10-10T02:05:03+00:00",
                 "context": {
-                  "id": "01M4G1R8V86E33Q6GW57N7DEG0",
-                  "parent_id": "01M4HRKS6G79E1XEQ7T4X9JGZR",
+                  "id": "01M4G887345H4QN2KKH2GT305R",
+                  "parent_id": "01M4HRKS6G1NWR8DKDNYJN4P7X",
                   "user_id": null
                 }
               },
@@ -2099,12 +2133,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "16e7a8ceccf1cab56f1253018693333c"
+                    "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                   },
                   "origin": "LOCAL",
                   "time_fired": "2026-10-10T02:05:03+00:00",
                   "context": {
-                    "id": "01M4HRWZ4RY6NBJBPYCNXYZBW2",
+                    "id": "01M4HRWZ4R4835P831MPKB900Z",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2123,7 +2157,7 @@
                   "binary_sensor.hall_doorway_occupancy"
                 ]
               },
-              "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+              "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -2136,49 +2170,77 @@
               "phase": "Evening",
               "prefer_rgb_color": true,
               "script_transition": 5,
-              "manual_run": false,
-              "target_ids": {
+              "manual_run": false
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M4G8873E91BRPT518S4K0ZEM",
+                "parent_id": "01M4HRWZ4R4835P831MPKB900Z",
+                "user_id": null
+              },
+              "room": {
                 "entities": [
+                  "binary_sensor.hall_doorway_occupancy",
+                  "binary_sensor.hall_occupancy",
+                  "light.hall_lamp",
                   "light.hall_pendant",
                   "light.hall_spot_1",
                   "light.hall_spot_2",
                   "light.hall_spot_3",
-                  "light.hall_spot_4",
-                  "light.hall_lamp",
-                  "binary_sensor.hall_occupancy",
-                  "binary_sensor.hall_doorway_occupancy"
-                ],
-                "devices": [],
-                "areas": []
+                  "light.hall_spot_4"
+                ]
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "flare",
+                "service": "resolve_target",
+                "service_data": {},
+                "target": {
+                  "entity_id": [
+                    "light.hall_pendant",
+                    "light.hall_spot_1",
+                    "light.hall_spot_2",
+                    "light.hall_spot_3",
+                    "light.hall_spot_4",
+                    "light.hall_lamp",
+                    "binary_sensor.hall_occupancy",
+                    "binary_sensor.hall_doorway_occupancy"
+                  ]
+                }
               },
-              "target_named_entities": [
+              "running_script": false
+            }
+          }
+        ],
+        "action/1": [
+          {
+            "path": "action/1",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "changed_variables": {
+              "room_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
-              ],
-              "target_expanded_entities": [],
-              "all_target_entities": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "light.hall_spot_4"
               ],
               "resolved_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -2206,45 +2268,47 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "turn_off_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy"
               ],
               "occupancy_clear_for_wait": false,
               "room_is_idle": false,
               "occupied": true,
               "allow_turn_on": true,
               "entities_still_on": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "scope_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -2260,52 +2324,44 @@
             }
           }
         ],
-        "condition/0": [
+        "action/2": [
           {
-            "path": "condition/0",
-            "timestamp": "2026-10-10T02:05:03+00:00",
-            "result": {
-              "result": true
-            }
+            "path": "action/2",
+            "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "condition/0/conditions/0": [
+        "action/2/if": [
           {
-            "path": "condition/0/conditions/0",
-            "timestamp": "2026-10-10T02:05:03+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "condition/0/conditions/0/conditions/0": [
-          {
-            "path": "condition/0/conditions/0/conditions/0",
+            "path": "action/2/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0": [
+        "action/2/if/condition/0": [
           {
-            "path": "action/0",
+            "path": "action/2/if/condition/0",
+            "timestamp": "2026-10-10T02:05:03+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3": [
+          {
+            "path": "action/3",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "changed_variables": {
-              "context": {
-                "id": "01M4G1R8VKFQJ8BYTD1QV9M5DP",
-                "parent_id": "01M4HRWZ4RY6NBJBPYCNXYZBW2",
-                "user_id": null
-              },
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             },
             "result": {
@@ -2313,45 +2369,45 @@
             }
           }
         ],
-        "action/0/choose/0": [
+        "action/3/choose/0": [
           {
-            "path": "action/0/choose/0",
+            "path": "action/3/choose/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/0/conditions/0": [
+        "action/3/choose/0/conditions/0": [
           {
-            "path": "action/0/choose/0/conditions/0",
+            "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1": [
+        "action/3/choose/1": [
           {
-            "path": "action/0/choose/1",
+            "path": "action/3/choose/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1/conditions/0": [
+        "action/3/choose/1/conditions/0": [
           {
-            "path": "action/0/choose/1/conditions/0",
+            "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/1/conditions/1": [
+        "action/3/choose/1/conditions/1": [
           {
-            "path": "action/0/choose/1/conditions/1",
+            "path": "action/3/choose/1/conditions/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true,
@@ -2359,9 +2415,9 @@
             }
           }
         ],
-        "action/0/choose/1/conditions/2": [
+        "action/3/choose/1/conditions/2": [
           {
-            "path": "action/0/choose/1/conditions/2",
+            "path": "action/3/choose/1/conditions/2",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -2369,24 +2425,24 @@
             }
           }
         ],
-        "action/0/default/0": [
+        "action/3/default/0": [
           {
-            "path": "action/0/default/0",
+            "path": "action/3/default/0",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/0/if": [
+        "action/3/default/0/if": [
           {
-            "path": "action/0/default/0/if",
+            "path": "action/3/default/0/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/0/if/condition/0": [
+        "action/3/default/0/if/condition/0": [
           {
-            "path": "action/0/default/0/if/condition/0",
+            "path": "action/3/default/0/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -2394,42 +2450,42 @@
             }
           }
         ],
-        "action/0/default/1": [
+        "action/3/default/1": [
           {
-            "path": "action/0/default/1",
+            "path": "action/3/default/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "changed_variables": {
               "scene_active": false,
               "handed_off_entities": [],
               "target_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ]
             }
           }
         ],
-        "action/0/default/2": [
+        "action/3/default/2": [
           {
-            "path": "action/0/default/2",
+            "path": "action/3/default/2",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/2/if": [
+        "action/3/default/2/if": [
           {
-            "path": "action/0/default/2/if",
+            "path": "action/3/default/2/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/2/if/condition/0": [
+        "action/3/default/2/if/condition/0": [
           {
-            "path": "action/0/default/2/if/condition/0",
+            "path": "action/3/default/2/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -2437,27 +2493,27 @@
             }
           }
         ],
-        "action/0/default/3": [
+        "action/3/default/3": [
           {
-            "path": "action/0/default/3",
+            "path": "action/3/default/3",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/if": [
+        "action/3/default/3/if": [
           {
-            "path": "action/0/default/3/if",
+            "path": "action/3/default/3/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/if/condition/0": [
+        "action/3/default/3/if/condition/0": [
           {
-            "path": "action/0/default/3/if/condition/0",
+            "path": "action/3/default/3/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true,
@@ -2465,24 +2521,24 @@
             }
           }
         ],
-        "action/0/default/3/then/0": [
+        "action/3/default/3/then/0": [
           {
-            "path": "action/0/default/3/then/0",
+            "path": "action/3/default/3/then/0",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/3/then/0/if": [
+        "action/3/default/3/then/0/if": [
           {
-            "path": "action/0/default/3/then/0/if",
+            "path": "action/3/default/3/then/0/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/3/then/0/if/condition/0": [
+        "action/3/default/3/then/0/if/condition/0": [
           {
-            "path": "action/0/default/3/then/0/if/condition/0",
+            "path": "action/3/default/3/then/0/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -2490,27 +2546,27 @@
             }
           }
         ],
-        "action/0/default/3/then/1": [
+        "action/3/default/3/then/1": [
           {
-            "path": "action/0/default/3/then/1",
+            "path": "action/3/default/3/then/1",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "choice": "then"
             }
           }
         ],
-        "action/0/default/3/then/1/if": [
+        "action/3/default/3/then/1/if": [
           {
-            "path": "action/0/default/3/then/1/if",
+            "path": "action/3/default/3/then/1/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/default/3/then/1/if/condition/0": [
+        "action/3/default/3/then/1/if/condition/0": [
           {
-            "path": "action/0/default/3/then/1/if/condition/0",
+            "path": "action/3/default/3/then/1/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": true,
@@ -2518,9 +2574,9 @@
             }
           }
         ],
-        "action/0/default/3/then/1/then/0": [
+        "action/3/default/3/then/1/then/0": [
           {
-            "path": "action/0/default/3/then/1/then/0",
+            "path": "action/3/default/3/then/1/then/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "params": {
@@ -2528,12 +2584,12 @@
                 "service": "apply_lighting",
                 "service_data": {
                   "entities": [
+                    "light.hall_lamp",
                     "light.hall_pendant",
                     "light.hall_spot_1",
                     "light.hall_spot_2",
                     "light.hall_spot_3",
-                    "light.hall_spot_4",
-                    "light.hall_lamp"
+                    "light.hall_spot_4"
                   ],
                   "brightness_levels": {},
                   "brightness": 180,
@@ -2545,7 +2601,7 @@
                   ],
                   "transition": 5,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                  "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                   "force": false
                 },
                 "target": {}
@@ -2554,24 +2610,24 @@
             }
           }
         ],
-        "action/0/default/4": [
+        "action/3/default/4": [
           {
-            "path": "action/0/default/4",
+            "path": "action/3/default/4",
             "timestamp": "2026-10-10T02:05:03+00:00"
           }
         ],
-        "action/0/default/4/if": [
+        "action/3/default/4/if": [
           {
-            "path": "action/0/default/4/if",
+            "path": "action/3/default/4/if",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/default/4/if/condition/0": [
+        "action/3/default/4/if/condition/0": [
           {
-            "path": "action/0/default/4/if/condition/0",
+            "path": "action/3/default/4/if/condition/0",
             "timestamp": "2026-10-10T02:05:03+00:00",
             "result": {
               "result": false,
@@ -2598,19 +2654,7 @@
           }
         },
         "variables": {
-          "room_target": {
-            "entity_id": [
-              "light.hall_pendant",
-              "light.hall_spot_1",
-              "light.hall_spot_2",
-              "light.hall_spot_3",
-              "light.hall_spot_4",
-              "light.hall_lamp",
-              "binary_sensor.hall_occupancy",
-              "binary_sensor.hall_doorway_occupancy"
-            ]
-          },
-          "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+          "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -2623,58 +2667,14 @@
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
           "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
-          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
-          "target_ids": "{% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {{ {'entities': ns.entities | unique | list, 'devices': ns.devices | unique | list, 'areas': ns.areas | unique | list} }}\n",
-          "target_named_entities": "{{ target_ids.entities }}",
-          "target_expanded_entities": "{% set ns = namespace(entities=[]) %} {% for d in target_ids.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in target_ids.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {{ ns.entities | unique | list }}\n",
-          "all_target_entities": "{{ (target_named_entities + target_expanded_entities) | unique | list }}\n",
-          "resolved_entities": "{{ all_target_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
-          "template_brightness_levels": "{{ {} }}",
-          "morning_exclude_lights": [],
-          "day_exclude_lights": [],
-          "evening_exclude_lights": [],
-          "night_exclude_lights": [],
-          "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-          "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
-          "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
-          "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
-          "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
-          "template_idle_brightness": "{{ {} }}",
-          "morning_idle_brightness": 0,
-          "day_idle_brightness": 0,
-          "evening_idle_brightness": 0,
-          "night_idle_brightness": 0,
-          "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-          "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-          "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
-          "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
-          "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-          "room_occupancy_entities": "{{ all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
-          "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
-          "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
-          "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-          "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
-          "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
-          "scope_entities": "{% set ns = namespace(entities=target_expanded_entities) %} {% for e in (target_named_entities | select('match', '^light\\\\.') | list) %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
-          "morning_scene": null,
-          "day_scene": null,
-          "evening_scene": null,
-          "night_scene": null,
-          "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
-          "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-          "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
-          "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}"
         },
         "triggers": [
           {
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b0ec4dcc9562fa080e7ad3539ec2b322"
+              "device_id": "ea64f32cf2feb1bdd1788ac9a92cbdc9"
             },
             "options": {
               "event_type": [
@@ -2690,7 +2690,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "16e7a8ceccf1cab56f1253018693333c"
+              "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
             }
           },
           {
@@ -2780,6 +2780,89 @@
         ],
         "actions": [
           {
+            "alias": "Find the room's lights and sensors",
+            "action": "flare.resolve_target",
+            "target": {
+              "entity_id": [
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "binary_sensor.hall_occupancy",
+                "binary_sensor.hall_doorway_occupancy"
+              ]
+            },
+            "response_variable": "room"
+          },
+          {
+            "alias": "Work out what the room needs",
+            "variables": {
+              "room_entities": "{{ room.entities }}",
+              "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "template_brightness_levels": "{{ {} }}",
+              "morning_exclude_lights": [],
+              "day_exclude_lights": [],
+              "evening_exclude_lights": [],
+              "night_exclude_lights": [],
+              "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
+              "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
+              "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
+              "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
+              "template_idle_brightness": "{{ {} }}",
+              "morning_idle_brightness": 0,
+              "day_idle_brightness": 0,
+              "evening_idle_brightness": 0,
+              "night_idle_brightness": 0,
+              "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
+              "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
+              "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
+              "room_occupancy_entities": "{{ room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
+              "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
+              "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
+              "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
+              "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
+              "morning_scene": null,
+              "day_scene": null,
+              "evening_scene": null,
+              "night_scene": null,
+              "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
+              "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
+              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+            }
+          },
+          {
+            "alias": "Stop a motion_on run with nothing to turn on",
+            "if": [
+              {
+                "condition": "trigger",
+                "alias": "Triggered by motion_on",
+                "id": "motion_on"
+              },
+              {
+                "condition": "template",
+                "alias": "Nothing in the room is off, and nothing has an idle level",
+                "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count == 0\n   and idle_entities | length == 0 }}"
+              }
+            ],
+            "then": [
+              {
+                "stop": "Nothing to turn on"
+              }
+            ]
+          },
+          {
             "choose": [
               {
                 "alias": "Motion timed out and the room is confirmed empty",
@@ -2802,7 +2885,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   },
                   {
@@ -2824,7 +2907,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                         }
                       }
                     ]
@@ -2865,7 +2948,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -2921,7 +3004,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -2979,7 +3062,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -3001,40 +3084,8 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "conditions": [
-          {
-            "alias": "Every trigger passes except an unproductive motion_on tick",
-            "or": [
-              {
-                "alias": "Not a motion_on run",
-                "not": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  }
-                ]
-              },
-              {
-                "alias": "A motion_on run with something to actually turn on",
-                "and": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  },
-                  {
-                    "condition": "template",
-                    "alias": "Something in the room is off, or has an idle level",
-                    "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0\n   or idle_entities | length > 0 }}"
                   }
                 ]
               }
@@ -3050,7 +3101,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+            "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -3063,22 +3114,22 @@
                 "binary_sensor.hall_doorway_occupancy"
               ]
             },
-            "zone": "16e7a8ceccf1cab56f1253018693333c",
+            "zone": "ae312c68ebc44781d05f1dd3c82aa726",
             "no_motion_wait": 300
           }
         }
       },
       "context": {
-        "id": "01M4G1R8VKFQJ8BYTD1QV9M5DP",
-        "parent_id": "01M4HRWZ4RY6NBJBPYCNXYZBW2",
+        "id": "01M4G8873E91BRPT518S4K0ZEM",
+        "parent_id": "01M4HRWZ4R4835P831MPKB900Z",
         "user_id": null
       }
     },
     {
-      "last_step": "action/0/choose/0/sequence/0",
-      "run_id": "8fe9a2d4f260279cf79c835944743e7c",
+      "last_step": "action/3/choose/0/sequence/0",
+      "run_id": "41ce43a6b77f0547c14c98f8f18b0496",
       "state": "stopped",
-      "script_execution": null,
+      "script_execution": "cancelled",
       "timestamp": {
         "start": "2026-10-10T02:06:43+00:00",
         "finish": "2026-10-10T02:06:43+00:00"
@@ -3106,8 +3157,8 @@
                 "last_reported": "2026-10-10T02:05:03+00:00",
                 "last_updated": "2026-10-10T02:05:03+00:00",
                 "context": {
-                  "id": "01M4G1R8VKFQJ8BYTD1QV9M5DP",
-                  "parent_id": "01M4HRWZ4RY6NBJBPYCNXYZBW2",
+                  "id": "01M4G8873E91BRPT518S4K0ZEM",
+                  "parent_id": "01M4HRWZ4R4835P831MPKB900Z",
                   "user_id": null
                 }
               },
@@ -3128,7 +3179,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6GXDMJNW35HP9E0AEB",
+                    "id": "01M4HRKS6GFQPJ8GVVAHGX4WY1",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -3143,7 +3194,7 @@
                   "last_reported": "2026-10-10T02:01:42+00:00",
                   "last_updated": "2026-10-10T02:01:42+00:00",
                   "context": {
-                    "id": "01M4HRPTVG84VB321F27AV51YS",
+                    "id": "01M4HRPTVGYF2KPJ4E45H781D3",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -3165,7 +3216,7 @@
                   "binary_sensor.hall_doorway_occupancy"
                 ]
               },
-              "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+              "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -3178,49 +3229,77 @@
               "phase": "Evening",
               "prefer_rgb_color": true,
               "script_transition": 1,
-              "manual_run": false,
-              "target_ids": {
+              "manual_run": false
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M4G88743BSQPR4JA5QSK4C6E",
+                "parent_id": "01M4HRPTVGYF2KPJ4E45H781D3",
+                "user_id": null
+              },
+              "room": {
                 "entities": [
+                  "binary_sensor.hall_doorway_occupancy",
+                  "binary_sensor.hall_occupancy",
+                  "light.hall_lamp",
                   "light.hall_pendant",
                   "light.hall_spot_1",
                   "light.hall_spot_2",
                   "light.hall_spot_3",
-                  "light.hall_spot_4",
-                  "light.hall_lamp",
-                  "binary_sensor.hall_occupancy",
-                  "binary_sensor.hall_doorway_occupancy"
-                ],
-                "devices": [],
-                "areas": []
+                  "light.hall_spot_4"
+                ]
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "flare",
+                "service": "resolve_target",
+                "service_data": {},
+                "target": {
+                  "entity_id": [
+                    "light.hall_pendant",
+                    "light.hall_spot_1",
+                    "light.hall_spot_2",
+                    "light.hall_spot_3",
+                    "light.hall_spot_4",
+                    "light.hall_lamp",
+                    "binary_sensor.hall_occupancy",
+                    "binary_sensor.hall_doorway_occupancy"
+                  ]
+                }
               },
-              "target_named_entities": [
+              "running_script": false
+            }
+          }
+        ],
+        "action/1": [
+          {
+            "path": "action/1",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "changed_variables": {
+              "room_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
-              ],
-              "target_expanded_entities": [],
-              "all_target_entities": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "light.hall_spot_4"
               ],
               "resolved_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -3248,45 +3327,47 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "turn_off_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy"
               ],
               "occupancy_clear_for_wait": true,
               "room_is_idle": false,
               "occupied": true,
               "allow_turn_on": true,
               "entities_still_on": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "scope_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -3302,70 +3383,60 @@
             }
           }
         ],
-        "condition/0": [
+        "action/2": [
           {
-            "path": "condition/0",
-            "timestamp": "2026-10-10T02:06:43+00:00",
-            "result": {
-              "result": true
-            }
+            "path": "action/2",
+            "timestamp": "2026-10-10T02:06:43+00:00"
           }
         ],
-        "condition/0/conditions/0": [
+        "action/2/if": [
           {
-            "path": "condition/0/conditions/0",
-            "timestamp": "2026-10-10T02:06:43+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "condition/0/conditions/0/conditions/0": [
-          {
-            "path": "condition/0/conditions/0/conditions/0",
+            "path": "action/2/if",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0": [
+        "action/2/if/condition/0": [
           {
-            "path": "action/0",
+            "path": "action/2/if/condition/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
-            "changed_variables": {
-              "context": {
-                "id": "01M4G1R8W810PBYK9EBEP9A7J7",
-                "parent_id": "01M4HRPTVG84VB321F27AV51YS",
-                "user_id": null
-              }
-            },
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3": [
+          {
+            "path": "action/3",
+            "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "choice": 0
             }
           }
         ],
-        "action/0/choose/0": [
+        "action/3/choose/0": [
           {
-            "path": "action/0/choose/0",
+            "path": "action/3/choose/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/0/conditions/0": [
+        "action/3/choose/0/conditions/0": [
           {
-            "path": "action/0/choose/0/conditions/0",
+            "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/0/conditions/1": [
+        "action/3/choose/0/conditions/1": [
           {
-            "path": "action/0/choose/0/conditions/1",
+            "path": "action/3/choose/0/conditions/1",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true,
@@ -3373,9 +3444,9 @@
             }
           }
         ],
-        "action/0/choose/0/sequence/0": [
+        "action/3/choose/0/sequence/0": [
           {
-            "path": "action/0/choose/0/sequence/0",
+            "path": "action/3/choose/0/sequence/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "params": {
@@ -3383,15 +3454,15 @@
                 "service": "turn_off",
                 "service_data": {
                   "entities": [
+                    "light.hall_lamp",
                     "light.hall_pendant",
                     "light.hall_spot_1",
                     "light.hall_spot_2",
                     "light.hall_spot_3",
-                    "light.hall_spot_4",
-                    "light.hall_lamp"
+                    "light.hall_spot_4"
                   ],
                   "transition": 15,
-                  "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                  "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                 },
                 "target": {}
               },
@@ -3418,19 +3489,7 @@
           }
         },
         "variables": {
-          "room_target": {
-            "entity_id": [
-              "light.hall_pendant",
-              "light.hall_spot_1",
-              "light.hall_spot_2",
-              "light.hall_spot_3",
-              "light.hall_spot_4",
-              "light.hall_lamp",
-              "binary_sensor.hall_occupancy",
-              "binary_sensor.hall_doorway_occupancy"
-            ]
-          },
-          "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+          "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -3443,58 +3502,14 @@
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
           "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
-          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
-          "target_ids": "{% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {{ {'entities': ns.entities | unique | list, 'devices': ns.devices | unique | list, 'areas': ns.areas | unique | list} }}\n",
-          "target_named_entities": "{{ target_ids.entities }}",
-          "target_expanded_entities": "{% set ns = namespace(entities=[]) %} {% for d in target_ids.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in target_ids.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {{ ns.entities | unique | list }}\n",
-          "all_target_entities": "{{ (target_named_entities + target_expanded_entities) | unique | list }}\n",
-          "resolved_entities": "{{ all_target_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
-          "template_brightness_levels": "{{ {} }}",
-          "morning_exclude_lights": [],
-          "day_exclude_lights": [],
-          "evening_exclude_lights": [],
-          "night_exclude_lights": [],
-          "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-          "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
-          "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
-          "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
-          "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
-          "template_idle_brightness": "{{ {} }}",
-          "morning_idle_brightness": 0,
-          "day_idle_brightness": 0,
-          "evening_idle_brightness": 0,
-          "night_idle_brightness": 0,
-          "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-          "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-          "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
-          "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
-          "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-          "room_occupancy_entities": "{{ all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
-          "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
-          "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
-          "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-          "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
-          "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
-          "scope_entities": "{% set ns = namespace(entities=target_expanded_entities) %} {% for e in (target_named_entities | select('match', '^light\\\\.') | list) %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
-          "morning_scene": null,
-          "day_scene": null,
-          "evening_scene": null,
-          "night_scene": null,
-          "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
-          "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-          "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
-          "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}"
         },
         "triggers": [
           {
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b0ec4dcc9562fa080e7ad3539ec2b322"
+              "device_id": "ea64f32cf2feb1bdd1788ac9a92cbdc9"
             },
             "options": {
               "event_type": [
@@ -3510,7 +3525,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "16e7a8ceccf1cab56f1253018693333c"
+              "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
             }
           },
           {
@@ -3600,6 +3615,89 @@
         ],
         "actions": [
           {
+            "alias": "Find the room's lights and sensors",
+            "action": "flare.resolve_target",
+            "target": {
+              "entity_id": [
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "binary_sensor.hall_occupancy",
+                "binary_sensor.hall_doorway_occupancy"
+              ]
+            },
+            "response_variable": "room"
+          },
+          {
+            "alias": "Work out what the room needs",
+            "variables": {
+              "room_entities": "{{ room.entities }}",
+              "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "template_brightness_levels": "{{ {} }}",
+              "morning_exclude_lights": [],
+              "day_exclude_lights": [],
+              "evening_exclude_lights": [],
+              "night_exclude_lights": [],
+              "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
+              "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
+              "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
+              "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
+              "template_idle_brightness": "{{ {} }}",
+              "morning_idle_brightness": 0,
+              "day_idle_brightness": 0,
+              "evening_idle_brightness": 0,
+              "night_idle_brightness": 0,
+              "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
+              "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
+              "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
+              "room_occupancy_entities": "{{ room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
+              "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
+              "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
+              "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
+              "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
+              "morning_scene": null,
+              "day_scene": null,
+              "evening_scene": null,
+              "night_scene": null,
+              "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
+              "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
+              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+            }
+          },
+          {
+            "alias": "Stop a motion_on run with nothing to turn on",
+            "if": [
+              {
+                "condition": "trigger",
+                "alias": "Triggered by motion_on",
+                "id": "motion_on"
+              },
+              {
+                "condition": "template",
+                "alias": "Nothing in the room is off, and nothing has an idle level",
+                "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count == 0\n   and idle_entities | length == 0 }}"
+              }
+            ],
+            "then": [
+              {
+                "stop": "Nothing to turn on"
+              }
+            ]
+          },
+          {
             "choose": [
               {
                 "alias": "Motion timed out and the room is confirmed empty",
@@ -3622,7 +3720,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   },
                   {
@@ -3644,7 +3742,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                         }
                       }
                     ]
@@ -3685,7 +3783,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -3741,7 +3839,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -3799,7 +3897,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -3821,40 +3919,8 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "conditions": [
-          {
-            "alias": "Every trigger passes except an unproductive motion_on tick",
-            "or": [
-              {
-                "alias": "Not a motion_on run",
-                "not": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  }
-                ]
-              },
-              {
-                "alias": "A motion_on run with something to actually turn on",
-                "and": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  },
-                  {
-                    "condition": "template",
-                    "alias": "Something in the room is off, or has an idle level",
-                    "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0\n   or idle_entities | length > 0 }}"
                   }
                 ]
               }
@@ -3870,7 +3936,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+            "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -3883,20 +3949,20 @@
                 "binary_sensor.hall_doorway_occupancy"
               ]
             },
-            "zone": "16e7a8ceccf1cab56f1253018693333c",
+            "zone": "ae312c68ebc44781d05f1dd3c82aa726",
             "no_motion_wait": 300
           }
         }
       },
       "context": {
-        "id": "01M4G1R8W810PBYK9EBEP9A7J7",
-        "parent_id": "01M4HRPTVG84VB321F27AV51YS",
+        "id": "01M4G88743BSQPR4JA5QSK4C6E",
+        "parent_id": "01M4HRPTVGYF2KPJ4E45H781D3",
         "user_id": null
       }
     },
     {
-      "last_step": "action/0/choose/1/sequence/0",
-      "run_id": "71f060608076974893fc3b241d5df8da",
+      "last_step": "action/3/default/4/if/condition/0",
+      "run_id": "f8e3dd917a780a3be15fadefceb372f4",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -3926,8 +3992,8 @@
                 "last_reported": "2026-10-10T02:06:43+00:00",
                 "last_updated": "2026-10-10T02:06:43+00:00",
                 "context": {
-                  "id": "01M4G1R8W810PBYK9EBEP9A7J7",
-                  "parent_id": "01M4HRPTVG84VB321F27AV51YS",
+                  "id": "01M4G88743BSQPR4JA5QSK4C6E",
+                  "parent_id": "01M4HRPTVGYF2KPJ4E45H781D3",
                   "user_id": null
                 }
               },
@@ -3939,12 +4005,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "16e7a8ceccf1cab56f1253018693333c"
+                    "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                   },
                   "origin": "LOCAL",
                   "time_fired": "2026-10-10T02:06:43+00:00",
                   "context": {
-                    "id": "01M4HS00SRCYYTSZHGWXV4J1SJ",
+                    "id": "01M4HS00SR9RN2YNV2VJ8FFNEE",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -3963,7 +4029,7 @@
                   "binary_sensor.hall_doorway_occupancy"
                 ]
               },
-              "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+              "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -3976,49 +4042,77 @@
               "phase": "Evening",
               "prefer_rgb_color": true,
               "script_transition": 5,
-              "manual_run": false,
-              "target_ids": {
+              "manual_run": false
+            }
+          }
+        ],
+        "action/0": [
+          {
+            "path": "action/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "changed_variables": {
+              "context": {
+                "id": "01M4G8874G22H29G09XQZ4GSY2",
+                "parent_id": "01M4HS00SR9RN2YNV2VJ8FFNEE",
+                "user_id": null
+              },
+              "room": {
                 "entities": [
+                  "binary_sensor.hall_doorway_occupancy",
+                  "binary_sensor.hall_occupancy",
+                  "light.hall_lamp",
                   "light.hall_pendant",
                   "light.hall_spot_1",
                   "light.hall_spot_2",
                   "light.hall_spot_3",
-                  "light.hall_spot_4",
-                  "light.hall_lamp",
-                  "binary_sensor.hall_occupancy",
-                  "binary_sensor.hall_doorway_occupancy"
-                ],
-                "devices": [],
-                "areas": []
+                  "light.hall_spot_4"
+                ]
+              }
+            },
+            "result": {
+              "params": {
+                "domain": "flare",
+                "service": "resolve_target",
+                "service_data": {},
+                "target": {
+                  "entity_id": [
+                    "light.hall_pendant",
+                    "light.hall_spot_1",
+                    "light.hall_spot_2",
+                    "light.hall_spot_3",
+                    "light.hall_spot_4",
+                    "light.hall_lamp",
+                    "binary_sensor.hall_occupancy",
+                    "binary_sensor.hall_doorway_occupancy"
+                  ]
+                }
               },
-              "target_named_entities": [
+              "running_script": false
+            }
+          }
+        ],
+        "action/1": [
+          {
+            "path": "action/1",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "changed_variables": {
+              "room_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
-              ],
-              "target_expanded_entities": [],
-              "all_target_entities": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp",
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "light.hall_spot_4"
               ],
               "resolved_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -4046,45 +4140,40 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "turn_off_entities": [
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
-                "binary_sensor.hall_occupancy",
-                "binary_sensor.hall_doorway_occupancy"
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy"
               ],
               "occupancy_clear_for_wait": true,
               "room_is_idle": false,
-              "occupied": true,
-              "allow_turn_on": true,
-              "entities_still_on": [
-                "light.hall_pendant",
-                "light.hall_spot_1",
-                "light.hall_spot_2",
-                "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
-              ],
+              "occupied": false,
+              "allow_turn_on": false,
+              "entities_still_on": [],
               "scope_entities": [
+                "binary_sensor.hall_doorway_occupancy",
+                "binary_sensor.hall_occupancy",
+                "light.hall_lamp",
                 "light.hall_pendant",
                 "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_spot_3",
-                "light.hall_spot_4",
-                "light.hall_lamp"
+                "light.hall_spot_4"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -4100,88 +4189,90 @@
             }
           }
         ],
-        "condition/0": [
+        "action/2": [
           {
-            "path": "condition/0",
-            "timestamp": "2026-10-10T02:06:43+00:00",
-            "result": {
-              "result": true
-            }
+            "path": "action/2",
+            "timestamp": "2026-10-10T02:06:43+00:00"
           }
         ],
-        "condition/0/conditions/0": [
+        "action/2/if": [
           {
-            "path": "condition/0/conditions/0",
-            "timestamp": "2026-10-10T02:06:43+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "condition/0/conditions/0/conditions/0": [
-          {
-            "path": "condition/0/conditions/0/conditions/0",
+            "path": "action/2/if",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0": [
+        "action/2/if/condition/0": [
           {
-            "path": "action/0",
+            "path": "action/2/if/condition/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3": [
+          {
+            "path": "action/3",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "changed_variables": {
-              "context": {
-                "id": "01M4G1R8WG5ZDRAYQWQGS7E3P2",
-                "parent_id": "01M4HS00SRCYYTSZHGWXV4J1SJ",
-                "user_id": null
-              }
+              "scene_active": false,
+              "handed_off_entities": [],
+              "target_entities": [
+                "light.hall_lamp",
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4"
+              ]
             },
             "result": {
-              "choice": 1
+              "choice": "default"
             }
           }
         ],
-        "action/0/choose/0": [
+        "action/3/choose/0": [
           {
-            "path": "action/0/choose/0",
+            "path": "action/3/choose/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/0/conditions/0": [
+        "action/3/choose/0/conditions/0": [
           {
-            "path": "action/0/choose/0/conditions/0",
+            "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": false
             }
           }
         ],
-        "action/0/choose/1": [
+        "action/3/choose/1": [
           {
-            "path": "action/0/choose/1",
+            "path": "action/3/choose/1",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3/choose/1/conditions/0": [
+          {
+            "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true
             }
           }
         ],
-        "action/0/choose/1/conditions/0": [
+        "action/3/choose/1/conditions/1": [
           {
-            "path": "action/0/choose/1/conditions/0",
-            "timestamp": "2026-10-10T02:06:43+00:00",
-            "result": {
-              "result": true
-            }
-          }
-        ],
-        "action/0/choose/1/conditions/1": [
-          {
-            "path": "action/0/choose/1/conditions/1",
+            "path": "action/3/choose/1/conditions/1",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true,
@@ -4189,9 +4280,9 @@
             }
           }
         ],
-        "action/0/choose/1/conditions/2": [
+        "action/3/choose/1/conditions/2": [
           {
-            "path": "action/0/choose/1/conditions/2",
+            "path": "action/3/choose/1/conditions/2",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
               "result": true,
@@ -4199,39 +4290,131 @@
             }
           }
         ],
-        "action/0/choose/1/conditions/3": [
+        "action/3/choose/1/conditions/3": [
           {
-            "path": "action/0/choose/1/conditions/3",
+            "path": "action/3/choose/1/conditions/3",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
-              "result": true,
+              "result": false,
               "entities": []
             }
           }
         ],
-        "action/0/choose/1/sequence/0": [
+        "action/3/default/0": [
           {
-            "path": "action/0/choose/1/sequence/0",
+            "path": "action/3/default/0",
+            "timestamp": "2026-10-10T02:06:43+00:00"
+          }
+        ],
+        "action/3/default/0/if": [
+          {
+            "path": "action/3/default/0/if",
             "timestamp": "2026-10-10T02:06:43+00:00",
             "result": {
-              "params": {
-                "domain": "flare",
-                "service": "turn_off",
-                "service_data": {
-                  "entities": [
-                    "light.hall_pendant",
-                    "light.hall_spot_1",
-                    "light.hall_spot_2",
-                    "light.hall_spot_3",
-                    "light.hall_spot_4",
-                    "light.hall_lamp"
-                  ],
-                  "transition": 15,
-                  "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
-                },
-                "target": {}
-              },
-              "running_script": false
+              "result": false
+            }
+          }
+        ],
+        "action/3/default/0/if/condition/0": [
+          {
+            "path": "action/3/default/0/if/condition/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false,
+              "entities": []
+            }
+          }
+        ],
+        "action/3/default/1": [
+          {
+            "path": "action/3/default/1",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "changed_variables": {
+              "scene_active": false,
+              "handed_off_entities": [],
+              "target_entities": [
+                "light.hall_lamp",
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4"
+              ]
+            }
+          }
+        ],
+        "action/3/default/2": [
+          {
+            "path": "action/3/default/2",
+            "timestamp": "2026-10-10T02:06:43+00:00"
+          }
+        ],
+        "action/3/default/2/if": [
+          {
+            "path": "action/3/default/2/if",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3/default/2/if/condition/0": [
+          {
+            "path": "action/3/default/2/if/condition/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false,
+              "entities": []
+            }
+          }
+        ],
+        "action/3/default/3": [
+          {
+            "path": "action/3/default/3",
+            "timestamp": "2026-10-10T02:06:43+00:00"
+          }
+        ],
+        "action/3/default/3/if": [
+          {
+            "path": "action/3/default/3/if",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3/default/3/if/condition/0": [
+          {
+            "path": "action/3/default/3/if/condition/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false,
+              "entities": []
+            }
+          }
+        ],
+        "action/3/default/4": [
+          {
+            "path": "action/3/default/4",
+            "timestamp": "2026-10-10T02:06:43+00:00"
+          }
+        ],
+        "action/3/default/4/if": [
+          {
+            "path": "action/3/default/4/if",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false
+            }
+          }
+        ],
+        "action/3/default/4/if/condition/0": [
+          {
+            "path": "action/3/default/4/if/condition/0",
+            "timestamp": "2026-10-10T02:06:43+00:00",
+            "result": {
+              "result": false,
+              "entities": []
             }
           }
         ]
@@ -4254,19 +4437,7 @@
           }
         },
         "variables": {
-          "room_target": {
-            "entity_id": [
-              "light.hall_pendant",
-              "light.hall_spot_1",
-              "light.hall_spot_2",
-              "light.hall_spot_3",
-              "light.hall_spot_4",
-              "light.hall_lamp",
-              "binary_sensor.hall_occupancy",
-              "binary_sensor.hall_doorway_occupancy"
-            ]
-          },
-          "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+          "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -4279,58 +4450,14 @@
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
           "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
-          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
-          "target_ids": "{% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {{ {'entities': ns.entities | unique | list, 'devices': ns.devices | unique | list, 'areas': ns.areas | unique | list} }}\n",
-          "target_named_entities": "{{ target_ids.entities }}",
-          "target_expanded_entities": "{% set ns = namespace(entities=[]) %} {% for d in target_ids.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in target_ids.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {{ ns.entities | unique | list }}\n",
-          "all_target_entities": "{{ (target_named_entities + target_expanded_entities) | unique | list }}\n",
-          "resolved_entities": "{{ all_target_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
-          "template_brightness_levels": "{{ {} }}",
-          "morning_exclude_lights": [],
-          "day_exclude_lights": [],
-          "evening_exclude_lights": [],
-          "night_exclude_lights": [],
-          "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-          "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
-          "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
-          "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
-          "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
-          "template_idle_brightness": "{{ {} }}",
-          "morning_idle_brightness": 0,
-          "day_idle_brightness": 0,
-          "evening_idle_brightness": 0,
-          "night_idle_brightness": 0,
-          "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-          "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
-          "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-          "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
-          "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
-          "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
-          "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-          "room_occupancy_entities": "{{ all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + all_target_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
-          "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
-          "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
-          "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-          "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
-          "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
-          "scope_entities": "{% set ns = namespace(entities=target_expanded_entities) %} {% for e in (target_named_entities | select('match', '^light\\\\.') | list) %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
-          "morning_scene": null,
-          "day_scene": null,
-          "evening_scene": null,
-          "night_scene": null,
-          "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
-          "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-          "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
-          "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+          "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}"
         },
         "triggers": [
           {
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b0ec4dcc9562fa080e7ad3539ec2b322"
+              "device_id": "ea64f32cf2feb1bdd1788ac9a92cbdc9"
             },
             "options": {
               "event_type": [
@@ -4346,7 +4473,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "16e7a8ceccf1cab56f1253018693333c"
+              "device_id": "ae312c68ebc44781d05f1dd3c82aa726"
             }
           },
           {
@@ -4436,6 +4563,89 @@
         ],
         "actions": [
           {
+            "alias": "Find the room's lights and sensors",
+            "action": "flare.resolve_target",
+            "target": {
+              "entity_id": [
+                "light.hall_pendant",
+                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "binary_sensor.hall_occupancy",
+                "binary_sensor.hall_doorway_occupancy"
+              ]
+            },
+            "response_variable": "room"
+          },
+          {
+            "alias": "Work out what the room needs",
+            "variables": {
+              "room_entities": "{{ room.entities }}",
+              "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "template_brightness_levels": "{{ {} }}",
+              "morning_exclude_lights": [],
+              "day_exclude_lights": [],
+              "evening_exclude_lights": [],
+              "night_exclude_lights": [],
+              "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
+              "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
+              "color_temp_kelvin": "{{ state_attr(adaptive_sensor, 'color_temp') }}",
+              "rgb_color": "{{ state_attr(adaptive_sensor, 'rgb_color') }}",
+              "template_idle_brightness": "{{ {} }}",
+              "morning_idle_brightness": 0,
+              "day_idle_brightness": 0,
+              "evening_idle_brightness": 0,
+              "night_idle_brightness": 0,
+              "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
+              "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
+              "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
+              "room_occupancy_entities": "{{ room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n   | select('is_state_attr', 'device_class', 'motion') | list }}\n",
+              "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
+              "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
+              "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
+              "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
+              "morning_scene": null,
+              "day_scene": null,
+              "evening_scene": null,
+              "night_scene": null,
+              "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
+              "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
+              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_coverage": "{{ {'scene_active': false, 'covered_entities': []} }}"
+            }
+          },
+          {
+            "alias": "Stop a motion_on run with nothing to turn on",
+            "if": [
+              {
+                "condition": "trigger",
+                "alias": "Triggered by motion_on",
+                "id": "motion_on"
+              },
+              {
+                "condition": "template",
+                "alias": "Nothing in the room is off, and nothing has an idle level",
+                "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count == 0\n   and idle_entities | length == 0 }}"
+              }
+            ],
+            "then": [
+              {
+                "stop": "Nothing to turn on"
+              }
+            ]
+          },
+          {
             "choose": [
               {
                 "alias": "Motion timed out and the room is confirmed empty",
@@ -4458,7 +4668,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   },
                   {
@@ -4480,7 +4690,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                         }
                       }
                     ]
@@ -4521,7 +4731,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -4577,7 +4787,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
                   }
                 ]
@@ -4635,7 +4845,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "16e7a8ceccf1cab56f1253018693333c",
+                          "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -4657,40 +4867,8 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "16e7a8ceccf1cab56f1253018693333c"
+                      "zone_device_id": "ae312c68ebc44781d05f1dd3c82aa726"
                     }
-                  }
-                ]
-              }
-            ]
-          }
-        ],
-        "conditions": [
-          {
-            "alias": "Every trigger passes except an unproductive motion_on tick",
-            "or": [
-              {
-                "alias": "Not a motion_on run",
-                "not": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  }
-                ]
-              },
-              {
-                "alias": "A motion_on run with something to actually turn on",
-                "and": [
-                  {
-                    "condition": "trigger",
-                    "alias": "Triggered by motion_on",
-                    "id": "motion_on"
-                  },
-                  {
-                    "condition": "template",
-                    "alias": "Something in the room is off, or has an idle level",
-                    "value_template": "{{ resolved_entities | map('states') | select('ne', 'on') | list | count > 0\n   or idle_entities | length > 0 }}"
                   }
                 ]
               }
@@ -4706,7 +4884,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b0ec4dcc9562fa080e7ad3539ec2b322",
+            "schedule": "ea64f32cf2feb1bdd1788ac9a92cbdc9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -4719,14 +4897,14 @@
                 "binary_sensor.hall_doorway_occupancy"
               ]
             },
-            "zone": "16e7a8ceccf1cab56f1253018693333c",
+            "zone": "ae312c68ebc44781d05f1dd3c82aa726",
             "no_motion_wait": 300
           }
         }
       },
       "context": {
-        "id": "01M4G1R8WG5ZDRAYQWQGS7E3P2",
-        "parent_id": "01M4HS00SRCYYTSZHGWXV4J1SJ",
+        "id": "01M4G8874G22H29G09XQZ4GSY2",
+        "parent_id": "01M4HS00SR9RN2YNV2VJ8FFNEE",
         "user_id": null
       }
     }

@@ -306,6 +306,12 @@ behaves.</p>
 <p><strong>Lights &amp; Occupancy</strong> takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.</p>
 
+<p>The room’s lights are the ones an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> would reach on the same target.
+An entity you pick directly is always included. An entity reached through an area, floor,
+device or label is left out if it’s hidden, and also if it’s a configuration or diagnostic entity
+(such as a switch’s indicator light), unless the label is on that entity itself. The room’s
+<a href="../flares/">flare</a> has the same lights.</p>
+
 <p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
 
@@ -606,6 +612,9 @@ temperature aren’t sent. You can change both limits under <strong>FLARE → Zo
   <li><strong>It’s unavailable.</strong> FLARE sets it once it comes back online.</li>
   <li><strong>A scene has it</strong>, or <strong>Brightness Template</strong> returns <code class="language-plaintext highlighter-rouge">null</code> for it.</li>
   <li><strong>It’s at its idle brightness.</strong> See <a href="#idle-brightness">idle brightness</a>.</li>
+  <li><strong>It isn’t one of the room’s lights.</strong> A hidden light, or a configuration or diagnostic
+light, isn’t included through an area, floor, device or label. Pick it directly in
+<strong>Lights &amp; Occupancy</strong> to include it. See <a href="#room">Room</a>.</li>
 </ul>
 <h2 id="updating-the-blueprint">
   
