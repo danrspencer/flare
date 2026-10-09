@@ -74,6 +74,17 @@ SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
 
 
+def _shown(state) -> dict:
+    """What a light is showing, as a claim's target."""
+    attrs = state.attributes
+    target = {"brightness": attrs.get("brightness")}
+    if attrs.get("color_temp_kelvin") is not None:
+        target["color_temp_kelvin"] = attrs["color_temp_kelvin"]
+    elif attrs.get("rgb_color") is not None:
+        target["rgb_color"] = list(attrs["rgb_color"])
+    return target
+
+
 class ClaimStore(Protocol):
     """A zone's claims sensor, as ClaimRegistry needs it. Structural, to
     avoid importing sensor.py circularly."""
@@ -228,6 +239,34 @@ class ClaimRegistry:
                 "mismatch_since": overridden_since,
             }
         self._notify([store])
+
+    @callback
+    def adopt(self, subentry_id: str | None, entity_ids: list[str]) -> None:
+        """Claims lights that are on and already showing what the caller would
+        send, so nothing was written to them: their claim is what they show
+        now. Lights claimed in any zone are left alone. No-op without a zone."""
+        store = self._stores.get(subentry_id)
+        if store is None:
+            return
+        now = dt_util.utcnow().isoformat()
+        adopted = []
+        for entity_id in entity_ids:
+            state = self._hass.states.get(entity_id)
+            if state is None or state.state != "on" or any(entity_id in other.claims for other in self._stores.values()):
+                continue
+            store.claims[entity_id] = {
+                "observed": {
+                    "context_id": state.context.id,
+                    "secondary_context_id": None,
+                    "recorded_at": now,
+                    "target": _shown(state),
+                },
+                "latest": None,
+                "last_seen": now,
+            }
+            adopted.append(entity_id)
+        if adopted:
+            self._notify([store])
 
     async def async_record(
         self,

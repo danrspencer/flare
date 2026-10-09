@@ -30,7 +30,7 @@ from ..const import (
 )
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
-from .grouping import EntityLookup, Group, build_groups
+from .grouping import EntityLookup, Group, build_groups, target_brightness
 from ..zone.override_protection import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -488,6 +488,19 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 secondary_context_ids=secondary_context_ids,
                 context_id_overrides=context_id_overrides,
             )
+
+        # Lights already showing what this call would send get no write, so
+        # an unclaimed one is claimed as it is.
+        registry.adopt(
+            zone,
+            [
+                e
+                for e in _without_flares(hass, call.data["entities"])
+                if e not in written_entities
+                and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
+                and lookup.claims(e) is None
+            ],
+        )
 
         if tasks:
             await asyncio.gather(*tasks)
