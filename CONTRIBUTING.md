@@ -30,7 +30,7 @@ custom_components/flare/
     zone/          zones: who owns a light, and when each zone ticks
         override_protection.py
                          classify_state(): controlled / overridden /
-                         settling / untracked / off / unavailable
+                         mismatched / untracked / off / unavailable
         claims.py
                          the claims: what context.id and target this
                          integration last wrote each light with. They live

@@ -4,6 +4,7 @@ saves and restores for an entity that's genuinely added."""
 
 from datetime import timedelta
 
+import pytest
 from freezegun import freeze_time
 
 from homeassistant.config_entries import ConfigSubentryData
@@ -21,9 +22,21 @@ from custom_components.flare.zone.instance import zone_instances
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.claims import ClaimRegistry
-from custom_components.flare.zone.override_protection import RECONNECT_SETTLE
+from custom_components.flare.zone.override_protection import MISMATCH_GRACE
+from tests.support.claims import after_the_grace
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
+
+
+_STARTED: list = []
+
+
+@pytest.fixture(autouse=True)
+async def _remove_claims_sensors(hass: HomeAssistant):
+    """Removing a claims sensor cancels its pending recheck."""
+    yield
+    while _STARTED:
+        await _STARTED.pop().async_remove()
 
 
 def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
@@ -67,6 +80,7 @@ async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
     platform.config_entry = entry
     await platform.async_add_entities([tracker], config_subentry_id=zone_instances(entry)[0].subentry_id)
     await hass.async_block_till_done()
+    _STARTED.append(tracker)
     return registry, tracker
 
 
@@ -76,7 +90,7 @@ def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
 
 
 def _status(hass: HomeAssistant, tracker, entity_id: str) -> str:
-    return _classify_tracked(hass, entity_id, tracker.claims[entity_id])[0]
+    return _classify_tracked(hass, tracker._registry, entity_id, tracker.claims[entity_id])[0]
 
 
 async def test_what_is_saved_is_the_claims_themselves(hass: HomeAssistant):
@@ -97,10 +111,24 @@ async def test_claims_come_back_after_a_restart(hass: HomeAssistant):
 
 
 async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant):
-    """We asked for 200; it shows 90, so it's somebody else's."""
+    """We asked for 200; it shows 90. Left alone at once, and an override
+    once the zone's poll has noted it and the grace has passed."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
 
-    _, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
+    registry, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
+
+    assert _status(hass, tracker, "light.a") == "mismatched"
+    await tracker.async_update()
+    with after_the_grace():
+        assert _status(hass, tracker, "light.a") == "overridden"
+
+
+async def test_a_light_overridden_before_the_restart_is_overridden_at_once(hass: HomeAssistant):
+    """Its mismatch_since is restored with its claims."""
+    _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
+    claim = {**_claim("ctx-ours"), "mismatch_since": (dt_util.utcnow() - MISMATCH_GRACE).isoformat()}
+
+    _, tracker = await _start(hass, {"light.a": claim})
 
     assert _status(hass, tracker, "light.a") == "overridden"
 
@@ -135,8 +163,8 @@ async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: H
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
     await hass.async_block_till_done()
 
-    assert _status(hass, tracker, "light.a") == "settling"
-    with freeze_time(dt_util.utcnow() + RECONNECT_SETTLE, real_asyncio=True):
+    assert _status(hass, tracker, "light.a") == "mismatched"
+    with freeze_time(dt_util.utcnow() + MISMATCH_GRACE, real_asyncio=True):
         assert _status(hass, tracker, "light.a") == "overridden"
     unsub()
 

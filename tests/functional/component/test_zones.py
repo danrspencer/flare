@@ -4,6 +4,8 @@ zone is whichever one a caller names, never resolved from its area."""
 
 from datetime import timedelta
 
+import pytest
+
 from freezegun import freeze_time
 
 from homeassistant.components import persistent_notification
@@ -29,9 +31,9 @@ from custom_components.flare.schedule.coordinator import ScheduleCoordinator, sc
 from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.zone.instance import zone_instances
-from custom_components.flare.zone.claims import RECONNECTS, SIGNAL_CLAIMS_UPDATED, ClaimRegistry
-from custom_components.flare.zone.override_protection import RECONNECT_SETTLE
-from tests.support.claims import claim_field
+from custom_components.flare.zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
+from custom_components.flare.zone.override_protection import MISMATCH_GRACE
+from tests.support.claims import after_the_grace, claim_field
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -40,6 +42,17 @@ def _zone(title: str) -> ConfigSubentryData:
     return ConfigSubentryData(
         subentry_type=SUBENTRY_TYPE_ZONE, title=title, unique_id=title.lower().replace(" ", "_"), data={}
     )
+
+
+_TRACKERS: list = []
+
+
+@pytest.fixture(autouse=True)
+async def _stop_trackers(hass: HomeAssistant):
+    """Cancels each claims sensor's pending recheck."""
+    yield
+    while _TRACKERS:
+        await _TRACKERS.pop().async_will_remove_from_hass()
 
 
 async def _setup(hass: HomeAssistant, *zones: ConfigSubentryData):
@@ -58,6 +71,7 @@ async def _setup(hass: HomeAssistant, *zones: ConfigSubentryData):
     for instance, tracker in zip(zone_instances(entry), trackers):
         tracker.async_claims_changed = lambda: None
         registry.register(instance.subentry_id, tracker)
+        _TRACKERS.append(tracker)
     return entry, registry, added
 
 
@@ -145,11 +159,14 @@ async def test_counters_split_one_zones_lights_by_status(hass: HomeAssistant):
     await _record(registry, zone, "light.taken", "ctx-ours", ASKED)
     hass.states.async_set("light.mine", "on", ASKED, context=ours)
     hass.states.async_set("light.taken", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
+    registry.note_mismatches(_TRACKERS[-1])
 
-    assert controlled.native_value == 1
-    assert overridden.native_value == 1
-    assert overridden.extra_state_attributes["lights"] == ["light.taken"]
-    assert controlled.extra_state_attributes["total_tracked"] == 2
+    assert (controlled.native_value, overridden.native_value) == (1, 0), "mismatched: in neither yet"
+    with after_the_grace():
+        assert controlled.native_value == 1
+        assert overridden.native_value == 1
+        assert overridden.extra_state_attributes["lights"] == ["light.taken"]
+        assert controlled.extra_state_attributes["total_tracked"] == 2
 
 
 async def test_two_callers_writing_one_light_share_the_zones_claims(hass: HomeAssistant):
@@ -251,6 +268,9 @@ async def test_the_override_event_is_filed_under_the_zone(hass: HomeAssistant):
 
     hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
     tracker._refresh_statuses()
+    assert events == [], "mismatched, not yet an override"
+    with after_the_grace():
+        tracker._refresh_statuses()
     await hass.async_block_till_done()
 
     assert len(events) == 1
@@ -262,9 +282,10 @@ async def test_the_override_event_is_filed_under_the_zone(hass: HomeAssistant):
     assert events[0].data["latest"]["target"] == ASKED
 
 
-async def _back_online_at_a_stale_level(hass: HomeAssistant):
-    """A zone with one light just back online, reporting a stale level
-    before FLARE's resend lands."""
+async def _stops_matching(hass: HomeAssistant):
+    """A zone with one light that has just stopped matching its claims, as
+    when a bulb back online reports a stale level before FLARE's resend
+    lands."""
     area = ar.async_get(hass).async_get_or_create("Kitchen")
     entry, registry, added = await _setup(hass, _zone("Kitchen"))
     tracker = next(e for e in added if hasattr(e, "claims"))
@@ -274,27 +295,25 @@ async def _back_online_at_a_stale_level(hass: HomeAssistant):
     await _record(registry, _zone_id(entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
     tracker._refresh_statuses()
     hass.states.async_set("light.a", "on", {"brightness": 10, "color_temp_kelvin": 6500}, context=Context())
-    hass.data.setdefault(RECONNECTS, {})["light.a"] = hass.states.get("light.a").last_changed
     tracker._refresh_statuses()
     await hass.async_block_till_done()
     overridden = next(e for e in added if e.entity_id.endswith("_flare_overridden"))
     return tracker, events, overridden
 
 
-async def test_a_light_back_online_is_not_shown_overridden_while_it_settles(hass: HomeAssistant):
-    tracker, events, overridden = await _back_online_at_a_stale_level(hass)
+async def test_a_light_that_stops_matching_is_not_shown_overridden_at_first(hass: HomeAssistant):
+    tracker, events, overridden = await _stops_matching(hass)
 
     assert events == []
     assert overridden.native_value == 0
-    await tracker.async_will_remove_from_hass()  # cancels its recheck
 
 
-async def test_a_light_still_overridden_once_settled_is_announced_and_counted(hass: HomeAssistant):
-    _tracker, events, overridden = await _back_online_at_a_stale_level(hass)
+async def test_a_light_still_mismatched_after_the_grace_is_announced_and_counted(hass: HomeAssistant):
+    _tracker, events, overridden = await _stops_matching(hass)
     refreshed: list = []
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
-    later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
+    later = dt_util.utcnow() + MISMATCH_GRACE + timedelta(seconds=2)
     with freeze_time(later, real_asyncio=True):
         async_fire_time_changed(hass, later)
         await hass.async_block_till_done()
@@ -304,12 +323,12 @@ async def test_a_light_still_overridden_once_settled_is_announced_and_counted(ha
     assert [e.data["light"] for e in events] == ["light.a"]
 
 
-async def test_a_light_that_settles_to_what_flare_asked_for_is_never_announced(hass: HomeAssistant):
-    tracker, events, overridden = await _back_online_at_a_stale_level(hass)
+async def test_a_light_that_comes_back_to_what_flare_asked_for_is_never_announced(hass: HomeAssistant):
+    tracker, events, overridden = await _stops_matching(hass)
     hass.states.async_set("light.a", "on", ASKED, context=Context())
     tracker._refresh_statuses()
 
-    later = dt_util.utcnow() + RECONNECT_SETTLE + timedelta(seconds=2)
+    later = dt_util.utcnow() + MISMATCH_GRACE + timedelta(seconds=2)
     with freeze_time(later, real_asyncio=True):
         async_fire_time_changed(hass, later)
         await hass.async_block_till_done()
@@ -330,6 +349,8 @@ async def test_a_light_set_again_after_an_override_is_not_announced(hass: HomeAs
     tracker._refresh_statuses()
     hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
     tracker._refresh_statuses()
+    with after_the_grace():
+        tracker._refresh_statuses()
 
     hass.states.async_set("light.a", "on", ASKED, context=Context())
     tracker._refresh_statuses()
@@ -473,6 +494,8 @@ async def test_the_event_omits_device_id_when_there_is_no_device(hass: HomeAssis
     tracker._refresh_statuses()
     hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
     tracker._refresh_statuses()
+    with after_the_grace():
+        tracker._refresh_statuses()
     await hass.async_block_till_done()
 
     assert len(events) == 1
@@ -491,7 +514,9 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     _light(hass, "light.a", area_id=area.id)
     await _record(registry, _zone_id(_entry, "Kitchen"), "light.a", "ctx-ours", ASKED)
     hass.states.async_set("light.a", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
-    assert overridden.native_value == 1
+    tracker._refresh_statuses()
+    with after_the_grace():
+        assert overridden.native_value == 1
 
     refreshed: list = []
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
@@ -583,7 +608,80 @@ async def test_the_totals_count_every_zones_lights(hass: HomeAssistant):
     await _record(registry, _zone_id(entry, "Hall"), "light.b", "ctx-b", ASKED)
     await _record(registry, _zone_id(entry, "Hall"), "light.c", "ctx-c", ASKED)
     hass.states.async_set("light.c", "on", {"brightness": 12, "color_temp_kelvin": 6500}, context=Context())
+    for tracker in (e for e in added if hasattr(e, "claims")):
+        tracker._refresh_statuses()
 
     controlled, overridden = totals["sensor.flare_controlled_lights"], totals["sensor.flare_overridden_lights"]
-    assert (controlled.native_value, overridden.native_value) == (2, 1)
-    assert overridden.extra_state_attributes["lights"] == ["light.c"]
+    with after_the_grace():
+        assert (controlled.native_value, overridden.native_value) == (2, 1)
+        assert overridden.extra_state_attributes["lights"] == ["light.c"]
+
+
+async def test_a_room_switched_off_by_something_else_goes_dark_without_overrides(hass: HomeAssistant):
+    """Each light is only mismatched as it goes off, and the zone lets them
+    all go once it's dark, before any could count as overridden."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    events: list = []
+    hass.bus.async_listen("flare_light_overridden", events.append)
+    for light in ("light.a", "light.b"):
+        _light(hass, light, area_id=area.id, **ASKED)
+        await _record(registry, _zone_id(entry, "Kitchen"), light, f"ctx-{light}", ASKED)
+    tracker._refresh_statuses()
+    unsub = registry.async_start_listening(hass)
+
+    hass.states.async_set("light.a", "off", {}, context=Context())
+    await hass.async_block_till_done()
+    tracker._refresh_statuses()
+    hass.states.async_set("light.b", "off", {}, context=Context())
+    await hass.async_block_till_done()
+    with after_the_grace():
+        tracker._refresh_statuses()
+    unsub()
+
+    assert events == []
+    assert registry.all_records() == {}
+
+
+async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant):
+    """Recorded before it's sent, so the light briefly shows the last value;
+    the mismatch clears when the new one arrives."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    zone = _zone_id(entry, "Kitchen")
+    events: list = []
+    hass.bus.async_listen("flare_light_overridden", events.append)
+    _light(hass, "light.a", area_id=area.id, **ASKED)
+    await _record(registry, zone, "light.a", "ctx-first", ASKED)
+    tracker._refresh_statuses()
+    unsub = registry.async_start_listening(hass)
+
+    later = {"brightness": 120, "color_temp_kelvin": 2700}
+    await _record(registry, zone, "light.a", "ctx-second", later)
+    assert claim_field(registry, zone, "light.a", "latest", "context_id") == "ctx-second"
+    assert registry.record(zone, "light.a").get("mismatch_since"), "noted while the write is in flight"
+    tracker._refresh_statuses()
+    hass.states.async_set("light.a", "on", later, context=Context(id="ctx-second"))
+    await hass.async_block_till_done()
+    with after_the_grace():
+        tracker._refresh_statuses()
+    unsub()
+
+    assert "mismatch_since" not in registry.record(zone, "light.a")
+    assert events == []
+
+
+async def test_claims_override_is_an_override_at_once(hass: HomeAssistant):
+    """Someone said so, as a flare does, so there's nothing to wait for."""
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, added = await _setup(hass, _zone("Kitchen"))
+    tracker = next(e for e in added if hasattr(e, "claims"))
+    overridden = next(e for e in added if e.entity_id.endswith("_flare_overridden"))
+    _light(hass, "light.a", area_id=area.id, **ASKED)
+
+    await registry.async_override(_zone_id(entry, "Kitchen"), ["light.a"])
+    tracker._refresh_statuses()
+
+    assert overridden.native_value == 1

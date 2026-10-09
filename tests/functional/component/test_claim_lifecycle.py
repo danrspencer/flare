@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.zone.claims import STALE_RECORD_MAX_AGE_DAYS
+from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,
     apply_lighting,
@@ -55,8 +56,9 @@ async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_inte
     await hass.async_block_till_done()
 
     results = await claims_check(hass, ["light.a"])
-    assert results["light.a"]["status"] == "overridden"
-    assert results["light.a"]["blocked"] is True
+    assert (results["light.a"]["status"], results["light.a"]["blocked"]) == ("mismatched", True)
+    with after_the_grace():
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
 
 
 async def test_claim_is_cleared_when_light_goes_unavailable(setup_integration: HomeAssistant):
@@ -290,12 +292,13 @@ async def test_a_change_after_the_light_has_settled_still_counts_as_an_override(
     hass = setup_integration
     await _light_back_online_and_a_lost_write(hass)
 
-    with freeze_time(dt_util.utcnow() + timedelta(seconds=31), real_asyncio=True):
+    with freeze_time(dt_util.utcnow() + timedelta(seconds=31), real_asyncio=True) as frozen:
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=90, color_temp_kelvin=2702)
         await hass.async_block_till_done()
+        assert await _groups(hass) == []
+        frozen.tick(timedelta(seconds=31))
 
         assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
-        assert await _groups(hass) == []
 
 
 async def test_a_change_soon_after_flares_write_landed_still_counts_as_an_override(setup_integration: HomeAssistant):
@@ -314,7 +317,8 @@ async def test_a_change_soon_after_flares_write_landed_still_counts_as_an_overri
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=90, color_temp_kelvin=3200)
     await hass.async_block_till_done()
 
-    assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
+    with after_the_grace():
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
 
 
 async def _back_online_at_a_stale_level(hass: HomeAssistant) -> None:
@@ -326,17 +330,17 @@ async def _back_online_at_a_stale_level(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
 
-async def test_a_light_back_online_settles_before_it_counts_as_an_override(setup_integration: HomeAssistant):
+async def test_a_light_back_online_is_mismatched_before_it_counts_as_an_override(setup_integration: HomeAssistant):
     """Blocked meanwhile, like an override, so nothing writes over it."""
     hass = setup_integration
     await _back_online_at_a_stale_level(hass)
 
     result = (await claims_check(hass, ["light.a"]))["light.a"]
-    assert (result["status"], result["blocked"]) == ("settling", True)
+    assert (result["status"], result["blocked"]) == ("mismatched", True)
     assert await _groups(hass) == []
 
 
-async def test_a_light_still_changed_once_settled_is_overridden(setup_integration: HomeAssistant):
+async def test_a_light_still_changed_once_the_grace_is_over_is_overridden(setup_integration: HomeAssistant):
     hass = setup_integration
     await _back_online_at_a_stale_level(hass)
 

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from homeassistant.core import Context, State
 
@@ -198,8 +200,23 @@ class TestClassifyState:
 
     def test_a_reachable_light_is_judged_against_its_claims(self):
         state = State("light.a", "on", {"brightness": 40, "color_temp_kelvin": 6000}, context=Context(id="ctx-x"))
-        assert classify_state(state, self.RECORD) == ("overridden", None)
+        assert classify_state(state, self.RECORD)[0] in ("mismatched", "overridden")
         assert classify_state(state, None) == ("untracked", None)
+
+    def test_a_mismatch_is_only_an_override_once_it_has_lasted(self):
+        """Mismatched until its mismatch_since is MISMATCH_GRACE old; before
+        anything has noted it, it's mismatched too."""
+        state = State("light.a", "on", {"brightness": 40, "color_temp_kelvin": 6000}, context=Context(id="ctx-x"))
+        now = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
+        since = lambda seconds: {**self.RECORD, "mismatch_since": (now - timedelta(seconds=seconds)).isoformat()}
+
+        assert classify_state(state, self.RECORD, now=now) == ("mismatched", None)
+        assert classify_state(state, since(29), now=now) == ("mismatched", None)
+        assert classify_state(state, since(30), now=now) == ("overridden", None)
+
+    def test_mismatched_is_blocked_like_overridden(self):
+        assert is_blocked("mismatched") and is_blocked("overridden")
+        assert not is_blocked("mismatched", force=True)
 
     def test_it_reads_the_live_values_and_the_bulbs_range(self):
         # Parked at its advertised 4000K ceiling, so a 5000K target still matches.

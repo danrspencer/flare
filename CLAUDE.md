@@ -313,6 +313,23 @@ included, or one dead entity would block the release forever. "The room"
 is the zone: an untracked light holds nothing open. It fires only on a
 transition from a real on/off state (see below).
 
+**A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
+30s), at the user's direction. Until then the light is `mismatched`:
+blocked like an override, but counted in neither sensor and not
+announced. Each claim record carries `mismatch_since`, set when the light
+first stops matching and cleared when it matches again or can't be
+reached. `ClaimRegistry.note_mismatch` keeps it, from the state listener,
+each write, and every claims-sensor refresh (which also catches a
+restored claim's), so it lives with the claim, not in loose state. It's
+persisted with the claims, so an override from before a restart is still
+one. A new write starts afresh. `claims_override` sets it already expired,
+since someone said so. Short-lived mismatches seen live, all now silent:
+a bulb's stale first report after a reconnect (10/8130 on a bulb at
+204/8105, corrected 0.4s later), FLARE's own write still landing on a bulb
+whose previous write was never confirmed, and another automation
+switching a room off light by light (the zone goes dark and releases them
+first). The claims sensor rechecks once the grace has passed.
+
 **Known limitation, partly mitigated:** an `overridden` light is excluded
 from every group, so it never gets a fresher claim, and on a ramping
 curve the value match drifts further away. The zone going dark clears it;
@@ -346,9 +363,10 @@ light with no confirmed write. Restore state is saved every 15 minutes
 and at shutdown, so a crash loses up to 15 minutes of claims, failing
 open.
 
-**Reconnects** (`classify_state`'s `reconnected_at`; `claims.py` notes
-when a light goes unavailable/unknown -> on/off, and forgets it once a
-FLARE write is seen landing):
+**Reconnects** (`classify_state`'s `reconnected_at`; the `ClaimRegistry`
+notes when any light goes unavailable/unknown -> on/off, and forgets it
+once a FLARE write is seen landing. It's kept on the registry, not the
+claim, because a light's claim is dropped when it goes offline):
 
 - **A command lost as a light comes back is resent, not an override.**
   Found live: a Hue bulb on a wall switch booted at its default, the
@@ -360,13 +378,6 @@ FLARE write is seen landing):
   light someone changed before it dropped out has its last FLARE write
   from before. Note `latest` can't stand in for "landed": it's promoted
   only at the next write.
-- **Otherwise, within 30s of coming back, it's `settling`**: blocked like
-  an override, but counted in neither sensor and not announced. A bulb's
-  first report after reconnecting is often stale (seen live after a
-  restart: 10/8130 on a bulb at 204/8105, corrected 0.4s later), and the
-  zone announced overrides that never were. The claims sensor rechecks
-  once it has settled. It's a status of `classify_state`, so
-  `claims_check` and `apply_lighting` agree with the sensors.
 - Still parked: the same loss when FLARE wrote *before* the reconnect
   (needed three restarts in fifteen minutes, which ordinary use doesn't).
 
@@ -1076,10 +1087,10 @@ be on each light's timeline; the user chose the zone.
 - **`flare_lights_controlled` gathers for `CONTROLLED_GATHER_SECONDS`**,
   because a room's bulbs confirm one by one, and names only lights that
   are on (a turn-off claims lights too: "now controlling 0 lights"). A
-  light back from unavailable or settling isn't counted as taken, or
+  light back from unavailable or mismatched isn't counted as taken, or
   every room announced itself after a restart.
-- A settling light isn't announced as overridden (see "Claims across
-  restarts and reconnects").
+- A mismatched light isn't announced as overridden (see "Override
+  protection").
 
 ### Other operational notes
 

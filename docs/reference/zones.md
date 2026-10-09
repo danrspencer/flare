@@ -151,7 +151,8 @@ device_id: ...
 
 > **Kitchen** cleared 6 lights
 
-When something else changes one of a zone's lights, FLARE fires `flare_light_overridden` for that
+When something else changes one of a zone's lights, and it stays changed for 30 seconds, FLARE
+fires `flare_light_overridden` for that
 light:
 
 ```yaml
@@ -184,8 +185,8 @@ triggers:
 | Status | Meaning |
 |---|---|
 | `controlled` | FLARE is setting it: it matches one of its claims. |
-| `overridden` | It matches neither claim, so something else has changed it. |
-| `settling` | It came back online less than 30 seconds ago and doesn't match yet. A light's first reports after reconnecting are often out of date, so it isn't counted or announced as overridden until it has had time to report properly. It's blocked meanwhile. |
+| `overridden` | It has matched neither claim for at least 30 seconds, so something else has changed it. |
+| `mismatched` | It has matched neither claim for less than 30 seconds. Usually it's FLARE's own change still arriving, or a light just back online reporting late, so it isn't counted or announced as overridden yet. It's left alone meanwhile, the same as an overridden light. |
 | `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
 | `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
 | `unavailable` | Home Assistant can't reach it, so its claims aren't checked. It isn't blocked. |
