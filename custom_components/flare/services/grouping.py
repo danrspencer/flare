@@ -90,7 +90,13 @@ class EntityLookup:
 
 @dataclass
 class Group:
+    """One brightness bucket's commands. `target` (and `target_rgb` for the
+    *_rgb lists) is what the group's lights are sent, and so what was tested
+    against and what a write's claim records - one dict, so they can't differ."""
+
     brightness: int
+    target: dict = field(default_factory=dict)
+    target_rgb: Optional[dict] = None
     needing_off: list = field(default_factory=list)
     combined: list = field(default_factory=list)
     two_step: list = field(default_factory=list)
@@ -161,9 +167,8 @@ def build_groups(
     )
     groups = []
     for brightness, group_entities in _bucket_by_brightness(entities, brightness_levels, sensor_brightness).items():
-        group = Group(brightness=brightness)
-
         if brightness <= 0:
+            group = Group(brightness=brightness, target={"state": "off"})
             group.needing_off = [
                 e
                 for e in group_entities
@@ -174,6 +179,11 @@ def build_groups(
             groups.append(group)
             continue
 
+        group = Group(
+            brightness=brightness,
+            target={"brightness": brightness, "color_temp_kelvin": sensor_color_temp_kelvin},
+            target_rgb={"brightness": brightness, "rgb_color": list(rgb_color)} if use_rgb else None,
+        )
         if use_rgb:
             rgb_entities = [e for e in group_entities if lookup.supports_rgb(e)]
             temp_entities = [e for e in group_entities if e not in rgb_entities]
@@ -185,9 +195,7 @@ def build_groups(
             for e in temp_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set(
-                e, {"brightness": brightness, "color_temp_kelvin": sensor_color_temp_kelvin}, lookup, close_enough
-            )
+            and not _already_set(e, group.target, lookup, close_enough)
         ]
         group.two_step = [
             e
@@ -201,7 +209,7 @@ def build_groups(
             for e in rgb_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set(e, {"brightness": brightness, "rgb_color": rgb_color}, lookup, close_enough)
+            and not _already_set(e, group.target_rgb, lookup, close_enough)
         ]
         group.two_step_rgb = [
             e
