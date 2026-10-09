@@ -259,11 +259,12 @@ class TestLightsAlreadyShowingTheCurve:
 
         assert turn_on == []
 
-    async def test_off_hands_off_and_claimed_lights_are_not_claimed(self, setup_integration: HomeAssistant):
+    async def test_off_unreachable_hands_off_and_claimed_lights_are_not_claimed(self, setup_integration: HomeAssistant):
         hass = setup_integration
         async_mock_service(hass, "light", "turn_on")
         async_mock_service(hass, "light", "turn_off")
         set_light(hass, "light.off", "off", supported_color_modes=CT)
+        set_light(hass, "light.unreachable", "unavailable")
         set_light(hass, "light.hands_off", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
         set_light(hass, "light.claimed", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
         await claims_record(hass, ["light.claimed"], targets={"light.claimed": {"state": "off"}})
@@ -271,10 +272,10 @@ class TestLightsAlreadyShowingTheCurve:
 
         await apply_lighting(
             hass,
-            ["light.off", "light.hands_off", "light.claimed"],
+            ["light.off", "light.unreachable", "light.hands_off", "light.claimed"],
             brightness_levels={"light.off": 0, "light.hands_off": None},
         )
 
         records = claim_registry(hass).all_records()
-        assert "light.off" not in records and "light.hands_off" not in records
+        assert not {"light.off", "light.unreachable", "light.hands_off"} & set(records)
         assert records["light.claimed"] == claimed_before

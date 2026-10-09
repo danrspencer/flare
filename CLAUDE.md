@@ -330,6 +330,12 @@ whose previous write was never confirmed, and another automation
 switching a room off light by light (the zone goes dark and releases them
 first). The claims sensor rechecks once the grace has passed.
 
+**A light already showing what `apply_lighting` would send is adopted**
+(`ClaimRegistry.adopt`): no write goes to it, so if it's on and unclaimed
+in every zone it gets an `observed` claim of its current context and
+values. Otherwise a Clear in a lit room left most lights unclaimed, and a
+hand change to one went unnoticed.
+
 **Known limitation, partly mitigated:** an `overridden` light is excluded
 from every group, so it never gets a fresher claim, and on a ramping
 curve the value match drifts further away. The zone going dark clears it;
