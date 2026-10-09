@@ -166,12 +166,16 @@ zone: Kitchen                        # the zone that lost the light
 device_id: ...
 previous_status: controlled
 live_context_id: 01M11...
-live: { state: on, brightness: 12, color_temp_kelvin: 6500, rgb_color: null }
+live: { state: on, brightness: 12, color_temp_kelvin: 6500 }   # or rgb_color, for a colour
 observed: { context_id: ..., target: {...}, recorded_at: ... }
 latest:   { context_id: ..., target: {...}, recorded_at: ... }
 ```
 
 > **Kitchen** released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)
+
+`live` is what the light was showing: its brightness and colour temperature, or its `rgb_color`
+if it wasn't showing a white. A light reporting its colour as `xy` that's showing a white has its
+colour temperature worked out from it.
 
 It fires once when the light changes hands, not again while the light stays overridden, and not
 for lights that were already overridden before a restart. To trigger an automation on it:

@@ -32,6 +32,7 @@ from .const import (
     EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .zone.matching import shown
 from .zone.override_protection import MISMATCH_GRACE, classify_state
 from .zone.instance import ZoneInstance, zone_instances
 from .zone.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
@@ -187,12 +188,7 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
                 **self._zone_data("overridden"),
                 "previous_status": previous,
                 "live_context_id": live_context_id,
-                "live": {
-                    "state": state.state if state else None,
-                    "brightness": state.attributes.get("brightness") if state else None,
-                    "color_temp_kelvin": state.attributes.get("color_temp_kelvin") if state else None,
-                    "rgb_color": state.attributes.get("rgb_color") if state else None,
-                },
+                "live": {"state": state.state, **shown(state.attributes)} if state else {"state": None},
                 "observed": record.get("observed"),
                 "latest": record.get("latest"),
             },

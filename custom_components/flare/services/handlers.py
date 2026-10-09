@@ -31,13 +31,8 @@ from ..const import (
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups, target_brightness
-from ..zone.override_protection import (
-    DEFAULT_BRIGHTNESS_TOLERANCE,
-    DEFAULT_COLOR_TEMP_TOLERANCE,
-    DEFAULT_RGB_COLOR_TOLERANCE,
-    classify_state,
-    is_blocked,
-)
+from ..zone.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
+from ..zone.override_protection import classify_state, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from ..zone.claims import ClaimRegistry

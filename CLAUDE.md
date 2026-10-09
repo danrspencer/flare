@@ -258,19 +258,25 @@ Facts verified against HA core:
   compares values against either claim's target.
 - **Zigbee bulbs speak mireds**, and HA's Kelvin/mired conversions both
   `floor()`. Two Kelvin values flooring to the same mired are the same to
-  the device, so `_color_temp_matches` treats them as equal.
+  the device, so `matching.shows` treats them as equal.
 - **A bulb's advertised colour range isn't always honest**
   (`light.utility_spot_1` claims max 4000K and reports 5813K), so
-  `_already_set` accepts the raw target or the clamped one.
-- **A bulb in a colour mode reports no `color_temp_kelvin`**, only
-  `xy_color` (HA fills `rgb_color`/`hs_color` from it). `reported_kelvin()`
-  reads Kelvin from `xy` with HA's `color_xy_to_temperature`, if it's within
-  `MAX_WHITE_DUV` of the Planckian locus, for both override matching and
-  `_already_set`. Comparing by RGB instead read whites as overrides: HA's
-  Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K (seen
-  live on bathroom spots advertising 4000K and showing 6575K in `xy`).
+  `matching.shows` accepts the raw target or the clamped one.
+- **What a light shows is decided in one place, `zone/matching.py`**:
+  `shows()` (override matching, `_already_set`), `reported_kelvin()` and
+  `shown()` (adoption, the override event's `live`). Its docstring is the
+  rule set: Kelvin from `color_temp_kelvin`, else from a white's `xy_color`
+  (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
+  Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
+  only against an RGB target; the target as asked or clamped to the
+  advertised range. Separate copies had drifted (the bathroom spots read
+  as overridden while showing 6575K for 6578K).
+  `tests/checks/test_one_value_matcher.py` fails if anything else reads a
+  light's colour or imports `homeassistant.util.color` (the curve's
+  Kelvin->RGB for sending excepted).
 - **The minimum change (`min_brightness_change` %, `min_color_temp_change`
-  mireds) lives only in `_already_set`**, never in `classify()`: it
+  mireds) is only ever set by grouping** (`Tolerance`), never by
+  `classify()`: it
   decides what's worth sending, and widening override matching by the
   same amount would let a hand-set light near the curve read as FLARE's.
   Colour is in mireds because a flat Kelvin gap is ~4x coarser at 6500K.

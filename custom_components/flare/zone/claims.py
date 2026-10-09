@@ -50,6 +50,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
 from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
+from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
     _context_matches,
@@ -72,17 +73,6 @@ SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 # holds a claim on the same light. Each zone then reads the other's writes
 # as overrides, so the light quietly stops following either.
 NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
-
-
-def _shown(state) -> dict:
-    """What a light is showing, as a claim's target."""
-    attrs = state.attributes
-    target = {"brightness": attrs.get("brightness")}
-    if attrs.get("color_temp_kelvin") is not None:
-        target["color_temp_kelvin"] = attrs["color_temp_kelvin"]
-    elif attrs.get("rgb_color") is not None:
-        target["rgb_color"] = list(attrs["rgb_color"])
-    return target
 
 
 class ClaimStore(Protocol):
@@ -259,7 +249,7 @@ class ClaimRegistry:
                     "context_id": state.context.id,
                     "secondary_context_id": None,
                     "recorded_at": now,
-                    "target": _shown(state),
+                    "target": shown(state.attributes),
                 },
                 "latest": None,
                 "last_seen": now,
