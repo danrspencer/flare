@@ -27,7 +27,7 @@ async def _set_up_hall(hass: HomeAssistant, add_bulbs):
 
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["step_id"] == "areas"
-    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"areas": {}})
     await hass.async_block_till_done()
     assert result["reason"] == "setup_complete", result
     return bulbs

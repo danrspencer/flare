@@ -14,7 +14,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry, ConfigSubentryFlow
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import floor_registry as fr
 from homeassistant.helpers import selector
@@ -53,6 +53,7 @@ DEFAULT_SCHEDULE_NAME = "Home"
 MAX_SCHEDULES = 4
 SKIP = "skip"
 SET_UP = "set_up"
+AREAS = "areas"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
-        chosen = _chosen(user_input or {}, areas, schedules)
+        chosen = _chosen((user_input or {}).get(AREAS) or {}, areas, schedules)
 
         await self._create_entries()
         schedule_ids = self._schedule_ids()
@@ -249,10 +250,11 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 def _areas_schema(
     hass: HomeAssistant, areas: list[Area], schedules: list[tuple[str, str]], zoned: set[str]
 ) -> vol.Schema:
-    """What to set up, then a dropdown per area - Don't set up, or a
-    schedule - each field named after its area, which the dialog shows as
-    its label. An area with a zone starts as Don't set up; the others start
-    on the schedule named like their floor, else the first."""
+    """What to set up, then an Areas section with a dropdown per area -
+    Don't set up, or a schedule - each field named after its area, which
+    the dialog shows as its label. The section sets the areas apart from
+    the choice above them. An area with a zone starts as Don't set up; the
+    others start on the schedule named like their floor, else the first."""
     fields: dict = {
         vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
             selector.SelectSelectorConfig(
@@ -268,10 +270,12 @@ def _areas_schema(
             options=options, translation_key="area_schedule", mode=selector.SelectSelectorMode.DROPDOWN
         )
     )
+    per_area: dict = {}
     for area in areas:
         floor = _floor_name(hass, area.area_id)
         default = SKIP if area.area_id in zoned else by_floor.get(slugify(floor or ""), schedules[0][0])
-        fields[vol.Required(area.name, default=default)] = dropdown
+        per_area[vol.Required(area.name, default=default)] = dropdown
+    fields[vol.Required(AREAS)] = section(vol.Schema(per_area))
     return vol.Schema(fields)
 
 

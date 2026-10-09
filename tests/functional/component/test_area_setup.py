@@ -71,25 +71,35 @@ async def _first_setup(hass: HomeAssistant, names: list[str]):
     return await _submit(hass, result, {f"schedule_{n}": name for n, name in enumerate(names, 1)})
 
 
+def _area_fields(result) -> dict:
+    """The Areas section's fields, by name."""
+    (key,) = [k for k in result["data_schema"].schema if str(k) == "areas"]
+    return {str(k): v for k, v in result["data_schema"].schema[key].schema.schema.items()}
+
+
+def _defaults(result) -> dict:
+    """The form's starting values, the Areas section's flattened in."""
+    defaults = result["data_schema"]({"areas": {}})
+    return {"set_up": defaults["set_up"], **defaults["areas"]}
+
+
 def _choose(hass: HomeAssistant, result, area_ids: list[str], **extra) -> dict:
     """The areas form's input: each area in `area_ids` on the one schedule,
     every other area Don't set up."""
     names = {ar.async_get(hass).async_get_area(a).name for a in area_ids}
-    fields = [str(k) for k in result["data_schema"].schema if str(k) != "set_up"]
-    (schedule,) = {o["value"] for o in _options(result, fields[0])} - {"skip"} if fields else {None}
-    return {**{f: schedule if f in names else "skip" for f in fields}, **extra}
+    fields = _area_fields(result)
+    (schedule,) = {o["value"] for o in _options(result, next(iter(fields)))} - {"skip"} if fields else {None}
+    return {"areas": {f: schedule if f in names else "skip" for f in fields}, **extra}
 
 
 def _options(result, field: str) -> list[dict]:
-    key = next(k for k in result["data_schema"].schema if str(k) == field)
-    return result["data_schema"].schema[key].config["options"]
+    return _area_fields(result)[field].config["options"]
 
 
 def _picked(hass: HomeAssistant, result) -> list[str]:
     """The areas that start set up."""
-    defaults = result["data_schema"]({})
     names = {a.name: a.id for a in ar.async_get(hass).async_list_areas()}
-    return sorted(names[f] for f, v in defaults.items() if f != "set_up" and v != "skip")
+    return sorted(names[f] for f, v in _defaults(result).items() if f != "set_up" and v != "skip")
 
 
 # --- First setup -------------------------------------------------------
@@ -161,12 +171,12 @@ async def test_each_area_starts_on_the_schedule_named_like_its_floor(
     _area(hass, "Loft", "light.l")
 
     result = await _first_setup(hass, ["Downstairs", "Upstairs"])
-    assert result["data_schema"]({}) == {
+    assert _defaults(result) == {
         "set_up": "flare", "Kitchen": "schedule_1", "Bedroom": "schedule_2", "Loft": "schedule_1"
     }
     assert [o["value"] for o in _options(result, "Kitchen")] == ["skip", "schedule_1", "schedule_2"]
 
-    result = await _submit(hass, result, {"Kitchen": "schedule_1", "Bedroom": "schedule_2", "Loft": "skip"})
+    result = await _submit(hass, result, {"areas": {"Kitchen": "schedule_1", "Bedroom": "schedule_2", "Loft": "skip"}})
 
     assert result["description_placeholders"] == {
         "schedules": "Downstairs, Upstairs", "zones": "2", "automations": "2", "flares": "2"
@@ -230,13 +240,13 @@ async def test_with_several_schedules_an_area_with_a_zone_starts_as_dont_set_up(
 ):
     _area(hass, "Kitchen", "light.k", floor="Upstairs")
     result = await _first_setup(hass, ["Downstairs", "Upstairs"])
-    await _submit(hass, result, {"Kitchen": "schedule_2"})
+    await _submit(hass, result, {"areas": {"Kitchen": "schedule_2"}})
     _area(hass, "Hall", "light.h", floor="Upstairs")
 
     result = await _start(hass)
 
     schedules = {s.title: s.subentry_id for s in schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES))}
-    assert result["data_schema"]({}) == {"set_up": "flare", "Hall": schedules["Upstairs"], "Kitchen": "skip"}
+    assert _defaults(result) == {"set_up": "flare", "Hall": schedules["Upstairs"], "Kitchen": "skip"}
 
 
 async def test_set_up_area_with_no_lights_in_areas_says_so(stub_entry_setup, automations_file, hass: HomeAssistant):

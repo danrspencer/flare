@@ -510,7 +510,9 @@ it is). Set up area can just be run again.
   back to a field's name when it has no translation, the only way to
   label fields made at runtime). It starts on the schedule named like the
   area's floor, else the first. One field per area so it can't be set up
-  wrong. Tried and dropped: radios (three rows per area), HA's area
+  wrong. They sit in an **Areas** section (`data_entry_flow.section`) to
+  set them apart from what-to-set-up; its key is fixed, so its heading
+  and description translate. Tried and dropped: radios (three rows per area), HA's area
   picker (closes after every pick), and a checkbox list per schedule
   (always expanded, and an area could be ticked under two schedules).
 - **The flare is part of the default**, the one exception to "nothing
