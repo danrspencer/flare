@@ -59,6 +59,12 @@ class TestTolerance:
         """4373K and 4385K are 12K apart but floor to the same mired."""
         assert _groups({"light.a": _on(255, 4385)}, brightness=255, kelvin=4373)[0].combined == []
 
+    def test_a_white_reported_as_xy_is_at_target(self):
+        """A bulb asked for more than its advertised range reporting in xy."""
+        at = _on(255, color_mode="xy", xy_color=[0.3124, 0.3226], max_color_temp_kelvin=4000)
+        assert _groups({"light.a": at}, brightness=255, kelvin=6578)[0].combined == []
+        assert _groups({"light.a": at}, brightness=255, kelvin=3000)[0].combined == ["light.a"]
+
     def test_rgb_is_compared_per_channel(self):
         close = _on(200, supported_color_modes=["rgb"], rgb_color=[253, 181, 108])
         far = _on(200, supported_color_modes=["rgb"], rgb_color=[255, 180, 90])

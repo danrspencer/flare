@@ -128,6 +128,11 @@ CI — see `.github/workflows/release.yml`.
 - **Lights already at the curve are claimed.** After a **Clear**, lights already showing what
   FLARE would set got no change, so they had no claim: they weren't counted as controlled, and
   a change made to them wasn't noticed. `flare.apply_lighting` now claims them as they are.
+- **A white light reporting in `xy` is no longer read as overridden.** Some bulbs asked for a
+  colour temperature beyond their range report the colour as `xy`. FLARE compared it by RGB,
+  and Home Assistant's two conversions to RGB disagree near daylight white, so a bulb showing
+  exactly what FLARE asked for read as overridden. A white reported in `xy` is now compared as
+  a colour temperature.
 - **Renaming a FLARE entity no longer breaks anything.** A schedule kept reading a renamed
   time or curve value's old entity ID and quietly fell back to its default, and the
   dashboard lost renamed entities. Both now find them however they're named. The cards'

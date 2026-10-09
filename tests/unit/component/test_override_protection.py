@@ -3,15 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from homeassistant.core import Context, State
 
-from custom_components.flare.schedule.curve import kelvin_to_rgb
-from custom_components.flare.zone.override_protection import (
-    _color_temp_matches,
-    _context_matches,
-    classify,
-    classify_state,
-    is_blocked,
-    target_matches_values,
-)
+from custom_components.flare.zone.override_protection import _context_matches, classify, classify_state, is_blocked
 
 ON_TARGET = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -85,39 +77,7 @@ class TestClassifyByValue:
             observed=_claim("ctx-o", observed_target),
             latest=_claim("ctx-l", latest_target, secondary="ctx-l-step"),
             current_context="ctx-unrelated",
-            current_brightness=live[0],
-            current_color_temp_kelvin=live[1],
-        )
-        assert status == expected
-
-    def test_a_bulb_reporting_in_rgb_mode_matches_its_kelvin_claim(self):
-        """HA reports color_temp_kelvin as None outside COLOR_TEMP mode."""
-        claim = _claim("ctx-ours", {"brightness": 255, "color_temp_kelvin": 3000})
-        status, _ = classify(
-            is_on=True,
-            observed=claim,
-            latest=claim,
-            current_context="ctx-unrelated",
-            current_brightness=255,
-            current_color_temp_kelvin=None,
-            current_rgb_color=kelvin_to_rgb(3000),
-        )
-        assert status == "controlled"
-
-    @pytest.mark.parametrize(
-        ("reported", "expected"), [(4000, "controlled"), (2700, "overridden")], ids=["at its ceiling", "elsewhere"]
-    )
-    def test_a_bulb_parked_at_its_ceiling_matches_a_target_beyond_it(self, reported, expected):
-        claim = _claim("ctx-ours", {"brightness": 255, "color_temp_kelvin": 6531})
-        status, _ = classify(
-            is_on=True,
-            observed=claim,
-            latest=claim,
-            current_context="ctx-unrelated",
-            current_brightness=255,
-            current_color_temp_kelvin=reported,
-            min_color_temp_kelvin=2700,
-            max_color_temp_kelvin=4000,
+            attributes={"brightness": live[0], "color_temp_kelvin": live[1]},
         )
         assert status == expected
 
@@ -163,34 +123,6 @@ class TestIsBlocked:
         assert is_blocked("overridden", force=True) is False
 
 
-class TestTargetMatchesValues:
-    def test_rgb_targets_compare_per_channel(self):
-        target = {"brightness": 200, "rgb_color": [255, 120, 10]}
-        assert target_matches_values(target, 200, None, [255, 121, 9])
-        assert not target_matches_values(target, 200, None, [10, 10, 10])
-        assert not target_matches_values(target, 200, None, [255, 120, 10, 0])
-
-    def test_no_target_never_matches(self):
-        assert not target_matches_values(None, 200, 3000, None)
-        assert not target_matches_values({}, 200, 3000, None)
-
-    def test_a_mired_equivalent_kelvin_matches(self):
-        """4373K floors to mired 228, which reads back as 4385K."""
-        assert target_matches_values({"brightness": 255, "color_temp_kelvin": 4373}, 255, 4385, None)
-
-
-class TestColorTempMatches:
-    def test_within_kelvin_tolerance(self):
-        assert _color_temp_matches(3005, 3000, tolerance_kelvin=10)
-        assert not _color_temp_matches(3050, 3000, tolerance_kelvin=10)
-
-    def test_same_mired_matches_beyond_tolerance(self):
-        assert _color_temp_matches(4385, 4373, tolerance_kelvin=10)
-
-    def test_a_different_mired_does_not(self):
-        assert not _color_temp_matches(6000, 3000, tolerance_kelvin=10)
-
-
 class TestClassifyState:
     RECORD = {"observed": _claim("ctx-o", ON_TARGET), "latest": None}
 
@@ -227,4 +159,26 @@ class TestClassifyState:
             context=Context(id="ctx-x"),
         )
         record = {"observed": _claim("ctx-o", {"brightness": 200, "color_temp_kelvin": 5000}), "latest": None}
+        assert classify_state(state, record) == ("controlled", "observed-value")
+
+
+class TestValuesComeFromMatching:
+    """classify_state compares values through matching.shows - see
+    test_matching.py. One live case end to end."""
+
+    def test_spots_reporting_in_xy_showing_what_flare_asked_for_are_controlled(self):
+        state = State(
+            "light.a",
+            "on",
+            {
+                "brightness": 255,
+                "color_mode": "xy",
+                "color_temp_kelvin": None,
+                "xy_color": [0.3124, 0.3226],
+                "rgb_color": [242, 248, 255],
+                "max_color_temp_kelvin": 4000,
+            },
+            context=Context(id="ctx-x"),
+        )
+        record = {"observed": _claim("ctx-o", {"brightness": 255, "color_temp_kelvin": 6578}), "latest": None}
         assert classify_state(state, record) == ("controlled", "observed-value")
