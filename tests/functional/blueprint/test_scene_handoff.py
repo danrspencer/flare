@@ -92,8 +92,8 @@ class TestSceneHandoff:
         assert claims_clear_calls == []
         assert apply_lighting_calls[-1].data["entities"] == ["light.a"]
 
-    async def test_scene_recheck_is_skipped_on_a_same_phase_attribute_only_tick(
-        self, hass, apply_lighting_calls, scene_turn_on_calls
+    async def test_the_tick_does_not_re_activate_the_scene(
+        self, hass, apply_lighting_calls, scene_turn_on_calls, frozen_time
     ):
         """A scene is re-activated only on a real phase change, or it would stomp
         manual changes every minute."""
@@ -109,9 +109,13 @@ class TestSceneHandoff:
         await hass.async_block_till_done()
         assert len(scene_turn_on_calls) == 1
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 140, "color_temp": 3000})
+        runs = len(apply_lighting_calls)
+
+        frozen_time.tick(timedelta(minutes=1))
+        async_fire_time_changed(hass, dt_util.utcnow())
         await hass.async_block_till_done()
 
+        assert len(apply_lighting_calls) > runs, "precondition: the tick must have run the automation"
         assert len(scene_turn_on_calls) == 1
 
     async def test_scene_reaching_outside_scope_is_treated_as_invalid(
