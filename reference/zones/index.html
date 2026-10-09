@@ -477,7 +477,7 @@ light:</p>
 <span class="na">device_id</span><span class="pi">:</span> <span class="s">...</span>
 <span class="na">previous_status</span><span class="pi">:</span> <span class="s">controlled</span>
 <span class="na">live_context_id</span><span class="pi">:</span> <span class="s">01M11...</span>
-<span class="na">live</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">state</span><span class="pi">:</span> <span class="nv">on</span><span class="pi">,</span> <span class="nv">brightness</span><span class="pi">:</span> <span class="nv">12</span><span class="pi">,</span> <span class="nv">color_temp_kelvin</span><span class="pi">:</span> <span class="nv">6500</span><span class="pi">,</span> <span class="nv">rgb_color</span><span class="pi">:</span> <span class="nv">null</span> <span class="pi">}</span>
+<span class="na">live</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">state</span><span class="pi">:</span> <span class="nv">on</span><span class="pi">,</span> <span class="nv">brightness</span><span class="pi">:</span> <span class="nv">12</span><span class="pi">,</span> <span class="nv">color_temp_kelvin</span><span class="pi">:</span> <span class="nv">6500</span> <span class="pi">}</span>   <span class="c1"># or rgb_color, for a colour</span>
 <span class="na">observed</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">context_id</span><span class="pi">:</span> <span class="nv">...</span><span class="pi">,</span> <span class="nv">target</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">...</span><span class="pi">},</span> <span class="nv">recorded_at</span><span class="pi">:</span> <span class="nv">...</span> <span class="pi">}</span>
 <span class="na">latest</span><span class="pi">:</span>   <span class="pi">{</span> <span class="nv">context_id</span><span class="pi">:</span> <span class="nv">...</span><span class="pi">,</span> <span class="nv">target</span><span class="pi">:</span> <span class="pi">{</span><span class="nv">...</span><span class="pi">},</span> <span class="nv">recorded_at</span><span class="pi">:</span> <span class="nv">...</span> <span class="pi">}</span>
 </code></pre></div></div>
@@ -485,6 +485,10 @@ light:</p>
 <blockquote>
   <p><strong>Kitchen</strong> released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)</p>
 </blockquote>
+
+<p><code class="language-plaintext highlighter-rouge">live</code> is what the light was showing: its brightness and colour temperature, or its <code class="language-plaintext highlighter-rouge">rgb_color</code>
+if it wasn’t showing a white. A light reporting its colour as <code class="language-plaintext highlighter-rouge">xy</code> that’s showing a white has its
+colour temperature worked out from it.</p>
 
 <p>It fires once when the light changes hands, not again while the light stays overridden, and not
 for lights that were already overridden before a restart. To trigger an automation on it:</p>
