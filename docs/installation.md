@@ -10,7 +10,7 @@ permalink: /installation/
 Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.4.0 or newer, [HACS](https://hacs.xyz) installed,
+> **Prerequisites** — Home Assistant 2026.10.0 or newer, [HACS](https://hacs.xyz) installed,
 > and your lights assigned to areas, so FLARE can set itself up room by room.
 
 1. TOC
@@ -51,7 +51,7 @@ what most rooms want:
 | | What it does |
 |---|---|
 | A [zone]({{ site.baseurl }}/reference/zones/) | Keeps track of which lights FLARE is driving there, so it leaves alone a light you've changed yourself. |
-| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting". |
+| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting", with a **FLARE** label so you can find them. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
 The zone is always set up. Leave out the flare if you don't use voice assistants and don't
@@ -80,11 +80,6 @@ have them.
 
 The other buttons there add one thing at a time: **Add schedule**, **Add zone** and
 **Add flare**.
-
-{: .note }
-> A bug in Home Assistant 2026.9 and earlier makes **Add schedule**, **Add zone** and **Add
-> flare** ask you to pick between Schedules, Zones and Flares first. Pick the one that matches
-> what you're adding; Home Assistant 2026.10 fixes this.
 
 ---
 

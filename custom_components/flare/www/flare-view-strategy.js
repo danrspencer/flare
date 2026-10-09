@@ -13,7 +13,7 @@
  * every load, so layout changes arrive with an update.
  */
 
-import { scheduleSensors, normaliseSlug, listZones, zoneDevices } from './flare-entities.js';
+import { scheduleSensors, normaliseSlug, listZones, zoneDevices, flareTotals } from './flare-entities.js';
 import { sectionConfig } from './flare-section.js';
 import { zoneSections, zoneTotalsSection } from './flare-zone-section.js';
 import './flare-clear-card.js';
@@ -87,7 +87,7 @@ class FlareZoneViewStrategy extends HTMLElement {
       );
     }
 
-    const zoneView = { type: 'sections', max_columns: 2, sections: [zoneTotalsSection(zones), ...zoneSections(hass, zones)] };
+    const zoneView = { type: 'sections', max_columns: 2, sections: [zoneTotalsSection(zones, flareTotals(hass)), ...zoneSections(hass, zones)] };
     const devices = zoneDevices(hass, zones);
     const hasLogbook = (hass.config?.components || []).includes('logbook');
     if (!hasLogbook || !devices.length) return zoneView;

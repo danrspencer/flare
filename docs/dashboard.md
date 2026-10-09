@@ -14,12 +14,15 @@ Add it from **Settings → Dashboards → Add dashboard**: pick **FLARE Lighting
 name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 
 - **A schedule's view** shows the day's curve and every schedule and curve setting.
-- **Zones** shows how many lights FLARE is driving across the house and how many something
-  else has taken over. Below that is each zone, by floor and area, laid out like Home
-  Assistant's Lights dashboard: its controlled and overridden counts, which lights are
-  overridden, and a **Clear** button to hand them back. A zone's name opens its device page.
-  Beside the zones, **Activity** lists the last 24 hours of their events, as each zone's device
-  page does. On a narrow screen, Activity is a separate tab.
+- **Zones** starts with **All zones**: how many lights FLARE is driving across the house, how
+  many something else has taken over, and a **Clear** button for every zone at once. Below that
+  is each zone, by floor and area, laid out like Home Assistant's Lights dashboard: its
+  controlled and overridden counts, which lights are overridden, and a **Clear** button to hand
+  them back. A zone's name opens its device page. Beside the zones, **Activity** lists the last
+  24 hours of what the zones did, coloured by kind - blue when a zone takes its lights, amber
+  when something else overrides one, grey when a zone lets them go - and the buttons at its top
+  show one kind at a time. Selecting an entry opens that zone's device page. On a narrow screen,
+  Activity is a separate tab.
 
 ![A schedule's view: the day's curve, a phase override, the schedule times, and
 the curve and transition values for each phase]({{ '/assets/img/dashboard-section.png' | relative_url }})

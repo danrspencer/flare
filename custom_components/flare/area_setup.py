@@ -24,6 +24,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import label_registry as lr
 from homeassistant.util import slugify
 from homeassistant.util.file import write_utf8_file_atomic
 from homeassistant.util.yaml import dump, load_yaml
@@ -49,6 +50,10 @@ from .flares.automation import TARGET, automation_ref
 from .zone.instance import zone_instances
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
+
+# The label on every automation setup creates, so they're easy to find.
+LABEL_NAME = "FLARE"
+LABEL_ICON = "mdi:home-lightbulb"
 
 # How much each area gets; each includes the ones before it.
 ZONE = "zone"
@@ -141,8 +146,11 @@ async def async_set_up_areas(
     entity_ids = await async_add_automations(hass, list(configs.values()))
 
     registry = er.async_get(hass)
+    label = _flare_label(hass)
     for area, entity_id in zip(configs, entity_ids):
-        registry.async_update_entity(entity_id, area_id=area.area_id)
+        entry = registry.async_get(entity_id)
+        labels = (entry.labels if entry else set()) | {label}
+        registry.async_update_entity(entity_id, area_id=area.area_id, labels=labels)
     if level == AUTOMATION:
         return SetupResult(zones=zones, automations=len(entity_ids), flares=0)
     for area, entity_id in zip(configs, entity_ids):
@@ -224,6 +232,13 @@ def _restore(path: str, original: str | None) -> None:
         os.remove(path)
     else:
         write_utf8_file_atomic(path, original)
+
+
+def _flare_label(hass: HomeAssistant) -> str:
+    """The FLARE label's id, creating the label the first time."""
+    registry = lr.async_get(hass)
+    label = registry.async_get_label_by_name(LABEL_NAME) or registry.async_create(LABEL_NAME, icon=LABEL_ICON)
+    return label.label_id
 
 
 def _entry(hass: HomeAssistant, entry_type: str, required: bool = True) -> ConfigEntry | None:

@@ -433,6 +433,8 @@ dropdown; Set up area can just be run again).
   file, and the original text is restored byte for byte. An unreadable
   file (not YAML, or not a list) is left alone with its own message. A
   successful write drops comments in the file, as the editor does.
+- **Each automation gets the "FLARE" label** (created the first time), at
+  the user's request, so they're easy to find and manage.
 - **Not yet handled: a failure partway leaves what was created.** Zones
   (and on first setup the entries) exist before automations.yaml is
   written. Deliberately left for a decision of its own.
@@ -874,6 +876,11 @@ files, and a symlink once wrote junk blueprints into the repo.
   releases. That's deliberate; don't "fix" it with a PAT.
 - **`git push origin dev:main` must be a fast-forward**: `main` requires
   linear history.
+- **The integration needs HA 2026.10.0** (`hacs.json`'s `homeassistant`):
+  earlier releases make every subentry's Add button ask which entry type
+  first, a frontend bug that would read as ours, and the Activity card
+  needs 2026.10's `ha-logbook-entry`. The blueprint's own floor stays at
+  what it needs.
 - `tests/checks/test_versions.py` pins the placeholder and a parseable
   changelog heading. Full flow in CONTRIBUTING.md.
 
@@ -1023,23 +1030,41 @@ beside it.
   counts. On narrow screens it's a button badge on the heading.
 - A zone's area is its device's, else the area named after it; it takes
   the area's name unless two zones share the area.
-- The totals are a markdown template over the zones' counts. A stacked
-  statistics graph and total sensors were both tried and dropped.
-- **The Activity sidebar is `custom:flare-activity-card`**, not HA's
-  logbook card. That card asks for a device target's entities only, never
-  `deviceIds` (`hui-logbook-card.ts`, 2026.9 to dev), and the logbook
-  server drops sensors with a unit or state class from that list
-  (`async_filter_entities`), so zone events filed under the count sensors
-  never showed. FLARE's card renders the frontend's own `ha-logbook` with
-  the zones' entities and `deviceIds`, as a device page does. `ha-logbook`
-  is lazy-loaded, so the card has `loadCardHelpers` create a logbook card
-  first. An accepted risk like `ha-control-slider`; if it breaks, follow
-  `ha-config-device-page.ts`.
+- **The totals are an "All zones" row built like a zone's**, at the
+  user's direction: the Zones entry's device-less total sensors
+  (`sensor.flare_{controlled,overridden}_lights`, translation keys
+  `all_controlled`/`all_overridden`, found by `flareTotals()`) as its
+  tiles, and a Clear card pressing every zone's Clear button at once (the
+  card takes a list). A markdown line of sums came first, and a stacked
+  statistics graph before that was dropped as ugly.
+- **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
+  to the logbook's `logbook/event_stream` for the zones' devices itself,
+  filters by kind, and renders each entry as HA's own `ha-logbook-entry`
+  with `nodeColor` (2026.10+) set to the kind's colour (the tiles'
+  blue/amber/grey), so rows look exactly like HA's logbook. Only the list
+  around them - day headings and the scrolling box - is ours, copied from
+  `ha-logbook-renderer`, which can't colour rows individually. Selecting a
+  row (`logbook-entry-selected`) opens the zone's device page. An event's
+  kind is the zone entity it's filed under (below); entries without a
+  message, i.e. the Clear button's own state change, are left out.
+  - Why not HA's logbook card, as the Security dashboard uses: it asks for
+    a device target's entities only, never `deviceIds`
+    (`hui-logbook-card.ts`), and the logbook server drops sensors with a
+    unit from that list (`async_filter_entities`), so zone events never
+    showed; and it can't colour or filter rows.
+  - `ha-logbook-entry` is a frontend internal, lazy-loaded (the card has
+    `loadCardHelpers` create a logbook card first, which imports it). An
+    accepted risk like `ha-control-slider`; its properties were the same
+    from 2026.9 to dev apart from `nodeColor`, new in 2026.10. **It should
+    look like HA's logbook** (user's call): if HA restyles
+    `ha-logbook-renderer`'s day headings or container, follow them.
 
 **Zone events** (`flare_lights_controlled`, `flare_lights_released`,
-`flare_light_overridden`) carry one of the zone's count sensors as
-`entity_id` and its `device_id`, with the lights in `light`/`lights`, so
-they show on the zone's device page and in its Activity. The logbook
+`flare_light_overridden`) carry a zone entity as `entity_id` - the
+Controlled count, the Overridden count, or the Clear button for a release
+(`_zone_data`) - and the zone's `device_id`, with the lights in
+`light`/`lights`, so they show on the zone's device page and in its
+Activity, and the Activity card can tell the three apart. The logbook
 matches events to entities only through `entity_id`, so they can't also
 be on each light's timeline; the user chose the zone.
 

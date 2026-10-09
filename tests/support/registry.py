@@ -31,3 +31,15 @@ def zone_entities(device_id: str, slug: str) -> dict[str, dict]:
         "clear": f"button.{slug}_flare_clear",
     }
     return flare_entities(device_id, roles)
+
+
+def totals_entities() -> dict[str, dict]:
+    """The Zones entry's totals across zones, which have no device."""
+    return {
+        f"sensor.flare_{status}_lights": {
+            "entity_id": f"sensor.flare_{status}_lights",
+            "platform": "flare",
+            "translation_key": f"all_{status}",
+        }
+        for status in ("controlled", "overridden")
+    }

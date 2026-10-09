@@ -45,6 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         return
 
     registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([_AllZonesCountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")])
     for instance in zone_instances(entry):
         async_add_entities(
             [
@@ -222,21 +223,23 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         if not entity_ids:
             return
         self.hass.bus.async_fire(
-            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data("controlled")}
+            EVENT_LIGHTS_RELEASED, {"lights": entity_ids, **self._zone_data("clear")}
         )
 
     def _is_on(self, entity_id: str) -> bool:
         state = self.hass.states.get(entity_id)
         return state is not None and state.state == "on"
 
-    def _zone_data(self, status: str) -> dict[str, str]:
-        """Files an event under the zone: entity_id is the zone's count
-        sensor for `status`, which puts it in a logbook card targeting the
-        zone, and device_id puts it in the zone's own Activity (omitted, not
-        None, if the device isn't registered)."""
+    def _zone_data(self, role: str) -> dict[str, str]:
+        """Files an event under the zone: entity_id is the zone entity for
+        `role` (a count sensor, or Clear for a release), which is how the
+        Activity card tells the kinds apart, and device_id puts it in the
+        zone's own Activity (omitted, not None, if the device isn't
+        registered)."""
+        domain = "button" if role == "clear" else "sensor"
         entity_id = er.async_get(self.hass).async_get_entity_id(
-            "sensor", DOMAIN, f"{self._instance.subentry_id}_{status}"
-        ) or f"sensor.{self._instance.prefix}flare_{status}"
+            domain, DOMAIN, f"{self._instance.subentry_id}_{role}"
+        ) or f"{domain}.{self._instance.prefix}flare_{role}"
         # Identifiers are only unique per config entry.
         device = None
         if self.registry_entry is not None and self.registry_entry.config_entry_id is not None:
@@ -292,9 +295,12 @@ class _ZoneCountSensor(SensorEntity):
     def _handle_update(self) -> None:
         self.async_write_ha_state()
 
+    def _records(self) -> dict[str, dict]:
+        return self._registry.records_for_zone(self._instance.subentry_id)
+
     def _matching_lights(self) -> tuple[list[str], int]:
         lights: list[str] = []
-        records = self._registry.records_for_zone(self._instance.subentry_id)
+        records = self._records()
         for entity_id, record in records.items():
             status, _via, _ctx = _classify_tracked(self.hass, entity_id, record)
             if status == self._status:
@@ -309,6 +315,25 @@ class _ZoneCountSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         lights, total = self._matching_lights()
         return {"lights": lights, "total_tracked": total}
+
+
+class _AllZonesCountSensor(_ZoneCountSensor):
+    """A count across every zone, for the Zones view's totals row."""
+
+    _attr_has_entity_name = False
+
+    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, status: str) -> None:
+        self.hass = hass
+        self._registry = registry
+        self._status = status
+        self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
+        self._attr_unique_id = f"{entry.entry_id}_{status}"
+        self._attr_translation_key = f"all_{status}"
+        self.entity_id = f"sensor.flare_{status}_lights"
+        self._attr_name = f"FLARE {status} lights"
+
+    def _records(self) -> dict[str, dict]:
+        return self._registry.all_records()
 
 
 class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):

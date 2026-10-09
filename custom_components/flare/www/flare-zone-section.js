@@ -43,7 +43,9 @@ export function zoneCards(zone, title) {
       type: 'heading',
       heading: title,
       heading_style: 'subtitle',
-      tap_action: { action: 'navigate', navigation_path: `/config/devices/device/${zone.device}` },
+      ...(zone.device
+        ? { tap_action: { action: 'navigate', navigation_path: `/config/devices/device/${zone.device}` } }
+        : {}),
       badges: [
         { type: 'button', icon: 'mdi:backup-restore', text: 'Clear', tap_action: pressClear(clear), visibility: [SMALL_SCREEN] },
       ],
@@ -82,22 +84,25 @@ export function zoneCards(zone, title) {
   return cards;
 }
 
-/** The house's totals, from every zone's counts. */
-export function zoneTotalsSection(zones) {
-  const sum = (status) =>
-    `{{ ${JSON.stringify(zones.map(({ entities }) => entities[status])).replace(/"/g, "'")}` +
-    ` | map('states') | map('int', 0) | sum }}`;
+/**
+ * The house's totals, as a row like each zone's: Clear presses every
+ * zone's Clear, and the counts are the totals across zones (flareTotals()).
+ */
+export function zoneTotalsSection(zones, totals) {
+  const everything = {
+    device: null,
+    entities: {
+      controlled: totals.controlled,
+      overridden: totals.overridden,
+      clear: zones.map((zone) => zone.entities.clear).filter(Boolean),
+    },
+  };
   return {
     type: 'grid',
     column_span: 2,
     cards: [
       { type: 'heading', heading: 'Zones', heading_style: 'title', icon: 'mdi:lightbulb-group' },
-      {
-        type: 'markdown',
-        text_only: true,
-        grid_options: { columns: 'full' },
-        content: `**${sum('controlled')}** lights controlled · **${sum('overridden')}** overridden`,
-      },
+      ...zoneCards(everything, 'All zones'),
     ],
   };
 }
