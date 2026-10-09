@@ -31,7 +31,8 @@ from .flares.automation import (
     zone_inputs,
 )
 from .schedule.transfer import ScheduleError, dump, parse
-from .services.schedules import async_apply_schedule, read_schedule, schedule_instance_for
+from .schedule.coordinator import read_schedule
+from .services.schedules import async_apply_schedule, schedule_instance_for
 
 SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
 

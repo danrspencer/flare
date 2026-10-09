@@ -15,8 +15,8 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR, is_reachable
-from ..schedule.coordinator import CURVE_KEYS, TIME_KEYS, ScheduleInstance, schedule_instances
+from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR
+from ..schedule.coordinator import TIME_KEYS, ScheduleInstance, read_schedule, schedule_instances
 from ..schedule.transfer import ScheduleError, dump, parse
 
 ATTR_SCHEDULE_DEVICE_ID = "schedule_device_id"
@@ -41,20 +41,6 @@ def schedule_instance_for(hass: HomeAssistant, subentry_id: str) -> ScheduleInst
         if subentry is not None and subentry.subentry_type == SUBENTRY_TYPE_SENSOR:
             return next(i for i in schedule_instances(entry) if i.subentry_id == subentry_id)
     raise ValueError(f"No schedule with subentry {subentry_id}")
-
-
-def read_schedule(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, str | int]:
-    """The schedule's current values, skipping any entity not yet available."""
-    values: dict[str, str | int] = {}
-    for key in TIME_KEYS:
-        state = hass.states.get(instance.time_entity(hass, key))
-        if is_reachable(state):
-            values[key] = state.state
-    for key in CURVE_KEYS:
-        state = hass.states.get(instance.number_entity(hass, key))
-        if is_reachable(state):
-            values[key] = round(float(state.state))
-    return values
 
 
 async def async_apply_schedule(
