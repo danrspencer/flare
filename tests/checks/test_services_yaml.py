@@ -24,6 +24,7 @@ def test_every_documented_service_is_registered():
         "turn_off",
         "compute_curve",
         "compute_scene_coverage",
+        "resolve_target",
         "claims_check",
         "claims_record",
         "claims_clear",

@@ -49,8 +49,8 @@ attribute lists the lights.
 | `light.turn_on` with a brightness, colour or effect | Marks every light as overridden in the zone with [`flare.claims_override`](../services/#flareclaims_override), then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark. |
 | `light.turn_off` | Marks every light as overridden in the same way, then turns them off. They stay off until the room's automation next turns them on, such as when it detects motion. |
 
-The flare's lights are found the way a service call's target is. A light that is hidden, or
-belongs to another flare, isn't one of them.
+The flare's lights are the same as its automation's, chosen as described under
+[Room](../blueprint/#room). A light that belongs to another flare isn't one of them.
 
 ## Flares and the room's automation
 

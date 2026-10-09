@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from homeassistant.const import EntityCategory
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -173,6 +174,40 @@ class TestRoomTargetResolution:
             "light.named",
             "light.on_device",
         ]
+
+    async def test_an_area_leaves_out_hidden_and_categorised_lights_as_home_assistant_does(
+        self, hass, apply_lighting_calls
+    ):
+        area = ar.async_get(hass).async_get_or_create("Lounge")
+        ent_reg = er.async_get(hass)
+        for object_id, changes in (
+            ("lamp", {}),
+            ("hidden", {"hidden_by": er.RegistryEntryHider.USER}),
+            ("indicator", {"entity_category": EntityCategory.CONFIG}),
+        ):
+            ent_reg.async_get_or_create("light", "test", object_id, suggested_object_id=object_id)
+            ent_reg.async_update_entity(f"light.{object_id}", area_id=area.id, **changes)
+            light(hass, f"light.{object_id}", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"area_id": area.id})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.lamp"]
+
+    async def test_a_hidden_light_named_directly_is_still_one_of_the_rooms(self, hass, apply_lighting_calls):
+        ent_reg = er.async_get(hass)
+        ent_reg.async_get_or_create("light", "test", "hidden", suggested_object_id="hidden")
+        ent_reg.async_update_entity("light.hidden", hidden_by=er.RegistryEntryHider.USER)
+        light(hass, "light.hidden", "on")
+        await hass.async_block_till_done()
+
+        await setup_room_automation(hass, room_target={"entity_id": "light.hidden"})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.hidden"]
 
 class TestOverrideDetection:
     """docs/reference/blueprint.md#why-didnt-my-light-change"""

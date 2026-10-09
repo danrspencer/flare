@@ -1,12 +1,19 @@
 """The blueprint in a real HA automation engine, with FLARE's services and
 scene.turn_on mocked: these tests are about what the blueprint decides to
-call, for a given trigger and room state."""
+call, for a given trigger and room state. flare.resolve_target is the real
+one, since it decides which lights are the room's."""
 
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import async_mock_service
 
+from custom_components.flare.services.targets import async_setup_target_services
 from tests.functional.blueprint.harness import SENSOR
+
+
+@pytest.fixture(autouse=True)
+def resolve_target(hass: HomeAssistant):
+    async_setup_target_services(hass)
 
 
 @pytest.fixture
