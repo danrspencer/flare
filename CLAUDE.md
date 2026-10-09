@@ -667,8 +667,7 @@ a detected and a cleared trigger for each, sharing the `motion_on` /
 `room_entities` (every domain); `resolved_entities` is its lights minus
 flares. Scene scope is those entities plus every entity on each light's
 device. Through an area, device, floor or label, a hidden or categorised
-light isn't the room's (a breaking change for hidden lights in an area);
-one named directly always is. The `recovered` trigger keeps its own
+light isn't the room's; one named directly always is. The `recovered` trigger keeps its own
 Jinja expansion, since a trigger template can't read `variables:` or
 call a service.
 
@@ -814,8 +813,8 @@ Other blueprint facts:
   monkey-patching HA's private template environment. Hence
   `flare.resolve_target` in the action. The cost, accepted: a motion_on
   with nothing to do now starts a run (and, under `mode: restart`,
-  cancels one in progress) before it stops, where the old top-level
-  `condition:` dropped it first.
+  cancels one in progress) before it stops, which a top-level
+  `condition:` would drop first.
 - **Condition/action selector inputs replacing the template inputs.** A
   blueprint input's default can't reference another input, brightness
   returns a value no selector can produce, and scene handoff would lose
