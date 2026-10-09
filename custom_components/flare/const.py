@@ -1,4 +1,17 @@
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import State
+
 DOMAIN = "flare"
+
+# What HA reports for an entity it can't reach, or hasn't heard from yet.
+UNREACHABLE_STATES = frozenset({STATE_UNAVAILABLE, STATE_UNKNOWN})
+
+
+def is_reachable(state: State | None) -> bool:
+    """Whether HA has a real state for an entity: it exists, and isn't
+    unavailable or unknown. Every check of reachability goes through this."""
+    return state is not None and state.state not in UNREACHABLE_STATES
+
 
 PHASES = ["Morning", "Day", "Evening", "Night"]
 PHASE_OPTIONS = ["Auto", *PHASES]

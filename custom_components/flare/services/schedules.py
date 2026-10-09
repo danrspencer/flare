@@ -15,7 +15,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR
+from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR, is_reachable
 from ..schedule.coordinator import CURVE_KEYS, TIME_KEYS, ScheduleInstance, schedule_instances
 from ..schedule.transfer import ScheduleError, dump, parse
 
@@ -48,11 +48,11 @@ def read_schedule(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, 
     values: dict[str, str | int] = {}
     for key in TIME_KEYS:
         state = hass.states.get(instance.time_entity(hass, key))
-        if state is not None and state.state not in ("unknown", "unavailable"):
+        if is_reachable(state):
             values[key] = state.state
     for key in CURVE_KEYS:
         state = hass.states.get(instance.number_entity(hass, key))
-        if state is not None and state.state not in ("unknown", "unavailable"):
+        if is_reachable(state):
             values[key] = round(float(state.state))
     return values
 

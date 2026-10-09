@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR
+from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR, is_reachable
 from .curve import DEFAULT_SCHEDULE_HOURS, phase_at, targets_for_phase
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,7 +132,7 @@ def _curve_kwargs(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, 
     kwargs: dict[str, int] = {}
     for key in CURVE_KEYS:
         state = hass.states.get(instance.number_entity(hass, key))
-        if state is None or state.state in ("unknown", "unavailable"):
+        if not is_reachable(state):
             continue
         try:
             kwargs[key] = round(float(state.state))
@@ -223,7 +223,7 @@ def _compute_curve_points(boundaries: dict[str, float], curve_kwargs: dict[str, 
 
 def _phase_override(hass: HomeAssistant, instance: ScheduleInstance) -> str | None:
     state = hass.states.get(instance.override_entity(hass))
-    if state is None or state.state in ("Auto", "unknown", "unavailable"):
+    if not is_reachable(state) or state.state == "Auto":
         return None
     return state.state
 

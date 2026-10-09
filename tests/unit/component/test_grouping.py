@@ -44,6 +44,18 @@ def test_unreachable_entities_are_in_no_group():
     assert groups[0].combined + groups[0].two_step + groups[0].needing_off == ["light.a"]
 
 
+def test_a_light_with_no_state_is_unreachable():
+    """As override protection sees it: nothing to send to."""
+    groups = build_groups(
+        entities=["light.a", "light.missing"],
+        brightness_levels={},
+        sensor_brightness=200,
+        sensor_color_temp_kelvin=3000,
+        lookup=make_lookup({"light.a": _on(100)}),
+    )
+    assert groups[0].combined == ["light.a"]
+
+
 class TestTolerance:
     def test_a_light_already_at_target_is_skipped(self):
         groups = _groups({"light.a": _on(180, 3050)}, brightness=180, kelvin=3050)
