@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "36cca20dd151fe990df225cc3821dd3e",
+      "run_id": "2c0d233754bbcf82c25fb0f92d8f6cd6",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-10T02:00:02+00:00",
                 "last_updated": "2026-10-10T02:00:02+00:00",
                 "context": {
-                  "id": "01M4HRKS6GMYBBXXGTGMZGDRW7",
+                  "id": "01M4HRKS6GE0QZSMTDNKJPJ8RR",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6GX38REWK6T571J3BA",
+                    "id": "01M4HRKS6GJ2XTQMK0PEWDRF7V",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6G1HK0ZYHFFBSJ3ZPP",
+                    "id": "01M4HRKS6G45FJNYN88N2XYSBD",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -89,8 +89,8 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
-              "schedule": "dd92202edfde595e8978e0380992f83c",
+              "zone": "fdf1a619d2e3fef0773c397d84945d74",
+              "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -113,8 +113,8 @@
             "timestamp": "2026-10-10T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M4G8ZESNM90T8CT4S2VJA4BV",
-                "parent_id": "01M4HRKS6G1HK0ZYHFFBSJ3ZPP",
+                "id": "01M4H6SRBT0E2Y9597PVER4RX9",
+                "parent_id": "01M4HRKS6G45FJNYN88N2XYSBD",
                 "user_id": null
               },
               "room": {
@@ -276,12 +276,12 @@
             "result": {
               "result": false,
               "entities": [
-                "light.hall_spot_4",
-                "light.hall_spot_1",
+                "light.hall_spot_2",
+                "light.hall_spot_3",
                 "light.hall_pendant",
                 "light.hall_lamp",
-                "light.hall_spot_2",
-                "light.hall_spot_3"
+                "light.hall_spot_4",
+                "light.hall_spot_1"
               ]
             }
           }
@@ -519,7 +519,7 @@
                   ],
                   "transition": 1,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c",
+                  "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74",
                   "force": false
                 },
                 "target": {}
@@ -569,10 +569,10 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "fdfd495a490a0012dcf18a13ba39fb4c"
+          "zone": "fdf1a619d2e3fef0773c397d84945d74"
         },
         "variables": {
-          "schedule": "dd92202edfde595e8978e0380992f83c",
+          "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -592,7 +592,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "dd92202edfde595e8978e0380992f83c"
+              "device_id": "53c5368956e88775ac59a9ba1f3b7ee1"
             },
             "options": {
               "event_type": [
@@ -608,7 +608,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+              "device_id": "fdf1a619d2e3fef0773c397d84945d74"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -805,7 +805,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   },
                   {
@@ -827,7 +827,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                         }
                       }
                     ]
@@ -868,7 +868,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -924,7 +924,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -982,7 +982,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c",
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -1004,7 +1004,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -1021,7 +1021,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "dd92202edfde595e8978e0380992f83c",
+            "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1033,20 +1033,20 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
+            "zone": "fdf1a619d2e3fef0773c397d84945d74",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M4G8ZESNM90T8CT4S2VJA4BV",
-        "parent_id": "01M4HRKS6G1HK0ZYHFFBSJ3ZPP",
+        "id": "01M4H6SRBT0E2Y9597PVER4RX9",
+        "parent_id": "01M4HRKS6G45FJNYN88N2XYSBD",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/0/sequence/1/if/condition/0",
-      "run_id": "aa764f7bcfc31508fb7dc4b18b4f8378",
+      "run_id": "2578079060f8b6b4b16ee64a433f5cb4",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1076,8 +1076,8 @@
                 "last_reported": "2026-10-10T02:00:02+00:00",
                 "last_updated": "2026-10-10T02:00:02+00:00",
                 "context": {
-                  "id": "01M4G8ZESNM90T8CT4S2VJA4BV",
-                  "parent_id": "01M4HRKS6G1HK0ZYHFFBSJ3ZPP",
+                  "id": "01M4H6SRBT0E2Y9597PVER4RX9",
+                  "parent_id": "01M4HRKS6G45FJNYN88N2XYSBD",
                   "user_id": null
                 }
               },
@@ -1098,7 +1098,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6G1HK0ZYHFFBSJ3ZPP",
+                    "id": "01M4HRKS6G45FJNYN88N2XYSBD",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1113,7 +1113,7 @@
                   "last_reported": "2026-10-10T02:00:02+00:00",
                   "last_updated": "2026-10-10T02:00:02+00:00",
                   "context": {
-                    "id": "01M4HRKS6GS759D4BRQWKPTBB6",
+                    "id": "01M4HRKS6G4X6K0JP1SD002QRT",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1134,8 +1134,8 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
-              "schedule": "dd92202edfde595e8978e0380992f83c",
+              "zone": "fdf1a619d2e3fef0773c397d84945d74",
+              "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -1158,8 +1158,8 @@
             "timestamp": "2026-10-10T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M4G8ZET7GAYHX28PJJT50TWD",
-                "parent_id": "01M4HRKS6GS759D4BRQWKPTBB6",
+                "id": "01M4H6SRC70X0ZM3R8KF5AHSHK",
+                "parent_id": "01M4HRKS6G4X6K0JP1SD002QRT",
                 "user_id": null
               },
               "room": {
@@ -1376,7 +1376,7 @@
                     "light.hall_spot_4"
                   ],
                   "transition": 15,
-                  "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                  "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                 },
                 "target": {}
               },
@@ -1425,10 +1425,10 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "fdfd495a490a0012dcf18a13ba39fb4c"
+          "zone": "fdf1a619d2e3fef0773c397d84945d74"
         },
         "variables": {
-          "schedule": "dd92202edfde595e8978e0380992f83c",
+          "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -1448,7 +1448,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "dd92202edfde595e8978e0380992f83c"
+              "device_id": "53c5368956e88775ac59a9ba1f3b7ee1"
             },
             "options": {
               "event_type": [
@@ -1464,7 +1464,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+              "device_id": "fdf1a619d2e3fef0773c397d84945d74"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -1661,7 +1661,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   },
                   {
@@ -1683,7 +1683,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                         }
                       }
                     ]
@@ -1724,7 +1724,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -1780,7 +1780,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -1838,7 +1838,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c",
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -1860,7 +1860,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -1877,7 +1877,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "dd92202edfde595e8978e0380992f83c",
+            "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1889,20 +1889,20 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
+            "zone": "fdf1a619d2e3fef0773c397d84945d74",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M4G8ZET7GAYHX28PJJT50TWD",
-        "parent_id": "01M4HRKS6GS759D4BRQWKPTBB6",
+        "id": "01M4H6SRC70X0ZM3R8KF5AHSHK",
+        "parent_id": "01M4HRKS6G4X6K0JP1SD002QRT",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "57a57dff0ed3db452d71a674f0cbe7bc",
+      "run_id": "de4d3d71e885758ce7d5317f961e0364",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1932,8 +1932,8 @@
                 "last_reported": "2026-10-10T02:00:02+00:00",
                 "last_updated": "2026-10-10T02:00:02+00:00",
                 "context": {
-                  "id": "01M4G8ZET7GAYHX28PJJT50TWD",
-                  "parent_id": "01M4HRKS6GS759D4BRQWKPTBB6",
+                  "id": "01M4H6SRC70X0ZM3R8KF5AHSHK",
+                  "parent_id": "01M4HRKS6G4X6K0JP1SD002QRT",
                   "user_id": null
                 }
               },
@@ -1945,12 +1945,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                    "device_id": "fdf1a619d2e3fef0773c397d84945d74"
                   },
                   "origin": "LOCAL",
                   "time_fired": "2026-10-10T02:02:02+00:00",
                   "context": {
-                    "id": "01M4HRQECGBEYJS4Q968FJTZ6H",
+                    "id": "01M4HRQECGH2C07MBF6TYA8XX8",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1968,8 +1968,8 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
-              "schedule": "dd92202edfde595e8978e0380992f83c",
+              "zone": "fdf1a619d2e3fef0773c397d84945d74",
+              "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -1992,8 +1992,8 @@
             "timestamp": "2026-10-10T02:02:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M4G8ZEV4E0CFRA2HCC1SMG0H",
-                "parent_id": "01M4HRQECGBEYJS4Q968FJTZ6H",
+                "id": "01M4H6SRCVQ0B818TJH6ZEBRFP",
+                "parent_id": "01M4HRQECGH2C07MBF6TYA8XX8",
                 "user_id": null
               },
               "room": {
@@ -2369,10 +2369,10 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "fdfd495a490a0012dcf18a13ba39fb4c"
+          "zone": "fdf1a619d2e3fef0773c397d84945d74"
         },
         "variables": {
-          "schedule": "dd92202edfde595e8978e0380992f83c",
+          "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -2392,7 +2392,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "dd92202edfde595e8978e0380992f83c"
+              "device_id": "53c5368956e88775ac59a9ba1f3b7ee1"
             },
             "options": {
               "event_type": [
@@ -2408,7 +2408,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+              "device_id": "fdf1a619d2e3fef0773c397d84945d74"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -2605,7 +2605,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   },
                   {
@@ -2627,7 +2627,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                         }
                       }
                     ]
@@ -2668,7 +2668,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -2724,7 +2724,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -2782,7 +2782,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c",
+                          "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -2804,7 +2804,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "fdfd495a490a0012dcf18a13ba39fb4c"
+                      "zone_device_id": "fdf1a619d2e3fef0773c397d84945d74"
                     }
                   }
                 ]
@@ -2821,7 +2821,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "dd92202edfde595e8978e0380992f83c",
+            "schedule": "53c5368956e88775ac59a9ba1f3b7ee1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -2833,14 +2833,14 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "fdfd495a490a0012dcf18a13ba39fb4c",
+            "zone": "fdf1a619d2e3fef0773c397d84945d74",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M4G8ZEV4E0CFRA2HCC1SMG0H",
-        "parent_id": "01M4HRQECGBEYJS4Q968FJTZ6H",
+        "id": "01M4H6SRCVQ0B818TJH6ZEBRFP",
+        "parent_id": "01M4HRQECGH2C07MBF6TYA8XX8",
         "user_id": null
       }
     }
