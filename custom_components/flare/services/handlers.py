@@ -31,15 +31,11 @@ from ..const import (
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups, target_brightness
-from ..zone.override_protection import (
-    DEFAULT_BRIGHTNESS_TOLERANCE,
-    DEFAULT_COLOR_TEMP_TOLERANCE,
-    DEFAULT_RGB_COLOR_TOLERANCE,
-    classify_state,
-    is_blocked,
-)
+from ..zone.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
+from ..zone.override_protection import classify_state, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
+from ..flares.identity import without_flares
 from ..zone.claims import ClaimRegistry
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
@@ -217,19 +213,9 @@ def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
 
     def covered_entities(scene_entity_id: str) -> list:
         s = hass.states.get(scene_entity_id)
-        return list(s.attributes.get("entity_id", [])) if s else []
+        return list(s.attributes.get("entity_id") or []) if s else []
 
     return SceneLookup(exists=exists, covered_entities=covered_entities)
-
-
-def _without_flares(hass: HomeAssistant, entities: list[str]) -> list[str]:
-    """Drops flares' own lights: a flare in its room's area would otherwise
-    be sent the room's values, and pass them on to every light as an override."""
-    registry = er.async_get(hass)
-    return [
-        e for e in entities
-        if not ((entry := registry.async_get(e)) and entry.platform == DOMAIN and entry.domain == "light")
-    ]
 
 
 def _brightness(call: ServiceCall) -> int | None:
@@ -299,7 +285,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         rgb_color = call.data.get("rgb_color")
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
-            entities=_without_flares(hass, call.data["entities"]),
+            entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
@@ -342,16 +328,15 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         next non-forced call recognises it as ours."""
         force = call.data["force"]
         brightness = _brightness(call)
-        color_temp_kelvin = call.data["color_temp_kelvin"]
         rgb_color_raw = call.data.get("rgb_color")
         rgb_color = tuple(rgb_color_raw) if rgb_color_raw else None
         zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         lookup = _build_lookup(hass, registry, zone)
         groups = build_groups(
-            entities=_without_flares(hass, call.data["entities"]),
+            entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=brightness,
-            sensor_color_temp_kelvin=color_temp_kelvin,
+            sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
             lookup=lookup,
             brightness_tolerance=call.data["brightness_tolerance"],
             color_temp_tolerance=call.data["color_temp_tolerance"],
@@ -366,12 +351,11 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         transition = call.data["transition"]
         half_transition = round(transition / 2, 1)
-        rgb_color_list = list(rgb_color) if rgb_color is not None else None
 
         # Our writes carry call.context, which is what the claims record.
         written_entities: list = []
-        # What each write asked for, to recognise it echoed back under another
-        # context. An off-command records {"state": "off"}.
+        # What each write asked for - its group's target - to recognise it
+        # echoed back under another context.
         write_targets: dict = {}
         # Two-step entities get their own pair of contexts, created now because
         # claims are recorded before dispatch: the colour step's as the primary,
@@ -383,7 +367,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             if g.needing_off:
                 written_entities.extend(g.needing_off)
                 for e in g.needing_off:
-                    write_targets[e] = {"state": "off"}
+                    write_targets[e] = g.target
                 tasks.append(
                     hass.services.async_call(
                         "light",
@@ -396,17 +380,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             if g.combined:
                 written_entities.extend(g.combined)
                 for e in g.combined:
-                    write_targets[e] = {"brightness": g.brightness, "color_temp_kelvin": color_temp_kelvin}
+                    write_targets[e] = g.target
                 tasks.append(
                     hass.services.async_call(
                         "light",
                         "turn_on",
-                        {
-                            "entity_id": g.combined,
-                            "transition": transition,
-                            "brightness": g.brightness,
-                            "color_temp_kelvin": color_temp_kelvin,
-                        },
+                        {"entity_id": g.combined, "transition": transition, **g.target},
                         blocking=True,
                         context=call.context,
                     )
@@ -414,17 +393,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             if g.combined_rgb:
                 written_entities.extend(g.combined_rgb)
                 for e in g.combined_rgb:
-                    write_targets[e] = {"brightness": g.brightness, "rgb_color": rgb_color_list}
+                    write_targets[e] = g.target_rgb
                 tasks.append(
                     hass.services.async_call(
                         "light",
                         "turn_on",
-                        {
-                            "entity_id": g.combined_rgb,
-                            "transition": transition,
-                            "brightness": g.brightness,
-                            "rgb_color": rgb_color_list,
-                        },
+                        {"entity_id": g.combined_rgb, "transition": transition, **g.target_rgb},
                         blocking=True,
                         context=call.context,
                     )
@@ -434,7 +408,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 brightness_context = Context(parent_id=call.context.id)
                 color_context = Context(parent_id=call.context.id)
                 for e in g.two_step:
-                    write_targets[e] = {"brightness": g.brightness, "color_temp_kelvin": color_temp_kelvin}
+                    write_targets[e] = g.target
                     context_id_overrides[e] = color_context.id
                     secondary_context_ids[e] = brightness_context.id
                 tasks.append(
@@ -445,7 +419,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                         half_transition,
                         brightness_context=brightness_context,
                         color_context=color_context,
-                        color_temp_kelvin=color_temp_kelvin,
+                        color_temp_kelvin=g.target["color_temp_kelvin"],
                     )
                 )
             if g.two_step_rgb:
@@ -453,7 +427,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 brightness_context = Context(parent_id=call.context.id)
                 color_context = Context(parent_id=call.context.id)
                 for e in g.two_step_rgb:
-                    write_targets[e] = {"brightness": g.brightness, "rgb_color": rgb_color_list}
+                    write_targets[e] = g.target_rgb
                     context_id_overrides[e] = color_context.id
                     secondary_context_ids[e] = brightness_context.id
                 tasks.append(
@@ -464,7 +438,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                         half_transition,
                         brightness_context=brightness_context,
                         color_context=color_context,
-                        rgb_color=rgb_color_list,
+                        rgb_color=g.target_rgb["rgb_color"],
                     )
                 )
 
@@ -495,7 +469,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             zone,
             [
                 e
-                for e in _without_flares(hass, call.data["entities"])
+                for e in without_flares(hass, call.data["entities"])
                 if e not in written_entities
                 and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
                 and lookup.claims(e) is None
@@ -512,7 +486,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         One operation so callers can't get the order or the encoding wrong.
         No override protection: it turns off everything it's given."""
-        entities = _without_flares(hass, call.data["entities"])
+        entities = without_flares(hass, call.data["entities"])
         if not entities:
             return
         transition = call.data["transition"]

@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from datetime import time as time_of_day
 from datetime import timedelta
 from typing import Any
 
@@ -21,7 +22,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR
+from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR, is_reachable
 from .curve import DEFAULT_SCHEDULE_HOURS, phase_at, targets_for_phase
 
 _LOGGER = logging.getLogger(__name__)
@@ -128,17 +129,29 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
     return instances
 
 
-def _curve_kwargs(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, int]:
-    kwargs: dict[str, int] = {}
+def default_time(key: str) -> time_of_day:
+    """A boundary's default: "morning_time" -> DEFAULT_SCHEDULE_HOURS["morning"]."""
+    return time_of_day(hour=DEFAULT_SCHEDULE_HOURS[key[: -len("_time")]])
+
+
+def read_schedule(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, str | int]:
+    """The schedule's values as its entities hold them now: times as
+    "HH:MM:SS", curve values as ints. Anything unreachable or unreadable is
+    left out, for the caller to default (the curve) or omit (an export)."""
+    values: dict[str, str | int] = {}
+    for key in TIME_KEYS:
+        state = hass.states.get(instance.time_entity(hass, key))
+        if is_reachable(state) and dt_util.parse_time(state.state) is not None:
+            values[key] = state.state
     for key in CURVE_KEYS:
         state = hass.states.get(instance.number_entity(hass, key))
-        if state is None or state.state in ("unknown", "unavailable"):
+        if not is_reachable(state):
             continue
         try:
-            kwargs[key] = round(float(state.state))
+            values[key] = round(float(state.state))
         except (TypeError, ValueError):
             continue
-    return kwargs
+    return values
 
 
 def _time_str_to_today_timestamp(time_str: str | None) -> float | None:
@@ -152,24 +165,19 @@ def _time_str_to_today_timestamp(time_str: str | None) -> float | None:
     return now_local.replace(hour=t.hour, minute=t.minute, second=t.second, microsecond=0).timestamp()
 
 
-def _time_ts(hass: HomeAssistant, instance: ScheduleInstance, key: str) -> float:
-    """Today's timestamp for one boundary, never None: falls back to the
-    default when the entity doesn't exist yet or is unavailable, as it is
-    during a reload. None would crash phase_at() and wedge setup."""
-    state = hass.states.get(instance.time_entity(hass, key))
-    ts = _time_str_to_today_timestamp(state.state) if state is not None else None
-    if ts is None:
-        default_hour = DEFAULT_SCHEDULE_HOURS[key[: -len("_time")]]
-        ts = _time_str_to_today_timestamp(f"{default_hour:02d}:00:00")
-    return ts
-
-
 def _compute_boundaries(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, float]:
-    morning_ts = _time_ts(hass, instance, "morning_time")
-    day_ts = _time_ts(hass, instance, "day_time")
-    night_ts = _time_ts(hass, instance, "night_time")
-    earliest_ts = _time_ts(hass, instance, "evening_earliest_time")
-    latest_ts = _time_ts(hass, instance, "evening_latest_time")
+    """Today's boundary timestamps. A boundary not read falls back to its
+    default, as during a reload: a gap would crash phase_at() and wedge setup."""
+    values = read_schedule(hass, instance)
+
+    def time_ts(key: str) -> float:
+        return _time_str_to_today_timestamp(values.get(key) or default_time(key).isoformat())
+
+    morning_ts = time_ts("morning_time")
+    day_ts = time_ts("day_time")
+    night_ts = time_ts("night_time")
+    earliest_ts = time_ts("evening_earliest_time")
+    latest_ts = time_ts("evening_latest_time")
 
     sun_state = hass.states.get("sun.sun")
     next_setting = sun_state.attributes.get("next_setting") if sun_state else None
@@ -223,7 +231,7 @@ def _compute_curve_points(boundaries: dict[str, float], curve_kwargs: dict[str, 
 
 def _phase_override(hass: HomeAssistant, instance: ScheduleInstance) -> str | None:
     state = hass.states.get(instance.override_entity(hass))
-    if state is None or state.state in ("Auto", "unknown", "unavailable"):
+    if not is_reachable(state) or state.state == "Auto":
         return None
     return state.state
 
@@ -235,7 +243,8 @@ class ScheduleCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         boundaries = _compute_boundaries(self.hass, self._instance)
-        curve_kwargs = _curve_kwargs(self.hass, self._instance)
+        values = read_schedule(self.hass, self._instance)
+        curve_kwargs = {key: values[key] for key in CURVE_KEYS if key in values}
         now_ts = time.time()
         computed_phase = phase_at(now_ts, boundaries["morning_ts"], boundaries["day_ts"], boundaries["evening_ts"], boundaries["night_ts"])
         phase = _phase_override(self.hass, self._instance) or computed_phase

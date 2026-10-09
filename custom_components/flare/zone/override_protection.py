@@ -9,20 +9,23 @@ See claims.py's module docstring."""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, TypedDict
 
-# HA's own conversions, so they match what devices actually report.
 from homeassistant.util import dt as dt_util
-from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
-from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
+
+from ..const import is_reachable
+from .matching import (
+    DEFAULT_BRIGHTNESS_TOLERANCE,
+    DEFAULT_COLOR_TEMP_TOLERANCE,
+    DEFAULT_RGB_COLOR_TOLERANCE,
+    Tolerance,
+    shows,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import State
-
-DEFAULT_BRIGHTNESS_TOLERANCE = 2
-DEFAULT_COLOR_TEMP_TOLERANCE = 10
-DEFAULT_RGB_COLOR_TOLERANCE = 10
 
 
 class _ContextClaim(TypedDict):
@@ -46,13 +49,6 @@ class _WriteRecord(TypedDict, total=False):
     mismatch_since: Optional[str]
 
 
-def _as_int(value, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
 def _context_matches(claim: Optional[dict], current_context: Optional[str]) -> bool:
     """True if `current_context` is either of the claim's context ids."""
     if claim is None:
@@ -60,80 +56,6 @@ def _context_matches(claim: Optional[dict], current_context: Optional[str]) -> b
     return current_context == claim["context_id"] or (
         claim.get("secondary_context_id") is not None and current_context == claim["secondary_context_id"]
     )
-
-
-def _color_temp_matches(current_kelvin: int, target_kelvin: int, tolerance_kelvin: int) -> bool:
-    """Within tolerance, or both floor to the same mired - the unit Zigbee
-    bulbs actually use, so they're indistinguishable to the device. A flat
-    Kelvin tolerance can't cover it: one mired is ~5K at 2700K but ~20K
-    at 4500K. E.g. 4373K floors to mired 228, which reads back as 4385K."""
-    if abs(current_kelvin - target_kelvin) <= tolerance_kelvin:
-        return True
-    return _kelvin_to_mired(current_kelvin) == _kelvin_to_mired(target_kelvin)
-
-
-def _color_temp_matches_rgb(target_kelvin: int, current_rgb, tolerance: int) -> bool:
-    """True if a Kelvin target and a live rgb_color are the same colour. HA
-    reports color_temp_kelvin as None outside COLOR_TEMP mode, so a bulb in
-    xy/rgb mode can only match this way."""
-    if not isinstance(current_rgb, (list, tuple)) or len(current_rgb) != 3:
-        return False
-    target_rgb = _kelvin_to_rgb(target_kelvin)
-    return all(abs(a - b) <= tolerance for a, b in zip(current_rgb, target_rgb))
-
-
-def _clamp_kelvin(target_kelvin: int, min_kelvin, max_kelvin) -> int:
-    """The target, clamped to the bulb's advertised range (0 = unknown)."""
-    lo = _as_int(min_kelvin, 0)
-    hi = _as_int(max_kelvin, 0)
-    if lo > 0:
-        target_kelvin = max(target_kelvin, lo)
-    if hi > 0:
-        target_kelvin = min(target_kelvin, hi)
-    return target_kelvin
-
-
-def target_matches_values(
-    target: Optional[dict],
-    current_brightness,
-    current_color_temp_kelvin,
-    current_rgb_color,
-    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
-    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
-    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
-    min_color_temp_kelvin=None,
-    max_color_temp_kelvin=None,
-) -> bool:
-    """Whether live values still match what a claim asked for, even though
-    its context doesn't. A falsy target never matches.
-
-    min/max_color_temp_kelvin: the bulb's advertised range, so a bulb
-    parked at its ceiling still matches a target beyond it."""
-    if not target:
-        return False
-    target_brightness = target.get("brightness")
-    if target_brightness is None:
-        return False
-    if abs(_as_int(current_brightness, -999) - target_brightness) > brightness_tolerance:
-        return False
-    target_rgb = target.get("rgb_color")
-    if target_rgb is not None:
-        return (
-            isinstance(current_rgb_color, (list, tuple))
-            and len(current_rgb_color) == 3
-            and all(abs(a - b) <= rgb_color_tolerance for a, b in zip(current_rgb_color, target_rgb))
-        )
-    target_color_temp = target.get("color_temp_kelvin")
-    if target_color_temp is None:
-        return False
-    current_kelvin = _as_int(current_color_temp_kelvin, -999)
-    if _color_temp_matches(current_kelvin, target_color_temp, color_temp_tolerance):
-        return True
-    # A bulb in xy/rgb mode has no color_temp_kelvin to compare.
-    if _color_temp_matches_rgb(target_color_temp, current_rgb_color, rgb_color_tolerance):
-        return True
-    reachable = _clamp_kelvin(target_color_temp, min_color_temp_kelvin, max_color_temp_kelvin)
-    return reachable != target_color_temp and _color_temp_matches(current_kelvin, reachable, color_temp_tolerance)
 
 
 def _asked_for_off(claim: Optional[dict]) -> bool:
@@ -149,14 +71,8 @@ def classify(
     observed: Optional[dict],
     latest: Optional[dict],
     current_context: Optional[str],
-    current_brightness=None,
-    current_color_temp_kelvin=None,
-    current_rgb_color=None,
-    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
-    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
-    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
-    min_color_temp_kelvin=None,
-    max_color_temp_kelvin=None,
+    attributes: Mapping = {},
+    tolerance: Tolerance = Tolerance(),
 ) -> tuple[str, Optional[str]]:
     """The decision table. Returns `(status, matched_via)`.
 
@@ -190,29 +106,9 @@ def classify(
         return "overridden", None
     if observed is None:
         return "untracked", None
-    if latest is not None and target_matches_values(
-        latest.get("target"),
-        current_brightness,
-        current_color_temp_kelvin,
-        current_rgb_color,
-        brightness_tolerance,
-        color_temp_tolerance,
-        rgb_color_tolerance,
-        min_color_temp_kelvin,
-        max_color_temp_kelvin,
-    ):
+    if latest is not None and shows(attributes, latest.get("target"), tolerance):
         return "controlled", "latest-value"
-    if target_matches_values(
-        observed.get("target"),
-        current_brightness,
-        current_color_temp_kelvin,
-        current_rgb_color,
-        brightness_tolerance,
-        color_temp_tolerance,
-        rgb_color_tolerance,
-        min_color_temp_kelvin,
-        max_color_temp_kelvin,
-    ):
+    if shows(attributes, observed.get("target"), tolerance):
         return "controlled", "observed-value"
     return "overridden", None
 
@@ -254,10 +150,15 @@ def classify_state(
     then "overridden": most mismatches are FLARE's own write still landing
     or a bulb reporting late. A mismatched light is blocked like an
     overridden one, so a real change is never written over meanwhile."""
-    if state is None or state.state in ("unavailable", "unknown"):
+    if not is_reachable(state):
         return "unavailable", None
-    status, matched_via = _classify_live(
-        state, record or {}, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance
+    status, matched_via = classify(
+        state.state == "on",
+        (record or {}).get("observed"),
+        (record or {}).get("latest"),
+        state.context.id,
+        state.attributes,
+        Tolerance(brightness_tolerance, color_temp_tolerance, rgb_color_tolerance),
     )
     if status != "overridden":
         return status, matched_via
@@ -294,24 +195,6 @@ def _written_since(record: _WriteRecord, when: datetime) -> bool:
         return datetime.fromisoformat(recorded) >= when
     except (TypeError, ValueError):
         return False
-
-
-def _classify_live(state, record, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance):
-    attributes = state.attributes
-    return classify(
-        state.state == "on",
-        record.get("observed"),
-        record.get("latest"),
-        state.context.id,
-        attributes.get("brightness"),
-        attributes.get("color_temp_kelvin"),
-        attributes.get("rgb_color"),
-        brightness_tolerance,
-        color_temp_tolerance,
-        rgb_color_tolerance,
-        attributes.get("min_color_temp_kelvin"),
-        attributes.get("max_color_temp_kelvin"),
-    )
 
 
 def is_blocked(status: str, force: bool = False) -> bool:

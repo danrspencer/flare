@@ -1,23 +1,33 @@
-"""The blueprint in a real HA automation engine, with FLARE's services and
-scene.turn_on mocked: these tests are about what the blueprint decides to
-call, for a given trigger and room state. flare.resolve_target is the real
-one, since it decides which lights are the room's."""
+"""The blueprint in a real HA automation engine, with FLARE's writing
+services and scene.turn_on mocked: these tests are about what the blueprint
+decides to call, for a given trigger and room state. The read-only
+compute_scene_coverage and resolve_target are FLARE's own."""
 
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
+from custom_components.flare.const import DOMAIN
+from custom_components.flare.services.handlers import async_setup_services
 from custom_components.flare.services.targets import async_setup_target_services
+from custom_components.flare.zone.claims import ClaimRegistry
 from tests.functional.blueprint.harness import SENSOR
 
 
 @pytest.fixture(autouse=True)
-def resolve_target(hass: HomeAssistant):
+def read_only_services(hass: HomeAssistant):
+    """The real flare.compute_scene_coverage and flare.resolve_target, and no
+    other FLARE service. The mocks depend on it, since it removes the rest."""
+    entry = MockConfigEntry(domain=DOMAIN)
+    async_setup_services(hass, entry, ClaimRegistry(hass, entry))
+    for service in list(hass.services.async_services_for_domain(DOMAIN)):
+        if service != "compute_scene_coverage":
+            hass.services.async_remove(DOMAIN, service)
     async_setup_target_services(hass)
 
 
 @pytest.fixture
-def apply_lighting_calls(hass: HomeAssistant):
+def apply_lighting_calls(hass: HomeAssistant, read_only_services):
     return async_mock_service(hass, "flare", "apply_lighting")
 
 
@@ -27,12 +37,12 @@ def scene_turn_on_calls(hass: HomeAssistant):
 
 
 @pytest.fixture
-def turn_off_calls(hass: HomeAssistant):
+def turn_off_calls(hass: HomeAssistant, read_only_services):
     return async_mock_service(hass, "flare", "turn_off")
 
 
 @pytest.fixture(autouse=True)
-def claims_clear_calls(hass: HomeAssistant):
+def claims_clear_calls(hass: HomeAssistant, read_only_services):
     """Autouse: the blueprint releases handed-off lights on any tick."""
     return async_mock_service(hass, "flare", "claims_clear")
 

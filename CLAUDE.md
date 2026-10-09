@@ -72,10 +72,11 @@ HA's trace UI.
   `condition:`. The `recovered` trigger keeps a plain Jinja expansion (it
   only makes a room catch up early, so close enough is fine - user's
   call).
-
-- Scene compatibility (`scene_active`/`scene_valid`) also exists as the
-  `compute_scene_coverage` service, but the blueprint keeps its own Jinja
-  copy because a `condition:` reads it. See "Parked: scene handling".
+- Scene coverage is the `compute_scene_coverage` service, called in
+  `default:` only when a scene is chosen (`scene_entity_id` is required).
+  Choosing the scene (`desired_scene`) and its scope (`scope_entities`)
+  stay in the blueprint, built on `resolve_target`'s entities. Nothing
+  before `default:` reads coverage. See "Parked: scene handling".
 - Override protection is in Python, re-checked against live state on
   every call, never a one-shot trigger check (lesson 2).
 - **The blueprint knows phase names in three inputs** - `rgb_phases`,
@@ -210,9 +211,22 @@ claims are each exposed through both.
   dashboard.
 
 **Dependencies run one way**: `schedule/`, `zone/` and `flares/` import
-only `const.py`; `services/` may use `schedule/` and `zone/`; the root
-may use everything. `tests/checks/test_layering.py` enforces it.
+only `const.py`; `services/` may use `schedule/`, `zone/` and
+`flares/identity.py` (which lights are flares); the root may use
+everything. `tests/checks/test_layering.py` enforces it.
 `services/__init__.py` holds no imports.
+
+**One definition each, shared rather than copied** - copies drifted
+before each of these was pulled together, and a check test fails on a new
+copy where one is practical:
+
+- Reachability: `const.is_reachable()` (`test_one_reachability_check.py`).
+  A light with no state was reachable to grouping and unavailable to
+  override protection.
+- What a light shows: `zone/matching.py` (`test_one_value_matcher.py`).
+- Which lights are flares: `flares/identity.py`.
+- A schedule's values: `schedule/coordinator.read_schedule()`, used by
+  the curve (which defaults what's missing) and export (which omits it).
 
 **`strings.json` is the source and `translations/en.json` a copy**, which
 is what HA shows for a custom integration. They had drifted;
@@ -272,12 +286,25 @@ Facts verified against HA core:
   compares values against either claim's target.
 - **Zigbee bulbs speak mireds**, and HA's Kelvin/mired conversions both
   `floor()`. Two Kelvin values flooring to the same mired are the same to
-  the device, so `_color_temp_matches` treats them as equal.
+  the device, so `matching.shows` treats them as equal.
 - **A bulb's advertised colour range isn't always honest**
   (`light.utility_spot_1` claims max 4000K and reports 5813K), so
-  `_already_set` accepts the raw target or the clamped one.
+  `matching.shows` accepts the raw target or the clamped one.
+- **What a light shows is decided in one place, `zone/matching.py`**:
+  `shows()` (override matching, `_already_set`), `reported_kelvin()` and
+  `shown()` (adoption, the override event's `live`). Its docstring is the
+  rule set: Kelvin from `color_temp_kelvin`, else from a white's `xy_color`
+  (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
+  Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
+  only against an RGB target; the target as asked or clamped to the
+  advertised range. Separate copies had drifted (the bathroom spots read
+  as overridden while showing 6575K for 6578K).
+  `tests/checks/test_one_value_matcher.py` fails if anything else reads a
+  light's colour or imports `homeassistant.util.color` (the curve's
+  Kelvin->RGB for sending excepted).
 - **The minimum change (`min_brightness_change` %, `min_color_temp_change`
-  mireds) lives only in `_already_set`**, never in `classify()`: it
+  mireds) is only ever set by grouping** (`Tolerance`), never by
+  `classify()`: it
   decides what's worth sending, and widening override matching by the
   same amount would let a hand-set light near the curve read as FLARE's.
   Colour is in mireds because a flat Kelvin gap is ~4x coarser at 6500K.
@@ -545,7 +572,7 @@ leaves the room wherever the bulbs restored to.
 - **A flare must never be one of a room's lights**, or the room's tick
   would send it the curve and it would pass that on as an override.
   Three layers: the blueprint rejects `integration_entities('flare')`,
-  the services drop flare lights (`_without_flares`), and a flare's own
+  the services drop flare lights (`flares/identity.without_flares`), and a flare's own
   filter drops other flares (or it recurses forever). Blueprint tests need
   a real `MockEntityPlatform` entity for `integration_entities`
   (`add_flare_light`).
@@ -817,10 +844,11 @@ Other blueprint facts:
 
 Not built; recorded so it isn't re-derived.
 
-1. **Straight port**: `apply_lighting` takes `scene_entity_id` /
-   `scope_entities`, calls `compute_scene_coverage`, then `scene.turn_on`
-   plus dispatch on the uncovered lights. Cost: the tick no longer stops
-   at `condition:` while a scene owns the room. Accepted if picked up.
+1. **Folding activation in**: `apply_lighting` takes `scene_entity_id` /
+   `scope_entities` and does the coverage, `scene.turn_on` and dispatch on
+   the uncovered lights itself. The blueprint already gets coverage from
+   the service, so this only moves `scene.turn_on`; it would need a way to
+   skip re-activation on a tick (`scene_recheck_due`).
 2. **Bigger**: feed a scene's stored values through the grouping
    pipeline, so a level could scale a scene. But a scene captures
    whichever colour mode was active (`xy`/`hs`/`color_temp`), may carry

@@ -14,8 +14,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.util.dt as dt_util
 
 from .const import DOMAIN
-from .schedule.coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .schedule.curve import DEFAULT_SCHEDULE_HOURS
+from .schedule.coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, default_time, schedule_instances
 
 _LABELS = {
     "morning_time": "Morning Start",
@@ -25,8 +24,6 @@ _LABELS = {
     "night_time": "Night Start",
 }
 
-# "morning_time" -> DEFAULT_SCHEDULE_HOURS["morning"], etc.
-_DEFAULTS = {key: datetime.time(hour=DEFAULT_SCHEDULE_HOURS[key[: -len("_time")]]) for key in TIME_KEYS}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -48,7 +45,7 @@ class _BoundaryTime(TimeEntity, RestoreEntity):
         self.entity_id = instance.time_entity_id(key)
         self._attr_device_info = instance.device_info
         self._attr_name = _LABELS[key]
-        self._attr_native_value = _DEFAULTS[key]
+        self._attr_native_value = default_time(key)
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()

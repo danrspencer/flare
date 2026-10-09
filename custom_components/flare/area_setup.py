@@ -47,6 +47,7 @@ from .const import (
     SUBENTRY_TYPE_ZONE,
 )
 from .flares.automation import TARGET, automation_ref
+from .flares.identity import is_flare_entry
 from .zone.instance import zone_instances
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
@@ -90,7 +91,7 @@ def areas_with_lights(hass: HomeAssistant) -> list[Area]:
     device_registry = dr.async_get(hass)
     area_ids = set()
     for entry in entity_registry.entities.values():
-        if entry.domain != "light" or entry.platform == DOMAIN:
+        if entry.domain != "light" or is_flare_entry(entry):
             continue
         area_id = entry.area_id
         if area_id is None and entry.device_id:

@@ -1,7 +1,5 @@
 """Which of your target entities a scene covers, so the scene can take
-those and your default behaviour the rest. Nothing lighting-specific.
-The blueprint keeps a Jinja copy, since a `condition:` can't call a
-service."""
+those and your default behaviour the rest. Nothing lighting-specific."""
 
 from dataclasses import dataclass, field
 from typing import Callable

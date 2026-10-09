@@ -279,3 +279,34 @@ class TestLightsAlreadyShowingTheCurve:
         records = claim_registry(hass).all_records()
         assert not {"light.off", "light.unreachable", "light.hands_off"} & set(records)
         assert records["light.claimed"] == claimed_before
+
+
+async def test_each_lights_claim_is_what_it_was_sent(setup_integration: HomeAssistant):
+    """Combined, two-step, RGB and two-step RGB alike."""
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    await label_two_step(hass, "light.ct_two")
+    await label_two_step(hass, "light.rgb_two")
+    set_light(hass, "light.ct", "off", supported_color_modes=CT)
+    set_light(hass, "light.ct_two", "off", supported_color_modes=CT)
+    set_light(hass, "light.rgb", "off", supported_color_modes=["xy"])
+    set_light(hass, "light.rgb_two", "off", supported_color_modes=["xy"])
+
+    await apply_lighting(
+        hass,
+        ["light.ct", "light.ct_two", "light.rgb", "light.rgb_two"],
+        brightness=180,
+        color_temp_kelvin=2900,
+        prefer_rgb_color=True,
+        rgb_color=[255, 170, 90],
+    )
+
+    sent: dict = {}
+    for call in turn_on:
+        for light in call.data["entity_id"]:
+            sent.setdefault(light, {}).update(
+                {k: v for k, v in call.data.items() if k in ("brightness", "color_temp_kelvin", "rgb_color")}
+            )
+    records = claim_registry(hass).all_records()
+    assert {light: records[light]["latest"]["target"] for light in sent} == sent
+    assert set(sent) == {"light.ct", "light.ct_two", "light.rgb", "light.rgb_two"}

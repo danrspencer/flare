@@ -49,7 +49,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_ZONE
+from ..const import DOMAIN, SUBENTRY_TYPE_ZONE, UNREACHABLE_STATES, is_reachable
+from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
     _context_matches,
@@ -72,17 +73,6 @@ SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 # holds a claim on the same light. Each zone then reads the other's writes
 # as overrides, so the light quietly stops following either.
 NOTIFICATION_LIGHT_IN_TWO_ZONES = "flare_light_in_two_zones"
-
-
-def _shown(state) -> dict:
-    """What a light is showing, as a claim's target."""
-    attrs = state.attributes
-    target = {"brightness": attrs.get("brightness")}
-    if attrs.get("color_temp_kelvin") is not None:
-        target["color_temp_kelvin"] = attrs["color_temp_kelvin"]
-    elif attrs.get("rgb_color") is not None:
-        target["rgb_color"] = list(attrs["rgb_color"])
-    return target
 
 
 class ClaimStore(Protocol):
@@ -259,7 +249,7 @@ class ClaimRegistry:
                     "context_id": state.context.id,
                     "secondary_context_id": None,
                     "recorded_at": now,
-                    "target": _shown(state),
+                    "target": shown(state.attributes),
                 },
                 "latest": None,
                 "last_seen": now,
@@ -420,7 +410,7 @@ class ClaimRegistry:
                 and new is not None
                 and new.state in ("on", "off")
                 and old is not None
-                and old.state in ("unavailable", "unknown")
+                and old.state in UNREACHABLE_STATES
             ):
                 reconnects[entity_id] = new.last_changed
             store = self._store_for(entity_id)
@@ -429,10 +419,10 @@ class ClaimRegistry:
             if new is not None and _context_matches(store.claims[entity_id].get("latest"), new.context.id):
                 # FLARE's write landed: the light has settled under FLARE.
                 reconnects.pop(entity_id, None)
-            old_available = old is not None and old.state not in ("unavailable", "unknown")
+            old_available = is_reachable(old)
             # Explicitly unavailable, not removed: every entity is removed across a
             # restart.
-            new_explicitly_unavailable = new is not None and new.state in ("unavailable", "unknown")
+            new_explicitly_unavailable = new is not None and not is_reachable(new)
             dropped = old_available and new_explicitly_unavailable
             # Not unknown -> off, which is a light reconnecting.
             went_off = old_available and new is not None and new.state == "off"
