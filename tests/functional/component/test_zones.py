@@ -685,3 +685,14 @@ async def test_claims_override_is_an_override_at_once(hass: HomeAssistant):
     tracker._refresh_statuses()
 
     assert overridden.native_value == 1
+
+
+async def test_a_light_another_zone_claims_is_not_adopted(hass: HomeAssistant):
+    area = ar.async_get(hass).async_get_or_create("Kitchen")
+    entry, registry, _ = await _setup(hass, _zone("Kitchen"), _zone("Hall"))
+    _light(hass, "light.a", area_id=area.id, **ASKED)
+    await _record(registry, _zone_id(entry, "Hall"), "light.a", "ctx-hall", ASKED)
+
+    registry.adopt(_zone_id(entry, "Kitchen"), ["light.a"])
+
+    assert registry.record(_zone_id(entry, "Kitchen"), "light.a") is None

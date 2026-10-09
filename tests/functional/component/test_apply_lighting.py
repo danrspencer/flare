@@ -18,6 +18,7 @@ from tests.functional.component.harness import (
     apply_lighting,
     claim_registry,
     claims_check,
+    claims_record,
     label_two_step,
     zone_id,
     set_light,
@@ -231,3 +232,50 @@ class TestMinimumChange:
 
         await apply_lighting(hass, ["light.a"], min_color_temp_change=0)
         assert len(turn_on) == 1
+
+
+class TestLightsAlreadyShowingTheCurve:
+    """Nothing is sent to them, so they're claimed as they are - after a
+    Clear, say, when the room never went dark."""
+
+    async def test_an_unclaimed_one_is_claimed_without_a_write(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+
+        await apply_lighting(hass, ["light.a"])
+
+        assert turn_on == []
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "controlled"
+
+    async def test_one_changed_after_it_was_claimed_is_left_alone(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+        await apply_lighting(hass, ["light.a"])
+
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=60, color_temp_kelvin=2200)
+        await apply_lighting(hass, ["light.a"])
+
+        assert turn_on == []
+
+    async def test_off_unreachable_hands_off_and_claimed_lights_are_not_claimed(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        async_mock_service(hass, "light", "turn_on")
+        async_mock_service(hass, "light", "turn_off")
+        set_light(hass, "light.off", "off", supported_color_modes=CT)
+        set_light(hass, "light.unreachable", "unavailable")
+        set_light(hass, "light.hands_off", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+        set_light(hass, "light.claimed", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+        await claims_record(hass, ["light.claimed"], targets={"light.claimed": {"state": "off"}})
+        claimed_before = dict(claim_registry(hass).all_records()["light.claimed"])
+
+        await apply_lighting(
+            hass,
+            ["light.off", "light.unreachable", "light.hands_off", "light.claimed"],
+            brightness_levels={"light.off": 0, "light.hands_off": None},
+        )
+
+        records = claim_registry(hass).all_records()
+        assert not {"light.off", "light.unreachable", "light.hands_off"} & set(records)
+        assert records["light.claimed"] == claimed_before
