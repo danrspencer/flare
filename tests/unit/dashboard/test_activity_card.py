@@ -158,3 +158,61 @@ def test_days_are_headed_as_the_logbook_heads_them(result):
 
 def test_selecting_an_entry_opens_its_zones_device_page(result):
     assert result["navigated"] == "/config/devices/device/hall_zone"
+
+
+@pytest.fixture(scope="module")
+def resubscribed():
+    """Lovelace moves a card in and out of the page and reconfigures it; each
+    time the stream sends its history again."""
+    return run_js(
+        f"""
+const element = (tag) => ({{
+  tag, children: [], className: '', textContent: '', innerHTML: '',
+  append(...nodes) {{ this.children.push(...nodes); }},
+  replaceChildren() {{ this.children = []; }},
+}});
+globalThis.document = {{ createElement: element }};
+const defined = {{ 'ha-logbook-entry': class {{}} }};
+globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
+globalThis.customElements.get = (name) => defined[name];
+const parts = {{ '.chips': element('div'), '.list': element('div') }};
+HTMLElement.prototype.attachShadow = function () {{
+  this.shadowRoot = {{ innerHTML: '', querySelector: (s) => parts[s], addEventListener() {{}} }};
+  return this.shadowRoot;
+}};
+await import({js_path(WWW / "flare-activity-card.js")});
+const Card = defined['flare-activity-card'];
+
+const callbacks = [];
+const send = (callback) => callback({{ events: input.events, start_time: 0, end_time: 0 }});
+const hass = {{
+  entities: input.entities,
+  locale: {{ language: 'en-GB' }},
+  localize: () => '',
+  connection: {{
+    subscribeMessage: (callback) => {{
+      callbacks.push(callback);
+      send(callback);
+      return Promise.resolve(() => {{}});
+    }},
+  }},
+}};
+const card = new Card();
+card.setConfig({{ device_id: ['kitchen_zone', 'hall_zone'] }});
+card.hass = hass;
+await card._loading;
+card.disconnectedCallback();
+card.connectedCallback();
+card.setConfig({{ device_id: ['kitchen_zone', 'hall_zone'] }});
+// A superseded subscription's message, arriving before its unsubscribe lands.
+send(callbacks[0]);
+// The live stream repeating an entry it has already sent.
+send(callbacks[callbacks.length - 1]);
+return parts['.list'].children.filter((c) => c.item).map((c) => c.item.message);
+""",
+        {"entities": ENTITIES, "events": EVENTS},
+    )
+
+
+def test_each_entry_shows_once_however_often_it_is_sent(resubscribed):
+    assert resubscribed == ["cleared 6 lights", "released Hall Spot to something else", "now controlling 6 lights"]

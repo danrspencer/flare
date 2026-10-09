@@ -51,6 +51,9 @@ export function visibleEntries(entries, kinds, chosen, since) {
     .sort((a, b) => b.when - a.when);
 }
 
+// The same entry can arrive twice from the stream.
+const entryKey = (e) => `${e.when}|${e.entity_id}|${e.message}`;
+
 const dayOf = (when) => new Date(when * 1000).setHours(0, 0, 0, 0);
 
 /**
@@ -139,7 +142,6 @@ class FlareActivityCard extends HTMLElement {
     if (!Array.isArray(devices) || !devices.length) throw new Error('device_id is required');
     this._config = config;
     this._unsubscribe();
-    this._entries = [];
     this._subscribe();
   }
 
@@ -169,10 +171,17 @@ class FlareActivityCard extends HTMLElement {
     return this._config.hours_to_show || DEFAULT_HOURS_TO_SHOW;
   }
 
+  // Each subscription starts the list afresh with the stream's history, and
+  // a superseded one's messages are dropped: unsubscribing is asynchronous.
   _subscribe() {
     if (this._subscription || !this._hass || !this._config) return;
     const start = new Date(Date.now() - this._hours() * 3600 * 1000).toISOString();
-    this._subscription = this._hass.connection.subscribeMessage((message) => this._received(message), {
+    const subscription = {};
+    this._current = subscription;
+    this._entries = [];
+    this._subscription = this._hass.connection.subscribeMessage((message) => {
+      if (this._current === subscription) this._received(message);
+    }, {
       type: 'logbook/event_stream',
       start_time: start,
       device_ids: this._config.device_id,
@@ -182,12 +191,14 @@ class FlareActivityCard extends HTMLElement {
   _unsubscribe() {
     const subscription = this._subscription;
     this._subscription = null;
+    this._current = null;
     if (subscription) subscription.then((unsub) => unsub()).catch(() => {});
   }
 
   _received(message) {
     if (message && Array.isArray(message.events) && message.events.length) {
-      this._entries = this._entries.concat(message.events);
+      const seen = new Set(this._entries.map(entryKey));
+      this._entries = this._entries.concat(message.events.filter((e) => !seen.has(entryKey(e))));
     }
     this._render();
   }
