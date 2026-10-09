@@ -149,10 +149,11 @@ CI — see `.github/workflows/release.yml`.
 
 - **`flare_lights_released` is filed under the zone's Clear button** (`entity_id:
   button.<zone>_flare_clear`) rather than its Controlled count.
-- **A light that has just come back online reads `settling`**, for 30 seconds, rather than
-  `overridden`. Its first reports are often out of date, so it isn't counted or announced as
-  overridden until it has had time to report properly. FLARE leaves it alone meanwhile, and
-  `flare.claims_check` reports the new status.
+- **A light only counts as overridden once it has stayed changed for 30 seconds.** Until then
+  it's `mismatched`: left alone, as an overridden light is, but not counted or announced. Most
+  short-lived mismatches are FLARE's own change still arriving, a light just back online
+  reporting late, or a room being switched off light by light by another automation, which
+  used to log an override for every light. `flare.claims_check` reports the new status.
 - **FLARE's entries are called Schedules, Zones and Flares**, without the "FLARE" in front.
 - **The blueprint's first three inputs are Schedule, Zone and Lights & Occupancy**, in
   that order. **Schedule** is what was labelled **FLARE Sensor**; nothing to re-enter.
