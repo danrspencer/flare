@@ -262,6 +262,13 @@ Facts verified against HA core:
 - **A bulb's advertised colour range isn't always honest**
   (`light.utility_spot_1` claims max 4000K and reports 5813K), so
   `_already_set` accepts the raw target or the clamped one.
+- **A bulb in a colour mode reports no `color_temp_kelvin`**, only
+  `xy_color` (HA fills `rgb_color`/`hs_color` from it). `reported_kelvin()`
+  reads Kelvin from `xy` with HA's `color_xy_to_temperature`, if it's within
+  `MAX_WHITE_DUV` of the Planckian locus, for both override matching and
+  `_already_set`. Comparing by RGB instead read whites as overrides: HA's
+  Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K (seen
+  live on bathroom spots advertising 4000K and showing 6575K in `xy`).
 - **The minimum change (`min_brightness_change` %, `min_color_temp_change`
   mireds) lives only in `_already_set`**, never in `classify()`: it
   decides what's worth sending, and widening override matching by the
