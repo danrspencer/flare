@@ -13,6 +13,7 @@ from ..zone.override_protection import (
     _color_temp_matches,
     classify_state,
     is_blocked,
+    reported_kelvin,
 )
 from .two_step import TWO_STEP_LABEL_ID, model_matches
 
@@ -284,7 +285,7 @@ def _already_set(
         return False
     if not _brightness_close(entity_id, target_brightness, lookup, brightness_tolerance, min_brightness_change):
         return False
-    current_color_temp = _as_int(lookup.state_attr(entity_id, "color_temp_kelvin"), -999)
+    current_color_temp = _as_int(reported_kelvin(lookup.state(entity_id).attributes), -999)
     if _color_temp_close(current_color_temp, target_color_temp_kelvin, color_temp_tolerance, min_color_temp_change):
         return True
     # Also accept the target clamped to the bulb's range - see

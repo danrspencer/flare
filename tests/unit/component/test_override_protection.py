@@ -3,13 +3,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from homeassistant.core import Context, State
 
-from custom_components.flare.schedule.curve import kelvin_to_rgb
 from custom_components.flare.zone.override_protection import (
     _color_temp_matches,
     _context_matches,
     classify,
     classify_state,
     is_blocked,
+    reported_kelvin,
     target_matches_values,
 )
 
@@ -89,20 +89,6 @@ class TestClassifyByValue:
             current_color_temp_kelvin=live[1],
         )
         assert status == expected
-
-    def test_a_bulb_reporting_in_rgb_mode_matches_its_kelvin_claim(self):
-        """HA reports color_temp_kelvin as None outside COLOR_TEMP mode."""
-        claim = _claim("ctx-ours", {"brightness": 255, "color_temp_kelvin": 3000})
-        status, _ = classify(
-            is_on=True,
-            observed=claim,
-            latest=claim,
-            current_context="ctx-unrelated",
-            current_brightness=255,
-            current_color_temp_kelvin=None,
-            current_rgb_color=kelvin_to_rgb(3000),
-        )
-        assert status == "controlled"
 
     @pytest.mark.parametrize(
         ("reported", "expected"), [(4000, "controlled"), (2700, "overridden")], ids=["at its ceiling", "elsewhere"]
@@ -228,3 +214,52 @@ class TestClassifyState:
         )
         record = {"observed": _claim("ctx-o", {"brightness": 200, "color_temp_kelvin": 5000}), "latest": None}
         assert classify_state(state, record) == ("controlled", "observed-value")
+
+
+class TestReportedKelvin:
+    """HA gives color_temp_kelvin only in COLOR_TEMP mode; in a colour mode
+    it comes from xy_color, if that's a white."""
+
+    def test_color_temp_mode_reports_it_directly(self):
+        assert reported_kelvin({"color_temp_kelvin": 3000, "xy_color": [0.5, 0.4]}) == 3000
+
+    @pytest.mark.parametrize(
+        ("xy", "kelvin"), [((0.3124, 0.3226), 6575), ((0.4599, 0.4106), 2698), ((0.5019, 0.4152), 2233)]
+    )
+    def test_a_white_in_xy_is_read_as_kelvin(self, xy, kelvin):
+        assert reported_kelvin({"color_temp_kelvin": None, "xy_color": list(xy)}) == kelvin
+
+    @pytest.mark.parametrize("xy", [(0.17, 0.7), (0.7, 0.3), (0.38, 0.28)], ids=["green", "red", "pink"])
+    def test_a_colour_has_no_kelvin(self, xy):
+        assert reported_kelvin({"color_temp_kelvin": None, "xy_color": list(xy)}) is None
+
+    def test_nothing_to_read(self):
+        assert reported_kelvin({}) is None
+
+
+class TestABulbReportingInXy:
+    """Seen live: spots asked for 6578K reported xy (0.3124, 0.3226), and
+    rgb_color (242, 248, 255) - HA's xy conversion, not its Kelvin one."""
+
+    CLAIM = {"observed": _claim("ctx-o", {"brightness": 255, "color_temp_kelvin": 6578}), "latest": None}
+
+    def _state(self, xy, **attributes):
+        return State(
+            "light.a",
+            "on",
+            {"brightness": 255, "color_mode": "xy", "color_temp_kelvin": None, "xy_color": xy, **attributes},
+            context=Context(id="ctx-x"),
+        )
+
+    def test_showing_what_flare_asked_for_is_controlled(self):
+        state = self._state([0.3124, 0.3226], rgb_color=[242, 248, 255], max_color_temp_kelvin=4000)
+        assert classify_state(state, self.CLAIM) == ("controlled", "observed-value")
+
+    def test_parked_at_its_ceiling_is_controlled(self):
+        state = self._state([0.3805, 0.3768], max_color_temp_kelvin=4000)
+        assert classify_state(state, self.CLAIM) == ("controlled", "observed-value")
+
+    def test_a_colour_is_not_mistaken_for_the_white_asked_for(self):
+        """Green reads as ~8049K by xy alone."""
+        record = {"observed": _claim("ctx-o", {"brightness": 255, "color_temp_kelvin": 8049}), "latest": None}
+        assert classify_state(self._state([0.17, 0.7]), record)[0] in ("mismatched", "overridden")

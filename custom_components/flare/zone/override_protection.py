@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Optional, TypedDict
 # HA's own conversions, so they match what devices actually report.
 from homeassistant.util import dt as dt_util
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
-from homeassistant.util.color import color_temperature_to_rgb as _kelvin_to_rgb
+from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
 if TYPE_CHECKING:
     from homeassistant.core import State
@@ -72,14 +72,57 @@ def _color_temp_matches(current_kelvin: int, target_kelvin: int, tolerance_kelvi
     return _kelvin_to_mired(current_kelvin) == _kelvin_to_mired(target_kelvin)
 
 
-def _color_temp_matches_rgb(target_kelvin: int, current_rgb, tolerance: int) -> bool:
-    """True if a Kelvin target and a live rgb_color are the same colour. HA
-    reports color_temp_kelvin as None outside COLOR_TEMP mode, so a bulb in
-    xy/rgb mode can only match this way."""
-    if not isinstance(current_rgb, (list, tuple)) or len(current_rgb) != 3:
-        return False
-    target_rgb = _kelvin_to_rgb(target_kelvin)
-    return all(abs(a - b) <= tolerance for a, b in zip(current_rgb, target_rgb))
+# How far a reported colour can sit from the line of whites (Duv, in CIE
+# 1960 uv) and still count as a colour temperature. Coloured light sits far
+# beyond it: pink ~0.05, green ~0.15.
+MAX_WHITE_DUV = 0.02
+
+
+def reported_kelvin(attributes) -> Optional[int]:
+    """The colour temperature a light reports. HA gives color_temp_kelvin only
+    in COLOR_TEMP mode; in a colour mode (a Zigbee bulb asked for more than its
+    advertised range often reports xy) it's read from xy_color, if that's a
+    white. None if there's neither."""
+    kelvin = attributes.get("color_temp_kelvin")
+    if kelvin is not None:
+        return _as_int(kelvin, None)
+    xy = attributes.get("xy_color")
+    if not isinstance(xy, (list, tuple)) or len(xy) != 2:
+        return None
+    try:
+        kelvin = _xy_to_kelvin(float(xy[0]), float(xy[1]))
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    return kelvin if _duv(xy[0], xy[1], kelvin) <= MAX_WHITE_DUV else None
+
+
+def _duv(x: float, y: float, kelvin: int) -> float:
+    """Distance from the Planckian locus at `kelvin`, in CIE 1960 uv."""
+    locus_x, locus_y = _planckian_xy(min(max(kelvin, 1667), 25000))
+    u, v = _xy_to_uv(x, y)
+    locus_u, locus_v = _xy_to_uv(locus_x, locus_y)
+    return ((u - locus_u) ** 2 + (v - locus_v) ** 2) ** 0.5
+
+
+def _planckian_xy(kelvin: float) -> tuple[float, float]:
+    """The Planckian locus' xy (Kim et al.'s cubic fit, 1667-25000K)."""
+    t = kelvin
+    if t <= 4000:
+        x = -0.2661239e9 / t**3 - 0.2343589e6 / t**2 + 0.8776956e3 / t + 0.179910
+    else:
+        x = -3.0258469e9 / t**3 + 2.1070379e6 / t**2 + 0.2226347e3 / t + 0.240390
+    if t <= 2222:
+        y = -1.1063814 * x**3 - 1.34811020 * x**2 + 2.18555832 * x - 0.20219683
+    elif t <= 4000:
+        y = -0.9549476 * x**3 - 1.37418593 * x**2 + 2.09137015 * x - 0.16748867
+    else:
+        y = 3.0817580 * x**3 - 5.87338670 * x**2 + 3.75112997 * x - 0.37001483
+    return x, y
+
+
+def _xy_to_uv(x: float, y: float) -> tuple[float, float]:
+    d = -2 * x + 12 * y + 3
+    return 4 * x / d, 6 * y / d
 
 
 def _clamp_kelvin(target_kelvin: int, min_kelvin, max_kelvin) -> int:
@@ -128,9 +171,6 @@ def target_matches_values(
         return False
     current_kelvin = _as_int(current_color_temp_kelvin, -999)
     if _color_temp_matches(current_kelvin, target_color_temp, color_temp_tolerance):
-        return True
-    # A bulb in xy/rgb mode has no color_temp_kelvin to compare.
-    if _color_temp_matches_rgb(target_color_temp, current_rgb_color, rgb_color_tolerance):
         return True
     reachable = _clamp_kelvin(target_color_temp, min_color_temp_kelvin, max_color_temp_kelvin)
     return reachable != target_color_temp and _color_temp_matches(current_kelvin, reachable, color_temp_tolerance)
@@ -304,7 +344,7 @@ def _classify_live(state, record, brightness_tolerance, color_temp_tolerance, rg
         record.get("latest"),
         state.context.id,
         attributes.get("brightness"),
-        attributes.get("color_temp_kelvin"),
+        reported_kelvin(attributes),
         attributes.get("rgb_color"),
         brightness_tolerance,
         color_temp_tolerance,
