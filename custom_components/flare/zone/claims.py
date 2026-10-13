@@ -390,6 +390,16 @@ class ClaimRegistry:
         store.claims.clear()
         store.async_announce_released(released)
 
+    @callback
+    def release_if_settled_dark(self, store: ClaimStore) -> None:
+        """_release_if_dark for claims that came back with the zone (a
+        restart, a restore): its lights may have gone off while HA wasn't
+        watching, so no on -> off ever reaches the listener. Only once every
+        claimed light has reported on or off, so a zone isn't released while
+        its lights reconnect one at a time."""
+        if all(is_reachable(self._hass.states.get(entity_id)) for entity_id in store.claims):
+            self._release_if_dark(store)
+
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
         """One listener for every tracked light:
 
@@ -398,7 +408,9 @@ class ClaimRegistry:
           after it. Forgotten once a write from FLARE is seen landing.
         - Any change to a tracked light: its `mismatch_since` kept.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
-        - Off (on/off -> off): releases the zone if it has gone dark."""
+        - Off (on/off -> off): releases the zone if it has gone dark.
+        - Arrival (none/unavailable/unknown -> on/off): releases the zone if
+          every claimed light has now reported and none is on."""
         reconnects = self._reconnects
 
         @callback
@@ -426,13 +438,16 @@ class ClaimRegistry:
             dropped = old_available and new_explicitly_unavailable
             # Not unknown -> off, which is a light reconnecting.
             went_off = old_available and new is not None and new.state == "off"
+            arrived = not old_available and is_reachable(new)
 
             if dropped:
                 store.claims.pop(entity_id, None)
             changed = self.note_mismatch(store, entity_id)
             if dropped or went_off:
                 self._release_if_dark(store)
-            if dropped or went_off or changed:
+            elif arrived:
+                self.release_if_settled_dark(store)
+            if dropped or went_off or arrived or changed:
                 self._notify([store])
 
         return hass.bus.async_listen("state_changed", _on_state_changed)
