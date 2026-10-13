@@ -184,3 +184,45 @@ async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: H
 
     assert set(registry.all_records()) == {"light.a", "light.b"}
     unsub()
+
+
+async def test_a_zone_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
+    """Its lights went off while HA wasn't watching (during a restart, a
+    shutdown racing FLARE's own turn-off, a restore), so no on -> off ever
+    arrives to release it, and every light would read overridden."""
+    _light(hass, "light.a", "off")
+    _light(hass, "light.b", "off")
+    released: list = []
+    hass.bus.async_listen("flare_lights_released", released.append)
+
+    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
+    await hass.async_block_till_done()
+
+    assert registry.all_records() == {}
+    assert [e.data["lights"] for e in released] == [["light.a", "light.b"]]
+
+
+async def test_a_zone_restored_dark_waits_for_every_light_to_report(hass: HomeAssistant):
+    """Lights reporting in after the claims came back, one at a time."""
+    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
+    unsub = registry.async_start_listening(hass)
+
+    _light(hass, "light.a", "unknown")
+    _light(hass, "light.b", "off")
+    await hass.async_block_till_done()
+    assert set(registry.all_records()) == {"light.a", "light.b"}, "light.a hasn't reported yet"
+
+    _light(hass, "light.a", "off")
+    await hass.async_block_till_done()
+    assert registry.all_records() == {}
+    unsub()
+
+
+async def test_a_zone_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant):
+    _light(hass, "light.a", "on", **ASKED)
+    _light(hass, "light.b", "off")
+
+    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
+    await hass.async_block_till_done()
+
+    assert set(registry.all_records()) == {"light.a", "light.b"}

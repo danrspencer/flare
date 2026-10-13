@@ -402,6 +402,15 @@ Two listener rules, pinned in `test_claim_persistence.py`:
 - **`went_off` needs a real starting state.** Lights reconnect one at a
   time; the first back being `off` while its siblings are `unknown` must
   not release the zone.
+- **A zone restored dark lets go of its claims**
+  (`release_if_settled_dark`), checked when the claims sensor is added and
+  whenever a claimed light reports in from none/unavailable/unknown, once
+  *every* claimed light reports on or off and none is on. Lights that went
+  off while HA wasn't watching (switched off during a restart, FLARE's own
+  turn-off racing a shutdown, a restore) never send an on -> off, so the
+  zone stayed claimed with every light `overridden` and motion ignored
+  until Clear (seen live: 18 lights in three zones after a restore). A
+  claimed light that never reports holds it, as the rule above requires.
 
 A restart is not an escape hatch for a light stuck `overridden`. Known
 residuals, both ending when the room goes dark: a bulb that power-cycled

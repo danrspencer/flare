@@ -110,6 +110,8 @@ class _ZoneClaimsSensor(SensorEntity, RestoreEntity):
         if last is not None:
             self.claims = dict(last.as_dict().get("claims") or {})
         self._registry.register(self._instance.subentry_id, self)
+        # Lights already reporting dark won't change again to release it.
+        self._registry.release_if_settled_dark(self)
         # The setup-time prune ran before this entity existed.
         await self._registry.async_prune_stale()
 
