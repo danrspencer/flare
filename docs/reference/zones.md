@@ -106,6 +106,8 @@ override: once the room is dark, FLARE sets every light in it again.
 
 - A light that isn't in the zone doesn't count.
 - A light that's unavailable counts as off, so one dead bulb can't keep the zone's claims.
+- After a restart, a zone whose lights are all off once they've reported in discards its claims
+  too, so a room switched off while Home Assistant was restarting comes on again as usual.
 
 A light also loses its claim when it goes unavailable, and you can discard a zone's claims by
 hand with its **Clear** button.

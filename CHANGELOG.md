@@ -129,6 +129,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
+- **A room switched off while Home Assistant was restarting comes on again.** If a room's lights
+  went off while Home Assistant wasn't running, its zone kept its claims after the restart, so
+  every light read as overridden and the room ignored motion until **Clear** was pressed. The
+  zone now lets go of them once its lights have reported in and none is on.
 - **Lights already at the curve are claimed.** After a **Clear**, lights already showing what
   FLARE would set got no change, so they had no claim: they weren't counted as controlled, and
   a change made to them wasn't noticed. `flare.apply_lighting` now claims them as they are.
