@@ -58,7 +58,11 @@ def _device(hass: HomeAssistant, subentry_id: str) -> str:
 
 
 async def _start(hass: HomeAssistant):
-    return await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    """The main flow, past the first setup's menu."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    if result["type"] == "menu":
+        result = await _submit(hass, result, {"next_step_id": "schedules"})
+    return result
 
 
 async def _submit(hass: HomeAssistant, result, user_input: dict):
@@ -360,6 +364,23 @@ async def test_a_house_with_no_lights_in_areas_still_gets_its_schedule(
     assert _summary(result) == {"schedules": "Home", "zones": "0", "automations": "0", "flares": "0"}
     assert len(hass.config_entries.async_entries(DOMAIN)) == 3
     assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
+
+
+async def test_first_setup_can_be_skipped(stub_entry_setup, automations_file, hass: HomeAssistant):
+    """Every entry, with nothing in it; Set up area then wants a schedule."""
+    _area(hass, "Kitchen", "light.k")
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert (result["type"], result["menu_options"]) == ("menu", ["schedules", "skip"])
+    result = await _submit(hass, result, {"next_step_id": "skip"})
+
+    assert result["reason"] == "setup_skipped"
+    assert len(hass.config_entries.async_entries(DOMAIN)) == 3
+    assert schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES)) == []
+    assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
+    assert _automations(automations_file) == []
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    assert result["reason"] == "no_schedules"
 
 
 # --- Set up area, once FLARE exists --------------------------------------

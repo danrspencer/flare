@@ -24,6 +24,7 @@ async def _set_up(hass: HomeAssistant):
     hass.states.async_set(light.entity_id, "off", {}, context=Context())
     flows = hass.config_entries.flow
     result = await flows.async_init(DOMAIN, context={"source": "user"})
+    result = await flows.async_configure(result["flow_id"], {"next_step_id": "schedules"})
     result = await flows.async_configure(result["flow_id"], {"layout": "home"})
     result = await flows.async_configure(result["flow_id"], {"areas": {}})
     await hass.async_block_till_done()

@@ -34,7 +34,9 @@ with type **Integration**. Then find **FLARE** in the HACS list and download it.
 
 ## Step 2 — restart, then add FLARE
 
-Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
+Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**, and
+choose **Set up schedules and rooms**. (If you'd rather set everything up yourself, or only want
+FLARE's parts for your own automations, choose **Skip setup** instead.)
 
 It asks:
 

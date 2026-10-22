@@ -86,7 +86,8 @@ CI — see `.github/workflows/release.yml`.
   schedule, which one each follows.
   Each area gets a zone, a room automation from the blueprint and a flare, all named after
   it, so there's nothing left to do by hand. You can choose just the zone, or the zone and
-  the automation, instead. It finishes with a summary of what it created.
+  the automation, instead. It finishes with a summary of what it created. **Skip setup**
+  installs FLARE with nothing set up, for setting things up yourself.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.

@@ -470,7 +470,9 @@ the goal, at the user's direction, is a painless first install. The main
 flow asks for schedules, then which areas to set up, creates each missing
 entry through `SOURCE_IMPORT`, and hands the areas to
 `area_setup.async_set_up_areas`. Each entry can still be added alone, so
-deleting one and adding it back works.
+deleting one and adding it back works. It opens on a menu, set up or
+**Skip setup** (user's call), which creates the three entries empty, for
+someone setting things up by hand or only using the services.
 
 - **Schedules are a choice of shape, not a count** (user's call, after a
   number box and names that had to match the floors exactly felt fiddly):
