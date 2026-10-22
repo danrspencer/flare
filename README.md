@@ -17,8 +17,6 @@ so "turn on the kitchen" brings the kitchen up the way FLARE would.
 
 [![Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/setup.gif)](https://danrspencer.github.io/flare/installation/)
 
-[![The FLARE Lighting dashboard view: the day's curve, a phase override, the schedule times, and the curve and transition values for each phase](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/dashboard-section.png)](https://danrspencer.github.io/flare/dashboard/)
-
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
 
 The quickest way to see what this actually does is the
