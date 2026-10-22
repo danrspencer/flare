@@ -113,6 +113,7 @@ return {{
   dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
   emptyDashboard: Dashboard ? await Dashboard.generate({{}}, empty) : null,
   customStrategies: globalThis.window.customStrategies,
+  createSuggestions: Dashboard ? await Dashboard.getCreateSuggestions({{}}) : null,
   zoneDevices: zoneDevices(input.activity),
   activityView: Zone ? await Zone.generate({{}}, input.activity) : null,
   noLogbookView: Zone ? await Zone.generate({{}}, {{ ...input.activity, config: {{ components: [] }} }}) : null,
@@ -430,6 +431,11 @@ def test_the_dashboard_is_offered_under_add_dashboard(result):
     assert entry["strategyType"] == "dashboard"
     assert entry["name"] == "FLARE Lighting"
     assert "ll-strategy-dashboard-flare" in result["registeredAs"]
+
+
+def test_add_dashboard_suggests_flare_and_its_icon(result):
+    """HA's create dialog pre-fills these, and the URL from the title."""
+    assert result["createSuggestions"] == {"title": "FLARE", "icon": "flare:logo"}
 
 
 # --- Activity --------------------------------------------------------------

@@ -32,6 +32,7 @@ from .const import (
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
+from .dashboard_reload import FrontendLoadedView
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
@@ -50,14 +51,9 @@ FLARE_PLATFORMS = [Platform.LIGHT]
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 CARD_URL_BASE = "/flare_static"
-CARD_JS_PATH = "flare-curve-card.js"
-FEATURE_JS_PATH = "flare-kelvin-feature.js"
-STRATEGY_JS_PATH = "flare-view-strategy.js"
-BRIGHTNESS_JS_PATH = "flare-brightness-feature.js"
-TRANSFER_JS_PATH = "flare-schedule-transfer-card.js"
-ICON_JS_PATH = "flare-icon.js"
-# flare-entities.js, flare-section.js, flare-zone-section.js and
-# flare-value-slider.js register nothing; the modules above import them.
+# Loads the modules that register something, once HA's frontend is ready
+# for them; those import the rest.
+LOADER_JS_PATH = "flare-loader.js"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -71,8 +67,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     www = Path(__file__).parent / "www"
     base = f"{CARD_URL_BASE}/{await hass.async_add_executor_job(www_fingerprint, www)}"
     await hass.http.async_register_static_paths([StaticPathConfig(base, str(www), cache_headers=True)])
-    for js in (ICON_JS_PATH, CARD_JS_PATH, FEATURE_JS_PATH, BRIGHTNESS_JS_PATH, TRANSFER_JS_PATH, STRATEGY_JS_PATH):
-        add_extra_js_url(hass, f"{base}/{js}")
+    add_extra_js_url(hass, f"{base}/{LOADER_JS_PATH}")
+    hass.http.register_view(FrontendLoadedView())
     async_setup_schedule_services(hass)
     async_setup_target_services(hass)
     return True

@@ -206,7 +206,8 @@ claims are each exposed through both.
   `logbook`, `const`, and the eight entity platform modules, which
   **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`). Also `area_setup`, which needs
-  zones, flares and the blueprint at once. `services.yaml`,
+  zones, flares and the blueprint at once, and `dashboard_reload` (getting
+  the dashboard into a page open during setup). `services.yaml`,
   `strings.json` and `translations/` stay at the root; `www/` is the
   dashboard.
 
@@ -466,10 +467,19 @@ which lights are driven by whom and need the claim registry.
 
 **One "Add Integration" sets FLARE up ready to use, rooms included** -
 the goal, at the user's direction, is a painless first install. The main
-flow asks how many schedules and their names, then which areas to set
-up, creates each missing entry through `SOURCE_IMPORT`, and hands the
-areas to `area_setup.async_set_up_areas`. Each entry can still be added
-alone, so deleting one and adding it back works.
+flow asks for schedules, then which areas to set up, creates each missing
+entry through `SOURCE_IMPORT`, and hands the areas to
+`area_setup.async_set_up_areas`. Each entry can still be added alone, so
+deleting one and adding it back works.
+
+- **Schedules are a choice of shape, not a count** (user's call, after a
+  number box and names that had to match the floors exactly felt fiddly):
+  one called Home (always the default: one is enough for most homes,
+  user's call), one per floor (offered with two or more floors, its label
+  listing them, so it isn't translated), or Custom: a list of names,
+  starting as just Home (not the floors; that's what per floor is for). The areas step's
+  start-on-the-floor's-schedule rule then matches per floor exactly.
+  Floor names that fail the name checks land on the names step.
 
 **The flow ends on an abort carrying a summary, never on an entry**,
 because HA's "integration added" dialog (`step-flow-create-entry.ts`)
@@ -514,14 +524,20 @@ it is). Set up area can just be run again.
   only unticks the area; every area with lights is listed (user's call,
   after reading automations' targets proved unreliable). Re-running an
   area reuses its zone but adds another automation and flare.
-- **Each area is a dropdown named after it** - "-- Don't set up --", set apart so it
-  can't be mistaken for a schedule, then each schedule (the dialog falls
-  back to a field's name when it has no translation, the only way to
-  label fields made at runtime). It starts on the schedule named like the
-  area's floor, else the first. One field per area so it can't be set up
-  wrong. They sit in an **Areas** section (`data_entry_flow.section`) to
-  set them apart from what-to-set-up; its key is fixed, so its heading
-  and description translate. Tried and dropped: radios (three rows per area), HA's area
+- **Each area is an optional dropdown of schedules named after it** (the
+  dialog falls back to a field's name when it has no translation, the
+  only way to label fields made at runtime), and an empty one isn't set
+  up (user's call, over a "-- Don't set up --" choice). Its schedule is a
+  suggested value, not a default, or a cleared area would be filled back
+  in. It starts on the schedule named like the area's floor, else the
+  first, or empty if the area has a zone. One field per area so it can't be set up
+  wrong. They sit in a `data_entry_flow.section` per floor, lowest first
+  (user's call: rooms organised by floor whatever the schedules), keyed
+  by the floor's name, which the dialog shows as the heading when there's
+  no translation; floorless areas come last under **Other areas**, or
+  under **Areas** when no area has a floor (fixed keys, translated). The
+  step's description, not a section's, explains the dropdowns, since the
+  floors' sections can't carry translated text. Tried and dropped: radios (three rows per area), HA's area
   picker (closes after every pick), and a checkbox list per schedule
   (always expanded, and an area could be ticked under two schedules).
 - **The flare is part of the default**, the one exception to "nothing
@@ -532,6 +548,21 @@ it is). Set up area can just be run again.
 `window.customStrategies`. Creating it from setup was built and dropped
 at the user's direction: HA keeps the dashboards collection private, and
 the only way in was unwrapping a websocket handler. Don't bring it back.
+
+- **It needs a page reload after first setup, sometimes two.** The
+  frontend (2026.10) reads `add_extra_js_url` modules only from the page
+  HTML at load, never from `frontend/subscribe_extra_js`, so a page open
+  during setup never gets them. HA's service worker serves pages
+  stale-while-revalidate, so on HTTPS or `localhost` the first reload is
+  the pre-FLARE copy. Nothing server-side can reload a page, so
+  `dashboard_reload.py` links to one, in the setup summary and a repair
+  raised by first setup: `target="_self"` makes it a real load rather
+  than in-app navigation, and a one-off query token makes it a URL the
+  service worker has never cached. The repair clears when any page
+  requests the beacon, an empty module served as a view that the loader
+  imports last. It's at `/flare_static/frontend_loaded.js`, not under
+  `/api/`, where HA's CORS check rejects the `Origin` a module import
+  always sends; no auth, since module scripts are fetched without it.
 
 ### Flares
 
@@ -1034,11 +1065,24 @@ Until the first release, the beta is also the root.
 ### The front end (`custom_components/flare/www/`)
 
 **Served from the integration.** `async_setup` registers one static path
-for the directory and `add_extra_js_url`s each module that registers
-something; modules that register nothing (`flare-entities.js`,
-`flare-section.js`, `flare-zone-section.js`, `flare-value-slider.js`,
-`flare-clear-card.js`, `flare-activity-card.js`) are pulled in by the
-imports of those that do.
+for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
+which imports each module that registers something; modules that
+register nothing (`flare-entities.js`, `flare-section.js`,
+`flare-zone-section.js`, `flare-value-slider.js`, `flare-clear-card.js`,
+`flare-activity-card.js`) are pulled in by the imports of those that do.
+`test_every_module_that_registers_something_is_loaded` follows the
+imports from the loader.
+
+- **The loader waits for `<home-assistant>` to be defined before
+  importing anything.** HA's frontend (2026.10) installs a scoped custom
+  element registry polyfill, replacing `window.customElements` and
+  `window.HTMLElement`, while it loads integrations' modules in parallel.
+  A module that won the race defined its elements in the browser's own
+  registry, where HA never looks, so the dashboard was listed but timed
+  out when picked ("Timeout waiting for strategy element"), at random.
+  The page has `<home-assistant>` in its HTML before any script runs;
+  outside HA (the docs playground loads the card directly) there's
+  nothing to wait for.
 
 - **The URL carries a fingerprint of the files**
   (`/flare_static/<hash>/`, `www_fingerprint()`), cached hard. The

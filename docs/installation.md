@@ -38,13 +38,19 @@ Restart Home Assistant, then **Settings → Devices & Services → Add Integrati
 
 It asks:
 
-- **How many schedules, and their names.** A [schedule]({{ site.baseurl }}/reference/schedules/)
-  is the day's lighting: when each phase starts, and how bright and warm it is. One for the
-  whole house is fine to start with; use more if parts of the house should differ, such as one
-  per floor. Pick names you're happy to keep: they become part of each schedule's entity IDs.
+- **Your schedules.** A [schedule]({{ site.baseurl }}/reference/schedules/) is the day's
+  lighting: when each phase starts, and how bright and warm it is. **One for the whole home**
+  (called Home) is the default, and enough for most homes. You can instead choose **one per
+  floor** (offered when your home has more than one floor, and named after them), or
+  **Custom**, to name the schedules yourself.
+  A schedule's name becomes part of its entity IDs, so pick names you're happy to keep.
 - **What to set up for each area**, and **which schedule each area follows**. Every area with
-  lights is listed with a choice of **-- Don't set up --** or one of your schedules. An area starts on
-  the schedule with the same name as its floor, or on your first schedule if none matches.
+  lights is listed, grouped by floor, and starts on the schedule with the same name as its floor,
+  or on your first schedule if none matches. To leave an area out, clear its schedule.
+
+None of this is final. You can add or remove schedules later from FLARE's integration page, set
+up more areas with **Set up area** (see [Adding a room later](#adding-a-room-later)), and change
+which schedule a room follows in its automation.
 
 Each area you set up gets up to three things, named after it. All three is the default, and
 what most rooms want:
@@ -72,11 +78,17 @@ Automations & Scenes**, so you can change its inputs there.
 with a view for each schedule and one for your zones, and it keeps up as you add more. See
 [Dashboard]({{ site.baseurl }}/dashboard/).
 
+{: .note }
+> **FLARE Lighting** only appears once the page has reloaded after setting FLARE up. Use
+> **Reload this page** at the end of setup, or in the repair FLARE raises until a page has loaded
+> its dashboard. If it's still missing, reload once more: your browser may show its saved copy of
+> the page the first time.
+
 ## Adding a room later
 
 **Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights. An area
-that already has a zone starts as **-- Don't set up --**: setting it up again keeps its zone but gives
-it another automation and flare, so only change it if it doesn't have them.
+that already has a zone starts empty, because setting it up again keeps its zone but gives it
+another automation and flare, so only pick a schedule for it if it doesn't have them.
 
 The other buttons there add one thing at a time: **Add schedule**, **Add zone** and
 **Add flare**.

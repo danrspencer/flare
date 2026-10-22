@@ -22,7 +22,7 @@ async def test_the_served_url_carries_a_fingerprint_of_the_files(hass):
     assert configs[0].cache_headers is True
 
     served = [call.args[1] for call in add_js.call_args_list]
-    assert served, "no front-end files were registered with the frontend"
+    assert served == [f"/flare_static/{fingerprint}/flare-loader.js"], "the loader is the one entry point"
     for url in served:
         assert url.startswith(f"/flare_static/{fingerprint}/"), url
         # A missing file is only ever a 404 in the browser.
@@ -47,3 +47,25 @@ def test_renaming_a_file_changes_the_fingerprint(tmp_path):
     (tmp_path / "a.js").rename(tmp_path / "b.js")
 
     assert www_fingerprint(tmp_path) != before
+
+
+def test_the_loader_imports_the_beacon_the_server_serves():
+    from custom_components.flare.dashboard_reload import BEACON_URL
+
+    assert f"'{BEACON_URL}'" in (WWW / "flare-loader.js").read_text()
+
+
+def test_every_module_that_registers_something_is_loaded():
+    """Reached from the loader, directly or through another module's imports."""
+    import re
+
+    imports = re.compile(r"""import\b[^'"\n]*['"]\./([^'"]+)['"]""")
+    registers = re.compile(r"customElements\.define|window\.custom\w+")
+    reached, todo = set(), ["flare-loader.js"]
+    while todo:
+        name = todo.pop()
+        if name not in reached:
+            reached.add(name)
+            todo += imports.findall((WWW / name).read_text())
+    registering = {p.name for p in WWW.glob("*.js") if registers.search(p.read_text())}
+    assert registering - reached == set()
