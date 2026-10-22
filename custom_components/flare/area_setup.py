@@ -54,7 +54,7 @@ _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 
 # The label on every automation setup creates, so they're easy to find.
 LABEL_NAME = "FLARE"
-LABEL_ICON = "mdi:home-lightbulb"
+LABEL_ICON = "flare:logo"
 # One of the frontend's named label colours: warm, like the curve.
 LABEL_COLOR = "amber"
 

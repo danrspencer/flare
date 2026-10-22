@@ -202,7 +202,7 @@ async def test_its_automations_carry_a_flare_label(stub_entry_setup, automations
     await _submit(hass, result, _choose(hass, result, [hall], set_up="automation"))
 
     (label,) = [l for l in lr.async_get(hass).async_list_labels() if l.name == "FLARE"]
-    assert (label.icon, label.color) == ("mdi:home-lightbulb", "amber")
+    assert (label.icon, label.color) == ("flare:logo", "amber")
     registry = er.async_get(hass)
     assert label.label_id in registry.async_get("automation.kitchen_lighting").labels
     assert label.label_id in registry.async_get("automation.hall_lighting").labels
