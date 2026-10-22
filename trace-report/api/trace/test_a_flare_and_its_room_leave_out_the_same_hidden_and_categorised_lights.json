@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "ff8f3c69390ccd5acc6ab7b19bb11eb2",
+      "run_id": "530cb21e6a2e1a65ea9bcf62f05b2d4f",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-23T02:00:02+00:00",
                 "last_updated": "2026-10-23T02:00:02+00:00",
                 "context": {
-                  "id": "01M5K7S46GC30MAMXRZMDVRP5A",
+                  "id": "01M5K7S46GTWXFYBNHQBJZN458",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -45,8 +45,8 @@
               "room_target": {
                 "area_id": "behaviour_test_room"
               },
-              "zone": "ed2012c579e351ea4a3edc6677fc5ddc",
-              "schedule": "8d3d7d3044b624c014ba39785fb258f5",
+              "zone": "49525175c097bf08b08078679cc5db1b",
+              "schedule": "26713d388b9c0c808fc6557bc0b65b2b",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -69,8 +69,8 @@
             "timestamp": "2026-10-23T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M5K7S46G4VY75QXCV5FVWZSF",
-                "parent_id": "01M5K7S46G1HF2VQ89YGGFG3DZ",
+                "id": "01M5K7S46GJ4KPGHMCCZ4958G2",
+                "parent_id": "01M5K7S46GT9JQF1TF7TTHR70F",
                 "user_id": null
               },
               "room": {
@@ -402,7 +402,7 @@
                   ],
                   "transition": 1,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc",
+                  "zone_device_id": "49525175c097bf08b08078679cc5db1b",
                   "force": true
                 },
                 "target": {}
@@ -444,10 +444,10 @@
           "room_target": {
             "area_id": "behaviour_test_room"
           },
-          "zone": "ed2012c579e351ea4a3edc6677fc5ddc"
+          "zone": "49525175c097bf08b08078679cc5db1b"
         },
         "variables": {
-          "schedule": "8d3d7d3044b624c014ba39785fb258f5",
+          "schedule": "26713d388b9c0c808fc6557bc0b65b2b",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -467,7 +467,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "8d3d7d3044b624c014ba39785fb258f5"
+              "device_id": "26713d388b9c0c808fc6557bc0b65b2b"
             },
             "options": {
               "event_type": [
@@ -483,7 +483,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+              "device_id": "49525175c097bf08b08078679cc5db1b"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -640,7 +640,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+                      "zone_device_id": "49525175c097bf08b08078679cc5db1b"
                     }
                   },
                   {
@@ -662,7 +662,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+                          "zone_device_id": "49525175c097bf08b08078679cc5db1b"
                         }
                       }
                     ]
@@ -703,7 +703,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+                      "zone_device_id": "49525175c097bf08b08078679cc5db1b"
                     }
                   }
                 ]
@@ -759,7 +759,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+                      "zone_device_id": "49525175c097bf08b08078679cc5db1b"
                     }
                   }
                 ]
@@ -817,7 +817,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc",
+                          "zone_device_id": "49525175c097bf08b08078679cc5db1b",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -839,7 +839,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "ed2012c579e351ea4a3edc6677fc5ddc"
+                      "zone_device_id": "49525175c097bf08b08078679cc5db1b"
                     }
                   }
                 ]
@@ -856,17 +856,17 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "8d3d7d3044b624c014ba39785fb258f5",
+            "schedule": "26713d388b9c0c808fc6557bc0b65b2b",
             "room_target": {
               "area_id": "behaviour_test_room"
             },
-            "zone": "ed2012c579e351ea4a3edc6677fc5ddc"
+            "zone": "49525175c097bf08b08078679cc5db1b"
           }
         }
       },
       "context": {
-        "id": "01M5K7S46G4VY75QXCV5FVWZSF",
-        "parent_id": "01M5K7S46G1HF2VQ89YGGFG3DZ",
+        "id": "01M5K7S46GJ4KPGHMCCZ4958G2",
+        "parent_id": "01M5K7S46GT9JQF1TF7TTHR70F",
         "user_id": null
       }
     }
