@@ -21,12 +21,14 @@ different numbers written in.
 The commit message records that source (`Source: <sha>`), which is how a
 promotion finds what to rebuild.
 
-Two subcommands, both of which build and tag locally and print what they
-did. Pushing the tag and publishing the GitHub release is the workflow's
-job, because that is the part that needs credentials:
+Three subcommands. The first two build and tag locally and print what they
+did; `check` only says whether a commit could ship. Pushing the tag and
+publishing the GitHub release is the workflow's job, because that is the
+part that needs credentials:
 
     release.py cut-beta --source SHA     what .github/workflows/cut-beta.yml runs
     release.py promote [--force]         what .github/workflows/promote.yml runs
+    release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
 
 Pure functions up top, git at the bottom. Standard library only, so the
 workflows need no install step.
@@ -317,7 +319,12 @@ class Repo:
 # --- Subcommands -------------------------------------------------------
 
 
-def cut_beta(repo: Repo, source: str) -> Tag:
+def check(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
+    """The full source SHA, our tags, and the beta `source` would become.
+
+    Refuses a change to what ships while the changelog's top section names
+    a version that is already out: the change belongs in a new section.
+    """
     # Whatever the caller passed (HEAD, a branch, a short SHA), record the
     # full SHA: it is written into the release commit and read back at
     # promotion time, when HEAD would mean something else entirely.
@@ -329,7 +336,25 @@ def cut_beta(repo: Repo, source: str) -> Tag:
     if base is None:
         raise Refuse(f"{CHANGELOG} has no '## [x.y.z]' section to read the target version from")
 
-    beta = next_beta(base, tags)
+    stable = highest_stable(tags)
+    if stable is not None and parse_base(base) <= stable:
+        released = Tag(stable, True, 0)
+        try:
+            changed = repo.shipped_changed(repo.source_of(released), source)
+        except Refuse:
+            changed = True  # a hand-made release: no recorded source to compare
+        if changed:
+            raise Refuse(
+                f"the changelog's top section is [{base}], which is already released "
+                f"({released.name}), but {', '.join(SHIPPED)} has changed since. Add a "
+                f"section for the next version to {CHANGELOG} and list the change there."
+            )
+
+    return source, tags, next_beta(base, tags)
+
+
+def cut_beta(repo: Repo, source: str) -> Tag:
+    source, tags, beta = check(repo, source)
 
     # A push that changed nothing a house would receive (docs, tests, CI)
     # would otherwise cut a beta that HACS offers testers as an update to
@@ -373,6 +398,9 @@ def main(argv: list[str] | None = None) -> int:
     beta = sub.add_parser("cut-beta", help="build the next beta from a source commit")
     beta.add_argument("--source", required=True, help="the commit to release")
 
+    chk = sub.add_parser("check", help="fail if a commit changes a version that is already out")
+    chk.add_argument("--source", required=True, help="the commit to check")
+
     prom = sub.add_parser("promote", help="build a stable release from the beta that has soaked")
     prom.add_argument("--force", action="store_true", help="ignore the soak period")
 
@@ -380,7 +408,10 @@ def main(argv: list[str] | None = None) -> int:
     repo = Repo(REPO_ROOT)
 
     try:
-        if args.command == "cut-beta":
+        if args.command == "check":
+            _, _, beta = check(repo, args.source)
+            print(f"OK: this would ship as {beta.name}")
+        elif args.command == "cut-beta":
             tag = cut_beta(repo, args.source)
             _emit(tag=tag.name, prerelease="true")
         else:

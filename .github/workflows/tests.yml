@@ -81,3 +81,17 @@ jobs:
             scripts/trace_viewer.html
             custom_components/flare/blueprints/flare.yaml
           if-no-files-found: ignore
+
+  # A change to what ships needs a changelog section for a version that
+  # isn't out yet, or the beta job refuses it after the merge.
+  changelog:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python scripts/release.py check --source HEAD
