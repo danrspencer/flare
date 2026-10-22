@@ -9,10 +9,6 @@ permalink: /installation/
 
 Five minutes to a room running on the curve.
 
-<video src="{{ '/assets/video/setup.mp4' | relative_url }}" poster="{{ '/assets/video/setup.jpg' | relative_url }}"
-  controls muted playsinline preload="none" style="width: 100%"
-  aria-label="Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard"></video>
-
 {: .note }
 > **Prerequisites** — Home Assistant 2026.10.0 or newer, [HACS](https://hacs.xyz) installed,
 > and your lights assigned to areas, so FLARE can set itself up room by room.
