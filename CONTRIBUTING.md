@@ -208,6 +208,9 @@ The site keeps a version of the docs per release, with a picker in the header:
 
 - `/flare/` is the latest release, published by `promote.yml` along with the release, which is also kept
   at `/flare/v/<version>/`.
+- A release's docs come from `main`, not its tag, while nothing under `custom_components/` has changed
+  since the release (`scripts/release.py docs-source`). So a docs fix after the last beta reaches the
+  latest release: `cut-beta.yml` republishes it on such a push, as well as the beta.
 - `/flare/beta/` is the newest beta, published by `cut-beta.yml` on every push to `main`, and offered only
   while it's newer than the latest release. Until the first release it's the root too.
 

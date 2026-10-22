@@ -7,6 +7,8 @@ name: docs
 #   cut-beta.yml        -> the beta's docs, at /beta/ (and at / until
 #                          there's a release), on every push to main
 #   promote.yml         -> a release's docs, at /v/<version>/ and at /
+#   cut-beta.yml again  -> the newest release's docs too, when a push
+#                          changed nothing shipped since that release
 #   a pull request      -> builds the site, publishes nothing
 #
 # Both are called once their tag is pushed, so the beta's docs carry its
@@ -39,9 +41,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || '' }}
-          # beta-version reads the tags.
+          # beta-version and docs-source read the tags.
           fetch-depth: 0
+
+      # A release's docs are main's while nothing shipped has changed since
+      # the release, so a docs-only fix reaches it; otherwise the tag's.
+      # Decided by main's copy of the script, which the tag may predate.
+      - name: Check out the release's docs
+        if: inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          ref=$(python3 scripts/release.py docs-source --head HEAD --tag "$TAG" | sed -n 's/^ref=//p')
+          test -n "$ref"
+          echo "Building $TAG's docs from $ref"
+          git checkout --quiet "$ref"
 
       - name: What this run publishes
         id: what

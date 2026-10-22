@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      release: ${{ steps.release_docs.outputs.follows_head == 'true' && steps.release_docs.outputs.tag || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,6 +46,12 @@ jobs:
       - name: Build the beta
         id: cut
         run: python scripts/release.py cut-beta --source "$GITHUB_SHA"
+
+      # Whether the newest release's docs follow this push: they do while
+      # nothing shipped has changed since that release's source.
+      - name: Does the release's documentation follow main
+        id: release_docs
+        run: python scripts/release.py docs-source --head "$GITHUB_SHA"
 
       # A tag pushed with GITHUB_TOKEN does not trigger release.yml (GitHub
       # does not let a workflow's own events start other workflows), which
@@ -69,3 +77,16 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/docs.yml
+
+  # The newest release's docs, when this push changed nothing shipped since
+  # it: a docs fix made after the last beta reaches the site's default.
+  release-docs:
+    needs: [beta, docs]
+    if: needs.beta.outputs.release != ''
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    with:
+      tag: ${{ needs.beta.outputs.release }}

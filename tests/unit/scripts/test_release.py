@@ -349,6 +349,27 @@ def test_check_fails_the_command_for_a_shipped_change_under_a_released_version(p
     assert "::error::" in capsys.readouterr().out
 
 
+def test_a_release_s_docs_follow_main_while_nothing_shipped_has_changed(project):
+    released(project, "0.17.0")
+    docs = project.edit("docs/page.md", "fixed", "docs fix")
+
+    assert release.docs_source(project.repo, docs) == (Tag.parse("v0.17.0"), docs)
+
+
+def test_a_release_s_docs_stay_on_the_tag_once_shipped_code_moves_on(project):
+    released(project, "0.17.0")
+    change = project.edit("custom_components/flare/x.py", "y = 2", "python change")
+
+    assert release.docs_source(project.repo, change, "v0.17.0") == (Tag.parse("v0.17.0"), "v0.17.0")
+
+
+def test_docs_source_needs_a_release(project):
+    with pytest.raises(Skip):
+        release.docs_source(project.repo, "HEAD")
+    with pytest.raises(Refuse):
+        release.docs_source(project.repo, "HEAD", "v0.17.0-beta.1")
+
+
 def test_every_beta_stamps_the_blueprint_with_its_own_version(project):
     """The blueprint's stamp is each release's own version."""
     project.target("0.17.0")

@@ -21,14 +21,15 @@ different numbers written in.
 The commit message records that source (`Source: <sha>`), which is how a
 promotion finds what to rebuild.
 
-Three subcommands. The first two build and tag locally and print what they
-did; `check` only says whether a commit could ship. Pushing the tag and
+Four subcommands. The first two build and tag locally and print what they
+did; `check` and `docs-source` only answer a question. Pushing the tag and
 publishing the GitHub release is the workflow's job, because that is the
 part that needs credentials:
 
     release.py cut-beta --source SHA     what .github/workflows/cut-beta.yml runs
     release.py promote [--force]         what .github/workflows/promote.yml runs
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
+    release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
 
 Pure functions up top, git at the bottom. Standard library only, so the
 workflows need no install step.
@@ -372,6 +373,30 @@ def cut_beta(repo: Repo, source: str) -> Tag:
     return beta
 
 
+def docs_source(repo: Repo, head: str, tag_name: str | None = None) -> tuple[Tag, str]:
+    """A release (the newest unless named) and the commit to build its docs
+    from: `head`, while nothing shipped has changed since the release's
+    source, so a docs fix after the last beta still reaches the release;
+    otherwise the release itself, whose docs match its code.
+    """
+    head = repo.out("rev-parse", "--verify", f"{head}^{{commit}}")
+    if tag_name is None:
+        tags, _ = repo.tags()
+        stable = highest_stable(tags)
+        if stable is None:
+            raise Skip("there is no release yet")
+        tag = Tag(stable, True, 0)
+    else:
+        tag = Tag.parse(tag_name)
+        if tag is None or not tag.stable:
+            raise Refuse(f"{tag_name} is not a release tag")
+    try:
+        changed = repo.shipped_changed(repo.source_of(tag), head)
+    except Refuse:
+        changed = True  # a hand-made release: build its docs from the tag
+    return tag, tag.name if changed else head
+
+
 def promote(repo: Repo, now: datetime, *, force: bool = False) -> Tag:
     tags, made_at = repo.tags()
     beta = pick_promotion(tags, made_at, now, force=force)
@@ -404,6 +429,10 @@ def main(argv: list[str] | None = None) -> int:
     prom = sub.add_parser("promote", help="build a stable release from the beta that has soaked")
     prom.add_argument("--force", action="store_true", help="ignore the soak period")
 
+    docs = sub.add_parser("docs-source", help="the commit to build a release's docs from")
+    docs.add_argument("--head", required=True, help="the newest commit on main")
+    docs.add_argument("--tag", help="the release (default: the newest)")
+
     args = parser.parse_args(argv)
     repo = Repo(REPO_ROOT)
 
@@ -411,6 +440,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check":
             _, _, beta = check(repo, args.source)
             print(f"OK: this would ship as {beta.name}")
+        elif args.command == "docs-source":
+            tag, ref = docs_source(repo, args.head, args.tag)
+            _emit(tag=tag.name, ref=ref, follows_head=str(ref != tag.name).lower())
         elif args.command == "cut-beta":
             tag = cut_beta(repo, args.source)
             _emit(tag=tag.name, prerelease="true")
@@ -418,7 +450,8 @@ def main(argv: list[str] | None = None) -> int:
             tag = promote(repo, datetime.now(timezone.utc), force=args.force)
             _emit(tag=tag.name, prerelease="false")
     except Skip as skip:
-        print(f"::notice::Nothing released: {skip}")
+        done = "Nothing to follow" if args.command == "docs-source" else "Nothing released"
+        print(f"::notice::{done}: {skip}")
         _emit(tag="")
     except Refuse as refusal:
         print(f"::error::{refusal}")
