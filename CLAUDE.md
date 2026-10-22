@@ -1269,7 +1269,12 @@ test module never imports another.
   new user would before touching the live instance, not a test layer.
   `--reset` gives a brand-new house. `mise run sandbox:record`
   (`scripts/sandbox_record.py`, Playwright) records walkthrough videos
-  of it; a step that fails leaves a screenshot in `sandbox/recordings/`.
+  of it, and writes the published copies once every scene has recorded:
+  the docs' videos (`docs/assets/video/`) and the README's GIF
+  (`docs/assets/img/setup.gif`, by raw `main` URL like the README's other
+  images, since GitHub and HACS show a README's images but not video).
+  Each release's docs on `docs-site` carry their own copy of the videos;
+  git stores an unchanged one once.
 
 **Practices worth keeping:**
 

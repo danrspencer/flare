@@ -6,8 +6,11 @@
 
 Starts a brand-new sandbox (stop any running one first), clears the
 notifications and repairs a new install shows, then plays each scene in
-a fresh browser with a visible pointer and saves it as an .mp4 in
-sandbox/recordings/. Run by mise, with .venv-record's Playwright.
+a fresh browser with a visible pointer. Once every scene has recorded,
+the videos and their still frames go to docs/assets/video/ and the
+README's GIF to docs/assets/img/: commit them. Working files, and a
+screenshot of any step that fails, stay in sandbox/recordings/. Run by
+mise, with .venv-record's Playwright.
 """
 
 from __future__ import annotations
@@ -29,6 +32,9 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeout
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "sandbox" / "recordings"
+VIDEOS = ROOT / "docs" / "assets" / "video"
+# The README shows the setup as a GIF: GitHub and HACS show images, not video.
+README_GIF = {"setup": ROOT / "docs" / "assets" / "img" / "setup.gif"}
 PORT = int(os.environ.get("SANDBOX_PORT", "0"))
 URL = f"http://localhost:{PORT}"
 # Tall enough for a schedule's graph and all its sliders at once.
@@ -221,12 +227,29 @@ def record(browser, name: str, scene: Callable[[Director], None]) -> Path:
     raw = Path(page.video.path())
     out = OUT / f"{name}.mp4"
     skip = max(0.0, (director.started or opened) - opened)
-    subprocess.run(
-        [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", "-ss", f"{skip:.2f}", "-i", raw,
-         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-movflags", "+faststart", out],
-        check=True,
-    )
+    ffmpeg("-ss", f"{skip:.2f}", "-i", raw, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20",
+           "-movflags", "+faststart", out)
     raw.unlink()
+    return out
+
+
+def ffmpeg(*args) -> None:
+    subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error", *map(str, args)], check=True)
+
+
+def publish(name: str, video: Path) -> list[Path]:
+    """The video and a still from near its end, where it shows what was
+    done, for the site; and the README's GIF, if it has one."""
+    VIDEOS.mkdir(parents=True, exist_ok=True)
+    out = [VIDEOS / f"{name}.mp4", VIDEOS / f"{name}.jpg"]
+    out[0].write_bytes(video.read_bytes())
+    ffmpeg("-sseof", "-2", "-i", video, "-frames:v", "1", "-q:v", "3", out[1])
+    if gif := README_GIF.get(name):
+        # 800 wide at 10 frames a second keeps the text readable in a few MB.
+        palette = "fps=10,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];" \
+            "[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle"
+        ffmpeg("-i", video, "-vf", palette, gif)
+        out.append(gif)
     return out
 
 
@@ -403,6 +426,7 @@ def main() -> None:
         sys.exit("customise picks up where setup ends: record both")
 
     OUT.mkdir(parents=True, exist_ok=True)
+    recorded: dict[str, Path] = {}
     sandbox = start_sandbox()
     try:
         with sync_playwright() as playwright:
@@ -412,8 +436,13 @@ def main() -> None:
                 if name == "customise":
                     movie_scene(browser)
                 print(f"Recording {name} ...", flush=True)
-                print(f"  {record(browser, name, SCENES[name]).relative_to(ROOT)}", flush=True)
+                recorded[name] = record(browser, name, SCENES[name])
             browser.close()
+        # Only once every scene has recorded, so a failure leaves the
+        # published ones as they were.
+        for name, video in recorded.items():
+            for path in publish(name, video):
+                print(f"  {path.relative_to(ROOT)}", flush=True)
     finally:
         sandbox.terminate()
         sandbox.wait()

@@ -10,6 +10,10 @@ permalink: /guides/
 
 How to do more with FLARE once a room is running.
 
+<video src="{{ '/assets/video/customise.mp4' | relative_url }}" poster="{{ '/assets/video/customise.jpg' | relative_url }}"
+  controls muted playsinline preload="none" style="width: 100%"
+  aria-label="Adjusting two schedules from the dashboard, giving a bedroom a nightlight, and giving a living room a movie-night Scene Template"></video>
+
 - **[Examples]({{ site.baseurl }}/guides/examples/)** — automations that change or build on
   FLARE: a weekend lie-in, a holiday schedule, movie night, and more.
 - **[Templates]({{ site.baseurl }}/guides/templates/)** — the blueprint's Brightness, Idle

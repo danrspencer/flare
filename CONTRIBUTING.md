@@ -169,7 +169,7 @@ With the sandbox stopped, run:
 mise run sandbox:record
 ```
 
-It records two videos into `sandbox/recordings/` (not committed):
+It records two videos:
 
 - `setup.mp4` adds FLARE with one schedule per floor, adds its dashboard, shows the automations it made, and ends
   on the dashboard.
@@ -178,7 +178,17 @@ It records two videos into `sandbox/recordings/` (not committed):
   evening, with its result shown in the template preview.
 
 It starts its own brand-new sandbox, clears the notifications and repairs a new install shows, and plays each video
-in a fresh browser at 1280×1000, tall enough for a schedule's graph and all its sliders, with a visible pointer. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
+in a fresh browser at 1280×1000, tall enough for a schedule's graph and all its sliders, with a visible pointer.
+
+Once both have recorded, it writes what the docs and README show, ready to commit:
+
+- `docs/assets/video/setup.mp4` and `customise.mp4`, on the Quickstart and Guides pages, each with a still frame
+  (`.jpg`) shown before it plays;
+- `docs/assets/img/setup.gif`, at the top of the README. GitHub and HACS show images in a README but not video,
+  and the README links it from `main`, so it shows once merged.
+
+Re-record whenever setup or the dashboard changes, and commit the new files. If a scene fails, nothing is written,
+and a screenshot of the failed step is left in `sandbox/recordings/` with the working files. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
 Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
 ## Previewing the dashboard card
