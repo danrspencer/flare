@@ -17,6 +17,8 @@ CI — see `.github/workflows/release.yml`.
 - **Skip setup** installs FLARE with nothing set up, for setting things up yourself or only
   using its services.
 - **Adding FLARE Lighting suggests a title and icon**: FLARE, with FLARE's logo.
+- **The FLARE label on the automations setup creates uses FLARE's logo** as its icon. A label
+  that already exists keeps its own.
 - **After setup, a link reloads the page** so **FLARE Lighting** appears in Add dashboard, and a
   repair offers the same until a page has loaded it.
 
