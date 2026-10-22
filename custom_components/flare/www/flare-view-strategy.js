@@ -119,6 +119,11 @@ customElements.define('ll-strategy-view-flare-zone', FlareZoneViewStrategy);
  *     type: custom:flare
  */
 class FlareDashboardStrategy extends HTMLElement {
+  // What Add dashboard pre-fills: its title, and from that its URL.
+  static getCreateSuggestions() {
+    return { title: 'FLARE', icon: 'flare:logo' };
+  }
+
   static async generate(config, hass) {
     const schedules = scheduleSensors(hass).map(({ slug, title }) => ({
       title,

@@ -4,49 +4,58 @@
       "user": "Set up area"
     },
     "step": {
+      "user": {
+        "title": "Set up FLARE",
+        "description": "FLARE can set up your schedules and rooms now. If you'd rather set everything up yourself, or only want to use FLARE's parts in your own automations, skip setup.",
+        "menu_options": {
+          "schedules": "Set up schedules and rooms",
+          "skip": "Skip setup"
+        }
+      },
       "schedules": {
         "title": "Set up FLARE",
-        "description": "A schedule is the day's lighting: when each phase starts, and how bright and warm the light is. One is enough for most homes. Use more if parts of the house should differ, such as a schedule per floor.",
+        "description": "A schedule is the day's lighting: when each phase starts, and how bright and warm the light is. One schedule is enough for most homes, but each floor can have its own.\n\nYou can add or remove schedules later from FLARE's integration page.",
         "data": {
-          "count": "How many schedules?"
+          "layout": "Schedules"
         }
       },
       "schedule_names": {
         "title": "Name your schedules",
-        "description": "Each name becomes part of that schedule's entity IDs, so pick names you're happy to keep.",
+        "description": "Add a name for each schedule you want. Each name becomes part of that schedule's entity IDs, so pick names you're happy to keep. If a schedule has the same name as a floor, that floor's areas start on it in the next step.",
         "data": {
-          "schedule_1": "First schedule",
-          "schedule_2": "Second schedule",
-          "schedule_3": "Third schedule",
-          "schedule_4": "Fourth schedule"
+          "names": "Schedule"
         }
       },
       "areas": {
         "title": "Set up areas",
-        "description": "Each area you set up gets a zone, which keeps track of the lights FLARE is driving there. With it, you can have an automation from the FLARE blueprint, which drives them, and a flare over that automation: a light for the whole room, for voice assistants and HomeKit.",
+        "description": "Each area you set up gets a zone, which keeps track of the lights FLARE is driving there. By default it also gets a room automation from the FLARE blueprint, which drives those lights, and a flare: a light for the whole room, for voice assistants and HomeKit.\n\nPick the schedule each area follows, or clear it to leave that area out. You can set up more areas later with **Set up area** on FLARE's integration page, and change which schedule a room follows in its automation.",
         "data": {
           "set_up": "What to set up in each area"
         },
         "sections": {
           "areas": {
-            "name": "Areas",
-            "description": "The schedule each area follows. An area starts on the schedule named like its floor. Areas that already have a zone start on -- Don't set up --, because setting one up again gives it another automation and flare."
+            "name": "Areas"
+          },
+          "other_areas": {
+            "name": "Other areas"
           }
         }
       }
     },
     "abort": {
-      "setup_complete": "FLARE is set up, with the schedules {schedules}. Added zones: {zones}. Room automations: {automations}. Flares: {flares}.",
+      "setup_complete": "FLARE is set up, with the schedules {schedules}. Added zones: {zones}. Room automations: {automations}. Flares: {flares}.\n\n{reload} to add the FLARE Lighting dashboard from Settings → Dashboards → Add dashboard. If it isn't listed there, reload the page once more.",
       "areas_set_up": "Added zones: {zones}. Room automations: {automations}. Flares: {flares}.",
       "no_schedules": "Add a schedule first: an area's automation needs one to follow.",
       "automations_not_loaded": "The zones are set up, but the room automations couldn't be: Home Assistant isn't loading automations.yaml, the file its automation editor saves to. Add `automation: !include automations.yaml` to configuration.yaml, restart, then use Set up area again.",
       "automations_invalid": "The zones are set up, but the room automations couldn't be: automations.yaml isn't a list of automations Home Assistant can read. Fix the file, then use Set up area again.",
       "setup_failed": "Setting up the areas failed. Home Assistant's log has the reason.",
-      "no_areas": "No area has any lights. Put your lights in areas, then try again."
+      "no_areas": "No area has any lights. Put your lights in areas, then try again.",
+      "setup_skipped": "FLARE is installed, with nothing set up yet. FLARE's integration page has **Add schedule**, **Add zone** and **Add flare**, and **Set up area** to set up rooms once you have a schedule."
     },
     "error": {
-      "invalid_name": "Give the schedule a name with at least one letter or number",
-      "duplicate_name": "Two schedules can't share a name"
+      "invalid_name": "Give each schedule a name with at least one letter or number",
+      "duplicate_name": "Two schedules can't share a name",
+      "no_names": "Name at least one schedule"
     }
   },
   "config_subentries": {
@@ -57,22 +66,22 @@
       },
       "step": {
         "user": {
-          "title": "Add a FLARE schedule sensor",
-          "description": "Adds a day-phase/curve sensor and phase-override select, grouped under a device with this name. Entities are prefixed with it too (e.g. \"Living Room\" -> sensor.living_room_flare). The schedule times and brightness/colour curve aren't set here - they're separate entities on the device once it's created, each starting at a sensible default and adjustable any time.",
+          "title": "Add schedule",
+          "description": "A schedule is the day's lighting: when each phase starts, and how bright and warm the light is. It gets a device with this name, and its entity IDs start with the name, so \"Living Room\" gives sensor.living_room_flare. Its times and curve start at FLARE's defaults, and you can change them on the device's page or the FLARE Lighting dashboard.",
           "data": {
             "name": "Name"
           }
         },
         "reconfigure": {
           "title": "Export or import this schedule",
-          "description": "This is every time, brightness, colour temperature and transition in this schedule. You can copy it to keep or share, or paste in another schedule and submit it to replace this one, and anything you leave out keeps its current value.",
+          "description": "This is everything in this schedule: its times, brightness, colour temperatures and transitions. You can copy it to keep or share it. To replace this schedule, paste in another one and submit it. Anything you leave out keeps its current value.",
           "data": {
             "schedule": "Schedule"
           }
         }
       },
       "error": {
-        "already_configured": "A sensor with this name already exists",
+        "already_configured": "A schedule with that name already exists",
         "invalid_schedule": "{error}"
       },
       "abort": {
@@ -88,7 +97,7 @@
       "step": {
         "user": {
           "title": "Add zone",
-          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to update. A blueprint automation uses the zone picked as its Zone; a service call uses the one it names as zone_device_id.",
+          "description": "A zone is usually one room. It keeps track of which lights FLARE is driving there, so FLARE leaves alone a light you've changed yourself, and its tick tells the room's automation when to update. A room automation uses the zone picked as its **Zone**, and a service call uses the one in its zone_device_id.",
           "data": {
             "name": "Name"
           }
@@ -98,11 +107,11 @@
           "data": {
             "name": "Name"
           },
-          "description": "A zone is usually one room. It remembers which lights FLARE is currently driving, and its Tick tells the room's automation when to update. A blueprint automation uses the zone picked as its Zone; a service call uses the one it names as zone_device_id."
+          "description": "A zone is usually one room. It keeps track of which lights FLARE is driving there, so FLARE leaves alone a light you've changed yourself, and its tick tells the room's automation when to update. A room automation uses the zone picked as its **Zone**, and a service call uses the one in its zone_device_id."
         }
       },
       "error": {
-        "already_configured": "A schedule sensor or zone with that name already exists"
+        "already_configured": "A zone with that name already exists"
       }
     },
     "flare": {
@@ -114,7 +123,7 @@
       "step": {
         "user": {
           "title": "Add flare",
-          "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on with nothing else runs the room's automation, so the room comes on the way it normally would. Turning it on with a brightness or colour sets every light in the room to that, and turning it off turns every light in the room off; FLARE leaves the room alone after either until it's empty and dark.",
+          "description": "A flare is a light for a whole room, to use from voice assistants, HomeKit or a dashboard. Turning it on runs the room's automation, so the room comes on the way it normally would.\n\nIf you turn it on with a brightness or colour, every light in the room is set to that, and turning it off turns every light in the room off. After either, FLARE leaves the room alone until it's empty and dark.",
           "menu_options": {
             "blueprint": "Rooms from the FLARE blueprint",
             "custom": "Another automation"
@@ -122,7 +131,7 @@
         },
         "blueprint": {
           "title": "Add flares for your rooms",
-          "description": "Each room picked gets a flare named after its automation, in the automation's area. You can rename one afterwards. Rooms that already have a flare aren't listed.",
+          "description": "Each room you pick gets a flare named after its automation, in the automation's area, and you can rename it afterwards. Rooms that already have a flare aren't listed.",
           "data": {
             "automation": "Rooms"
           }
@@ -163,7 +172,7 @@
             "area_id": "Area"
           },
           "data_description": {
-            "area_id": "Where the flare's device starts out, which is how voice assistants and HomeKit know its room. Starts as the automation's area."
+            "area_id": "The flare's room, which is how voice assistants and HomeKit know where it is. It starts as the automation's area."
           }
         },
         "reconfigure": {
@@ -223,13 +232,17 @@
           "install_failed": "Couldn't install the blueprint. Home Assistant's log has the reason."
         }
       }
+    },
+    "reload_for_dashboard": {
+      "title": "Reload to add FLARE's dashboard",
+      "description": "FLARE was set up while this page was open, and Home Assistant only loads an integration's dashboard when the page loads. {reload}, then find **FLARE Lighting** in Settings → Dashboards → Add dashboard.\n\nIf it still isn't listed, reload the page once more: your browser may show a saved copy of it first. This repair goes away once a browser has loaded FLARE's dashboard."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Zones options",
-        "description": "Bulb models that need two-step transitions, one pattern per line. Any light whose device matches one of these patterns is routed into two-step transitions automatically, with no label needed — the box starts pre-filled with the models shipped with the integration, and you can add to it or remove from it freely.\n\nPatterns are matched case-insensitively against “manufacturer model”, and * is a wildcard, e.g. *TRADFRI bulb* or IKEA*. Clearing the box entirely falls back to the shipped defaults, so it can't quietly switch off detection.\n\nOnce you save your own list it stays as you left it — a later release adding a newly discovered bulb won't change it.\n\nEach zone's Tick fires once per update interval, a gap apart from the next zone's, so rooms don't all send at the same moment. A change smaller than the minimum brightness or colour temperature change isn't sent at all.",
+        "description": "**Two-step bulb models** lists the bulb models that need brightness and colour sent separately, one pattern per line. Each pattern is matched against a light's manufacturer and model, ignoring case, and * matches anything, as in *TRADFRI bulb* or IKEA*.\n\nThe field is pre-filled with FLARE's default patterns. Your saved list replaces those defaults entirely, so you can remove a pattern as well as add one, but it won't pick up patterns added in later releases. If you save the field empty, FLARE uses the defaults again.\n\nEach zone ticks once per **Update interval**, a gap apart from the next zone, so rooms don't all send at once. A change smaller than the **Minimum brightness change** or **Minimum colour temperature change** isn't sent.",
         "data": {
           "two_step_models": "Two-step bulb models",
           "tick_interval": "Update interval",
@@ -254,9 +267,10 @@
         "flare": "A zone, an automation and a flare"
       }
     },
-    "area_schedule": {
+    "layout": {
       "options": {
-        "skip": "-- Don't set up --"
+        "home": "One for the whole home",
+        "custom": "Custom"
       }
     }
   }

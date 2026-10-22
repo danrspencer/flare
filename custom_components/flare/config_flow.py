@@ -44,16 +44,24 @@ from .const import (
     SUBENTRY_TYPE_ZONE,
     ZONES_ENTRY_TITLE,
 )
+from .dashboard_reload import async_raise as async_raise_reload, reload_link
 from .schedule.coordinator import schedule_instances
 from .options_flow import FlareOptionsFlow
 from .subentry_flows import FlareSubentryFlow, SensorSubentryFlow, ZoneSubentryFlow
 
-# The first schedule's suggested name, when there's only one.
+# The one schedule's name, for the whole home.
 DEFAULT_SCHEDULE_NAME = "Home"
-MAX_SCHEDULES = 4
-SKIP = "skip"
+# The schedules step's choice, and the names step's field.
+LAYOUT = "layout"
+PER_FLOOR = "per_floor"
+HOME = "home"
+CUSTOM = "custom"
+NAMES = "names"
 SET_UP = "set_up"
+# The areas' section when no area has a floor, else the floorless areas'
+# after a section per floor.
 AREAS = "areas"
+OTHER_AREAS = "other_areas"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,51 +79,74 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 3
 
     def __init__(self) -> None:
-        self._schedule_count = 1
         self._new_schedules: list[str] = []
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if ENTRY_TYPE_SCHEDULES not in self._configured():
-            return await self.async_step_schedules()
+            return self.async_show_menu(step_id="user", menu_options=["schedules", "skip"])
         return await self.async_step_areas()
 
+    async def async_step_skip(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """FLARE's entries with nothing in them, for someone setting up
+        their own schedules, zones and automations, or only using the
+        services."""
+        await self._create_entries()
+        return self.async_abort(reason="setup_skipped")
+
     async def async_step_schedules(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """How many schedules: one for the house, or one per floor."""
+        """One schedule for the home, one per floor, or names of your own."""
+        floors = _floor_names(self.hass)
         if user_input is not None:
-            self._schedule_count = int(user_input["count"])
-            return await self.async_step_schedule_names()
+            if user_input[LAYOUT] == CUSTOM:
+                return await self.async_step_schedule_names()
+            names = floors if user_input[LAYOUT] == PER_FLOOR else [DEFAULT_SCHEDULE_NAME]
+            if errors := _name_errors(names):
+                return await self.async_step_schedule_names(suggested=names, errors=errors)
+            self._new_schedules = names
+            return await self.async_step_areas()
+
+        # One floor or none would make "per floor" the whole home under
+        # another name. Its label lists the floors, so it isn't translated.
+        options = [selector.SelectOptionDict(value=HOME, label=HOME)]
+        if len(floors) > 1:
+            options.append(selector.SelectOptionDict(value=PER_FLOOR, label=f"One per floor: {', '.join(floors)}"))
+        options.append(selector.SelectOptionDict(value=CUSTOM, label=CUSTOM))
         return self.async_show_form(
             step_id="schedules",
             data_schema=vol.Schema(
                 {
-                    vol.Required("count", default=1): selector.NumberSelector(
-                        selector.NumberSelectorConfig(min=1, max=MAX_SCHEDULES, step=1, mode=selector.NumberSelectorMode.BOX)
+                    vol.Required(LAYOUT, default=HOME): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options, translation_key=LAYOUT, mode=selector.SelectSelectorMode.LIST
+                        )
                     )
                 }
             ),
         )
 
-    async def async_step_schedule_names(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        keys = [f"schedule_{n}" for n in range(1, self._schedule_count + 1)]
-        errors: dict[str, str] = {}
+    async def async_step_schedule_names(
+        self,
+        user_input: dict[str, Any] | None = None,
+        *,
+        suggested: list[str] | None = None,
+        errors: dict[str, str] | None = None,
+    ) -> FlowResult:
+        """A list of names, one schedule each."""
         if user_input is not None:
-            names = [user_input.get(key, "").strip() for key in keys]
-            slugs = [slugify(name) for name in names]
-            for key, name, slug in zip(keys, names, slugs):
-                if not any(c.isalnum() for c in name):
-                    errors[key] = "invalid_name"
-                elif slugs.count(slug) > 1:
-                    errors[key] = "duplicate_name"
-            if not errors:
+            names = [name.strip() for name in user_input.get(NAMES) or [] if name.strip()]
+            if not (errors := _name_errors(names)):
                 self._new_schedules = names
                 return await self.async_step_areas()
-        suggested = user_input or ({"schedule_1": DEFAULT_SCHEDULE_NAME} if len(keys) == 1 else {})
+            suggested = names
+        if suggested is None:
+            suggested = [DEFAULT_SCHEDULE_NAME]
         return self.async_show_form(
             step_id="schedule_names",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema({vol.Required(key): selector.TextSelector() for key in keys}), suggested
+                vol.Schema({vol.Required(NAMES): selector.TextSelector(selector.TextSelectorConfig(multiple=True))}),
+                {NAMES: suggested},
             ),
-            errors=errors,
+            errors=errors or {},
         )
 
     async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -137,7 +168,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
-        chosen = _chosen((user_input or {}).get(AREAS) or {}, areas, schedules)
+        chosen = _chosen(user_input or {}, areas, schedules)
 
         await self._create_entries()
         schedule_ids = self._schedule_ids()
@@ -157,6 +188,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         placeholders = {key: str(count) for key, count in counts.items()}
         if first_setup:
             placeholders["schedules"] = ", ".join(self._new_schedules)
+            placeholders["reload"] = reload_link()
+            async_raise_reload(self.hass, placeholders["reload"])
         return self.async_abort(
             reason="setup_complete" if first_setup else "areas_set_up", description_placeholders=placeholders
         )
@@ -250,11 +283,12 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 def _areas_schema(
     hass: HomeAssistant, areas: list[Area], schedules: list[tuple[str, str]], zoned: set[str]
 ) -> vol.Schema:
-    """What to set up, then an Areas section with a dropdown per area -
-    Don't set up, or a schedule - each field named after its area, which
-    the dialog shows as its label. The section sets the areas apart from
-    the choice above them. An area with a zone starts as Don't set up; the
-    others start on the schedule named like their floor, else the first."""
+    """What to set up, then the areas, a section per floor (lowest first,
+    each named after its floor, which the dialog shows as its heading)
+    with the floorless areas last. Each area is a dropdown of schedules,
+    named after the area; an empty one isn't set up. An area with a zone
+    starts empty; the others start on the schedule named like their floor,
+    else the first."""
     fields: dict = {
         vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
             selector.SelectSelectorConfig(
@@ -262,21 +296,44 @@ def _areas_schema(
             )
         )
     }
-    options = [selector.SelectOptionDict(value=SKIP, label="-- Don't set up --")]
-    options += [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
+    options = [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
     by_floor = {slugify(name): key for key, name in schedules}
     dropdown = selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=options, translation_key="area_schedule", mode=selector.SelectSelectorMode.DROPDOWN
+            options=options, mode=selector.SelectSelectorMode.DROPDOWN
         )
     )
-    per_area: dict = {}
+    by_section: dict[str, dict] = {floor: {} for floor in _floor_names(hass)}
+    floorless = OTHER_AREAS if any(_floor_name(hass, a.area_id) for a in areas) else AREAS
+    by_section[floorless] = {}
     for area in areas:
         floor = _floor_name(hass, area.area_id)
-        default = SKIP if area.area_id in zoned else by_floor.get(slugify(floor or ""), schedules[0][0])
-        per_area[vol.Required(area.name, default=default)] = dropdown
-    fields[vol.Required(AREAS)] = section(vol.Schema(per_area))
+        # Suggested rather than a default, so an area cleared to nothing
+        # stays cleared: that's how it's left out.
+        suggested = None if area.area_id in zoned else by_floor.get(slugify(floor or ""), schedules[0][0])
+        by_section[floor or floorless][vol.Optional(area.name, description={"suggested_value": suggested})] = dropdown
+    for key, per_area in by_section.items():
+        if per_area:
+            fields[vol.Required(key)] = section(vol.Schema(per_area))
     return vol.Schema(fields)
+
+
+def _floor_names(hass: HomeAssistant) -> list[str]:
+    """Every floor's name, lowest first; floors without a level last."""
+    floors = fr.async_get(hass).async_list_floors()
+    return [f.name for f in sorted(floors, key=lambda f: (f.level is None, f.level or 0, f.name))]
+
+
+def _name_errors(names: list[str]) -> dict[str, str]:
+    """Schedule names need a letter or number, and to differ as entity IDs."""
+    slugs = [slugify(name) for name in names]
+    if not names:
+        return {NAMES: "no_names"}
+    if not all(any(c.isalnum() for c in name) for name in names):
+        return {NAMES: "invalid_name"}
+    if len(set(slugs)) < len(slugs):
+        return {NAMES: "duplicate_name"}
+    return {}
 
 
 def _floor_name(hass: HomeAssistant, area_id: str) -> str | None:
@@ -286,6 +343,8 @@ def _floor_name(hass: HomeAssistant, area_id: str) -> str | None:
 
 
 def _chosen(user_input: dict[str, Any], areas: list[Area], schedules: list[tuple[str, str]]) -> dict[Area, str]:
-    """Area -> schedule choice key, for every area set up."""
+    """Area -> schedule choice key, for every area set up, from whichever
+    section it's in."""
     keys = {key for key, _ in schedules}
-    return {area: user_input[area.name] for area in areas if user_input.get(area.name) in keys}
+    picked = {name: value for part in user_input.values() if isinstance(part, dict) for name, value in part.items()}
+    return {area: picked[area.name] for area in areas if picked.get(area.name) in keys}

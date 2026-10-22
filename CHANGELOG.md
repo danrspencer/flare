@@ -81,18 +81,20 @@ CI — see `.github/workflows/release.yml`.
 - **Motion sensors work in Lights & Occupancy.** Binary sensors with `device_class: motion`
   now turn a room on and off exactly like occupancy sensors, on their own or alongside them.
   Before, only `device_class: occupancy` sensors were picked up.
-- **Adding FLARE sets your rooms up.** Setup asks how many schedules you want and their
-  names, then which areas to set up, and with more than one schedule, which one each follows.
+- **Adding FLARE sets your rooms up.** Setup asks for one schedule per floor, one for the
+  whole home, or names of your own, then which areas to set up, and with more than one
+  schedule, which one each follows.
   Each area gets a zone, a room automation from the blueprint and a flare, all named after
   it, so there's nothing left to do by hand. You can choose just the zone, or the zone and
-  the automation, instead. It finishes with a summary of what it created.
+  the automation, instead. It finishes with a summary of what it created. **Skip setup**
+  installs FLARE with nothing set up, for setting things up yourself.
 - **Set up area**, the button at the top of FLARE's integration page, does the same for an
   area added later. Every area with lights is listed, with those that don't have a zone yet
   ticked.
 - **A ready-made dashboard.** **FLARE Lighting** is now in **Settings → Dashboards → Add
   dashboard**: a view for each schedule and one for your zones, which keeps up as you add
-  more. It's the new `custom:flare` dashboard strategy. FLARE's logo is available as an icon,
-  `flare:logo`, for its sidebar entry.
+  more. It's the new `custom:flare` dashboard strategy. Adding it suggests the title FLARE and
+  FLARE's logo as its icon (`flare:logo`, also available for anything else).
 - **A redesigned Zones view.** The house's totals at the top, then each zone by floor and
   area, laid out like Home Assistant's Lights dashboard with Clear where that has "All
   off" and the zone's counts where that has lights, and an Activity feed beside them like
@@ -129,6 +131,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Fixed
 
+- **Picking FLARE Lighting in Add dashboard works every time.** Depending on the order the page
+  loaded in, the dashboard could be listed but do nothing when picked, and FLARE's cards could
+  fail to show. FLARE now waits for Home Assistant's own page to be ready before loading them.
 - **A room switched off while Home Assistant was restarting comes on again.** If a room's lights
   went off while Home Assistant wasn't running, its zone kept its claims after the restart, so
   every light read as overridden and the room ignored motion until **Clear** was pressed. The
