@@ -513,8 +513,8 @@ it is). Set up area can just be run again.
   file, and the original text is restored byte for byte. An unreadable
   file (not YAML, or not a list) is left alone with its own message. A
   successful write drops comments in the file, as the editor does.
-- **Each automation gets the "FLARE" label** (created the first time), at
-  the user's request, so they're easy to find and manage.
+- **Each automation gets the "FLARE" label** (created the first time, in
+  amber), at the user's request, so they're easy to find and manage.
 - **Not yet handled: a failure partway leaves what was created.** Zones
   (and on first setup the entries) exist before automations.yaml is
   written. Deliberately left for a decision of its own.
