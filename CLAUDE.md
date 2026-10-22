@@ -986,7 +986,9 @@ files, and a symlink once wrote junk blueprints into the repo.
   request): `dev` is the churn branch; a push of `dev` to `main` cuts
   `vX.Y.Z-beta.N` (`cut-beta.yml`); a daily job promotes a version's
   newest beta to `vX.Y.Z` once it's 7 days old (`promote.yml`). `X.Y.Z`
-  comes from `CHANGELOG.md`'s top `## [x.y.z]` heading. An open issue
+  comes from `CHANGELOG.md`'s top `## [x.y.z]` heading; a change under
+  `custom_components/` while that names a released version fails, on the
+  pull request (`release.py check`) and in the beta job. An open issue
   labelled `release-blocker` stops a promotion - that's the user's veto.
   Soak is per version (a later beta of the same version restarts its
   clock), and nothing at or below the highest stable is promoted.

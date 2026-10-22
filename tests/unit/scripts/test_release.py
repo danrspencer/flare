@@ -307,6 +307,48 @@ def test_a_push_that_changes_nothing_shipped_cuts_no_beta(project):
         release.cut_beta(project.repo, first)  # and re-running is a no-op
 
 
+def released(project: Project, version: str) -> None:
+    project.target(version)
+    project.repo.build(Tag.parse(f"v{version}"), project.commit(version))
+
+
+def test_a_shipped_change_under_a_released_version_is_refused(project):
+    released(project, "0.17.0")
+    change = project.edit("custom_components/flare/x.py", "y = 2", "python change")
+
+    with pytest.raises(Refuse, match=r"\[0\.17\.0\], which is already released"):
+        release.check(project.repo, change)
+    with pytest.raises(Refuse):
+        release.cut_beta(project.repo, change)
+
+
+def test_a_docs_change_under_a_released_version_is_not_refused(project):
+    released(project, "0.17.0")
+    docs = project.edit("docs/page.md", "hello", "docs only")
+
+    with pytest.raises(Skip):
+        release.check(project.repo, docs)
+
+
+def test_a_shipped_change_under_a_new_section_passes(project):
+    released(project, "0.17.0")
+    project.edit("custom_components/flare/x.py", "y = 2", "python change")
+    project.target("0.18.0")
+
+    _, _, beta = release.check(project.repo, project.commit("target 0.18.0"))
+
+    assert beta.name == "v0.18.0-beta.1"
+
+
+def test_check_fails_the_command_for_a_shipped_change_under_a_released_version(project, capsys, monkeypatch):
+    released(project, "0.17.0")
+    change = project.edit("custom_components/flare/x.py", "y = 2", "python change")
+    monkeypatch.setattr(release, "REPO_ROOT", project.root)
+
+    assert release.main(["check", "--source", change]) == 1
+    assert "::error::" in capsys.readouterr().out
+
+
 def test_every_beta_stamps_the_blueprint_with_its_own_version(project):
     """The blueprint's stamp is each release's own version."""
     project.target("0.17.0")

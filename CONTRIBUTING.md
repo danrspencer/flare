@@ -351,11 +351,13 @@ says what version is being worked toward, and it is already required, so write i
 before the first change that should ship. Breaking changes bump the **minor** while
 below 1.0, and say so in the section.
 
-A push cuts nothing, and stays green, when the top heading is a version that has already
-been released, or when nothing under `custom_components/` changed since
-the last beta. So docs, test and CI changes can go to `main` freely; a change that should
-ship but forgot its heading is the thing to watch for. A heading *below* an existing
-beta fails the run - that would reach testers as a downgrade.
+A push cuts nothing, and stays green, when nothing under `custom_components/` changed
+since the last beta, or since the release its top heading names. So docs, test and CI
+changes can go to `main` freely. A change under `custom_components/` while the top heading
+is a version that's already out fails, on the pull request (the `changelog` job in
+`tests.yml`, `scripts/release.py check`) and again in the beta job: add a section for the
+next version. A heading *below* an existing beta fails too - that would reach testers as a
+downgrade.
 
 ### Promoting a beta
 
