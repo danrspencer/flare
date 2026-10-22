@@ -55,6 +55,8 @@ _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 # The label on every automation setup creates, so they're easy to find.
 LABEL_NAME = "FLARE"
 LABEL_ICON = "mdi:home-lightbulb"
+# One of the frontend's named label colours: warm, like the curve.
+LABEL_COLOR = "amber"
 
 # How much each area gets; each includes the ones before it.
 ZONE = "zone"
@@ -238,7 +240,9 @@ def _restore(path: str, original: str | None) -> None:
 def _flare_label(hass: HomeAssistant) -> str:
     """The FLARE label's id, creating the label the first time."""
     registry = lr.async_get(hass)
-    label = registry.async_get_label_by_name(LABEL_NAME) or registry.async_create(LABEL_NAME, icon=LABEL_ICON)
+    label = registry.async_get_label_by_name(LABEL_NAME) or registry.async_create(
+        LABEL_NAME, icon=LABEL_ICON, color=LABEL_COLOR
+    )
     return label.label_id
 
 

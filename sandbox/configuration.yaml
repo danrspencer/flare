@@ -42,7 +42,8 @@ logger:
     haffmpeg: critical
     homeassistant.components.camera.img_util: critical
 
-# Floors, then each floor's rooms: how many bulbs each has, and its icon.
+# Floors, then each floor's rooms: how many bulbs each has, its icon, and
+# whether it has a TV (a media_player that only turns on and off).
 # A room with 0 bulbs is an area with no lights. Each room also gets a
 # sensor device: an occupancy binary_sensor and a Presence switch driving it.
 sandbox_house:
@@ -50,7 +51,7 @@ sandbox_house:
     icon: mdi:home-floor-0
     rooms:
       Kitchen: {bulbs: 3, icon: mdi:stove}
-      Living Room: {bulbs: 2, icon: mdi:sofa}
+      Living Room: {bulbs: 2, icon: mdi:sofa, tv: true}
       Dining Room: {bulbs: 2, icon: mdi:silverware-fork-knife}
       Study: {bulbs: 1, icon: mdi:desk}
       Garage: {bulbs: 0, icon: mdi:garage}

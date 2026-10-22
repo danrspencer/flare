@@ -513,8 +513,8 @@ it is). Set up area can just be run again.
   file, and the original text is restored byte for byte. An unreadable
   file (not YAML, or not a list) is left alone with its own message. A
   successful write drops comments in the file, as the editor does.
-- **Each automation gets the "FLARE" label** (created the first time), at
-  the user's request, so they're easy to find and manage.
+- **Each automation gets the "FLARE" label** (created the first time, in
+  amber), at the user's request, so they're easy to find and manage.
 - **Not yet handled: a failure partway leaves what was created.** Zones
   (and on first setup the entries) exist before automations.yaml is
   written. Deliberately left for a decision of its own.
@@ -1267,7 +1267,9 @@ test module never imports another.
   `SANDBOX_PORT` running this checkout's FLARE over a fake house
   (`sandbox/`), already onboarded. It's for trying setup and the UI as a
   new user would before touching the live instance, not a test layer.
-  `--reset` gives a brand-new house.
+  `--reset` gives a brand-new house. `mise run sandbox:record`
+  (`scripts/sandbox_record.py`, Playwright) records walkthrough videos
+  of it; a step that fails leaves a screenshot in `sandbox/recordings/`.
 
 **Practices worth keeping:**
 

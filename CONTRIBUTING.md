@@ -152,13 +152,34 @@ mise run sandbox:reset
 - The house is `sandbox/configuration.yaml`'s `sandbox_house:` block: floors and rooms, their icons, and how
   many bulbs each room has. Every room also gets a sensor with an occupancy `binary_sensor` and a **Presence** switch to set it,
   so you walk into the kitchen by turning on `switch.kitchen_sensor_presence`. Bulbs (`light.kitchen_bulb_1` ...)
-  take brightness and colour temperature and keep their state across restarts. The fake devices are
+  take brightness and colour temperature and keep their state across restarts. A room with `tv: true` also
+  gets a TV that only turns on and off (`media_player.living_room_tv`). The fake devices are
   `sandbox/custom_components/sandbox_house/`.
 - Home Assistant runs from `.sandbox/`, rebuilt from `sandbox/` on every start (FLARE and the fake house are
   symlinked in). Restart it to pick up a change to FLARE's Python, from the terminal or from Home Assistant's
   own Restart.
 - The owner account is `sandbox` / `sandbox`, for when you need to log in from another device.
 - FLARE is linked in, not installed through HACS, so HACS isn't part of what the sandbox tests.
+
+### Recording walkthroughs
+
+With the sandbox stopped, run:
+
+```bash
+mise run sandbox:record
+```
+
+It records two videos into `sandbox/recordings/` (not committed):
+
+- `setup.mp4` adds FLARE with one schedule per floor, adds its dashboard, shows the automations it made, and ends
+  on the dashboard.
+- `customise.mp4` carries on from there. It adjusts both schedules with their graphs in view, gives the Bedroom a
+  nightlight, and gives the Living Room a Scene Template that picks a movie-night scene while the TV is on in the
+  evening, with its result shown in the template preview.
+
+It starts its own brand-new sandbox, clears the notifications and repairs a new install shows, and plays each video
+in a fresh browser at 1280×1000, tall enough for a schedule's graph and all its sliders, with a visible pointer. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
+Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
 ## Previewing the dashboard card
 
