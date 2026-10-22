@@ -20,9 +20,15 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
 DOMAIN = "sandbox_house"
-PLATFORMS = [Platform.LIGHT, Platform.BINARY_SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.LIGHT, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.MEDIA_PLAYER]
 
-ROOM_SCHEMA = vol.Schema({vol.Required("bulbs"): cv.positive_int, vol.Optional("icon"): cv.icon})
+ROOM_SCHEMA = vol.Schema(
+    {
+        vol.Required("bulbs"): cv.positive_int,
+        vol.Optional("icon"): cv.icon,
+        vol.Optional("tv", default=False): cv.boolean,
+    }
+)
 FLOOR_SCHEMA = vol.Schema(
     {vol.Optional("icon"): cv.icon, vol.Required("rooms"): {cv.string: ROOM_SCHEMA}}
 )
@@ -34,6 +40,7 @@ class Room:
     name: str
     area_id: str
     bulbs: int
+    tv: bool = False
 
     @property
     def slug(self) -> str:
@@ -44,6 +51,9 @@ class Room:
 
     def sensor_device(self) -> DeviceInfo:
         return DeviceInfo(identifiers={(DOMAIN, f"{self.slug}_sensor")})
+
+    def tv_device(self) -> DeviceInfo:
+        return DeviceInfo(identifiers={(DOMAIN, f"{self.slug}_tv")})
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -64,7 +74,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     floor_id=area.floor_id or floor.floor_id,
                     icon=area.icon or room.get("icon"),
                 )
-            rooms.append(Room(name, area.id, room["bulbs"]))
+            rooms.append(Room(name, area.id, room["bulbs"], room["tv"]))
     hass.data[DOMAIN] = rooms
 
     if not hass.config_entries.async_entries(DOMAIN):
@@ -82,6 +92,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # light.kitchen_bulb_1, switch.kitchen_sensor_presence.
         wanted = [(f"Bulb {n}", "Bulb", room.bulb_device(n)) for n in range(1, room.bulbs + 1)]
         wanted.append(("Sensor", "Presence sensor", room.sensor_device()))
+        if room.tv:
+            wanted.append(("TV", "TV", room.tv_device()))
         for name, model, info in wanted:
             device = devices.async_get_or_create(
                 config_entry_id=entry.entry_id,

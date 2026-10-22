@@ -65,3 +65,22 @@ run = "python scripts/sandbox.py"
 description = "Run the sandbox from a brand-new house, throwing away its state"
 depends = ["sandbox:install"]
 run = "python scripts/sandbox.py --reset"
+
+[tasks."sandbox:record:install"]
+description = "Install Playwright, its Chromium and ffmpeg into .venv-record/ for recording the sandbox"
+run = """
+want="playwright==1.64.0 imageio-ffmpeg==0.6.0"
+if [ "$(cat .venv-record/installed 2>/dev/null)" = "$want" ]; then
+  exit 0
+fi
+echo "Installing $want into .venv-record/"
+uv venv --clear -q -p "$(mise which python)" .venv-record
+uv pip install -q -p .venv-record $want
+.venv-record/bin/playwright install chromium
+echo "$want" > .venv-record/installed
+"""
+
+[tasks."sandbox:record"]
+description = "Record the sandbox walkthrough videos into sandbox/recordings/ (stop the sandbox first)"
+depends = ["sandbox:install", "sandbox:record:install"]
+run = ".venv-record/bin/python scripts/sandbox_record.py"
