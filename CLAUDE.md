@@ -1027,6 +1027,12 @@ Until the first release, the beta is also the root.
 - `cut-beta.yml` and `promote.yml` call `docs.yml` after pushing their
   tag. A push to `main` starting it directly raced the tag and labelled
   the beta with the previous number.
+- **A release's docs follow `main` while its code does**: built from
+  `main` whenever nothing under `custom_components/` has changed since
+  the release's source (`release.py docs-source`), else from the tag,
+  and republished by `cut-beta.yml` on such a push. Building them from
+  the tag alone left a docs fix merged after the last beta out of the
+  release until the next code change.
 - The version picker is added to pages when the site is assembled, not
   in the Jekyll source, so stored old versions get today's picker. It
   lives in `docs/_versions/`, which Jekyll skips.
