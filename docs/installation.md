@@ -7,7 +7,7 @@ permalink: /installation/
 # Quickstart
 {: .no_toc }
 
-A few minutes to install, then under a minute to your whole house running on the curve.
+Five minutes to a room running on the curve.
 
 <video src="{{ '/assets/video/setup.mp4' | relative_url }}" poster="{{ '/assets/video/setup.jpg' | relative_url }}"
   controls muted playsinline preload="none" style="width: 100%"
