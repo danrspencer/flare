@@ -127,6 +127,39 @@ a service, so anything a condition depends on has to remain template-based. Brig
 checks, and transition routing are implemented in the integration and unit tested. See `CLAUDE.md` for further
 implementation notes.
 
+## A sandbox Home Assistant
+
+To try FLARE end to end without touching a real house, run a throwaway Home Assistant with this checkout's FLARE
+in it:
+
+```bash
+mise run sandbox
+```
+
+It opens on <http://127.0.0.1:8124>, already logged in, with no FLARE set up yet, so the first thing to do is
+**Add Integration → FLARE**, just as a new user would. To get back to a brand-new house, run:
+
+```bash
+mise run sandbox:reset
+```
+
+- `mise run sandbox:install` (which both run first) installs Home Assistant into `.venv-sandbox/`, with the
+  Python and uv from `mise.toml`. By default that's the oldest release FLARE supports, `hacs.json`'s
+  `homeassistant`. To try another, set `SANDBOX_HA_VERSION` (`SANDBOX_HA_VERSION=2026.11.0 mise run sandbox`).
+  It reinstalls only when the version changes, and the first install takes a few minutes. A house saved by a
+  newer release may not load in an older one; use `sandbox:reset` after going back.
+- The port is `SANDBOX_PORT` in `mise.toml`'s `[env]`.
+- The house is `sandbox/configuration.yaml`'s `sandbox_house:` block: floors and rooms, their icons, and how
+  many bulbs each room has. Every room also gets a sensor with an occupancy `binary_sensor` and a **Presence** switch to set it,
+  so you walk into the kitchen by turning on `switch.kitchen_sensor_presence`. Bulbs (`light.kitchen_bulb_1` ...)
+  take brightness and colour temperature and keep their state across restarts. The fake devices are
+  `sandbox/custom_components/sandbox_house/`.
+- Home Assistant runs from `.sandbox/`, rebuilt from `sandbox/` on every start (FLARE and the fake house are
+  symlinked in). Restart it to pick up a change to FLARE's Python, from the terminal or from Home Assistant's
+  own Restart.
+- The owner account is `sandbox` / `sandbox`, for when you need to log in from another device.
+- FLARE is linked in, not installed through HACS, so HACS isn't part of what the sandbox tests.
+
 ## Previewing the dashboard card
 
 The [curve playground](https://danrspencer.github.io/flare/playground/) on this site renders the real card against synthetic data, with no

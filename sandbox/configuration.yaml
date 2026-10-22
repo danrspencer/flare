@@ -1,0 +1,62 @@
+# The sandbox's Home Assistant config, copied into .sandbox/ by
+# scripts/sandbox.py on every start. Edit it here, not there.
+
+homeassistant:
+  name: FLARE Sandbox
+  latitude: 51.5072
+  longitude: -0.1276
+  elevation: 11
+  unit_system: metric
+  time_zone: Europe/London
+  country: GB
+  currency: GBP
+  # Logged in automatically from this machine; the account behind it is
+  # in CONTRIBUTING.md ("A sandbox Home Assistant").
+  auth_providers:
+    - type: trusted_networks
+      trusted_networks:
+        - 127.0.0.1
+        - ::1
+      allow_bypass_login: true
+    - type: homeassistant
+
+# What default_config would bring that FLARE and its dashboard use,
+# without the network discovery and cloud parts a laptop doesn't need.
+automation: !include automations.yaml
+blueprint:
+config:
+frontend:
+history:
+logbook:
+person:
+recorder:
+scene: !include scenes.yaml
+script: !include scripts.yaml
+sun:
+
+logger:
+  default: warning
+  logs:
+    custom_components.flare: info
+    # No ffmpeg or libjpeg-turbo on a laptop, and nothing here needs them.
+    haffmpeg: critical
+    homeassistant.components.camera.img_util: critical
+
+# Floors, then each floor's rooms: how many bulbs each has, and its icon.
+# A room with 0 bulbs is an area with no lights. Each room also gets a
+# sensor device: an occupancy binary_sensor and a Presence switch driving it.
+sandbox_house:
+  Downstairs:
+    icon: mdi:home-floor-0
+    rooms:
+      Kitchen: {bulbs: 3, icon: mdi:stove}
+      Living Room: {bulbs: 2, icon: mdi:sofa}
+      Dining Room: {bulbs: 2, icon: mdi:silverware-fork-knife}
+      Study: {bulbs: 1, icon: mdi:desk}
+      Garage: {bulbs: 0, icon: mdi:garage}
+  Upstairs:
+    icon: mdi:home-floor-1
+    rooms:
+      Bedroom: {bulbs: 2, icon: mdi:bed}
+      Landing: {bulbs: 2, icon: mdi:stairs}
+      Bathroom: {bulbs: 4, icon: mdi:shower}

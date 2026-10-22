@@ -331,7 +331,8 @@ def test_promotion_rebuilds_the_betas_own_source_as_the_bare_version(project):
     # Main moves on after the beta; the release must NOT pick that up.
     project.edit("custom_components/flare/later.py", "x = 1", "unsoaked change")
 
-    stable = release.promote(project.repo, NOW + timedelta(days=30) + timedelta(hours=1))
+    # The beta is cut now, by the real clock, so its soak is too.
+    stable = release.promote(project.repo, datetime.now(timezone.utc) + timedelta(days=8))
 
     assert stable.name == "v0.17.0"
     assert project.repo.source_of(stable) == source
