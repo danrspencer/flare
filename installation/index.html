@@ -236,6 +236,8 @@
 
 <p>Five minutes to a room running on the curve.</p>
 
+<video src="/flare/assets/video/setup.mp4" poster="/flare/assets/video/setup.jpg" controls="" muted="" playsinline="" preload="none" style="width: 100%" aria-label="Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard"></video>
+
 <blockquote class="note">
   <p><strong>Prerequisites</strong> — Home Assistant 2026.10.0 or newer, <a href="https://hacs.xyz">HACS</a> installed,
 and your lights assigned to areas, so FLARE can set itself up room by room.</p>
@@ -276,19 +278,27 @@ and your lights assigned to areas, so FLARE can set itself up room by room.</p>
 </h2>
     
 
-<p>Restart Home Assistant, then <strong>Settings → Devices &amp; Services → Add Integration → FLARE</strong>.</p>
+<p>Restart Home Assistant, then <strong>Settings → Devices &amp; Services → Add Integration → FLARE</strong>, and
+choose <strong>Set up schedules and rooms</strong>. (If you’d rather set everything up yourself, or only want
+FLARE’s parts for your own automations, choose <strong>Skip setup</strong> instead.)</p>
 
 <p>It asks:</p>
 
 <ul>
-  <li><strong>How many schedules, and their names.</strong> A <a href="/flare/reference/schedules/">schedule</a>
-is the day’s lighting: when each phase starts, and how bright and warm it is. One for the
-whole house is fine to start with; use more if parts of the house should differ, such as one
-per floor. Pick names you’re happy to keep: they become part of each schedule’s entity IDs.</li>
+  <li><strong>Your schedules.</strong> A <a href="/flare/reference/schedules/">schedule</a> is the day’s
+lighting: when each phase starts, and how bright and warm it is. <strong>One for the whole home</strong>
+(called Home) is the default, and enough for most homes. You can instead choose <strong>one per
+floor</strong> (offered when your home has more than one floor, and named after them), or
+<strong>Custom</strong>, to name the schedules yourself.
+A schedule’s name becomes part of its entity IDs, so pick names you’re happy to keep.</li>
   <li><strong>What to set up for each area</strong>, and <strong>which schedule each area follows</strong>. Every area with
-lights is listed with a choice of <strong>– Don’t set up –</strong> or one of your schedules. An area starts on
-the schedule with the same name as its floor, or on your first schedule if none matches.</li>
+lights is listed, grouped by floor, and starts on the schedule with the same name as its floor,
+or on your first schedule if none matches. To leave an area out, clear its schedule.</li>
 </ul>
+
+<p>None of this is final. You can add or remove schedules later from FLARE’s integration page, set
+up more areas with <strong>Set up area</strong> (see <a href="#adding-a-room-later">Adding a room later</a>), and change
+which schedule a room follows in its automation.</p>
 
 <p>Each area you set up gets up to three things, named after it. All three is the default, and
 what most rooms want:</p>
@@ -339,6 +349,13 @@ off by itself.</p>
 <p><strong>Settings → Dashboards → Add dashboard</strong>, and pick <strong>FLARE Lighting</strong>. It’s a dashboard
 with a view for each schedule and one for your zones, and it keeps up as you add more. See
 <a href="/flare/dashboard/">Dashboard</a>.</p>
+
+<blockquote class="note">
+  <p><strong>FLARE Lighting</strong> only appears once the page has reloaded after setting FLARE up. Use
+<strong>Reload this page</strong> at the end of setup, or in the repair FLARE raises until a page has loaded
+its dashboard. If it’s still missing, reload once more: your browser may show its saved copy of
+the page the first time.</p>
+</blockquote>
 <h2 id="adding-a-room-later">
   
   
@@ -349,8 +366,8 @@ with a view for each schedule and one for your zones, and it keeps up as you add
     
 
 <p><strong>Settings → Devices &amp; Services → FLARE → Set up area</strong>. It lists every area with lights. An area
-that already has a zone starts as <strong>– Don’t set up –</strong>: setting it up again keeps its zone but gives
-it another automation and flare, so only change it if it doesn’t have them.</p>
+that already has a zone starts empty, because setting it up again keeps its zone but gives it
+another automation and flare, so only pick a schedule for it if it doesn’t have them.</p>
 
 <p>The other buttons there add one thing at a time: <strong>Add schedule</strong>, <strong>Add zone</strong> and
 <strong>Add flare</strong>.</p><hr />
