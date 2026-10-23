@@ -21,6 +21,9 @@ built in.
 
 FLARE sets your lights through the day, and leaves alone any light you change yourself.
 
+- **It lights the room when you walk in.** With a motion or occupancy sensor, the room comes on
+  at the right brightness and colour for the time of day, or in the scene you've picked for it,
+  and turns off once it's empty.
 - **It keeps every light on the curve.** Every minute it checks each light, and corrects
   any that have drifted or missed a command.
 - **It works with lights on a physical wall switch.** If you cut the power to a room and
