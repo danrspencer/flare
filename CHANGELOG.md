@@ -7,14 +7,24 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
-## [1.2.0] - Unreleased
+## [1.3.0] - Unreleased
 
 ### Added
 
 - **Sensors From Areas**, a new blueprint input under the new **Triggers** section, on by
   default. Turn it off and the room ignores the occupancy and motion sensors **Lights &
   Occupancy** picks up through an area, floor, device or label, and uses only the sensors you
-  pick by name. **Additional Triggers** has moved into the same section.
+  pick by name.
+
+### Changed
+
+- **The blueprint's inputs are rearranged** so the ones most rooms need are out in the open.
+  **Wait time** now sits under **Lights & Occupancy** instead of inside a section. The
+  sections run Brightness & Exclusions, Idle Brightness, Scene Handoff, Colour, Triggers (which
+  now holds **Additional Triggers**) and Transitions (formerly Timing). Existing automations
+  keep their settings.
+
+## [1.2.0] - Unreleased
 
 ### Changed
 

@@ -46,7 +46,8 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy and motion sensors within it decide when.
+        controlled, occupancy and motion sensors within it decide when (see
+        Sensors From Areas, under Triggers).
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
@@ -56,50 +57,18 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
-    scene_handoff:
-      name: Scene Handoff
-      icon: mdi:palette-swatch
-      collapsed: true
-      input:
-        scene_template:
-          name: Scene Template (Optional)
-          description: >
-            Template returning a scene entity_id to hand the room over
-            to instead of the adaptive brightness/colour. Takes
-            precedence over the per-phase scenes below whenever it
-            returns one - they're the fallback for phases it doesn't
-            cover.
-            If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
-            changes.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
-          default: ""
-          selector:
-            template: {}
-        morning_scene:
-          name: Morning Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        day_scene:
-          name: Day Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        evening_scene:
-          name: Evening Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        night_scene:
-          name: Night Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
+    no_motion_wait:
+      name: Wait time
+      description: >
+        How long every sensor must be clear before the room counts as empty
+        and its lights turn off.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-percent
@@ -217,6 +186,50 @@ blueprint:
               min: 0
               max: 255
               mode: box
+    scene_handoff:
+      name: Scene Handoff
+      icon: mdi:palette-swatch
+      collapsed: true
+      input:
+        scene_template:
+          name: Scene Template (Optional)
+          description: >
+            Template returning a scene entity_id to hand the room over
+            to instead of the adaptive brightness/colour. Takes
+            precedence over the per-phase scenes below whenever it
+            returns one - they're the fallback for phases it doesn't
+            cover.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: ""
+          selector:
+            template: {}
+        morning_scene:
+          name: Morning Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        day_scene:
+          name: Day Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        evening_scene:
+          name: Evening Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        night_scene:
+          name: Night Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
     colour:
       name: Colour
       icon: mdi:palette
@@ -239,7 +252,7 @@ blueprint:
               multiple: true
     triggers:
       name: Triggers
-      icon: mdi:motion-sensor
+      icon: mdi:lightning-bolt-outline
       collapsed: true
       input:
         use_area_sensors:
@@ -264,19 +277,10 @@ blueprint:
             entity:
               multiple: true
     timing:
-      name: Timing
+      name: Transitions
       icon: mdi:timer-outline
       collapsed: true
       input:
-        no_motion_wait:
-          name: Wait time
-          description: Time to keep the light on after motion stops.
-          default: 120
-          selector:
-            number:
-              min: 0
-              max: 3600
-              unit_of_measurement: seconds
         motion_on_transition:
           name: Motion On Transition
           description: Transition duration when turning on via motion or a manual run.

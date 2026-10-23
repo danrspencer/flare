@@ -18,7 +18,7 @@ from tests.support import load_blueprint
 
 
 class TestAdaptiveScheduleAndTransitions:
-    """docs/reference/blueprint.md#timing"""
+    """docs/reference/blueprint.md#transitions"""
 
     async def test_an_unavailable_sensor_skips_the_tick_instead_of_erroring(self, hass, apply_lighting_calls):
         """apply_lighting requires both values, so an unavailable sensor would
