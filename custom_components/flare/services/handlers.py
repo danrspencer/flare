@@ -38,6 +38,9 @@ from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_
 from ..flares.identity import without_flares
 from ..zone.claims import ClaimRegistry
 
+# FLARE drives and tracks lights only.
+LIGHT_IDS = [cv.entity_domain("light")]
+
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
 BRIGHTNESS_LEVELS = vol.Schema(
@@ -46,7 +49,7 @@ BRIGHTNESS_LEVELS = vol.Schema(
 
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
         vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
@@ -89,7 +92,7 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
 
 APPLY_LIGHTING_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
         vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
@@ -112,7 +115,7 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
 
 TURN_OFF_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Optional("transition", default=0): vol.Coerce(float),
         # None turns the lights off untracked.
         vol.Optional("zone_device_id"): vol.Any(None, cv.string),
@@ -123,7 +126,7 @@ TURN_OFF_SCHEMA = vol.Schema(
 # required.
 CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Required("zone_device_id"): cv.string,
         vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
@@ -133,7 +136,7 @@ CLAIMS_CHECK_SCHEMA = vol.Schema(
 
 CLAIMS_RECORD_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Required("zone_device_id"): cv.string,
         vol.Optional("targets", default=dict): dict,
     }
@@ -141,7 +144,7 @@ CLAIMS_RECORD_SCHEMA = vol.Schema(
 
 CLAIMS_CLEAR_SCHEMA = vol.Schema(
     {
-        vol.Required("entities"): [cv.entity_id],
+        vol.Required("entities"): LIGHT_IDS,
         vol.Required("zone_device_id"): cv.string,
     }
 )

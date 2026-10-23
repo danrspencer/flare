@@ -7,6 +7,15 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [1.2.0] - Unreleased
+
+### Changed
+
+- **FLARE's lighting and claims actions take lights only.** `compute_lighting_groups`,
+  `apply_lighting`, `turn_off` and the four `claims_*` actions now reject any entity that isn't a
+  light, and their entity pickers list only lights. The claims actions used to accept any
+  entity, but override protection only ever made sense for lights.
+
 ## [1.1.0] - Unreleased
 
 ### Changed

@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 import voluptuous as vol
 import yaml
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
@@ -133,6 +133,27 @@ async def test_compute_lighting_groups_accepts_an_explicit_null_rgb_color(setup_
     )
 
     assert result["groups"][0]["combined"] == ["light.a"]
+
+
+@pytest.mark.parametrize(
+    ("service", "data"),
+    [
+        ("compute_lighting_groups", {"brightness": 200, "color_temp_kelvin": 4000}),
+        ("apply_lighting", {"brightness": 200, "color_temp_kelvin": 4000, "transition": 0}),
+        ("turn_off", {}),
+        ("claims_check", {"zone_device_id": "zone"}),
+        ("claims_record", {"zone_device_id": "zone"}),
+        ("claims_clear", {"zone_device_id": "zone"}),
+        ("claims_override", {"zone_device_id": "zone"}),
+    ],
+)
+async def test_the_lighting_and_claims_services_take_lights_only(setup_integration: HomeAssistant, service, data):
+    hass = setup_integration
+    responds = hass.services.supports_response(DOMAIN, service) is not SupportsResponse.NONE
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(
+            DOMAIN, service, {"entities": ["light.a", "switch.fan"], **data}, blocking=True, return_response=responds
+        )
 
 
 async def test_compute_scene_coverage_requires_a_scene(setup_integration: HomeAssistant):
