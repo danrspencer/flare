@@ -54,9 +54,7 @@ other binary sensors in the target are ignored. A room can mix both kinds.
 To choose the sensors yourself while still picking an area for the lights, turn off
 [Sensors From Areas](#triggers).
 
-A room with no sensor follows the schedule but never turns its lights on or off. A sensor that's
-unavailable is ignored until it comes back, so a room whose only sensor is unavailable behaves
-the same way.
+A room with no sensor follows the schedule but never turns its lights on or off.
 
 If a room has two automations, for example one for a lamp and one for the ceiling light, give
 both the same **Zone**.
