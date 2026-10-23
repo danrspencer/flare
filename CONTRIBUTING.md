@@ -366,6 +366,12 @@ Each pull request gets a comment from `release-preview.yml` naming the beta it w
 merged now, with that beta's release notes, or saying why it would ship in none. It's updated
 on every push.
 
+Release notes are GitHub's generated list of merged pull requests, minus any labelled `repo`
+(`.github/release.yml`). That label is applied automatically, from `.github/labeler.yml`, to
+a pull request whose every file is repo plumbing - CI, scripts, tests, contributor docs - and
+removed again if it later touches anything else. Docs and README changes stay in. To leave
+out any other pull request, label it once it's merged; before then the next push re-checks it.
+
 ### Promoting a beta
 
 Nothing to do. `.github/workflows/promote.yml` runs daily and releases the newest beta

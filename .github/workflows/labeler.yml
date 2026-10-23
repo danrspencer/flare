@@ -1,0 +1,26 @@
+name: labeler
+
+# Labels a fork's pull request from labeler.yml. A pull request from this
+# repository is labelled by release-preview.yml instead, before it reads
+# the release notes the label decides.
+#
+# pull_request_target, so a fork's pull request gets a token that can
+# label. Safe because nothing from the pull request is checked out or run:
+# the labeler reads its config from the base branch and the file list
+# from the API.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          sync-labels: true
