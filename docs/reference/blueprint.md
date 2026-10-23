@@ -127,7 +127,7 @@ and other variations.
 
 | Input | Default | Description |
 |---|---|---|
-| **Sensors From Areas** | on | Lets the sensors **Lights & Occupancy** picks up through an area, floor, device or label turn the lights on and off. |
+| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. |
 | **Additional Triggers** | none | Entities that make the room update as soon as they change. |
 
 ### Sensors from areas
