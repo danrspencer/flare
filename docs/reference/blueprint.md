@@ -32,7 +32,7 @@ behaves.
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
-| **Use Sensors** | on | Turn the lights on and off from the sensors in **Lights & Occupancy**. Turn it off for a room that should only follow the schedule. |
+| **Use Area Sensors** | on | Use the sensors **Lights & Occupancy** picks up through an area, floor, device or label. Turn it off to use only sensors you pick by name. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -51,8 +51,11 @@ The room's [flare](../flares/) controls the same lights.
 Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
 other binary sensors in the target are ignored. A room can mix both kinds.
 
-A room with no sensor, or with **Use Sensors** off, follows the schedule but never turns its
-lights on or off.
+With **Use Area Sensors** off, only sensors you pick by name count, so you can use the area for
+its lights and pick the sensors yourself, such as the hallway's for a landing. Pick none for a
+room that only follows the schedule.
+
+A room with no sensor follows the schedule but never turns its lights on or off.
 
 If a room has two automations, for example one for a lamp and one for the ceiling light, give
 both the same **Zone**.

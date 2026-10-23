@@ -11,9 +11,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
-- **Use Sensors**, a new blueprint input, on by default. Turn it off and the room ignores the
-  occupancy and motion sensors in **Lights & Occupancy**: it follows the schedule but never
-  turns its lights on or off by itself.
+- **Use Area Sensors**, a new blueprint input, on by default. Turn it off and the room ignores
+  the occupancy and motion sensors **Lights & Occupancy** picks up through an area, floor,
+  device or label, and uses only the sensors you pick by name.
 
 ### Changed
 
