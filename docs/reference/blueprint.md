@@ -58,15 +58,6 @@ A room with no sensor follows the schedule but never turns its lights on or off.
 If a room has two automations, for example one for a lamp and one for the ceiling light, give
 both the same **Zone**.
 
-## Colour
-
-| Input | Default | Description |
-|---|---|---|
-| **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
-
-Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
-leaves Morning and Day on colour temperature.
-
 ## Scenes
 
 | Input | Default | Description |
@@ -113,6 +104,15 @@ to:
 An idle brightness is the only way the room's lights come on while it's empty. See
 [Templates](../../guides/templates/#idle-brightness-template) for one lamp as the nightlight,
 and other variations.
+
+## Colour
+
+| Input | Default | Description |
+|---|---|---|
+| **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
+
+Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
+leaves Morning and Day on colour temperature.
 
 ## Triggers
 

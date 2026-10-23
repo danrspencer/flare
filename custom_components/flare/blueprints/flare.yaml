@@ -56,26 +56,6 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
-    colour:
-      name: Colour
-      icon: mdi:palette
-      collapsed: true
-      input:
-        rgb_phases:
-          name: Prefer RGB During
-          description: >
-            Phases to send RGB colour instead of colour temperature, for
-            lights that support it (auto-detected). At the high colour
-            temperatures used during Morning/Day, this can look
-            blue-tinted rather than a clean white, so those phases are
-            off by default - Evening/Night's warmer values don't have
-            that problem.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
-          default: [Evening, Night]
-          selector:
-            select:
-              options: [Morning, Day, Evening, Night]
-              multiple: true
     scene_handoff:
       name: Scene Handoff
       icon: mdi:palette-swatch
@@ -237,6 +217,26 @@ blueprint:
               min: 0
               max: 255
               mode: box
+    colour:
+      name: Colour
+      icon: mdi:palette
+      collapsed: true
+      input:
+        rgb_phases:
+          name: Prefer RGB During
+          description: >
+            Phases to send RGB colour instead of colour temperature, for
+            lights that support it (auto-detected). At the high colour
+            temperatures used during Morning/Day, this can look
+            blue-tinted rather than a clean white, so those phases are
+            off by default - Evening/Night's warmer values don't have
+            that problem.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
+          default: [Evening, Night]
+          selector:
+            select:
+              options: [Morning, Day, Evening, Night]
+              multiple: true
     triggers:
       name: Triggers
       icon: mdi:motion-sensor
