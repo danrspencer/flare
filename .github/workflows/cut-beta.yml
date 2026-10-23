@@ -63,14 +63,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.cut.outputs.tag }}
+          # Named explicitly: release commits are on no branch, so GitHub
+          # would find no earlier tag to count from (release.py notes_start).
+          PREVIOUS: ${{ steps.cut.outputs.previous }}
         run: |
           git push origin "refs/tags/$TAG"
-          # Notes span the previous tag, named explicitly: release commits
-          # are on no branch, so GitHub finds no earlier tag among this
-          # one's ancestors and falls back to v0.16.0. The suffix sorts a
-          # beta below its own release.
-          previous=$(git -c versionsort.suffix=-beta tag --list 'v[0-9]*' --sort=-v:refname | grep -vx "$TAG" | head -1)
-          gh release create "$TAG" --title "$TAG" --generate-notes --prerelease ${previous:+--notes-start-tag "$previous"}
+          gh release create "$TAG" --title "$TAG" --generate-notes --prerelease ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
 
   # The beta's docs. Also when nothing shipped changed and no beta was
   # cut: a docs-only push still updates them, under the newest beta's
