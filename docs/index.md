@@ -21,22 +21,30 @@ built in.
 
 FLARE sets your lights through the day, and leaves alone any light you change yourself.
 
-- **It keeps every light on the curve.** Every minute it checks each light, and corrects
-  any that have drifted or missed a command.
+- **It lights the room when you walk in.** With a [motion or occupancy sensor]({{ site.baseurl }}/reference/blueprint/#room),
+  the room comes on at the right brightness and colour for the time of day, or in the
+  [scene]({{ site.baseurl }}/guides/scenes/) you've picked for it, and
+  [turns off once it's empty]({{ site.baseurl }}/reference/blueprint/#when-lights-turn-on-and-off).
 - **It works with lights on a physical wall switch.** If you cut the power to a room and
   restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home
   Assistant again, instead of leaving it at whatever it powered up as.
-- **Each room can be different.** Give a light its own brightness, hand the room to a
-  scene in any phase, or use a template when a fixed value isn't enough.
-- **It can leave a nightlight on.** When a room empties it can dim to a low level instead
-  of going dark.
+- **It keeps every light on the curve.** [Every minute]({{ site.baseurl }}/reference/blueprint/#when-the-room-updates)
+  it checks each light, and corrects any that have drifted or missed a command.
+- **Each room can be different.** Give a light its own [brightness]({{ site.baseurl }}/guides/templates/#brightness-template),
+  hand the room to a [scene]({{ site.baseurl }}/guides/scenes/) in any phase, or use a
+  [template]({{ site.baseurl }}/guides/templates/) when a fixed value isn't enough.
+- **It can leave a nightlight on.** When a room empties it can
+  [dim to a low level]({{ site.baseurl }}/reference/blueprint/#idle-brightness) instead of going dark.
 - **It leaves your changes alone.** If you change a light yourself, from an app, a wall
-  switch or another automation, FLARE stops setting it until the room next goes dark.
-- **It works with Siri, Alexa and Google.** Each room gets a single light to expose to them,
-  so "turn on the kitchen" lights the kitchen the way FLARE would, rather than at whatever the
-  bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone.
-- **It's gentle on your Zigbee network.** Rooms update one after another rather than all
-  at once, and changes too small to see aren't sent.
+  switch or another automation, FLARE [stops setting it]({{ site.baseurl }}/reference/zones/#override-protection)
+  until the room next goes dark.
+- **It works with Siri, Alexa and Google.** Each room gets [a single light]({{ site.baseurl }}/guides/flares/)
+  to expose to them, so "turn on the kitchen" lights the kitchen the way FLARE would, rather than
+  at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
+  alone.
+- **It's gentle on your Zigbee network.** Rooms update [one after another]({{ site.baseurl }}/reference/zones/#when-zones-tick)
+  rather than all at once, and [changes too small to see]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
+  aren't sent.
 
 ---
 
