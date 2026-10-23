@@ -68,8 +68,8 @@ HA's trace UI.
   they can see `is_hidden_entity` but not `entity_category`, and
   `device_entities()` misses child devices. So the action's first step
   calls the service, and everything built from the room's entities is an
-  action-level `variables:` step after it; the blueprint has no top-level
-  `condition:`. The `recovered` trigger keeps a plain Jinja expansion (it
+  action-level `variables:` step after it. The one top-level
+  `condition:` reads only inputs (Sensors From Areas, below). The `recovered` trigger keeps a plain Jinja expansion (it
   only makes a room catch up early, so close enough is fine - user's
   call).
 - Scene coverage is the `compute_scene_coverage` service, called in
@@ -720,6 +720,13 @@ device. Through an area, device, floor or label, a hidden or categorised
 light isn't the room's; one named directly always is. The `recovered` trigger keeps its own
 Jinja expansion, since a trigger template can't read `variables:` or
 call a service.
+
+**Sensors From Areas** (`use_area_sensors`) off keeps only sensors named in `room_target`'s
+`entity_id`. The native triggers can't be narrowed (`!input` inserts a
+whole input, and a trigger's `target:` takes no templates), so they still
+fire for every sensor and the top-level `condition:` drops those from
+sensors not named; `room_occupancy_entities` applies the same filter.
+Named means the raw `entity_id` list, which needs no resolution.
 
 `room_occupancy_entities` exists only to know whether the room has a
 sensor at all: `occupancy.is_detected` over zero entities is vacuously

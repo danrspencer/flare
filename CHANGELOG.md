@@ -9,8 +9,20 @@ CI — see `.github/workflows/release.yml`.
 
 ## [1.2.0] - Unreleased
 
+### Added
+
+- **Sensors From Areas**, a new blueprint input under the new **Triggers** section, on by
+  default. Turn it off and the room ignores the occupancy and motion sensors **Lights &
+  Occupancy** picks up through an area, floor, device or label, and uses only the sensors you
+  pick by name.
+
 ### Changed
 
+- **The blueprint's inputs are rearranged** so the ones most rooms need are out in the open.
+  **Wait time** now sits under **Lights & Occupancy** instead of inside a section. The
+  sections run Brightness & Exclusions, Idle Brightness, Scene Handoff, Triggers (which now
+  holds **Additional Triggers**), Transitions (formerly Timing) and Colour. Existing automations
+  keep their settings.
 - **FLARE's lighting and claims actions take lights only.** `compute_lighting_groups`,
   `apply_lighting`, `turn_off` and the four `claims_*` actions now reject any entity that isn't a
   light, and their entity pickers list only lights. The claims actions used to accept any

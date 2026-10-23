@@ -46,7 +46,8 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy and motion sensors within it decide when.
+        controlled, occupancy and motion sensors within it decide when (see
+        Sensors From Areas, under Triggers).
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
@@ -56,81 +57,22 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
-    extra_triggers:
-      name: Additional Triggers (Optional)
+    no_motion_wait:
+      name: Wait time
       description: >
-        Entities that make the room update as soon as they change, such as
-        an entity Scene Template or Brightness Template depends on. They
-        only adjust lights that are already on, and never switch one on.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-      default: []
+        Only used when the room has occupancy or motion sensors: how long
+        every one must be clear before the room counts as empty and its
+        lights turn off.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+      default: 120
       selector:
-        entity:
-          multiple: true
-    colour:
-      name: Colour
-      icon: mdi:palette
-      collapsed: true
-      input:
-        rgb_phases:
-          name: Prefer RGB During
-          description: >
-            Phases to send RGB colour instead of colour temperature, for
-            lights that support it (auto-detected). At the high colour
-            temperatures used during Morning/Day, this can look
-            blue-tinted rather than a clean white, so those phases are
-            off by default - Evening/Night's warmer values don't have
-            that problem.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
-          default: [Evening, Night]
-          selector:
-            select:
-              options: [Morning, Day, Evening, Night]
-              multiple: true
-    scene_handoff:
-      name: Scene Handoff
-      icon: mdi:palette-swatch
-      collapsed: true
-      input:
-        scene_template:
-          name: Scene Template (Optional)
-          description: >
-            Template returning a scene entity_id to hand the room over
-            to instead of the adaptive brightness/colour. Takes
-            precedence over the per-phase scenes below whenever it
-            returns one - they're the fallback for phases it doesn't
-            cover.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
-          default: ""
-          selector:
-            template: {}
-        morning_scene:
-          name: Morning Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        day_scene:
-          name: Day Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        evening_scene:
-          name: Evening Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
-        night_scene:
-          name: Night Scene (Optional)
-          default: null
-          selector:
-            entity:
-              domain: scene
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: seconds
     brightness_exclusions:
       name: Brightness & Exclusions
-      icon: mdi:brightness-percent
+      icon: mdi:brightness-6
       collapsed: true
       input:
         brightness_template:
@@ -142,6 +84,9 @@ blueprint:
             Its own per-entity values always win over the per-phase
             exclusions below - those only fill in entities it doesn't
             already mention.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
           selector:
@@ -187,6 +132,9 @@ blueprint:
             instead of switching off. Its own per-entity values always
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
           selector:
@@ -239,20 +187,81 @@ blueprint:
               min: 0
               max: 255
               mode: box
+    scene_handoff:
+      name: Scene Handoff
+      icon: mdi:palette-swatch
+      collapsed: true
+      input:
+        scene_template:
+          name: Scene Template (Optional)
+          description: >
+            Template returning a scene entity_id to hand the room over
+            to instead of the adaptive brightness/colour. Takes
+            precedence over the per-phase scenes below whenever it
+            returns one - they're the fallback for phases it doesn't
+            cover.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: ""
+          selector:
+            template: {}
+        morning_scene:
+          name: Morning Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        day_scene:
+          name: Day Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        evening_scene:
+          name: Evening Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+        night_scene:
+          name: Night Scene (Optional)
+          default: null
+          selector:
+            entity:
+              domain: scene
+    triggers:
+      name: Triggers
+      icon: mdi:lightning-bolt-outline
+      collapsed: true
+      input:
+        use_area_sensors:
+          name: Sensors From Areas
+          description: >
+            When disabled, occupancy and motion sensors won't be inferred
+            from the areas, floors, devices or labels in Lights & Occupancy.
+            Only explicitly selected sensors will be used.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
+          default: true
+          selector:
+            boolean: {}
+        extra_triggers:
+          name: Additional Triggers (Optional)
+          description: >
+            Entities that make the room update as soon as they change, such as
+            an entity Scene Template or Brightness Template depends on. They
+            only adjust lights that are already on, and never switch one on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            entity:
+              multiple: true
     timing:
-      name: Timing
+      name: Transitions
       icon: mdi:timer-outline
       collapsed: true
       input:
-        no_motion_wait:
-          name: Wait time
-          description: Time to keep the light on after motion stops.
-          default: 120
-          selector:
-            number:
-              min: 0
-              max: 3600
-              unit_of_measurement: seconds
         motion_on_transition:
           name: Motion On Transition
           description: Transition duration when turning on via motion or a manual run.
@@ -280,6 +289,26 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
+    colour:
+      name: Colour
+      icon: mdi:palette
+      collapsed: true
+      input:
+        rgb_phases:
+          name: Prefer RGB During
+          description: >
+            Phases to send RGB colour instead of colour temperature, for
+            lights that support it (auto-detected). At the high colour
+            temperatures used during Morning/Day, this can look
+            blue-tinted rather than a clean white, so those phases are
+            off by default - Evening/Night's warmer values don't have
+            that problem.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
+          default: [Evening, Night]
+          selector:
+            select:
+              options: [Morning, Day, Evening, Night]
+              multiple: true
 
 mode: restart
 max_exceeded: silent
@@ -288,6 +317,7 @@ max_exceeded: silent
 trigger_variables:
   room_target: !input room_target
   zone: !input zone
+  use_area_sensors: !input use_area_sensors
 
 trigger:
   # The schedule's Phase, which fires on a real phase change (and once at
@@ -320,7 +350,8 @@ trigger:
     platform: state
     entity_id: !input extra_triggers
   # Occupancy and motion sensors share the ids. Harmless with no sensor of
-  # either kind in the room.
+  # either kind in the room. With Sensors From Areas off, `condition:` drops
+  # those from sensors not picked by name.
   - id: motion_on
     trigger: occupancy.detected
     target: !input room_target
@@ -396,6 +427,20 @@ variables:
   # Nothing triggered this run: "Run" was pressed, or automation.trigger
   # was called. Forces the tick through override protection.
   manual_run: "{{ not (trigger is defined and trigger.id is defined) }}"
+  # Entities picked by name in Room Target, as written: the only sensors
+  # that count with Sensors From Areas off.
+  named_entities: >
+    {% set v = room_target.get('entity_id', []) %}
+    {{ [v] if v is string else v }}
+
+# Plain reading of the inputs, so it needs no resolve_target.
+condition:
+  - alias: "Not a sensor that Sensors From Areas leaves out"
+    condition: template
+    value_template: >
+      {{ use_area_sensors or manual_run
+         or trigger.id not in ['motion_on', 'motion_off']
+         or trigger.entity_id in named_entities }}
 
 action:
   # Room Target as Home Assistant resolves it for an action, which is how a
@@ -517,12 +562,15 @@ action:
           {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}
         {% endfor %}
         {{ ns.m }}
-      # The room's occupancy and motion sensors.
+      # The room's occupancy and motion sensors; only those picked by name
+      # with Sensors From Areas off.
       room_occupancy_entities: >
-        {{ room_entities | select('match', '^binary_sensor\\.')
-           | select('is_state_attr', 'device_class', 'occupancy') | list
+        {% set sensors = room_entities | select('match', '^binary_sensor\\.')
+             | select('is_state_attr', 'device_class', 'occupancy') | list
            + room_entities | select('match', '^binary_sensor\\.')
-           | select('is_state_attr', 'device_class', 'motion') | list }}
+             | select('is_state_attr', 'device_class', 'motion') | list %}
+        {{ sensors if use_area_sensors
+           else sensors | select('in', named_entities) | list }}
       # No occupancy sensor on, or changed, within the Wait time. Hand-written
       # because occupancy.is_not_detected's `for:` isn't reliable after a
       # restart. Only `on` counts as occupied, so a sensor left unavailable

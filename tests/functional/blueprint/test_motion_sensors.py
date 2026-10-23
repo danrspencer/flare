@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
@@ -99,3 +101,85 @@ class TestMotionSensors:
         await hass.async_block_till_done()
 
         assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
+
+
+
+async def _area_room(hass) -> str:
+    """A room whose area holds light.a and binary_sensor.area_motion."""
+    area = ar.async_get(hass).async_get_or_create("lounge")
+    ent_reg = er.async_get(hass)
+    for domain, object_id in (("light", "a"), ("binary_sensor", "area_motion")):
+        ent_reg.async_get_or_create(domain, "test", object_id, suggested_object_id=object_id)
+        ent_reg.async_update_entity(f"{domain}.{object_id}", area_id=area.id)
+    return area.id
+
+
+class TestSensorsFromAreasOff:
+    """docs/reference/blueprint.md#sensors-from-areas"""
+
+    async def test_an_area_sensor_does_not_turn_the_lights_on(self, hass, apply_lighting_calls):
+        area_id = await _area_room(hass)
+        motion(hass, "binary_sensor.area_motion", "off")
+        light(hass, "light.a", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"area_id": area_id}, use_area_sensors=False)
+
+        motion(hass, "binary_sensor.area_motion", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls == []
+
+    async def test_a_sensor_picked_by_name_turns_the_lights_on(self, hass, apply_lighting_calls):
+        area_id = await _area_room(hass)
+        motion(hass, "binary_sensor.area_motion", "off")
+        motion(hass, "binary_sensor.hall_motion", "off")
+        light(hass, "light.a", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"area_id": area_id, "entity_id": "binary_sensor.hall_motion"},
+            use_area_sensors=False,
+        )
+
+        motion(hass, "binary_sensor.hall_motion", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
+
+    async def test_an_area_sensor_clearing_does_not_turn_the_lights_off(self, hass, turn_off_calls):
+        area_id = await _area_room(hass)
+        motion(hass, "binary_sensor.area_motion", "on")
+        motion(hass, "binary_sensor.hall_motion", "off")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"area_id": area_id, "entity_id": ["binary_sensor.hall_motion"]},
+            no_motion_wait=0,
+            use_area_sensors=False,
+        )
+
+        motion(hass, "binary_sensor.area_motion", "off")
+        await hass.async_block_till_done()
+        await _wait_out(hass)
+
+        assert turn_off_calls == []
+
+    async def test_an_area_sensor_left_on_does_not_keep_the_lights_on(self, hass, turn_off_calls):
+        area_id = await _area_room(hass)
+        motion(hass, "binary_sensor.area_motion", "on")
+        motion(hass, "binary_sensor.hall_motion", "on")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"area_id": area_id, "entity_id": ["binary_sensor.hall_motion"]},
+            no_motion_wait=0,
+            use_area_sensors=False,
+        )
+
+        motion(hass, "binary_sensor.hall_motion", "off")
+        await hass.async_block_till_done()
+        await _wait_out(hass)
+
+        assert turn_off_calls and turn_off_calls[-1].data["entities"] == ["light.a"]
