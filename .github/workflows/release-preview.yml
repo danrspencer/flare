@@ -10,7 +10,9 @@ on:
     types: [opened, synchronize, reopened, edited]
 
 permissions:
-  contents: read
+  # generate-notes needs contents: write. Safe only because the job skips
+  # forks, so this never runs a stranger's code with a write token.
+  contents: write
   pull-requests: write
 
 concurrency:
