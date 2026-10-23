@@ -7,7 +7,7 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
-## [1.3.0] - Unreleased
+## [1.2.0] - Unreleased
 
 ### Added
 
@@ -23,11 +23,6 @@ CI — see `.github/workflows/release.yml`.
   sections run Brightness & Exclusions, Idle Brightness, Scene Handoff, Triggers (which now
   holds **Additional Triggers**), Transitions (formerly Timing) and Colour. Existing automations
   keep their settings.
-
-## [1.2.0] - Unreleased
-
-### Changed
-
 - **FLARE's lighting and claims actions take lights only.** `compute_lighting_groups`,
   `apply_lighting`, `turn_off` and the four `claims_*` actions now reject any entity that isn't a
   light, and their entity pickers list only lights. The claims actions used to accept any
