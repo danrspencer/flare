@@ -32,7 +32,6 @@ behaves.
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
-| **Use Area Sensors** | on | Use the sensors **Lights & Occupancy** picks up through an area, floor, device or label. Turn it off to use only sensors you pick by name. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -51,9 +50,8 @@ The room's [flare](../flares/) controls the same lights.
 Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
 other binary sensors in the target are ignored. A room can mix both kinds.
 
-With **Use Area Sensors** off, only sensors you pick by name count, so you can use the area for
-its lights and pick the sensors yourself, such as the hallway's for a landing. Pick none for a
-room that only follows the schedule.
+To choose the sensors yourself while still picking an area for the lights, turn off
+[Sensors From Areas](#triggers).
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
@@ -125,11 +123,20 @@ and other variations.
 | **Motion Off Transition** | 15s | Transition when the room empties. |
 | **Background Transition** | 5s | Transition for every other update. |
 
-## Additional triggers
+## Triggers
 
 | Input | Default | Description |
 |---|---|---|
+| **Sensors From Areas** | on | Lets the sensors **Lights & Occupancy** picks up through an area, floor, device or label turn the lights on and off. |
 | **Additional Triggers** | none | Entities that make the room update as soon as they change. |
+
+### Sensors from areas
+
+Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway's for a landing. Pick none for a room that only follows the schedule.
+
+### Additional triggers
 
 Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
 while it's playing. An additional trigger only adjusts lights that are already on. To turn a room

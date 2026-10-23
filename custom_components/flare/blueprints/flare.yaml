@@ -56,27 +56,33 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
-    use_area_sensors:
-      name: Use Area Sensors
-      description: >
-        Turn the lights on and off from the occupancy and motion sensors that
-        Lights & Occupancy picks up through an area, floor, device or label.
-        When turned off, only sensors picked by name count.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
-      default: true
-      selector:
-        boolean: {}
-    extra_triggers:
-      name: Additional Triggers (Optional)
-      description: >
-        Entities that make the room update as soon as they change, such as
-        an entity Scene Template or Brightness Template depends on. They
-        only adjust lights that are already on, and never switch one on.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-      default: []
-      selector:
-        entity:
-          multiple: true
+    triggers:
+      name: Triggers
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        use_area_sensors:
+          name: Sensors From Areas
+          description: >
+            Let the occupancy and motion sensors that Lights & Occupancy
+            picks up through an area, floor, device or label turn the lights
+            on and off. Turn it off to use only the sensors you pick there by
+            name.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
+          default: true
+          selector:
+            boolean: {}
+        extra_triggers:
+          name: Additional Triggers (Optional)
+          description: >
+            Entities that make the room update as soon as they change, such as
+            an entity Scene Template or Brightness Template depends on. They
+            only adjust lights that are already on, and never switch one on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            entity:
+              multiple: true
     colour:
       name: Colour
       icon: mdi:palette
@@ -331,7 +337,7 @@ trigger:
     platform: state
     entity_id: !input extra_triggers
   # Occupancy and motion sensors share the ids. Harmless with no sensor of
-  # either kind in the room. With Use Area Sensors off, `condition:` drops
+  # either kind in the room. With Sensors From Areas off, `condition:` drops
   # those from sensors not picked by name.
   - id: motion_on
     trigger: occupancy.detected
@@ -409,14 +415,14 @@ variables:
   # was called. Forces the tick through override protection.
   manual_run: "{{ not (trigger is defined and trigger.id is defined) }}"
   # Entities picked by name in Room Target, as written: the only sensors
-  # that count with Use Area Sensors off.
+  # that count with Sensors From Areas off.
   named_entities: >
     {% set v = room_target.get('entity_id', []) %}
     {{ [v] if v is string else v }}
 
 # Plain reading of the inputs, so it needs no resolve_target.
 condition:
-  - alias: "Not a sensor Use Area Sensors leaves out"
+  - alias: "Not a sensor that Sensors From Areas leaves out"
     condition: template
     value_template: >
       {{ use_area_sensors or manual_run
@@ -544,7 +550,7 @@ action:
         {% endfor %}
         {{ ns.m }}
       # The room's occupancy and motion sensors; only those picked by name
-      # with Use Area Sensors off.
+      # with Sensors From Areas off.
       room_occupancy_entities: >
         {% set sensors = room_entities | select('match', '^binary_sensor\\.')
              | select('is_state_attr', 'device_class', 'occupancy') | list

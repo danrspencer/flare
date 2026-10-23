@@ -114,8 +114,8 @@ async def _area_room(hass) -> str:
     return area.id
 
 
-class TestUseAreaSensorsOff:
-    """docs/reference/blueprint.md#room"""
+class TestSensorsFromAreasOff:
+    """docs/reference/blueprint.md#sensors-from-areas"""
 
     async def test_an_area_sensor_does_not_turn_the_lights_on(self, hass, apply_lighting_calls):
         area_id = await _area_room(hass)
