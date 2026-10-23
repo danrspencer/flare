@@ -114,15 +114,6 @@ An idle brightness is the only way the room's lights come on while it's empty. S
 [Templates](../../guides/templates/#idle-brightness-template) for one lamp as the nightlight,
 and other variations.
 
-## Timing
-
-| Input | Default | Description |
-|---|---|---|
-| **Wait time** | 120s | How long every sensor must be clear before the room is empty. |
-| **Motion On Transition** | 1s | Transition when someone comes in, or when you run the automation by hand. |
-| **Motion Off Transition** | 15s | Transition when the room empties. |
-| **Background Transition** | 5s | Transition for every other update. |
-
 ## Triggers
 
 | Input | Default | Description |
@@ -142,6 +133,15 @@ Add any entity a template depends on, such as the TV in a Brightness Template th
 while it's playing. An additional trigger only adjusts lights that are already on. To turn a room
 on from something else, see
 [lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+
+## Timing
+
+| Input | Default | Description |
+|---|---|---|
+| **Wait time** | 120s | How long every sensor must be clear before the room is empty. |
+| **Motion On Transition** | 1s | Transition when someone comes in, or when you run the automation by hand. |
+| **Motion Off Transition** | 15s | Transition when the room empties. |
+| **Background Transition** | 5s | Transition for every other update. |
 
 ## How a room behaves
 

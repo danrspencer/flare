@@ -56,32 +56,6 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
-    triggers:
-      name: Triggers
-      icon: mdi:motion-sensor
-      collapsed: true
-      input:
-        use_area_sensors:
-          name: Sensors From Areas
-          description: >
-            When disabled, occupancy and motion sensors won't be inferred
-            from the areas, floors, devices or labels in Lights & Occupancy.
-            Only explicitly selected sensors will be used.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
-          default: true
-          selector:
-            boolean: {}
-        extra_triggers:
-          name: Additional Triggers (Optional)
-          description: >
-            Entities that make the room update as soon as they change, such as
-            an entity Scene Template or Brightness Template depends on. They
-            only adjust lights that are already on, and never switch one on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            entity:
-              multiple: true
     colour:
       name: Colour
       icon: mdi:palette
@@ -115,6 +89,9 @@ blueprint:
             precedence over the per-phase scenes below whenever it
             returns one - they're the fallback for phases it doesn't
             cover.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
           selector:
@@ -157,6 +134,9 @@ blueprint:
             Its own per-entity values always win over the per-phase
             exclusions below - those only fill in entities it doesn't
             already mention.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
           selector:
@@ -202,6 +182,9 @@ blueprint:
             instead of switching off. Its own per-entity values always
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
+            If it reads another entity, add that entity to Additional
+            Triggers, under Triggers, so the room updates as soon as it
+            changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
           selector:
@@ -254,6 +237,32 @@ blueprint:
               min: 0
               max: 255
               mode: box
+    triggers:
+      name: Triggers
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        use_area_sensors:
+          name: Sensors From Areas
+          description: >
+            When disabled, occupancy and motion sensors won't be inferred
+            from the areas, floors, devices or labels in Lights & Occupancy.
+            Only explicitly selected sensors will be used.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
+          default: true
+          selector:
+            boolean: {}
+        extra_triggers:
+          name: Additional Triggers (Optional)
+          description: >
+            Entities that make the room update as soon as they change, such as
+            an entity Scene Template or Brightness Template depends on. They
+            only adjust lights that are already on, and never switch one on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            entity:
+              multiple: true
     timing:
       name: Timing
       icon: mdi:timer-outline
