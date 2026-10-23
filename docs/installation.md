@@ -10,8 +10,11 @@ permalink: /installation/
 Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.10.0 or newer, [HACS](https://hacs.xyz) installed,
-> and your lights assigned to areas, so FLARE can set itself up room by room.
+> **Prerequisites** — Home Assistant 2026.10.0 or newer, and [HACS](https://hacs.xyz) installed.
+>
+> It's best to assign your lights and your occupancy and motion sensors to areas first. FLARE
+> works without that, but it sets rooms up area by area, so anything without an area is left out
+> until you add it to a room's automation by hand.
 
 1. TOC
 {:toc}
