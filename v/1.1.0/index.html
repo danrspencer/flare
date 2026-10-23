@@ -253,22 +253,30 @@ built in.</p>
 <p>FLARE sets your lights through the day, and leaves alone any light you change yourself.</p>
 
 <ul>
-  <li><strong>It keeps every light on the curve.</strong> Every minute it checks each light, and corrects
-any that have drifted or missed a command.</li>
+  <li><strong>It lights the room when you walk in.</strong> With a <a href="/flare/v/1.1.0/reference/blueprint/#room">motion or occupancy sensor</a>,
+the room comes on at the right brightness and colour for the time of day, or in the
+<a href="/flare/v/1.1.0/guides/scenes/">scene</a> you’ve picked for it, and
+<a href="/flare/v/1.1.0/reference/blueprint/#when-lights-turn-on-and-off">turns off once it’s empty</a>.</li>
   <li><strong>It works with lights on a physical wall switch.</strong> If you cut the power to a room and
 restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home
 Assistant again, instead of leaving it at whatever it powered up as.</li>
-  <li><strong>Each room can be different.</strong> Give a light its own brightness, hand the room to a
-scene in any phase, or use a template when a fixed value isn’t enough.</li>
-  <li><strong>It can leave a nightlight on.</strong> When a room empties it can dim to a low level instead
-of going dark.</li>
+  <li><strong>It keeps every light on the curve.</strong> <a href="/flare/v/1.1.0/reference/blueprint/#when-the-room-updates">Every minute</a>
+it checks each light, and corrects any that have drifted or missed a command.</li>
+  <li><strong>Each room can be different.</strong> Give a light its own <a href="/flare/v/1.1.0/guides/templates/#brightness-template">brightness</a>,
+hand the room to a <a href="/flare/v/1.1.0/guides/scenes/">scene</a> in any phase, or use a
+<a href="/flare/v/1.1.0/guides/templates/">template</a> when a fixed value isn’t enough.</li>
+  <li><strong>It can leave a nightlight on.</strong> When a room empties it can
+<a href="/flare/v/1.1.0/reference/blueprint/#idle-brightness">dim to a low level</a> instead of going dark.</li>
   <li><strong>It leaves your changes alone.</strong> If you change a light yourself, from an app, a wall
-switch or another automation, FLARE stops setting it until the room next goes dark.</li>
-  <li><strong>It works with Siri, Alexa and Google.</strong> Each room gets a single light to expose to them,
-so “turn on the kitchen” lights the kitchen the way FLARE would, rather than at whatever the
-bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone.</li>
-  <li><strong>It’s gentle on your Zigbee network.</strong> Rooms update one after another rather than all
-at once, and changes too small to see aren’t sent.</li>
+switch or another automation, FLARE <a href="/flare/v/1.1.0/reference/zones/#override-protection">stops setting it</a>
+until the room next goes dark.</li>
+  <li><strong>It works with Siri, Alexa and Google.</strong> Each room gets <a href="/flare/v/1.1.0/guides/flares/">a single light</a>
+to expose to them, so “turn on the kitchen” lights the kitchen the way FLARE would, rather than
+at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
+alone.</li>
+  <li><strong>It’s gentle on your Zigbee network.</strong> Rooms update <a href="/flare/v/1.1.0/reference/zones/#when-zones-tick">one after another</a>
+rather than all at once, and <a href="/flare/v/1.1.0/reference/blueprint/#why-didnt-my-light-change">changes too small to see</a>
+aren’t sent.</li>
 </ul><hr />
 <h2 id="setting-it-up">
   
