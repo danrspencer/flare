@@ -36,11 +36,16 @@ behaves.
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
 
-The room's lights are the ones an action such as `light.turn_on` would reach on the same target.
-An entity you pick directly is always included. An entity reached through an area, floor,
-device or label is left out if it's hidden, and also if it's a configuration or diagnostic entity
-(such as a switch's indicator light), unless the label is on that entity itself. The room's
-[flare](../flares/) has the same lights.
+FLARE picks the room's lights the same way Home Assistant does when you call `light.turn_on`
+on that target:
+
+- A light you pick by name is always included.
+- A hidden light is left out if it was picked through an area, floor, device or label.
+- A configuration or diagnostic light, such as the indicator light on a wall switch, is left out
+  if it was picked through an area, floor or device, or a label on its device or area. If the
+  label is on the light itself, it's included.
+
+The room's [flare](../flares/) controls the same lights.
 
 Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
 other binary sensors in the target are ignored. A room can mix both kinds.
