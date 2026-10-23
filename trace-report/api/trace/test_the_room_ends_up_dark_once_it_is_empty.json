@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "a33696c72c842291f349cbfecc8f903a",
+      "run_id": "abc07b80566e6849489fdf0247cc68d6",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-24T02:00:02+00:00",
                 "last_updated": "2026-10-24T02:00:02+00:00",
                 "context": {
-                  "id": "01M5NT5V6G7BD5697HER4RVPX5",
+                  "id": "01M5NT5V6GAEYZK81PYWVZBWJR",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-10-24T02:00:02+00:00",
                   "last_updated": "2026-10-24T02:00:02+00:00",
                   "context": {
-                    "id": "01M5NT5V6GCAQ1XZS72GJTMBWV",
+                    "id": "01M5NT5V6GWC6RZ0SS7BX9FRS4",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-10-24T02:00:02+00:00",
                   "last_updated": "2026-10-24T02:00:02+00:00",
                   "context": {
-                    "id": "01M5NT5V6GJG4ENYKFGXS0PAV0",
+                    "id": "01M5NT5V6GKW6NKT3PMBT588KC",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -89,9 +89,9 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+              "zone": "075078657d3d1bd988c636270b4a506f",
               "use_area_sensors": true,
-              "schedule": "2346a630d1f5e0403963da2300edf539",
+              "schedule": "c1ee61848402f20d491db90ef18c08a9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -133,8 +133,8 @@
             "timestamp": "2026-10-24T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M5NT5V6G2Q2WVBW296QKRMG5",
-                "parent_id": "01M5NT5V6GJG4ENYKFGXS0PAV0",
+                "id": "01M5NT5V6G4PR3Z4SH51ETSQK4",
+                "parent_id": "01M5NT5V6GKW6NKT3PMBT588KC",
                 "user_id": null
               },
               "room": {
@@ -296,12 +296,12 @@
             "result": {
               "result": false,
               "entities": [
-                "light.hall_spot_4",
-                "light.hall_spot_3",
                 "light.hall_spot_1",
-                "light.hall_pendant",
                 "light.hall_spot_2",
-                "light.hall_lamp"
+                "light.hall_spot_4",
+                "light.hall_lamp",
+                "light.hall_spot_3",
+                "light.hall_pendant"
               ]
             }
           }
@@ -539,7 +539,7 @@
                   ],
                   "transition": 1,
                   "prefer_rgb_color": true,
-                  "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897",
+                  "zone_device_id": "075078657d3d1bd988c636270b4a506f",
                   "force": false
                 },
                 "target": {}
@@ -589,11 +589,11 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+          "zone": "075078657d3d1bd988c636270b4a506f",
           "use_area_sensors": true
         },
         "variables": {
-          "schedule": "2346a630d1f5e0403963da2300edf539",
+          "schedule": "c1ee61848402f20d491db90ef18c08a9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -614,7 +614,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "2346a630d1f5e0403963da2300edf539"
+              "device_id": "c1ee61848402f20d491db90ef18c08a9"
             },
             "options": {
               "event_type": [
@@ -630,7 +630,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+              "device_id": "075078657d3d1bd988c636270b4a506f"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -767,7 +767,7 @@
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-              "room_occupancy_entities": "{% set sensors = room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
+              "room_occupancy_entities": "{% set sensors = (room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list)\n   | reject('is_state', ['unavailable', 'unknown']) | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
@@ -827,7 +827,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   },
                   {
@@ -849,7 +849,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                         }
                       }
                     ]
@@ -890,7 +890,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -946,7 +946,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -1004,7 +1004,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897",
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -1026,7 +1026,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -1050,7 +1050,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "2346a630d1f5e0403963da2300edf539",
+            "schedule": "c1ee61848402f20d491db90ef18c08a9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1062,20 +1062,20 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+            "zone": "075078657d3d1bd988c636270b4a506f",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M5NT5V6G2Q2WVBW296QKRMG5",
-        "parent_id": "01M5NT5V6GJG4ENYKFGXS0PAV0",
+        "id": "01M5NT5V6G4PR3Z4SH51ETSQK4",
+        "parent_id": "01M5NT5V6GKW6NKT3PMBT588KC",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/0/sequence/1/if/condition/0",
-      "run_id": "48ac9cbf6eb61702089752efbed3d6d0",
+      "run_id": "d6c449119c0f6dfa84148fd3e64a757a",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1105,8 +1105,8 @@
                 "last_reported": "2026-10-24T02:00:02+00:00",
                 "last_updated": "2026-10-24T02:00:02+00:00",
                 "context": {
-                  "id": "01M5NT5V6G2Q2WVBW296QKRMG5",
-                  "parent_id": "01M5NT5V6GJG4ENYKFGXS0PAV0",
+                  "id": "01M5NT5V6G4PR3Z4SH51ETSQK4",
+                  "parent_id": "01M5NT5V6GKW6NKT3PMBT588KC",
                   "user_id": null
                 }
               },
@@ -1127,7 +1127,7 @@
                   "last_reported": "2026-10-24T02:00:02+00:00",
                   "last_updated": "2026-10-24T02:00:02+00:00",
                   "context": {
-                    "id": "01M5NT5V6GJG4ENYKFGXS0PAV0",
+                    "id": "01M5NT5V6GKW6NKT3PMBT588KC",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1142,7 +1142,7 @@
                   "last_reported": "2026-10-24T02:00:02+00:00",
                   "last_updated": "2026-10-24T02:00:02+00:00",
                   "context": {
-                    "id": "01M5NT5V6GFJMVZV36P0QV0PFW",
+                    "id": "01M5NT5V6G3G7K4WTFY10BQM32",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1163,9 +1163,9 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+              "zone": "075078657d3d1bd988c636270b4a506f",
               "use_area_sensors": true,
-              "schedule": "2346a630d1f5e0403963da2300edf539",
+              "schedule": "c1ee61848402f20d491db90ef18c08a9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -1207,8 +1207,8 @@
             "timestamp": "2026-10-24T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M5NT5V6GK6WHW801M7PECWPZ",
-                "parent_id": "01M5NT5V6GFJMVZV36P0QV0PFW",
+                "id": "01M5NT5V6G5XMHVFZH3HS1NA1S",
+                "parent_id": "01M5NT5V6G3G7K4WTFY10BQM32",
                 "user_id": null
               },
               "room": {
@@ -1425,7 +1425,7 @@
                     "light.hall_spot_4"
                   ],
                   "transition": 15,
-                  "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                  "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                 },
                 "target": {}
               },
@@ -1474,11 +1474,11 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+          "zone": "075078657d3d1bd988c636270b4a506f",
           "use_area_sensors": true
         },
         "variables": {
-          "schedule": "2346a630d1f5e0403963da2300edf539",
+          "schedule": "c1ee61848402f20d491db90ef18c08a9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -1499,7 +1499,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "2346a630d1f5e0403963da2300edf539"
+              "device_id": "c1ee61848402f20d491db90ef18c08a9"
             },
             "options": {
               "event_type": [
@@ -1515,7 +1515,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+              "device_id": "075078657d3d1bd988c636270b4a506f"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -1652,7 +1652,7 @@
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-              "room_occupancy_entities": "{% set sensors = room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
+              "room_occupancy_entities": "{% set sensors = (room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list)\n   | reject('is_state', ['unavailable', 'unknown']) | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
@@ -1712,7 +1712,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   },
                   {
@@ -1734,7 +1734,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                         }
                       }
                     ]
@@ -1775,7 +1775,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -1831,7 +1831,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -1889,7 +1889,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897",
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -1911,7 +1911,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -1935,7 +1935,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "2346a630d1f5e0403963da2300edf539",
+            "schedule": "c1ee61848402f20d491db90ef18c08a9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1947,20 +1947,20 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+            "zone": "075078657d3d1bd988c636270b4a506f",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M5NT5V6GK6WHW801M7PECWPZ",
-        "parent_id": "01M5NT5V6GFJMVZV36P0QV0PFW",
+        "id": "01M5NT5V6G5XMHVFZH3HS1NA1S",
+        "parent_id": "01M5NT5V6G3G7K4WTFY10BQM32",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "38472edec0fa6209e1d3f64fb1b38da7",
+      "run_id": "cda693b54538e9a1910db20973cafb8b",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1990,8 +1990,8 @@
                 "last_reported": "2026-10-24T02:00:02+00:00",
                 "last_updated": "2026-10-24T02:00:02+00:00",
                 "context": {
-                  "id": "01M5NT5V6GK6WHW801M7PECWPZ",
-                  "parent_id": "01M5NT5V6GFJMVZV36P0QV0PFW",
+                  "id": "01M5NT5V6G5XMHVFZH3HS1NA1S",
+                  "parent_id": "01M5NT5V6G3G7K4WTFY10BQM32",
                   "user_id": null
                 }
               },
@@ -2003,12 +2003,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                    "device_id": "075078657d3d1bd988c636270b4a506f"
                   },
                   "origin": "LOCAL",
                   "time_fired": "2026-10-24T02:02:02+00:00",
                   "context": {
-                    "id": "01M5NT9GCGCM4BZBC9XEHDM2RZ",
+                    "id": "01M5NT9GCGD1CBPVNR1KFHW4RR",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2026,9 +2026,9 @@
                   "binary_sensor.hall_occupancy"
                 ]
               },
-              "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+              "zone": "075078657d3d1bd988c636270b4a506f",
               "use_area_sensors": true,
-              "schedule": "2346a630d1f5e0403963da2300edf539",
+              "schedule": "c1ee61848402f20d491db90ef18c08a9",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -2070,8 +2070,8 @@
             "timestamp": "2026-10-24T02:02:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M5NT9GCGXBSQFPFK7A0HB5DX",
-                "parent_id": "01M5NT9GCGCM4BZBC9XEHDM2RZ",
+                "id": "01M5NT9GCGQMHN6JPPZZXMRCHA",
+                "parent_id": "01M5NT9GCGD1CBPVNR1KFHW4RR",
                 "user_id": null
               },
               "room": {
@@ -2447,11 +2447,11 @@
               "binary_sensor.hall_occupancy"
             ]
           },
-          "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+          "zone": "075078657d3d1bd988c636270b4a506f",
           "use_area_sensors": true
         },
         "variables": {
-          "schedule": "2346a630d1f5e0403963da2300edf539",
+          "schedule": "c1ee61848402f20d491db90ef18c08a9",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -2472,7 +2472,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "2346a630d1f5e0403963da2300edf539"
+              "device_id": "c1ee61848402f20d491db90ef18c08a9"
             },
             "options": {
               "event_type": [
@@ -2488,7 +2488,7 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+              "device_id": "075078657d3d1bd988c636270b4a506f"
             },
             "enabled": "{{ zone is not none }}"
           },
@@ -2625,7 +2625,7 @@
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
-              "room_occupancy_entities": "{% set sensors = room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
+              "room_occupancy_entities": "{% set sensors = (room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'occupancy') | list\n   + room_entities | select('match', '^binary_sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'motion') | list)\n   | reject('is_state', ['unavailable', 'unknown']) | list %}\n{{ sensors if use_area_sensors\n   else sensors | select('in', named_entities) | list }}\n",
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
@@ -2685,7 +2685,7 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   },
                   {
@@ -2707,7 +2707,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                         }
                       }
                     ]
@@ -2748,7 +2748,7 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -2804,7 +2804,7 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -2862,7 +2862,7 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897",
+                          "zone_device_id": "075078657d3d1bd988c636270b4a506f",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -2884,7 +2884,7 @@
                     "action": "flare.claims_clear",
                     "data": {
                       "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "f7efcbdba2e8a317dccf7b4b5ef64897"
+                      "zone_device_id": "075078657d3d1bd988c636270b4a506f"
                     }
                   }
                 ]
@@ -2908,7 +2908,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "2346a630d1f5e0403963da2300edf539",
+            "schedule": "c1ee61848402f20d491db90ef18c08a9",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -2920,14 +2920,14 @@
                 "binary_sensor.hall_occupancy"
               ]
             },
-            "zone": "f7efcbdba2e8a317dccf7b4b5ef64897",
+            "zone": "075078657d3d1bd988c636270b4a506f",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M5NT9GCGXBSQFPFK7A0HB5DX",
-        "parent_id": "01M5NT9GCGCM4BZBC9XEHDM2RZ",
+        "id": "01M5NT9GCGQMHN6JPPZZXMRCHA",
+        "parent_id": "01M5NT9GCGD1CBPVNR1KFHW4RR",
         "user_id": null
       }
     }
