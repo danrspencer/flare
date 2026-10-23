@@ -1,20 +1,23 @@
 # `repo`: a pull request that changes nothing a FLARE user gets, so it is
 # left out of the release notes (release.yml). Every changed file has to
 # match. Docs and README changes reach users and stay in.
+#
+# One brace glob, since any-glob-to-all-files needs a single glob matching
+# every file. Each `\` joins the next line on without a space.
 repo:
-  - all:
-      - changed-files:
-          - any-glob-to-all-files:
-              - ".github/**"
-              - ".claude/**"
-              - "scripts/**"
-              - "tests/**"
-              - "sandbox/**"
-              - "brand/**"
-              - "CONTRIBUTING.md"
-              - "CLAUDE.md"
-              - "DOCUMENTATION.md"
-              - "mise.toml"
-              - "pyproject.toml"
-              - "conftest.py"
-              - ".gitignore"
+  - changed-files:
+      - any-glob-to-all-files: "{\
+          .github/**,\
+          .claude/**,\
+          scripts/**,\
+          tests/**,\
+          sandbox/**,\
+          brand/**,\
+          CONTRIBUTING.md,\
+          CLAUDE.md,\
+          DOCUMENTATION.md,\
+          mise.toml,\
+          pyproject.toml,\
+          conftest.py,\
+          .gitignore\
+        }"
