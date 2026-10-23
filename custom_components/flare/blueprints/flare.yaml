@@ -56,6 +56,16 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
+    use_sensors:
+      name: Use Sensors
+      description: >
+        Turn the lights on and off from the occupancy and motion sensors in
+        Lights & Occupancy. Turned off, the room ignores them, as if it had
+        no sensor.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+      default: true
+      selector:
+        boolean: {}
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -288,6 +298,7 @@ max_exceeded: silent
 trigger_variables:
   room_target: !input room_target
   zone: !input zone
+  use_sensors: !input use_sensors
 
 trigger:
   # The schedule's Phase, which fires on a real phase change (and once at
@@ -320,22 +331,26 @@ trigger:
     platform: state
     entity_id: !input extra_triggers
   # Occupancy and motion sensors share the ids. Harmless with no sensor of
-  # either kind in the room.
+  # either kind in the room. Use Sensors off disables all four.
   - id: motion_on
     trigger: occupancy.detected
     target: !input room_target
+    enabled: "{{ use_sensors }}"
   - id: motion_on
     trigger: motion.detected
     target: !input room_target
+    enabled: "{{ use_sensors }}"
   - id: motion_off
     trigger: occupancy.cleared
     target: !input room_target
+    enabled: "{{ use_sensors }}"
     options:
       for:
         seconds: !input no_motion_wait
   - id: motion_off
     trigger: motion.cleared
     target: !input room_target
+    enabled: "{{ use_sensors }}"
     options:
       for:
         seconds: !input no_motion_wait
@@ -517,9 +532,11 @@ action:
           {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}
         {% endfor %}
         {{ ns.m }}
-      # The room's occupancy and motion sensors.
+      # The room's occupancy and motion sensors; none with Use Sensors off,
+      # so the room behaves as one without a sensor.
       room_occupancy_entities: >
-        {{ room_entities | select('match', '^binary_sensor\\.')
+        {{ [] if not use_sensors else
+           room_entities | select('match', '^binary_sensor\\.')
            | select('is_state_attr', 'device_class', 'occupancy') | list
            + room_entities | select('match', '^binary_sensor\\.')
            | select('is_state_attr', 'device_class', 'motion') | list }}

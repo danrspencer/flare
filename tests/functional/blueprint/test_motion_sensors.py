@@ -99,3 +99,56 @@ class TestMotionSensors:
         await hass.async_block_till_done()
 
         assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
+
+
+class TestUseSensorsOff:
+    """docs/reference/blueprint.md#room"""
+
+    async def test_motion_does_not_turn_the_lights_on(self, hass, apply_lighting_calls):
+        motion(hass, "binary_sensor.hall_motion", "off")
+        occupancy(hass, "binary_sensor.hall_presence", "off")
+        light(hass, "light.a", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.hall_motion", "binary_sensor.hall_presence"]},
+            use_sensors=False,
+        )
+
+        motion(hass, "binary_sensor.hall_motion", "on")
+        occupancy(hass, "binary_sensor.hall_presence", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls == []
+
+    async def test_sensors_clearing_does_not_turn_the_lights_off(self, hass, turn_off_calls, frozen_time):
+        motion(hass, "binary_sensor.hall_motion", "on")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass, room_target={"entity_id": ["light.a", "binary_sensor.hall_motion"]}, no_motion_wait=0, use_sensors=False
+        )
+
+        motion(hass, "binary_sensor.hall_motion", "off")
+        await hass.async_block_till_done()
+        await _wait_out(hass)
+        # A tick too, which would self-heal a room whose sensors read clear.
+        frozen_time.tick(timedelta(seconds=5))
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert turn_off_calls == []
+
+    async def test_lights_already_on_still_follow_the_schedule(self, hass, apply_lighting_calls, frozen_time):
+        motion(hass, "binary_sensor.hall_motion", "off")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass, room_target={"entity_id": ["light.a", "binary_sensor.hall_motion"]}, use_sensors=False
+        )
+
+        frozen_time.tick(timedelta(seconds=5))
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
