@@ -737,6 +737,10 @@ Named means the raw `entity_id` list, which needs no resolution.
 `room_occupancy_entities` exists only to know whether the room has a
 sensor at all: `occupancy.is_detected` over zero entities is vacuously
 **false**, so a light-only room would otherwise always read empty.
+It leaves out unavailable and unknown sensors, so a room whose only
+sensor is dead counts as sensorless, not empty: only `on` is occupied,
+so a dead sensor would otherwise read as clear forever and self-heal
+would switch off every light turned on there.
 
 **Triggers:** `phase_change` (`event.received` on the schedule's Phase
 entity, fired only on a real phase change, and once after setup so a
