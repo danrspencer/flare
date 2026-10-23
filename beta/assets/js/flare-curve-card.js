@@ -57,9 +57,19 @@ export function rgbToHex([r, g, b]) {
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
+const SECONDS_PER_DAY = 86400;
+
+// Mirrors curve.py's _night_clock(): a Night earlier than Morning is
+// tomorrow's, and an instant before it is still yesterday's Evening.
+function nightClock(t, morning, night) {
+  if (night >= morning) return [t, night];
+  return [t < night ? t + SECONDS_PER_DAY : t, night + SECONDS_PER_DAY];
+}
+
 // Mirrors curve.py's phase_at(). Exported (like the other pure helpers
 // below) so tests can run it under node.
 export function phaseAt(t, morning, day, evening, night) {
+  [t, night] = nightClock(t, morning, night);
   if (t < morning) return 'Night';
   if (t < day) return 'Morning';
   if (t < evening) return 'Day';
@@ -72,9 +82,10 @@ const PHASE_ORDER = ['Morning', 'Day', 'Evening', 'Night'];
 // Mirrors curve.py's phase_marks(): which phases actually occur, and when
 // each really starts, given boundaries that may be out of order.
 export function phaseMarks(morning, day, evening, night) {
+  const afterMidnight = night < morning;
   const effectiveStarts = [];
   let running = null;
-  for (const ts of [morning, day, evening, night]) {
+  for (const ts of [morning, day, evening, afterMidnight ? night + SECONDS_PER_DAY : night]) {
     running = running === null ? ts : Math.max(running, ts);
     effectiveStarts.push(running);
   }
@@ -85,6 +96,7 @@ export function phaseMarks(morning, day, evening, night) {
       marks.push([PHASE_ORDER[i], effectiveStarts[i]]);
     }
   }
+  if (afterMidnight) return [['Night', night], ...marks];
   if (marks.length) {
     marks.push(['Night', effectiveStarts[effectiveStarts.length - 1]]);
   }

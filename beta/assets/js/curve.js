@@ -96,8 +96,18 @@ export function kelvinToRgb(kelvin) {
   return [Math.round(r), Math.round(g), Math.round(b)];
 }
 
+const SECONDS_PER_DAY = 86400;
+
+/** Mirrors curve.py's _night_clock(): a Night earlier than Morning is
+ * tomorrow's, and an instant before it is still yesterday's Evening. */
+function nightClock(t, morningTs, nightTs) {
+  if (nightTs >= morningTs) return [t, nightTs];
+  return [t < nightTs ? t + SECONDS_PER_DAY : t, nightTs + SECONDS_PER_DAY];
+}
+
 /** Which phase an instant falls in. Mirrors curve.py's phase_at(). */
 export function phaseAt(t, morningTs, dayStartTs, eveningTs, nightTs) {
+  [t, nightTs] = nightClock(t, morningTs, nightTs);
   if (t < morningTs) return 'Night';
   if (t < dayStartTs) return 'Morning';
   if (t < eveningTs) return 'Day';
@@ -105,11 +115,9 @@ export function phaseAt(t, morningTs, dayStartTs, eveningTs, nightTs) {
   return 'Night';
 }
 
-const SECONDS_PER_DAY = 86400;
-
 const NEXT_PHASE = { Morning: 'Day', Day: 'Evening', Evening: 'Night', Night: 'Morning' };
 
-/** Mirrors curve.py's _phase_span(). Night is the only phase whose span
+/** Mirrors curve.py's _phase_span(), on nightClock()'s clock. Night's span
  * crosses midnight - phaseAt() returns 'Night' both before morningTs and
  * after nightTs, so which segment nowTs is in decides whether its handover
  * to Morning is today's or tomorrow's. */
@@ -124,6 +132,9 @@ function phaseSpan(dayPhase, nowTs, b) {
 /** Mirrors curve.py's _value_at(), including both clamps. */
 function valueAt(dayPhase, nowTs, b, values, durationMinutes) {
   const own = values[dayPhase];
+  let nightTs;
+  [nowTs, nightTs] = nightClock(nowTs, b.morningTs, b.nightTs);
+  b = { ...b, nightTs };
   const [spanStart, spanEnd] = phaseSpan(dayPhase, nowTs, b);
   const duration = Math.min(Math.max(durationMinutes, 0) * 60, Math.max(spanEnd - spanStart, 0));
   if (duration <= 0) return own;

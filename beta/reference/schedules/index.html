@@ -293,7 +293,7 @@ that need different timing, with <strong>Settings → Devices &amp; Services →
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">time.&lt;name&gt;_morning_time</code>, <code class="language-plaintext highlighter-rouge">day_time</code>, <code class="language-plaintext highlighter-rouge">night_time</code></td>
-      <td>When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00.</td>
+      <td>When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. If Night’s time is earlier than Morning’s, such as 01:00, Night starts after midnight, and Evening runs until then.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">time.&lt;name&gt;_evening_earliest_time</code>, <code class="language-plaintext highlighter-rouge">evening_latest_time</code></td>
@@ -389,7 +389,9 @@ before the end of Day the colour starts changing to Evening’s.</p>
 minutes, so its colour changes across the whole of Day, while its brightness changes only in
 roughly the last hour.</p>
 
-<p>Night runs past midnight, so its transition is in the minutes before Morning starts.</p>
+<p>Night runs past midnight, so its transition is in the minutes before Morning starts. If Night
+starts after midnight, Evening runs past midnight instead, and its transition is in the minutes
+before Night starts.</p>
 <h2 id="copying-a-schedule">
   
   
