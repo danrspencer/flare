@@ -307,11 +307,18 @@ behaves.</p>
 <p><strong>Lights &amp; Occupancy</strong> takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.</p>
 
-<p>The room’s lights are the ones an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> would reach on the same target.
-An entity you pick directly is always included. An entity reached through an area, floor,
-device or label is left out if it’s hidden, and also if it’s a configuration or diagnostic entity
-(such as a switch’s indicator light), unless the label is on that entity itself. The room’s
-<a href="../flares/">flare</a> has the same lights.</p>
+<p>FLARE picks the room’s lights the same way Home Assistant does when you call <code class="language-plaintext highlighter-rouge">light.turn_on</code>
+on that target:</p>
+
+<ul>
+  <li>A light you pick by name is always included.</li>
+  <li>A hidden light is left out if it was picked through an area, floor, device or label.</li>
+  <li>A configuration or diagnostic light, such as the indicator light on a wall switch, is left out
+if it was picked through an area, floor or device, or a label on its device or area. If the
+label is on the light itself, it’s included.</li>
+</ul>
+
+<p>The room’s <a href="../flares/">flare</a> controls the same lights.</p>
 
 <p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
