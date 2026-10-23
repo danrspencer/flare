@@ -237,7 +237,7 @@ response_variable: check
 |---|---|---|
 | `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it. |
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it. |
-| `entities`<br>list of entity IDs | yes | The entities to check. |
+| `entities`<br>list of light entity IDs | yes | The lights to check. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of a claimed RGB colour on every channel matches it. |
 | `zone_device_id`<br>zone device ID | yes | The zone whose claims to check against. |
 
@@ -280,7 +280,7 @@ data:
 
 | Field | Required | Description |
 |---|---|---|
-| `entities`<br>list of entity IDs | yes | The entities you're about to change. |
+| `entities`<br>list of light entity IDs | yes | The lights you're about to change. |
 | `targets`<br>map of entity ID to values | no | What you're about to send each entity: `brightness` and either `color_temp_kelvin` or `rgb_color`. |
 | `zone_device_id`<br>zone device ID | yes | The zone to record the claim in. |
 
@@ -313,7 +313,7 @@ data:
 
 | Field | Required | Description |
 |---|---|---|
-| `entities`<br>list of entity IDs | yes | The entities to clear. |
+| `entities`<br>list of light entity IDs | yes | The lights to clear. |
 | `zone_device_id`<br>zone device ID | yes | The zone to clear them from. |
 
 ### Response data
@@ -345,7 +345,7 @@ data:
 
 | Field | Required | Description |
 |---|---|---|
-| `entities`<br>list of entity IDs | yes | The entities to mark. |
+| `entities`<br>list of light entity IDs | yes | The lights to mark. |
 | `zone_device_id`<br>zone device ID | yes | The zone to mark them in. |
 
 ### Response data

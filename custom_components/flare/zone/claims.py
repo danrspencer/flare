@@ -416,10 +416,12 @@ class ClaimRegistry:
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
             entity_id = event.data["entity_id"]
+            # Claims hold lights only (the services' schemas see to it).
+            if not entity_id.startswith("light."):
+                return
             old, new = event.data["old_state"], event.data["new_state"]
             if (
-                entity_id.startswith("light.")
-                and new is not None
+                new is not None
                 and new.state in ("on", "off")
                 and old is not None
                 and old.state in UNREACHABLE_STATES

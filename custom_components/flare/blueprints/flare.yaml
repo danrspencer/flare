@@ -702,9 +702,11 @@ action:
           scene_active: "{{ scene_coverage.scene_active }}"
           # Lights handed off this run - to an active scene, or via a
           # null/false level. They're never written, so their claims are
-          # released instead of going stale into "overridden".
+          # released instead of going stale into "overridden". Lights only: a
+          # scene can set other domains, which hold no claims.
           handed_off_entities: >
-            {{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities) | unique | list }}
+            {{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)
+               | select('match', 'light[.]') | unique | list }}
           # No off-light filter: the step using it is already behind
           # allow_turn_on.
           target_entities: >

@@ -70,6 +70,31 @@ class TestSceneHandoff:
         # Still adaptively managed, so not released.
         assert apply_lighting_calls[-1].data["entities"] == ["light.uncovered"]
 
+    async def test_only_the_lights_a_scene_covers_are_released(
+        self, hass, apply_lighting_calls, scene_turn_on_calls, claims_clear_calls
+    ):
+        """A scene can set other domains too, which hold no claims."""
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        add_zone(hass, kitchen.id, "kitchen")
+        light(hass, "light.covered", "on")
+        light(hass, "light.uncovered", "on")
+        hass.states.async_set("switch.fan", "on")
+        hass.states.async_set(
+            "scene.evening_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.covered", "switch.fan"]}
+        )
+        await hass.async_block_till_done()
+
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.covered", "light.uncovered", "switch.fan"]},
+            evening_scene="scene.evening_scene",
+        )
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        await hass.async_block_till_done()
+
+        assert scene_turn_on_calls
+        assert claims_clear_calls[-1].data["entities"] == ["light.covered"]
+
     async def test_a_scene_reaching_outside_scope_releases_nothing(
         self, hass, apply_lighting_calls, claims_clear_calls
     ):
