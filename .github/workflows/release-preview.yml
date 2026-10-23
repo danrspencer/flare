@@ -32,6 +32,15 @@ jobs:
         with:
           python-version: "3.14"
 
+      # Before the notes are read, since a `repo` label leaves a pull
+      # request out of them (release.yml). Reads the checked-out
+      # labeler.yml. A fork's pull request is labelled by labeler.yml.
+      - name: Label
+        id: label
+        uses: actions/labeler@v5
+        with:
+          sync-labels: true
+
       # HEAD is the pull request merged into its base: what main would be.
       - name: Which beta it would ship in
         id: preview
@@ -49,6 +58,7 @@ jobs:
           TAG: ${{ steps.preview.outputs.tag }}
           PREVIOUS: ${{ steps.preview.outputs.previous }}
           REASON: ${{ steps.preview.outputs.reason }}
+          LABELS: ${{ steps.label.outputs.all-labels }}
         run: |
           marker='<!-- release-preview -->'
           {
@@ -56,7 +66,10 @@ jobs:
             echo "### Release preview"
             echo
             if [ -n "$TAG" ]; then
-              # GitHub lists only merged pull requests, so this one is added.
+              # GitHub lists only merged pull requests, so this one is added,
+              # unless its label leaves it out.
+              line="* $TITLE by @$AUTHOR in $URL"
+              case ",$LABELS," in *,repo,*) line="" ;; esac
               notes=$(gh api "repos/$REPO/releases/generate-notes" \
                 -f tag_name="$TAG" -f target_commitish="$BASE" \
                 ${PREVIOUS:+-f previous_tag_name="$PREVIOUS"} -q .body)
@@ -64,11 +77,13 @@ jobs:
               echo
               echo "<details><summary>Release notes for $TAG</summary>"
               echo
-              NOTES="$notes" LINE="* $TITLE by @$AUTHOR in $URL" python3 -c '
+              NOTES="$notes" LINE="$line" python3 -c '
           import os
           notes, line = os.environ["NOTES"], os.environ["LINE"]
           heading = "## What\x27s Changed\n"
-          if heading in notes:
+          if not line:
+              print(notes)
+          elif heading in notes:
               head, rest = notes.split(heading, 1)
               items, sep, tail = rest.partition("\n\n")
               print(head + heading + items + "\n" + line + sep + tail)
@@ -80,6 +95,10 @@ jobs:
             else
               echo "Merged now, this ships in no beta: $REASON"
             fi
+            case ",$LABELS," in *,repo,*)
+              echo
+              echo "Labelled \`repo\`, so it's left out of every release's notes." ;;
+            esac
           } > body.md
 
           id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
