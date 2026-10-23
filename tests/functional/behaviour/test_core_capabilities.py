@@ -116,6 +116,26 @@ async def test_a_sensor_left_unavailable_does_not_keep_a_room_lit(
     )
 
 
+async def test_a_room_whose_only_sensor_is_unavailable_is_not_switched_off(
+    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+) -> None:
+    """A dead sensor isn't an empty room: the room acts as if it has no sensor."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    occupancy(hass, HALL_SENSOR, "unavailable")
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], no_motion_wait=0)
+    await hass.services.async_call(
+        "light", "turn_on", {"entity_id": [b.entity_id for b in bulbs]}, blocking=True
+    )
+    assert all(state != "off" for state in room_brightness(hass, bulbs).values())
+
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+
+    assert all(state != "off" for state in room_brightness(hass, bulbs).values()), (
+        "an unavailable sensor read as an empty room and switched it off"
+    )
+
+
 async def test_a_phase_change_repaints_a_lit_room(
     hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
 ) -> None:

@@ -33,6 +33,9 @@ CI — see `.github/workflows/release.yml`.
 - **Night can start after midnight.** With Night set earlier than Morning, such as 01:00,
   Evening now runs until then. Before, Evening was skipped entirely and Night started at
   sunset.
+- **An unavailable occupancy or motion sensor no longer switches a room off.** It read as an
+  empty room, so lights turned on there went off again at the next tick. A room now ignores
+  sensors that are unavailable, and one whose only sensor is unavailable acts as if it has none.
 
 ## [1.1.0] - Unreleased
 

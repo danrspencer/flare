@@ -562,13 +562,16 @@ action:
           {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}
         {% endfor %}
         {{ ns.m }}
-      # The room's occupancy and motion sensors; only those picked by name
-      # with Sensors From Areas off.
+      # The room's working occupancy and motion sensors; only those picked by
+      # name with Sensors From Areas off. An unavailable or unknown sensor
+      # isn't one, so a room whose only sensor is dead counts as having none
+      # rather than as empty.
       room_occupancy_entities: >
-        {% set sensors = room_entities | select('match', '^binary_sensor\\.')
+        {% set sensors = (room_entities | select('match', '^binary_sensor\\.')
              | select('is_state_attr', 'device_class', 'occupancy') | list
            + room_entities | select('match', '^binary_sensor\\.')
-             | select('is_state_attr', 'device_class', 'motion') | list %}
+             | select('is_state_attr', 'device_class', 'motion') | list)
+           | reject('is_state', ['unavailable', 'unknown']) | list %}
         {{ sensors if use_area_sensors
            else sensors | select('in', named_entities) | list }}
       # No occupancy sensor on, or changed, within the Wait time. Hand-written
