@@ -9,6 +9,12 @@ CI — see `.github/workflows/release.yml`.
 
 ## [1.2.0] - Unreleased
 
+### Added
+
+- **Use Sensors**, a new blueprint input, on by default. Turn it off and the room ignores the
+  occupancy and motion sensors in **Lights & Occupancy**: it follows the schedule but never
+  turns its lights on or off by itself.
+
 ### Changed
 
 - **FLARE's lighting and claims actions take lights only.** `compute_lighting_groups`,
