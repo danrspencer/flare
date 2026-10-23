@@ -82,8 +82,23 @@ def kelvin_to_rgb(kelvin: float) -> tuple:
     return tuple(int(math.floor(c + 0.5)) for c in color_temperature_to_rgb(kelvin))
 
 
+SECONDS_PER_DAY = 86400
+
+
+def _night_clock(t: float, morning_ts: float, night_ts: float) -> tuple[float, float]:
+    """(t, night_ts) with Night after Evening. A Night set earlier in the day
+    than Morning is after midnight, so it's tomorrow's boundary, and an
+    instant before it still belongs to yesterday's Evening."""
+    if night_ts >= morning_ts:
+        return t, night_ts
+    if t < night_ts:
+        t += SECONDS_PER_DAY
+    return t, night_ts + SECONDS_PER_DAY
+
+
 def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> str:
     """Which phase an instant falls in, given today's boundaries."""
+    t, night_ts = _night_clock(t, morning_ts, night_ts)
     if t < morning_ts:
         return "Night"
     if t < day_start_ts:
@@ -107,10 +122,12 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
     Day at 08:00: never Morning), and the next phase then starts at the
     later boundary. Each phase starts at the running max of the boundaries
     up to its own. Night gets a mark only for its return, and only if some
-    other phase happens at all.
+    other phase happens at all. A Night after midnight is marked first,
+    with Evening running on from the day before until it.
 
     For anything drawing boundaries directly, like the card's labels."""
-    raw = (morning_ts, day_start_ts, evening_ts, night_ts)
+    after_midnight = night_ts < morning_ts
+    raw = (morning_ts, day_start_ts, evening_ts, night_ts + SECONDS_PER_DAY if after_midnight else night_ts)
 
     effective_starts = []
     running = None
@@ -124,21 +141,21 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
         if effective_starts[i] < effective_starts[i + 1]:
             marks.append((name, effective_starts[i]))
 
+    if after_midnight:
+        return [("Night", night_ts), *marks]
     # Night last, and only if some other phase happens.
     if marks:
         marks.append(("Night", effective_starts[-1]))
     return marks
 
 
-SECONDS_PER_DAY = 86400
-
-# Night wraps to Morning, so it's the only span crossing midnight.
+# Night wraps to Morning.
 _NEXT_PHASE = {"Morning": "Day", "Day": "Evening", "Evening": "Night", "Night": "Morning"}
 
 
 def _phase_span(day_phase: str, now_ts: float, boundaries: dict) -> tuple:
-    """(start, end) of the phase's own span. Night is one span crossing
-    midnight, starting either yesterday or today."""
+    """(start, end) of the phase's own span, on _night_clock()'s clock.
+    Night is one span crossing midnight, starting either yesterday or today."""
     if day_phase == "Morning":
         return boundaries["morning"], boundaries["day"]
     if day_phase == "Day":
@@ -165,6 +182,8 @@ def _value_at(
     span. The factor is clamped so it can't extrapolate, and strictly past
     the span it returns the phase's own value rather than the next phase's."""
     own = values[day_phase]
+    now_ts, night_ts = _night_clock(now_ts, boundaries["morning"], boundaries["night"])
+    boundaries = {**boundaries, "night": night_ts}
     span_start, span_end = _phase_span(day_phase, now_ts, boundaries)
     duration = min(max(duration_minutes, 0) * 60, max(span_end - span_start, 0))
     if duration <= 0:

@@ -16,6 +16,12 @@ CI — see `.github/workflows/release.yml`.
   light, and their entity pickers list only lights. The claims actions used to accept any
   entity, but override protection only ever made sense for lights.
 
+### Fixed
+
+- **Night can start after midnight.** With Night set earlier than Morning, such as 01:00,
+  Evening now runs until then. Before, Evening was skipped entirely and Night started at
+  sunset.
+
 ## [1.1.0] - Unreleased
 
 ### Changed

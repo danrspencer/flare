@@ -680,8 +680,14 @@ and the docs playground.
 Every literal is a keyword-only parameter with a named default
 (`DEFAULT_CURVE_VALUES`, `DEFAULT_SCHEDULE_HOURS`).
 
-- The brightness fade spans **1.6x the evening-to-night window**, as a
-  ratio so a custom range keeps the same shape.
+- **Each phase eases to the next over its own transition** (minutes,
+  per phase and per brightness/Kelvin), ending at the boundary.
+- **A Night earlier than Morning is after midnight** (`_night_clock`):
+  it's tomorrow's boundary, and Evening runs through midnight to it.
+  Boundaries are otherwise today's, so a 01:00 Night skipped Evening and
+  started Night at sunset. Strictly earlier: Night equal to Morning keeps
+  the out-of-order meaning (`phase_marks`). The card and the docs'
+  `curve.js` mirror it, held by `test_js_parity.py`.
 - `day_phase` is a **parameter**, not derived from the time, because a
   manual override passes a phase the clock disagrees with. Every ramp
   clamps its factor for that reason.

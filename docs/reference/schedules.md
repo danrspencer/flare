@@ -31,7 +31,7 @@ that need different timing, with **Settings → Devices & Services → FLARE →
 | `event.<name>_flare_phase` | Fires when the phase changes, including a manual override. The event type is the new phase's name. |
 | `select.<name>_flare_phase` | Overrides the phase. `Auto` (the default) follows the schedule; choosing a phase holds it until the schedule reaches its next phase. |
 | `switch.<name>_sticky_phase_override` | When on, an override stays until you set the phase back to `Auto`. |
-| `time.<name>_morning_time`, `day_time`, `night_time` | When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. |
+| `time.<name>_morning_time`, `day_time`, `night_time` | When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. If Night's time is earlier than Morning's, such as 01:00, Night starts after midnight, and Evening runs until then. |
 | `time.<name>_evening_earliest_time`, `evening_latest_time` | Evening starts at sunset, but no earlier or later than these. Defaults: 17:00, 20:00. |
 | `number.<name>_<phase>_brightness` | The phase's brightness, 0–255. At `0`, the phase turns the lights off. |
 | `number.<name>_<phase>_kelvin` | The phase's colour temperature, 1000–10000 K. |
@@ -69,7 +69,9 @@ Brightness and colour have separate transitions. By default, Day's colour transi
 minutes, so its colour changes across the whole of Day, while its brightness changes only in
 roughly the last hour.
 
-Night runs past midnight, so its transition is in the minutes before Morning starts.
+Night runs past midnight, so its transition is in the minutes before Morning starts. If Night
+starts after midnight, Evening runs past midnight instead, and its transition is in the minutes
+before Night starts.
 
 ## Copying a schedule
 

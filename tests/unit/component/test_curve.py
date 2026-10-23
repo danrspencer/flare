@@ -174,8 +174,8 @@ class TestKelvinToRgb:
 
 
 def _observed_transitions(boundaries, step=60):
-    """The day's phase changes, read off phase_at(). A leading Night run is
-    dropped: it's the wrap-around of the Night the day returns to."""
+    """The day's phase changes, read off phase_at(). A leading run of the
+    phase the day ends in is dropped: it's yesterday's, wrapping round."""
     runs = []
     previous = None
     for i in range(0, 86400, step):
@@ -183,7 +183,7 @@ def _observed_transitions(boundaries, step=60):
         if current != previous:
             runs.append((current, float(i)))
         previous = current
-    if runs and runs[0][0] == "Night":
+    if runs and runs[0][0] == runs[-1][0]:
         runs = runs[1:]
     return runs
 
@@ -196,9 +196,11 @@ BOUNDARY_CASES = [
     (6 * _H, 8 * _H, 19 * _H, 18 * _H),  # Night before Evening -> no Evening
     (6 * _H, 6 * _H, 19 * _H, 22 * _H),  # Morning == Day -> no Morning
     (6 * _H, 8 * _H, 8 * _H, 22 * _H),  # Day == Evening -> no Day
-    (22 * _H, 20 * _H, 18 * _H, 16 * _H),  # fully reversed -> only Night
+    (22 * _H, 20 * _H, 18 * _H, 16 * _H),  # fully reversed -> Night after midnight, no Morning or Day
     (0, 8 * _H, 19 * _H, 22 * _H),  # Morning at midnight -> no leading Night
     (6 * _H, 6 * _H, 6 * _H, 6 * _H),  # everything on one instant
+    (6 * _H, 8 * _H, 19 * _H, 1 * _H),  # Night after midnight
+    (6 * _H, 8 * _H, 19 * _H, 0),  # Night at midnight
 ]
 
 
@@ -214,12 +216,13 @@ class TestPhaseMarks:
             assert name in occurring, f"{name} is marked but never happens"
 
     @pytest.mark.parametrize("boundaries", BOUNDARY_CASES)
-    def test_ordered_and_ending_on_night(self, boundaries):
+    def test_ordered_with_night_last_or_after_midnight(self, boundaries):
         marks = phase_marks(*boundaries)
         starts = [t for _, t in marks]
         assert starts == sorted(starts)
         assert len(starts) == len(set(starts))
-        assert marks == [] or marks[-1][0] == "Night"
+        night_first = boundaries[3] < boundaries[0]
+        assert marks == [] or marks[0 if night_first else -1][0] == "Night"
 
     def test_a_normal_schedule_marks_all_four_in_order(self):
         assert phase_marks(6 * _H, 8 * _H, 19 * _H, 22 * _H) == [
@@ -235,7 +238,6 @@ class TestPhaseMarks:
         assert marks["Day"] == 10.0 * _H
 
     def test_a_day_that_never_leaves_night_has_no_marks(self):
-        assert phase_marks(22 * _H, 20 * _H, 18 * _H, 16 * _H) == []
         assert phase_marks(6 * _H, 6 * _H, 6 * _H, 6 * _H) == []
 
     def test_a_phase_starting_at_midnight_is_marked(self):
@@ -245,3 +247,50 @@ class TestPhaseMarks:
             ("Evening", 19.0 * _H),
             ("Night", 22.0 * _H),
         ]
+
+
+class TestNightAfterMidnight:
+    """Night set earlier in the day than Morning starts after midnight, so
+    Evening runs on through midnight until it."""
+
+    BOUNDARIES = (MORNING, DAY_START, EVENING, 1 * _H)
+
+    def _bri(self, phase, t):
+        return brightness_for_phase(phase, t, *self.BOUNDARIES)
+
+    def _kel(self, phase, t):
+        return kelvin_for_phase(phase, t, *self.BOUNDARIES)
+
+    @pytest.mark.parametrize(
+        "hour,phase",
+        [(0, "Evening"), (0.99, "Evening"), (1, "Night"), (5.99, "Night"), (6, "Morning"), (18, "Evening"), (23.99, "Evening")],
+    )
+    def test_evening_runs_through_midnight(self, hour, phase):
+        assert phase_at(hour * _H, *self.BOUNDARIES) == phase
+
+    def test_marks_night_first(self):
+        assert phase_marks(*self.BOUNDARIES) == [
+            ("Night", 1.0 * _H),
+            ("Morning", MORNING),
+            ("Day", DAY_START),
+            ("Evening", EVENING),
+        ]
+
+    def test_evening_fades_to_night_over_its_last_hour_across_midnight(self):
+        assert (self._bri("Evening", 23.9 * _H), self._kel("Evening", 23.9 * _H)) == DEFAULTS["Evening"]
+        assert (self._bri("Evening", 0), self._kel("Evening", 0)) == DEFAULTS["Evening"]
+        assert (self._bri("Evening", 0.5 * _H), self._kel("Evening", 0.5 * _H)) == (130, 2950)
+        assert (self._bri("Evening", 1 * _H - 1), self._kel("Evening", 1 * _H - 1)) == DEFAULTS["Night"]
+
+    def test_day_hands_over_to_evening_not_night(self):
+        assert self._bri("Day", EVENING) == self._bri("Evening", EVENING) == DEFAULTS["Evening"][0]
+
+    def test_night_hands_over_to_morning(self):
+        assert self._bri("Night", MORNING - 15 * 60) == round((DEFAULTS["Night"][0] + DEFAULTS["Morning"][0]) / 2)
+        assert self._bri("Night", MORNING) == DEFAULTS["Morning"][0]
+
+    def test_a_night_forced_before_it_starts_is_its_own_value(self):
+        assert (self._bri("Night", 0.5 * _H), self._kel("Night", 0.5 * _H)) == DEFAULTS["Night"]
+
+    def test_an_evening_forced_after_its_night_is_its_own_value(self):
+        assert (self._bri("Evening", 3 * _H), self._kel("Evening", 3 * _H)) == DEFAULTS["Evening"]
