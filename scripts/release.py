@@ -21,14 +21,15 @@ different numbers written in.
 The commit message records that source (`Source: <sha>`), which is how a
 promotion finds what to rebuild.
 
-Four subcommands. The first two build and tag locally and print what they
-did; `check` and `docs-source` only answer a question. Pushing the tag and
+Five subcommands. The first two build and tag locally and print what they
+did; the others only answer a question. Pushing the tag and
 publishing the GitHub release is the workflow's job, because that is the
 part that needs credentials:
 
     release.py cut-beta --source SHA     what .github/workflows/cut-beta.yml runs
     release.py promote [--force]         what .github/workflows/promote.yml runs
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
+    release.py preview --source SHA      what .github/workflows/release-preview.yml comments with
     release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
 
 Pure functions up top, git at the bottom. Standard library only, so the
@@ -162,6 +163,18 @@ def next_beta(base: str, tags: list[Tag]) -> Tag:
 
     n = max((t.beta for t in tags if t.base == want and not t.stable), default=0)
     return Tag(want, False, n + 1)
+
+
+def notes_start(tag: Tag, tags: list[Tag]) -> Tag | None:
+    """The tag a release's notes count from: a beta's, the newest tag below
+    it; a release's, the newest release below it, since its own betas are
+    nearly the same code.
+
+    Named explicitly because release commits are on no branch, so GitHub
+    finds no earlier tag among a release's ancestors.
+    """
+    earlier = [t for t in tags if t < tag and (t.stable or not tag.stable)]
+    return max(earlier, default=None)
 
 
 def pick_promotion(
@@ -354,7 +367,9 @@ def check(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
     return source, tags, next_beta(base, tags)
 
 
-def cut_beta(repo: Repo, source: str) -> Tag:
+def planned_beta(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
+    """check(), and also Skip when nothing shipped has changed since the
+    version's last beta."""
     source, tags, beta = check(repo, source)
 
     # A push that changed nothing a house would receive (docs, tests, CI)
@@ -368,7 +383,11 @@ def cut_beta(repo: Repo, source: str) -> Tag:
                 raise Skip(f"nothing under {', '.join(SHIPPED)} has changed since {last.name}")
         except Refuse:
             pass  # a hand-made beta: no recorded source, so cut a fresh one
+    return source, tags, beta
 
+
+def cut_beta(repo: Repo, source: str) -> Tag:
+    source, _, beta = planned_beta(repo, source)
     repo.build(beta, source)
     return beta
 
@@ -406,6 +425,21 @@ def promote(repo: Repo, now: datetime, *, force: bool = False) -> Tag:
     return stable
 
 
+def preview(repo: Repo, source: str) -> tuple[Tag | None, Tag | None, str]:
+    """The beta `source` would ship as if pushed to main now, the tag its
+    notes would count from, and, when it would ship as nothing, why."""
+    try:
+        _, tags, beta = planned_beta(repo, source)
+    except (Skip, Refuse) as reason:
+        return None, None, str(reason)
+    return beta, notes_start(beta, tags), ""
+
+
+def _notes_start_name(repo: Repo, tag: Tag) -> str:
+    previous = notes_start(tag, repo.tags()[0])
+    return previous.name if previous else ""
+
+
 def _emit(**outputs: str) -> None:
     for key, value in outputs.items():
         print(f"{key}={value}")
@@ -429,6 +463,9 @@ def main(argv: list[str] | None = None) -> int:
     prom = sub.add_parser("promote", help="build a stable release from the beta that has soaked")
     prom.add_argument("--force", action="store_true", help="ignore the soak period")
 
+    pre = sub.add_parser("preview", help="the beta a commit would ship as, for a pull request comment")
+    pre.add_argument("--source", required=True, help="the commit to preview")
+
     docs = sub.add_parser("docs-source", help="the commit to build a release's docs from")
     docs.add_argument("--head", required=True, help="the newest commit on main")
     docs.add_argument("--tag", help="the release (default: the newest)")
@@ -440,15 +477,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "check":
             _, _, beta = check(repo, args.source)
             print(f"OK: this would ship as {beta.name}")
+        elif args.command == "preview":
+            tag, previous, reason = preview(repo, args.source)
+            _emit(
+                tag=tag.name if tag else "", previous=previous.name if previous else "", reason=reason
+            )
         elif args.command == "docs-source":
             tag, ref = docs_source(repo, args.head, args.tag)
             _emit(tag=tag.name, ref=ref, follows_head=str(ref != tag.name).lower())
         elif args.command == "cut-beta":
             tag = cut_beta(repo, args.source)
-            _emit(tag=tag.name, prerelease="true")
+            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="true")
         else:
             tag = promote(repo, datetime.now(timezone.utc), force=args.force)
-            _emit(tag=tag.name, prerelease="false")
+            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="false")
     except Skip as skip:
         done = "Nothing to follow" if args.command == "docs-source" else "Nothing released"
         print(f"::notice::{done}: {skip}")

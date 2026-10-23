@@ -57,6 +57,33 @@ def test_the_changelogs_top_section_names_the_target():
     assert release.changelog_base("# Changelog\n\nnothing yet") is None
 
 
+# --- Release notes -----------------------------------------------------
+
+
+def test_a_first_beta_s_notes_count_from_the_last_release():
+    """v0.16.0-beta.2 sorts above v0.16.0 by git's default version sort,
+    which is the one that gets this wrong."""
+    known = tags("v0.15.0", "v0.16.0-beta.1", "v0.16.0-beta.2", "v0.16.0", "v0.17.0-beta.1")
+
+    assert release.notes_start(Tag.parse("v0.17.0-beta.1"), known).name == "v0.16.0"
+
+
+def test_a_later_beta_s_notes_count_from_the_beta_before_it():
+    known = tags("v0.16.0", "v0.17.0-beta.1", "v0.17.0-beta.2")
+
+    assert release.notes_start(Tag.parse("v0.17.0-beta.2"), known).name == "v0.17.0-beta.1"
+
+
+def test_a_release_s_notes_count_from_the_release_before_it_not_its_betas():
+    known = tags("v0.16.0", "v0.17.0-beta.1", "v0.17.0-beta.2", "v0.17.0")
+
+    assert release.notes_start(Tag.parse("v0.17.0"), known).name == "v0.16.0"
+
+
+def test_the_first_tag_s_notes_count_from_nothing():
+    assert release.notes_start(Tag.parse("v0.1.0-beta.1"), tags("v0.1.0-beta.1")) is None
+
+
 # --- Cutting a beta ----------------------------------------------------
 
 
@@ -436,6 +463,37 @@ def test_a_hand_made_beta_cannot_be_promoted(project):
         release.promote(project.repo, NOW + timedelta(days=400))
 
 
+def test_a_preview_names_the_beta_and_where_its_notes_start(project):
+    released(project, "0.16.0")
+    project.target("0.17.0")
+    source = project.commit("target 0.17.0")
+
+    beta, previous, reason = release.preview(project.repo, source)
+
+    assert (beta.name, previous.name, reason) == ("v0.17.0-beta.1", "v0.16.0", "")
+    assert project.repo.out("tag", "--list", "v0.17.0*") == "", "a preview built a release"
+
+
+def test_a_preview_of_nothing_shipped_says_why(project):
+    project.target("0.17.0")
+    release.cut_beta(project.repo, project.commit("target 0.17.0"))
+
+    beta, previous, reason = release.preview(project.repo, project.edit("docs/page.md", "hello", "docs only"))
+
+    assert (beta, previous) == (None, None)
+    assert "nothing under custom_components has changed since v0.17.0-beta.1" in reason
+
+
+def test_a_preview_of_a_refused_change_says_why_without_failing(project):
+    """The changelog job fails the pull request; the preview only explains."""
+    released(project, "0.17.0")
+
+    beta, _, reason = release.preview(project.repo, project.edit("custom_components/flare/x.py", "y = 2", "change"))
+
+    assert beta is None
+    assert "already released" in reason
+
+
 def test_the_command_line_hands_the_workflow_a_tag_or_nothing(project, monkeypatch, capsys, tmp_path):
     """The workflows read `tag=`: a skip exits 0 with it empty."""
     monkeypatch.setattr(release, "REPO_ROOT", project.root)
@@ -445,7 +503,7 @@ def test_the_command_line_hands_the_workflow_a_tag_or_nothing(project, monkeypat
     source = project.commit("target 0.17.0")
 
     assert release.main(["cut-beta", "--source", source]) == 0
-    assert output.read_text().splitlines() == ["tag=v0.17.0-beta.1", "prerelease=true"]
+    assert output.read_text().splitlines() == ["tag=v0.17.0-beta.1", "previous=", "prerelease=true"]
 
     output.write_text("")
     assert release.main(["cut-beta", "--source", source]) == 0  # nothing new: a skip
@@ -466,3 +524,7 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
 
     assert "scripts/release.py cut-beta --source" in cut
     assert "scripts/release.py promote" in promote
+    preview = (REPO_ROOT / ".github" / "workflows" / "release-preview.yml").read_text()
+    assert "scripts/release.py preview --source" in preview
+    for workflow in (cut, promote):
+        assert "steps.cut.outputs.previous" in workflow

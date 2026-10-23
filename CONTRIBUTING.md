@@ -362,6 +362,10 @@ is a version that's already out fails, on the pull request (the `changelog` job 
 next version. A heading *below* an existing beta fails too - that would reach testers as a
 downgrade.
 
+Each pull request gets a comment from `release-preview.yml` naming the beta it would ship in if
+merged now, with that beta's release notes, or saying why it would ship in none. It's updated
+on every push.
+
 ### Promoting a beta
 
 Nothing to do. `.github/workflows/promote.yml` runs daily and releases the newest beta
