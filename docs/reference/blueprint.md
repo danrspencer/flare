@@ -32,7 +32,7 @@ behaves.
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
-| **Wait time** | 120s | How long every sensor must be clear before the room is empty. |
+| **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
