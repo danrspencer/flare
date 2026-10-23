@@ -25,13 +25,15 @@ CURVE_JS = js_path(REPO_ROOT / "docs" / "assets" / "js" / "curve.js")
 CARD_JS = js_path(WWW / "flare-curve-card.js")
 KELVINS = list(range(1000, 10001))
 
-# Normal days plus awkward ones: a very short Day, and an Evening too short
-# for its hold.
+# Normal days plus awkward ones: a very short Day, an Evening too short
+# for its hold, and Night after midnight.
 BOUNDARY_SETS = [
     {"morningTs": 6 * 3600, "dayStartTs": 8 * 3600, "eveningTs": 19.75 * 3600, "nightTs": 22 * 3600},
     {"morningTs": 5 * 3600, "dayStartTs": 7 * 3600, "eveningTs": 17 * 3600, "nightTs": 23 * 3600},
     {"morningTs": 6 * 3600, "dayStartTs": 8 * 3600, "eveningTs": 8.25 * 3600, "nightTs": 22 * 3600},
     {"morningTs": 6 * 3600, "dayStartTs": 8 * 3600, "eveningTs": 20 * 3600, "nightTs": 21.5 * 3600},
+    {"morningTs": 6 * 3600, "dayStartTs": 8 * 3600, "eveningTs": 19 * 3600, "nightTs": 1 * 3600},
+    {"morningTs": 6 * 3600, "dayStartTs": 8 * 3600, "eveningTs": 23.5 * 3600, "nightTs": 0.25 * 3600},
 ]
 
 # Odd endpoints over even steps land ramps on .5 ties.
@@ -57,6 +59,8 @@ MARK_CASES = [
     [0, 8 * _H, 19 * _H, 22 * _H],
     [6 * _H, 6 * _H, 6 * _H, 6 * _H],
     [0, 0, 0, 86399],
+    [6 * _H, 8 * _H, 19 * _H, 1 * _H],
+    [6 * _H, 8 * _H, 19 * _H, 0],
 ]
 
 

@@ -194,7 +194,7 @@ response_variable: curve
 | Field | Required | Description |
 |---|---|---|
 | `at`<br>Unix timestamp; default now | no | The moment to work out the values for. |
-| `day`, `evening`, `morning`, `night`<br>Unix timestamp | yes | When each phase starts today. |
+| `day`, `evening`, `morning`, `night`<br>Unix timestamp | yes | When each phase starts today. If `night` is earlier than `morning`, Night starts after midnight, and Evening runs until then. |
 | `<phase>_brightness`<br>0–255; default Morning 255, Day 255, Evening 180, Night 80 | no | The phase's brightness. |
 | `<phase>_brightness_transition`<br>minutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30 | no | How long before the phase ends its brightness starts changing to the next phase's. |
 | `<phase>_kelvin`<br>Kelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700 | no | The phase's colour temperature. |
