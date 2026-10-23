@@ -106,15 +106,6 @@ A scene is only used if every entity it sets is in the room; otherwise the whole
 the schedule. When a scene is used, any light in the room that the scene doesn't set still
 follows the schedule. See [Scenes](../../guides/scenes/).
 
-## Colour
-
-| Input | Default | Description |
-|---|---|---|
-| **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
-
-Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
-leaves Morning and Day on colour temperature.
-
 ## Triggers
 
 | Input | Default | Description |
@@ -142,6 +133,15 @@ on from something else, see
 | **Motion On Transition** | 1s | Transition when someone comes in, or when you run the automation by hand. |
 | **Motion Off Transition** | 15s | Transition when the room empties. |
 | **Background Transition** | 5s | Transition for every other update. |
+
+## Colour
+
+| Input | Default | Description |
+|---|---|---|
+| **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
+
+Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
+leaves Morning and Day on colour temperature.
 
 ## How a room behaves
 

@@ -230,26 +230,6 @@ blueprint:
           selector:
             entity:
               domain: scene
-    colour:
-      name: Colour
-      icon: mdi:palette
-      collapsed: true
-      input:
-        rgb_phases:
-          name: Prefer RGB During
-          description: >
-            Phases to send RGB colour instead of colour temperature, for
-            lights that support it (auto-detected). At the high colour
-            temperatures used during Morning/Day, this can look
-            blue-tinted rather than a clean white, so those phases are
-            off by default - Evening/Night's warmer values don't have
-            that problem.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
-          default: [Evening, Night]
-          selector:
-            select:
-              options: [Morning, Day, Evening, Night]
-              multiple: true
     triggers:
       name: Triggers
       icon: mdi:lightning-bolt-outline
@@ -308,6 +288,26 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
+    colour:
+      name: Colour
+      icon: mdi:palette
+      collapsed: true
+      input:
+        rgb_phases:
+          name: Prefer RGB During
+          description: >
+            Phases to send RGB colour instead of colour temperature, for
+            lights that support it (auto-detected). At the high colour
+            temperatures used during Morning/Day, this can look
+            blue-tinted rather than a clean white, so those phases are
+            off by default - Evening/Night's warmer values don't have
+            that problem.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
+          default: [Evening, Night]
+          selector:
+            select:
+              options: [Morning, Day, Evening, Night]
+              multiple: true
 
 mode: restart
 max_exceeded: silent

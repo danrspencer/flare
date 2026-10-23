@@ -20,8 +20,8 @@ CI — see `.github/workflows/release.yml`.
 
 - **The blueprint's inputs are rearranged** so the ones most rooms need are out in the open.
   **Wait time** now sits under **Lights & Occupancy** instead of inside a section. The
-  sections run Brightness & Exclusions, Idle Brightness, Scene Handoff, Colour, Triggers (which
-  now holds **Additional Triggers**) and Transitions (formerly Timing). Existing automations
+  sections run Brightness & Exclusions, Idle Brightness, Scene Handoff, Triggers (which now
+  holds **Additional Triggers**), Transitions (formerly Timing) and Colour. Existing automations
   keep their settings.
 
 ## [1.2.0] - Unreleased
