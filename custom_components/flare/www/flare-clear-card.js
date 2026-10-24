@@ -47,9 +47,10 @@ class FlareClearCard extends HTMLElement {
       </style>
       <div class="row">
         <button aria-label="Clear"><ha-icon icon="mdi:backup-restore"></ha-icon></button>
-        <span class="name">${this._config.name || 'Clear'}</span>
+        <span class="name"></span>
       </div>
     `;
+    this.shadowRoot.querySelector('.name').textContent = this._config.name || 'Clear';
     this.shadowRoot.querySelector('button').addEventListener('click', () => this._press());
   }
 }
