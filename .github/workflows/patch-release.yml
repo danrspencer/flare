@@ -1,0 +1,89 @@
+name: patch-release
+
+# A fix for the current release, shipped straight to stable with no beta,
+# leaving whatever is in beta on main behind:
+#
+#     git switch -c release/1.1.x <v1.1.0's Source: commit>
+#     git cherry-pick <the fix>      # and a '## [1.1.1]' changelog section
+#     git push origin release/1.1.x
+#     gh workflow run patch-release.yml -f branch=release/1.1.x
+#
+# The tooling is main's, the release is the branch's. scripts/release.py
+# only builds vX.Y.(Z+1) for the current release vX.Y.Z, and only from a
+# commit built on that release's source, so main's unreleased changes
+# can't go out with it. The fix still needs to land on main for the next
+# version.
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "The branch to release, built on the current release's source"
+        type: string
+        required: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Which commit is being released
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ inputs.branch }}
+        run: echo "sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/$BRANCH" --jq .sha)" >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: source
+    uses: ./.github/workflows/tests.yml
+    with:
+      ref: ${{ needs.source.outputs.sha }}
+
+  patch:
+    needs: [source, tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.cut.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Build the release
+        id: cut
+        env:
+          SHA: ${{ needs.source.outputs.sha }}
+        run: |
+          git fetch origin "$SHA"
+          python scripts/release.py patch --source "$SHA"
+
+      # See cut-beta.yml for why the tag push does not need release.yml.
+      - name: Publish it
+        if: steps.cut.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.cut.outputs.tag }}
+          PREVIOUS: ${{ steps.cut.outputs.previous }}
+        run: |
+          git push origin "refs/tags/$TAG"
+          gh release create "$TAG" --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+
+  # The patch is the newest release, so its docs become the site's default.
+  docs:
+    needs: patch
+    if: needs.patch.outputs.tag != ''
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    with:
+      tag: ${{ needs.patch.outputs.tag }}

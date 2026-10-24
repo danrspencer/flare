@@ -393,6 +393,30 @@ gh workflow run promote.yml -f force=true
 
 That skips the seven days but not the `release-blocker` check.
 
+### Patching the current release
+
+A fix for the current release, say `v1.1.0`, can ship as `v1.1.1` straight away, with no beta
+and without whatever is in beta on `main`. Branch from the commit the release was built from
+(the `Source:` line of its release commit), cherry-pick the fix, add a `## [1.1.1]` section
+above `[1.1.0]` in the changelog, push the branch and run the workflow:
+
+```bash
+git log -1 --format=%B v1.1.0
+```
+
+```bash
+gh workflow run patch-release.yml -f branch=release/1.1.x
+```
+
+`.github/workflows/patch-release.yml` runs the tests on that branch, then
+`scripts/release.py patch` builds and publishes the release and its docs. It refuses
+anything but the next patch of the current release, a branch not built on that release's
+source, and a changelog whose top section isn't the patch. A later patch is another commit
+on the same branch.
+
+Land the fix on `main` too, with the same `[1.1.1]` section under its top one, or the next
+version ships without it.
+
 ### How a release is built
 
 The manifest's version in source is a placeholder (`0.0.0-dev`). HACS reads the version out of the `manifest.json` inside
@@ -449,7 +473,7 @@ channel for anything you want to see through HACS.
 
 ### Tagging by hand
 
-Still possible, for a hotfix or when a workflow is unavailable. Set the three versions
+Still possible, when a workflow is unavailable. For a hotfix, see "Patching the current release" above. Set the three versions
 yourself in a checkout, tag it, and push the tag: `.github/workflows/release.yml` checks
 the tag against the manifest, that both blueprint stamps equal the tag, and that the
 changelog has a section for it, then publishes. (A tag pushed by

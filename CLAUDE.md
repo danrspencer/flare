@@ -1009,6 +1009,11 @@ files, and a symlink once wrote junk blueprints into the repo.
   labelled `release-blocker` stops a promotion - that's the user's veto.
   Soak is per version (a later beta of the same version restarts its
   clock), and nothing at or below the highest stable is promoted.
+- **A patch to the current release skips the beta** (`patch-release.yml`, run by hand with
+  a branch, at the user's request): `release.py patch` builds vX.Y.(Z+1) only, from a commit
+  descended from vX.Y.Z's source whose changelog names the patch. That changelog check, not
+  the ancestry, is what keeps main's beta work out, since main descends from the source too.
+  The workflow runs main's tooling against the branch, which has neither.
 - **Nothing is committed to a branch for a release.** The manifest's
   source version is `0.0.0-dev`; `scripts/release.py` builds each release
   as a commit on top of its source commit with the real version written
