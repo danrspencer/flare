@@ -5,6 +5,8 @@
  * override; the curve doesn't.
  */
 
+import { escapeHtml } from './flare-html.js';
+
 // Re-render interval, and the granularity of "now" in the render cache.
 const RENDER_INTERVAL_MS = 30000;
 
@@ -421,8 +423,8 @@ class FlareCurveCard extends HTMLElement {
 
   _renderError(message) {
     this.shadowRoot.innerHTML = `
-      <ha-card header="${this._header()}">
-        <div style="padding: 16px; color: var(--error-color, red);">${message}</div>
+      <ha-card header="${escapeHtml(this._header())}">
+        <div style="padding: 16px; color: var(--error-color, red);">${escapeHtml(message)}</div>
       </ha-card>
     `;
   }
@@ -569,8 +571,8 @@ class FlareCurveCard extends HTMLElement {
     const swatch = (hex) => `<span class="swatch" style="background:${hex};border:${swatchBorder};"></span>`;
 
     const nowLabel = haveNow
-      ? `Now ${fmtTime(now)} · ${this._brightnessNow} bri · ${this._kelvinNow}K${this._phaseState ? ` · ${this._phaseState}` : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
-      : this._phaseState || '';
+      ? `Now ${fmtTime(now)} · ${this._brightnessNow} bri · ${this._kelvinNow}K${this._phaseState ? ` · ${escapeHtml(this._phaseState)}` : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
+      : escapeHtml(this._phaseState || '');
 
     const footnote = haveSamples
       ? this._eveningNote()
@@ -648,7 +650,7 @@ class FlareCurveCard extends HTMLElement {
           z-index: 2;
         }
       </style>
-      <ha-card header="${this._header()}">
+      <ha-card header="${escapeHtml(this._header())}">
         <div class="card-content">
           <div class="now-label">${nowLabel}</div>
           ${sunLabel ? `<div class="sun-label">${sunLabel}</div>` : ''}

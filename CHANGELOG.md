@@ -7,6 +7,14 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [1.1.1] - Unreleased
+
+### Fixed
+
+- **A name with `"` or `<` in it no longer breaks a card.** The curve card's header (the
+  schedule's name, or its `title` option), its missing-entity message and the Clear card's
+  `name` option are now shown as text, so markup in them is no longer run on the dashboard.
+
 ## [1.1.0] - Unreleased
 
 ### Changed

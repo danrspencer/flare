@@ -8,6 +8,8 @@
  *   entity: button.kitchen_flare_clear   # or a list, pressed together
  */
 
+import { escapeHtml } from './flare-html.js';
+
 class FlareClearCard extends HTMLElement {
   setConfig(config) {
     const entity = config && config.entity;
@@ -47,7 +49,7 @@ class FlareClearCard extends HTMLElement {
       </style>
       <div class="row">
         <button aria-label="Clear"><ha-icon icon="mdi:backup-restore"></ha-icon></button>
-        <span class="name">${this._config.name || 'Clear'}</span>
+        <span class="name">${escapeHtml(this._config.name || 'Clear')}</span>
       </div>
     `;
     this.shadowRoot.querySelector('button').addEventListener('click', () => this._press());
