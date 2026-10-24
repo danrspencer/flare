@@ -398,21 +398,34 @@ That skips the seven days but not the `release-blocker` check.
 A fix for the current release, say `v1.1.0`, can ship as `v1.1.1` straight away, with no beta
 and without whatever is in beta on `main`. Branch from the commit the release was built from
 (the `Source:` line of its release commit), cherry-pick the fix, add a `## [1.1.1]` section
-above `[1.1.0]` in the changelog, push the branch and run the workflow:
+above `[1.1.0]` in the changelog, and push the branch:
 
 ```bash
 git log -1 --format=%B v1.1.0
 ```
 
 ```bash
-gh workflow run patch-release.yml -f branch=release/1.1.x
+git switch -c release/1.1.x <that Source: commit>
 ```
 
-`.github/workflows/patch-release.yml` runs the tests on that branch, then
-`scripts/release.py patch` builds and publishes the release and its docs. It refuses
-anything but the next patch of the current release, a branch not built on that release's
-source, and a changelog whose top section isn't the patch. A later patch is another commit
-on the same branch.
+```bash
+git cherry-pick -x <the fix on main>
+```
+
+```bash
+git push origin release/1.1.x
+```
+
+A push to any `release/**` branch runs `.github/workflows/patch-release.yml`, as a push to
+`main` cuts a beta: the tests on that commit, then `scripts/release.py patch` builds and
+publishes the release and its docs. It refuses anything but the next patch of the current
+release, a branch not built on that release's source, and a changelog whose top section
+isn't the patch. A push that changes nothing shipped releases nothing. A later patch is
+another commit on the same branch, under a new changelog section.
+
+Each branch runs its own copy of the workflow and `scripts/release.py`, from the release it
+was cut from, so a fix to either reaches an older branch only if it's cherry-picked there.
+`release/1.1.x` predates the workflow; every release from 1.2.0 carries it.
 
 Land the fix on `main` too, with the same `[1.1.1]` section under its top one, or the next
 version ships without it.

@@ -628,6 +628,7 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
     preview = (REPO_ROOT / ".github" / "workflows" / "release-preview.yml").read_text()
     assert "scripts/release.py preview --source" in preview
     patch = (REPO_ROOT / ".github" / "workflows" / "patch-release.yml").read_text()
-    assert "scripts/release.py patch --source" in patch
+    assert 'scripts/release.py patch --source "$GITHUB_SHA"' in patch
+    assert 'branches: ["release/**"]' in patch, "a push to a release branch patches"
     for workflow in (cut, promote, patch):
         assert "steps.cut.outputs.previous" in workflow
