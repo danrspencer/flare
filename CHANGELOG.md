@@ -37,6 +37,14 @@ CI — see `.github/workflows/release.yml`.
   empty room, so lights turned on there went off again at the next tick. A room now ignores
   sensors that are unavailable, and one whose only sensor is unavailable acts as if it has none.
 
+## [1.1.1] - Unreleased
+
+### Fixed
+
+- **A name with `"` or `<` in it no longer breaks a card.** The curve card's header (the
+  schedule's name, or its `title` option), its missing-entity message and the Clear card's
+  `name` option are now shown as text, so markup in them is no longer run on the dashboard.
+
 ## [1.1.0] - Unreleased
 
 ### Changed
