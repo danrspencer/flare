@@ -21,13 +21,14 @@ different numbers written in.
 The commit message records that source (`Source: <sha>`), which is how a
 promotion finds what to rebuild.
 
-Five subcommands. The first two build and tag locally and print what they
+Six subcommands. The first three build and tag locally and print what they
 did; the others only answer a question. Pushing the tag and
 publishing the GitHub release is the workflow's job, because that is the
 part that needs credentials:
 
     release.py cut-beta --source SHA     what .github/workflows/cut-beta.yml runs
     release.py promote [--force]         what .github/workflows/promote.yml runs
+    release.py patch --source SHA        what .github/workflows/patch-release.yml runs
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
     release.py preview --source SHA      what .github/workflows/release-preview.yml comments with
     release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
@@ -300,6 +301,9 @@ class Repo:
             )
         return m.group(1)
 
+    def is_ancestor(self, old: str, new: str) -> bool:
+        return self.git("merge-base", "--is-ancestor", old, new, check=False).returncode == 0
+
     def shipped_changed(self, old: str, new: str) -> bool:
         return self.git("diff", "--quiet", old, new, "--", *SHIPPED, check=False).returncode != 0
 
@@ -425,6 +429,42 @@ def promote(repo: Repo, now: datetime, *, force: bool = False) -> Tag:
     return stable
 
 
+def patch(repo: Repo, source: str) -> Tag:
+    """The current release's next patch, built straight from `source` with
+    no beta.
+
+    Only the current release can be patched, from a commit built on its
+    source whose changelog names the patch. Main with work in beta names the
+    next version instead, so it can't go out as a patch.
+    """
+    source = repo.out("rev-parse", "--verify", f"{source}^{{commit}}")
+    tags, _ = repo.tags()
+    stable = highest_stable(tags)
+    if stable is None:
+        raise Refuse("there is no release to patch")
+    current = Tag(stable, True, 0)
+    tag = Tag((stable[0], stable[1], stable[2] + 1), True, 0)
+
+    base = changelog_base(repo.show(source, CHANGELOG) or "")
+    if base != tag.base_str:
+        raise Refuse(
+            f"a patch to {current.name} is {tag.name}, but the changelog's top section at "
+            f"{source[:12]} is [{base}]. Add a '## [{tag.base_str}]' section above [{current.base_str}]."
+        )
+
+    built_from = repo.source_of(current)
+    if not repo.is_ancestor(built_from, source):
+        raise Refuse(
+            f"{source[:12]} is not built on {current.name}'s source ({built_from[:12]}). Branch "
+            f"from that commit and cherry-pick the fix, so nothing else ships with it."
+        )
+    if not repo.shipped_changed(built_from, source):
+        raise Skip(f"nothing under {', '.join(SHIPPED)} has changed since {current.name}")
+
+    repo.build(tag, source)
+    return tag
+
+
 def preview(repo: Repo, source: str) -> tuple[Tag | None, Tag | None, str]:
     """The beta `source` would ship as if pushed to main now, the tag its
     notes would count from, and, when it would ship as nothing, why."""
@@ -463,6 +503,9 @@ def main(argv: list[str] | None = None) -> int:
     prom = sub.add_parser("promote", help="build a stable release from the beta that has soaked")
     prom.add_argument("--force", action="store_true", help="ignore the soak period")
 
+    pat = sub.add_parser("patch", help="build the current release's next patch, with no beta")
+    pat.add_argument("--source", required=True, help="the commit to release, built on the current release")
+
     pre = sub.add_parser("preview", help="the beta a commit would ship as, for a pull request comment")
     pre.add_argument("--source", required=True, help="the commit to preview")
 
@@ -488,6 +531,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "cut-beta":
             tag = cut_beta(repo, args.source)
             _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="true")
+        elif args.command == "patch":
+            tag = patch(repo, args.source)
+            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="false")
         else:
             tag = promote(repo, datetime.now(timezone.utc), force=args.force)
             _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="false")

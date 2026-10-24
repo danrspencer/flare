@@ -9,12 +9,19 @@ name: tests
 on:
   pull_request:
   workflow_call:
+    inputs:
+      ref:
+        description: "The commit to test (default: the caller's)"
+        type: string
+        default: ""
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-python@v5
         with:
           # Matches pyproject.toml's requires-python floor - tracks

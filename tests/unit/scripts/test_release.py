@@ -514,6 +514,107 @@ def test_the_command_line_hands_the_workflow_a_tag_or_nothing(project, monkeypat
     assert "::error::" in capsys.readouterr().out
 
 
+# --- Patches -----------------------------------------------------------
+
+
+def patch_branch(project: Project, version: str) -> str:
+    """A branch from the current release's source, with a fix and a section for it."""
+    current = max(t for t in project.repo.tags()[0] if t.stable)
+    project.repo.git("switch", "-q", "-c", "patch", project.repo.source_of(current))
+    project.edit("custom_components/flare/fix.py", "fixed = True", "the fix")
+    project.target(version)
+    return project.commit(f"target {version}")
+
+
+def test_a_patch_ships_the_branch_as_the_next_patch_release(project):
+    released(project, "0.17.0")
+    project.target("0.18.0")
+    project.edit("custom_components/flare/later.py", "x = 1", "in beta on main")
+    source = patch_branch(project, "0.17.1")
+
+    tag = release.patch(project.repo, source)
+
+    assert tag.name == "v0.17.1"
+    assert project.repo.source_of(tag) == source
+    assert json.loads(project.at("v0.17.1", release.MANIFEST))["version"] == "0.17.1"
+    assert version_from_description(project.at("v0.17.1", release.BLUEPRINT)) == "0.17.1"
+    files = project.repo.out("ls-tree", "-r", "--name-only", "v0.17.1")
+    assert "custom_components/flare/fix.py" in files
+    assert "later.py" not in files
+
+
+def test_a_patch_from_a_commit_not_built_on_the_release_is_refused(project):
+    first = project.repo.out("rev-parse", "HEAD")
+    released(project, "0.17.0")
+    project.repo.git("switch", "-q", "-c", "patch", first)
+    project.edit("custom_components/flare/fix.py", "fixed = True", "the fix")
+    project.target("0.17.1")
+
+    with pytest.raises(Refuse, match="not built on v0.17.0"):
+        release.patch(project.repo, project.commit("target 0.17.1"))
+
+
+def test_main_with_work_in_beta_is_not_a_patch(project):
+    released(project, "0.17.0")
+    project.target("0.18.0")
+    source = project.edit("custom_components/flare/later.py", "x = 1", "in beta on main")
+
+    with pytest.raises(Refuse, match=r"is v0\.17\.1"):
+        release.patch(project.repo, source)
+
+
+def test_a_patch_must_be_the_next_patch_of_the_current_release(project):
+    released(project, "0.17.0")
+
+    for version in ("0.18.0", "0.17.2", "0.17.0"):
+        project.repo.git("switch", "-q", "dev")
+        project.repo.git("branch", "-q", "-D", "patch", check=False)
+        with pytest.raises(Refuse, match=r"is v0\.17\.1"):
+            release.patch(project.repo, patch_branch(project, version))
+    assert Tag.parse("v0.17.1") not in project.repo.tags()[0]
+
+
+def test_a_patch_with_nothing_shipped_changed_is_skipped(project):
+    released(project, "0.17.0")
+    project.repo.git("switch", "-q", "-c", "patch", project.repo.source_of(Tag.parse("v0.17.0")))
+    project.target("0.17.1")
+    source = project.edit("docs/page.md", "hello", "docs only")
+
+    with pytest.raises(Skip):
+        release.patch(project.repo, source)
+
+
+def test_there_is_nothing_to_patch_before_a_release(project):
+    project.target("0.16.1")
+
+    with pytest.raises(Refuse, match="no release"):
+        release.patch(project.repo, project.commit("target 0.16.1"))
+
+
+def test_main_still_cuts_its_betas_after_a_patch(project):
+    released(project, "0.17.0")
+    patch_source = patch_branch(project, "0.17.1")
+    release.patch(project.repo, patch_source)
+    project.repo.git("switch", "-q", "dev")
+    project.target("0.18.0")
+    source = project.edit("custom_components/flare/fix.py", "fixed = True", "the fix, on main")
+
+    assert release.cut_beta(project.repo, source).name == "v0.18.0-beta.1"
+
+
+def test_the_command_line_hands_the_workflow_a_patch_and_its_previous_release(
+    project, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(release, "REPO_ROOT", project.root)
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    released(project, "0.17.0")
+    source = patch_branch(project, "0.17.1")
+
+    assert release.main(["patch", "--source", source]) == 0
+    assert output.read_text().splitlines() == ["tag=v0.17.1", "previous=v0.17.0", "prerelease=false"]
+
+
 # --- The wiring --------------------------------------------------------
 
 
@@ -526,5 +627,7 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
     assert "scripts/release.py promote" in promote
     preview = (REPO_ROOT / ".github" / "workflows" / "release-preview.yml").read_text()
     assert "scripts/release.py preview --source" in preview
-    for workflow in (cut, promote):
+    patch = (REPO_ROOT / ".github" / "workflows" / "patch-release.yml").read_text()
+    assert "scripts/release.py patch --source" in patch
+    for workflow in (cut, promote, patch):
         assert "steps.cut.outputs.previous" in workflow
