@@ -1,5 +1,5 @@
-"""Names and options from entities and card config reach the cards'
-markup as text, never as markup."""
+"""Names and options from entities and card config reach the cards as
+text and attribute values, never as markup."""
 
 import pytest
 
@@ -9,7 +9,6 @@ from tests.support.node import js_path, requires_node, run_js
 pytestmark = requires_node
 
 HOSTILE = '"><img src=x onerror=alert(1)>'
-ESCAPED = "&quot;&gt;&lt;img src=x onerror=alert(1)&gt;"
 
 
 @pytest.fixture(scope="module")
@@ -18,15 +17,40 @@ def result():
         f"""
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ escapeHtml }} = await import({js_path(WWW / "flare-html.js")});
 await import({js_path(WWW / "flare-curve-card.js")});
 await import({js_path(WWW / "flare-clear-card.js")});
-globalThis.requestAnimationFrame = () => 0;
-const element = () => new Proxy(function () {{}}, {{ get: (t, k) => (k === 'style' || k === 'dataset' ? {{}} : element()), apply: () => element() }});
-HTMLElement.prototype.attachShadow = function () {{
-  this.shadowRoot = {{ innerHTML: '', querySelector: () => element(), querySelectorAll: () => [] }};
-  return this.shadowRoot;
+
+// An element per selector, found only if the markup has it, recording
+// what the card sets on it.
+const element = () => {{
+  const el = {{ attrs: {{}}, textContent: '', style: {{}}, dataset: {{}}, clientWidth: 0 }};
+  el.setAttribute = (name, value) => {{ el.attrs[name] = String(value); }};
+  el.addEventListener = () => {{}};
+  el.getBoundingClientRect = () => ({{ left: 0, width: 0 }});
+  return el;
 }};
+HTMLElement.prototype.attachShadow = function () {{
+  const found = {{}};
+  const root = {{
+    innerHTML: '',
+    found,
+    querySelector(selector) {{
+      const marker = selector.startsWith('.') ? `class="${{selector.slice(1)}}"` : `<${{selector.split('.')[0]}}`;
+      if (!root.innerHTML.includes(marker)) return null;
+      return (found[selector] ||= element());
+    }},
+    querySelectorAll: () => [],
+  }};
+  this.shadowRoot = root;
+  return root;
+}};
+const seen = (card) => ({{
+  html: card.shadowRoot.innerHTML,
+  header: card.shadowRoot.found['ha-card']?.attrs.header,
+  error: card.shadowRoot.found['.error']?.textContent,
+  phase: card.shadowRoot.found['.phase']?.textContent,
+  name: card.shadowRoot.found['.name']?.textContent,
+}});
 
 const missing = new defined['flare-curve-card']();
 missing.setConfig({{ sensor: 'sensor.' + input.hostile }});
@@ -43,23 +67,29 @@ titled.hass = {{ states: {{ 'sensor.home_flare': {{ state: 'Day', attributes: {{
 const clear = new defined['flare-clear-card']();
 clear.setConfig({{ entity: 'button.kitchen_flare_clear', name: input.hostile }});
 
-return {{
-  missing: missing.shadowRoot.innerHTML,
-  named: named.shadowRoot.innerHTML,
-  titled: titled.shadowRoot.innerHTML,
-  clear: clear.shadowRoot.innerHTML,
-  ampersand: escapeHtml("Tom & Jerry's"),
-}};
+return {{ missing: seen(missing), named: seen(named), titled: seen(titled), clear: seen(clear) }};
 """,
         {"hostile": HOSTILE},
     )
 
 
 @pytest.mark.parametrize("card", ["missing", "named", "titled", "clear"])
-def test_a_hostile_name_is_shown_as_text(result, card):
-    assert "<img" not in result[card]
-    assert ESCAPED in result[card]
+def test_nothing_from_a_name_reaches_the_markup(result, card):
+    assert "<img" not in result[card]["html"]
 
 
-def test_ampersands_and_apostrophes_are_escaped(result):
-    assert result["ampersand"] == "Tom &amp; Jerry&#39;s"
+def test_the_missing_entity_message_is_text(result):
+    assert result["missing"]["error"] == f"Missing entity: sensor.{HOSTILE}"
+
+
+def test_the_schedules_name_is_the_header_and_its_phase_is_text(result):
+    assert result["named"]["header"] == HOSTILE
+    assert result["named"]["phase"] == HOSTILE
+
+
+def test_the_title_option_is_the_header(result):
+    assert result["titled"]["header"] == HOSTILE
+
+
+def test_the_clear_cards_name_is_text(result):
+    assert result["clear"]["name"] == HOSTILE
