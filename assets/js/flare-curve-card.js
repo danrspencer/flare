@@ -421,10 +421,12 @@ class FlareCurveCard extends HTMLElement {
 
   _renderError(message) {
     this.shadowRoot.innerHTML = `
-      <ha-card header="${this._header()}">
-        <div style="padding: 16px; color: var(--error-color, red);">${message}</div>
+      <ha-card>
+        <div class="error" style="padding: 16px; color: var(--error-color, red);"></div>
       </ha-card>
     `;
+    this.shadowRoot.querySelector('ha-card').setAttribute('header', this._header());
+    this.shadowRoot.querySelector('.error').textContent = message;
   }
 
   _eveningNote() {
@@ -569,8 +571,8 @@ class FlareCurveCard extends HTMLElement {
     const swatch = (hex) => `<span class="swatch" style="background:${hex};border:${swatchBorder};"></span>`;
 
     const nowLabel = haveNow
-      ? `Now ${fmtTime(now)} · ${this._brightnessNow} bri · ${this._kelvinNow}K${this._phaseState ? ` · ${this._phaseState}` : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
-      : this._phaseState || '';
+      ? `Now ${fmtTime(now)} · ${this._brightnessNow} bri · ${this._kelvinNow}K${this._phaseState ? ' · <span class="phase"></span>' : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
+      : '<span class="phase"></span>';
 
     const footnote = haveSamples
       ? this._eveningNote()
@@ -648,7 +650,7 @@ class FlareCurveCard extends HTMLElement {
           z-index: 2;
         }
       </style>
-      <ha-card header="${this._header()}">
+      <ha-card>
         <div class="card-content">
           <div class="now-label">${nowLabel}</div>
           ${sunLabel ? `<div class="sun-label">${sunLabel}</div>` : ''}
@@ -658,6 +660,10 @@ class FlareCurveCard extends HTMLElement {
         </div>
       </ha-card>
     `;
+    // Text from entities and options goes in as text, never as markup.
+    this.shadowRoot.querySelector('ha-card').setAttribute('header', this._header());
+    const phaseEl = this.shadowRoot.querySelector('.phase');
+    if (phaseEl) phaseEl.textContent = this._phaseState || '';
 
     this._svgEl = this.shadowRoot.querySelector('svg.chart');
     this._tooltipEl = this.shadowRoot.querySelector('.tooltip');
