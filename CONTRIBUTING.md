@@ -395,39 +395,40 @@ That skips the seven days but not the `release-blocker` check.
 
 ### Patching the current release
 
-A fix for the current release, say `v1.1.0`, can ship as `v1.1.1` straight away, with no beta
-and without whatever is in beta on `main`. Branch from the commit the release was built from
-(the `Source:` line of its release commit), cherry-pick the fix, add a `## [1.1.1]` section
-above `[1.1.0]` in the changelog, and push the branch:
+A fix for the current release, say `v1.2.0`, can ship as `v1.2.1` straight away, with no beta
+and without whatever is in beta on `main`. It goes through a release branch cut from the
+commit the release was built from (the `Source:` line of its release commit):
 
 ```bash
-git log -1 --format=%B v1.1.0
+git log -1 --format=%B v1.2.0
 ```
 
 ```bash
-git switch -c release/1.1.x <that Source: commit>
+git switch -c release/1.2.x <that Source: commit>
 ```
 
 ```bash
-git cherry-pick -x <the fix on main>
+git push origin release/1.2.x
 ```
 
-```bash
-git push origin release/1.1.x
-```
+Pushing the new branch releases nothing, since nothing has changed yet. Then raise the fix as
+a pull request into `release/1.2.x`, usually a `git cherry-pick -x` of the fix from `main`,
+with a `## [1.2.1]` section above `[1.2.0]` in the changelog. The pull request is checked as
+a patch: the `changelog` job runs `scripts/release.py check --patch`, and the release-preview
+comment names `v1.2.1`.
 
-A push to any `release/**` branch runs `.github/workflows/patch-release.yml`, as a push to
-`main` cuts a beta: the tests on that commit, then `scripts/release.py patch` builds and
-publishes the release and its docs. It refuses anything but the next patch of the current
-release, a branch not built on that release's source, and a changelog whose top section
-isn't the patch. A push that changes nothing shipped releases nothing. A later patch is
-another commit on the same branch, under a new changelog section.
+Merging it pushes to the branch, which runs `.github/workflows/patch-release.yml`: the tests,
+then `scripts/release.py patch` builds and publishes the release and its docs. It refuses
+anything but the next patch of the current release, a branch not built on that release's
+source, and a changelog whose top section isn't the patch. A change to nothing shipped needs
+no section and releases nothing. A later patch is another pull request into the same branch,
+under a new changelog section.
 
-Each branch runs its own copy of the workflow and `scripts/release.py`, from the release it
-was cut from, so a fix to either reaches an older branch only if it's cherry-picked there.
-`release/1.1.x` predates the workflow; every release from 1.2.0 carries it.
+Each branch runs its own copy of the workflows and `scripts/release.py`, from the release it
+was cut from, so a fix to them reaches an older branch only if it's cherry-picked there.
+`release/1.1.x` predates them; every release from 1.2.0 carries them.
 
-Land the fix on `main` too, with the same `[1.1.1]` section under its top one, or the next
+Land the fix on `main` too, with the same `[1.2.1]` section under its top one, or the next
 version ships without it.
 
 ### How a release is built

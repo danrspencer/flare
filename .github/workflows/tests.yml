@@ -95,4 +95,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - run: python scripts/release.py check --source HEAD
+      # A pull request into a release branch is a patch, not a beta.
+      - env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          case "$BASE" in
+            release/*) python scripts/release.py check --source HEAD --patch ;;
+            *) python scripts/release.py check --source HEAD ;;
+          esac

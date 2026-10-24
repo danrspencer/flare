@@ -1013,7 +1013,9 @@ files, and a symlink once wrote junk blueprints into the repo.
   (`patch-release.yml`, at the user's request): `release.py patch` builds vX.Y.(Z+1) only,
   from a commit descended from vX.Y.Z's source whose changelog names the patch. That
   changelog check, not the ancestry, is what keeps main's beta work out, since main descends
-  from the source too. Each branch runs its own copy of the workflow and script; a manual run
+  from the source too. Fixes go in as pull requests into the branch, which `tests.yml` and
+  `release-preview.yml` treat as patches (`--patch`) by their `release/*` base; merging one
+  cuts the patch. Each branch runs its own copy of the workflows and script; a manual run
   using main's tooling against a branch was tried first and dropped as unconventional.
 - **Nothing is committed to a branch for a release.** The manifest's
   source version is `0.0.0-dev`; `scripts/release.py` builds each release

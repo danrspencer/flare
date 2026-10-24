@@ -1,7 +1,8 @@
 name: release-preview
 
 # Comments on a pull request with the beta it would ship in if merged now,
-# and the release notes that beta would get. One comment, updated in place
+# or the patch for one into a release branch, and the release notes it
+# would get. One comment, updated in place
 # on every push or retitle.
 #
 # A pull request from a fork gets a read-only token, so it gets no comment.
@@ -41,10 +42,16 @@ jobs:
         with:
           sync-labels: true
 
-      # HEAD is the pull request merged into its base: what main would be.
-      - name: Which beta it would ship in
+      # HEAD is the pull request merged into its base: what the base would be.
+      - name: Which release it would ship in
         id: preview
-        run: python scripts/release.py preview --source HEAD
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          case "$BASE" in
+            release/*) python scripts/release.py preview --source HEAD --patch ;;
+            *) python scripts/release.py preview --source HEAD ;;
+          esac
 
       - name: Comment
         env:
@@ -73,7 +80,11 @@ jobs:
               notes=$(gh api "repos/$REPO/releases/generate-notes" \
                 -f tag_name="$TAG" -f target_commitish="$BASE" \
                 ${PREVIOUS:+-f previous_tag_name="$PREVIOUS"} -q .body)
-              echo "Merged now, this ships in **$TAG**. A pull request merged first would take that number, and this one would ship in the next."
+              case "$BASE" in
+                # A patch merged first takes this number; this one then needs a new section.
+                release/*) echo "Merged now, this ships as **$TAG**, straight to stable." ;;
+                *) echo "Merged now, this ships in **$TAG**. A pull request merged first would take that number, and this one would ship in the next." ;;
+              esac
               echo
               echo "<details><summary>Release notes for $TAG</summary>"
               echo
@@ -93,7 +104,10 @@ jobs:
               echo
               echo "</details>"
             else
-              echo "Merged now, this ships in no beta: $REASON"
+              case "$BASE" in
+                release/*) echo "Merged now, this ships in no release: $REASON" ;;
+                *) echo "Merged now, this ships in no beta: $REASON" ;;
+              esac
             fi
             case ",$LABELS," in *,repo,*)
               echo

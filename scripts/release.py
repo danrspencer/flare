@@ -31,6 +31,8 @@ part that needs credentials:
     release.py patch --source SHA        what .github/workflows/patch-release.yml runs
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
     release.py preview --source SHA      what .github/workflows/release-preview.yml comments with
+
+`check` and `preview` take `--patch` for a pull request into a release branch.
     release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
 
 Pure functions up top, git at the bottom. Standard library only, so the
@@ -429,9 +431,9 @@ def promote(repo: Repo, now: datetime, *, force: bool = False) -> Tag:
     return stable
 
 
-def patch(repo: Repo, source: str) -> Tag:
-    """The current release's next patch, built straight from `source` with
-    no beta.
+def planned_patch(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
+    """The full source SHA, our tags, and the current release's next patch,
+    which `source` would ship as with no beta.
 
     Only the current release can be patched, from a commit built on its
     source whose changelog names the patch. Main with work in beta names the
@@ -445,34 +447,40 @@ def patch(repo: Repo, source: str) -> Tag:
     current = Tag(stable, True, 0)
     tag = Tag((stable[0], stable[1], stable[2] + 1), True, 0)
 
-    base = changelog_base(repo.show(source, CHANGELOG) or "")
-    if base != tag.base_str:
-        raise Refuse(
-            f"a patch to {current.name} is {tag.name}, but the changelog's top section at "
-            f"{source[:12]} is [{base}]. Add a '## [{tag.base_str}]' section above [{current.base_str}]."
-        )
-
     built_from = repo.source_of(current)
     if not repo.is_ancestor(built_from, source):
         raise Refuse(
             f"{source[:12]} is not built on {current.name}'s source ({built_from[:12]}). Branch "
             f"from that commit and cherry-pick the fix, so nothing else ships with it."
         )
+    # Before the changelog, so a docs or test change needs no section.
     if not repo.shipped_changed(built_from, source):
         raise Skip(f"nothing under {', '.join(SHIPPED)} has changed since {current.name}")
 
+    base = changelog_base(repo.show(source, CHANGELOG) or "")
+    if base != tag.base_str:
+        raise Refuse(
+            f"a patch to {current.name} is {tag.name}, but the changelog's top section at "
+            f"{source[:12]} is [{base}]. Add a '## [{tag.base_str}]' section above [{current.base_str}]."
+        )
+    return source, tags, tag
+
+
+def patch(repo: Repo, source: str) -> Tag:
+    source, _, tag = planned_patch(repo, source)
     repo.build(tag, source)
     return tag
 
 
-def preview(repo: Repo, source: str) -> tuple[Tag | None, Tag | None, str]:
-    """The beta `source` would ship as if pushed to main now, the tag its
-    notes would count from, and, when it would ship as nothing, why."""
+def preview(repo: Repo, source: str, *, for_patch: bool = False) -> tuple[Tag | None, Tag | None, str]:
+    """The beta `source` would ship as if pushed to main now (or the patch,
+    pushed to a release branch), the tag its notes would count from, and,
+    when it would ship as nothing, why."""
     try:
-        _, tags, beta = planned_beta(repo, source)
+        _, tags, tag = (planned_patch if for_patch else planned_beta)(repo, source)
     except (Skip, Refuse) as reason:
         return None, None, str(reason)
-    return beta, notes_start(beta, tags), ""
+    return tag, notes_start(tag, tags), ""
 
 
 def _notes_start_name(repo: Repo, tag: Tag) -> str:
@@ -499,6 +507,7 @@ def main(argv: list[str] | None = None) -> int:
 
     chk = sub.add_parser("check", help="fail if a commit changes a version that is already out")
     chk.add_argument("--source", required=True, help="the commit to check")
+    chk.add_argument("--patch", action="store_true", help="check it as a patch, for a release branch")
 
     prom = sub.add_parser("promote", help="build a stable release from the beta that has soaked")
     prom.add_argument("--force", action="store_true", help="ignore the soak period")
@@ -508,6 +517,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pre = sub.add_parser("preview", help="the beta a commit would ship as, for a pull request comment")
     pre.add_argument("--source", required=True, help="the commit to preview")
+    pre.add_argument("--patch", action="store_true", help="preview it as a patch, for a release branch")
 
     docs = sub.add_parser("docs-source", help="the commit to build a release's docs from")
     docs.add_argument("--head", required=True, help="the newest commit on main")
@@ -518,10 +528,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "check":
-            _, _, beta = check(repo, args.source)
-            print(f"OK: this would ship as {beta.name}")
+            _, _, tag = (planned_patch if args.patch else check)(repo, args.source)
+            print(f"OK: this would ship as {tag.name}")
         elif args.command == "preview":
-            tag, previous, reason = preview(repo, args.source)
+            tag, previous, reason = preview(repo, args.source, for_patch=args.patch)
             _emit(
                 tag=tag.name if tag else "", previous=previous.name if previous else "", reason=reason
             )
