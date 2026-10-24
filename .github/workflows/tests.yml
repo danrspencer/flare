@@ -3,25 +3,19 @@ name: tests
 # Deliberately not on `push`: for a branch with a pull request that ran
 # the suite twice per push. Pull requests are tested here; a push to main
 # is tested by cut-beta.yml, which calls this workflow on the commit it
-# is about to release. A push to a branch with no pull request (a direct
+# is about to release, and patch-release.yml does the same for a push to
+# a release branch. A push to a branch with no pull request (a direct
 # commit to dev, say) is not tested until it reaches main, where a failing
 # suite stops the beta being cut.
 on:
   pull_request:
   workflow_call:
-    inputs:
-      ref:
-        description: "The commit to test (default: the caller's)"
-        type: string
-        default: ""
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
       - uses: actions/setup-python@v5
         with:
           # Matches pyproject.toml's requires-python floor - tracks
@@ -101,4 +95,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
-      - run: python scripts/release.py check --source HEAD
+      # A pull request into a release branch is a patch, not a beta.
+      - env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          case "$BASE" in
+            release/*) python scripts/release.py check --source HEAD --patch ;;
+            *) python scripts/release.py check --source HEAD ;;
+          esac

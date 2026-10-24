@@ -584,6 +584,38 @@ def test_a_patch_with_nothing_shipped_changed_is_skipped(project):
         release.patch(project.repo, source)
 
 
+def test_a_docs_change_on_a_release_branch_needs_no_changelog_section(project):
+    released(project, "0.17.0")
+    project.repo.git("switch", "-q", "-c", "patch", project.repo.source_of(Tag.parse("v0.17.0")))
+    source = project.edit("docs/page.md", "hello", "docs only")
+
+    with pytest.raises(Skip):
+        release.patch(project.repo, source)
+
+
+def test_a_pull_request_into_a_release_branch_is_checked_as_a_patch(project, monkeypatch, capsys):
+    """Judged as a beta, a patch below main's betas reads as a downgrade."""
+    monkeypatch.setattr(release, "REPO_ROOT", project.root)
+    released(project, "0.17.0")
+    project.target("0.18.0")
+    release.cut_beta(project.repo, project.edit("custom_components/flare/later.py", "x = 1", "beta"))
+    source = patch_branch(project, "0.17.1")
+
+    assert release.main(["check", "--source", source]) == 1
+    capsys.readouterr()
+    assert release.main(["check", "--source", source, "--patch"]) == 0
+    assert "v0.17.1" in capsys.readouterr().out
+
+
+def test_a_preview_of_a_patch_names_it_and_counts_its_notes_from_the_release(project):
+    released(project, "0.17.0")
+    source = patch_branch(project, "0.17.1")
+
+    tag, previous, reason = release.preview(project.repo, source, for_patch=True)
+
+    assert (tag.name, previous.name, reason) == ("v0.17.1", "v0.17.0", "")
+
+
 def test_there_is_nothing_to_patch_before_a_release(project):
     project.target("0.16.1")
 
@@ -628,6 +660,10 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
     preview = (REPO_ROOT / ".github" / "workflows" / "release-preview.yml").read_text()
     assert "scripts/release.py preview --source" in preview
     patch = (REPO_ROOT / ".github" / "workflows" / "patch-release.yml").read_text()
-    assert "scripts/release.py patch --source" in patch
+    assert 'scripts/release.py patch --source "$GITHUB_SHA"' in patch
+    assert 'branches: ["release/**"]' in patch, "a push to a release branch patches"
+    tests = (REPO_ROOT / ".github" / "workflows" / "tests.yml").read_text()
+    assert "release/*) python scripts/release.py check --source HEAD --patch" in tests
+    assert "release/*) python scripts/release.py preview --source HEAD --patch" in preview
     for workflow in (cut, promote, patch):
         assert "steps.cut.outputs.previous" in workflow
