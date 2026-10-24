@@ -18,7 +18,9 @@ await import({js_path(WWW / "flare-clear-card.js")});
 const Card = defined['flare-clear-card'];
 HTMLElement.prototype.attachShadow = function () {{
   const handlers = {{}};
-  this.shadowRoot = {{ innerHTML: '', querySelector: () => ({{ addEventListener: (type, fn) => (handlers[type] = fn) }}) }};
+  const name = {{ textContent: '' }};
+  this.shadowRoot = {{ innerHTML: '', querySelector: (s) => (s === '.name' ? name : {{ addEventListener: (type, fn) => (handlers[type] = fn) }}) }};
+  this._name = name;
   this._handlers = handlers;
   return this.shadowRoot;
 }};
@@ -36,7 +38,7 @@ let refused = null;
 try {{ new Card().setConfig({{}}); }} catch (err) {{ refused = err.message; }}
 let refusedEmpty = null;
 try {{ new Card().setConfig({{ entity: [] }}); }} catch (err) {{ refusedEmpty = err.message; }}
-return {{ calls, allCalls, html: card.shadowRoot.innerHTML, grid: card.getGridOptions(), refused, refusedEmpty }};
+return {{ calls, allCalls, html: card.shadowRoot.innerHTML, name: card._name.textContent, grid: card.getGridOptions(), refused, refusedEmpty }};
 """,
     )
 
@@ -47,7 +49,7 @@ def test_pressing_it_presses_the_zones_clear_button(result):
 
 def test_it_reads_clear_beside_its_icon(result):
     assert "mdi:backup-restore" in result["html"]
-    assert ">Clear<" in result["html"]
+    assert result["name"] == "Clear"
 
 
 def test_it_takes_a_quarter_of_the_row(result):
