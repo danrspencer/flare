@@ -2,11 +2,14 @@
 
     mise run sandbox         start it, setting it up on first run
     mise run sandbox:reset   start again from a brand-new house
+    mise run sandbox:hacs    a separate house with HACS and no FLARE
 
 mise installs Home Assistant into .venv-sandbox/ first and sets
 SANDBOX_PORT. This runs it from .sandbox/, with FLARE linked in from this
 checkout. On first run onboarding is completed through its own API, so the
 browser lands on a house with no FLARE in it, ready for Add Integration.
+With --hacs it runs from .sandbox-hacs/ instead, with HACS copied in from
+.venv-sandbox/hacs/ and FLARE left for HACS to install.
 See CONTRIBUTING.md ("A sandbox Home Assistant").
 """
 
@@ -28,33 +31,33 @@ from pathlib import Path
 PORT = int(os.environ.get("SANDBOX_PORT", "0"))
 URL = f"http://127.0.0.1:{PORT}"
 CLIENT_ID = f"{URL}/"
-# homeassistant.const.RESTART_EXIT_CODE
-RESTART_EXIT_CODE = 100
 OWNER = {"name": "Sandbox", "username": "sandbox", "password": "sandbox", "language": "en-GB"}
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "sandbox"
-CONFIG = ROOT / ".sandbox"
 VENV = ROOT / ".venv-sandbox"
 HASS = VENV / "bin" / "hass"
-LINKS = {
-    "flare": ROOT / "custom_components" / "flare",
-    "sandbox_house": SOURCE / "custom_components" / "sandbox_house",
-}
+HACS = VENV / "hacs" / "hacs"
+HOUSE = SOURCE / "custom_components" / "sandbox_house"
+FLARE = ROOT / "custom_components" / "flare"
+# The HACS house has a config dir of its own, since HACS installs FLARE
+# into custom_components/flare, which in the other links to this checkout.
+CONFIG = ROOT / ".sandbox"
+HACS_CONFIG = ROOT / ".sandbox-hacs"
 
 
-def prepare(reset: bool) -> None:
-    if reset and CONFIG.exists():
-        shutil.rmtree(CONFIG)
-    CONFIG.mkdir(exist_ok=True)
-    shutil.copyfile(SOURCE / "configuration.yaml", CONFIG / "configuration.yaml")
+def prepare(config: Path, reset: bool, hacs: bool) -> None:
+    if reset and config.exists():
+        shutil.rmtree(config)
+    config.mkdir(exist_ok=True)
+    shutil.copyfile(SOURCE / "configuration.yaml", config / "configuration.yaml")
     for name, empty in (("automations.yaml", "[]\n"), ("scenes.yaml", ""), ("scripts.yaml", "")):
-        if not (CONFIG / name).exists():
-            (CONFIG / name).write_text(empty)
+        if not (config / name).exists():
+            (config / name).write_text(empty)
     # The port lives in HA's own store, not YAML: a port set in YAML is a
     # trial that HA asks to confirm, and reverts five minutes later. This is
     # the store a fresh SANDBOX_HA_VERSION writes, with the port changed.
-    http = CONFIG / ".storage" / "http"
+    http = config / ".storage" / "http"
     if not http.exists():
         http.parent.mkdir(exist_ok=True)
         stable = {
@@ -74,13 +77,18 @@ def prepare(reset: bool) -> None:
             "key": "http",
             "data": {"stable": stable, "pending": None, "yaml_migration_done": True},
         }))
-    components = CONFIG / "custom_components"
+    components = config / "custom_components"
     components.mkdir(exist_ok=True)
-    for name, target in LINKS.items():
+    links = {"sandbox_house": HOUSE} if hacs else {"flare": FLARE, "sandbox_house": HOUSE}
+    for name, target in links.items():
         link = components / name
         if link.is_symlink() or link.exists():
             link.unlink()
         link.symlink_to(target)
+    # Copied, not linked: HACS updates itself in place.
+    if hacs:
+        shutil.rmtree(components / "hacs", ignore_errors=True)
+        shutil.copytree(HACS, components / "hacs")
 
 
 def request(path: str, data: dict | None = None, *, token: str | None = None, form: bool = False):
@@ -135,24 +143,28 @@ def onboard(hass: subprocess.Popen) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--reset", action="store_true", help="throw away .sandbox/ and start a brand-new house")
+    parser.add_argument("--reset", action="store_true", help="throw away the house's state and start a brand-new one")
+    parser.add_argument("--hacs", action="store_true", help="run a separate house with HACS and no FLARE")
     args = parser.parse_args()
-    if not PORT or not HASS.exists():
-        sys.exit("Run the sandbox through mise: mise run sandbox")
+    if not PORT or not HASS.exists() or (args.hacs and not HACS.exists()):
+        sys.exit("Run the sandbox through mise: mise run sandbox, or mise run sandbox:hacs")
 
-    prepare(args.reset)
-    hass = subprocess.Popen([HASS, "-c", CONFIG])
+    config = HACS_CONFIG if args.hacs else CONFIG
+    prepare(config, args.reset, args.hacs)
+    hass = subprocess.Popen([HASS, "-c", config])
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         onboard(hass)
         if hass.poll() is not None:
             sys.exit(hass.returncode)
         print(f"Sandbox ready at {URL}", flush=True)
-        # Restarting from HA's UI exits with this, for whatever started it
-        # to start it again.
-        while hass.wait() == RESTART_EXIT_CODE:
-            print("Restarting Home Assistant ...", flush=True)
-            hass = subprocess.Popen([HASS, "-c", CONFIG])
+        # Whatever stops Home Assistant, start it again: only stopping this
+        # (Ctrl-C, or the mise task being killed) ends the sandbox.
+        while True:
+            code = hass.wait()
+            print(f"Home Assistant stopped (exit code {code}), starting it again ...", flush=True)
+            time.sleep(1)
+            hass = subprocess.Popen([HASS, "-c", config])
     except KeyboardInterrupt:
         pass
     finally:

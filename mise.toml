@@ -8,6 +8,8 @@ _.python.venv = { path = ".venv", create = true }
 # entry repeats it. It runs hacs.json's minimum Home Assistant unless
 # SANDBOX_HA_VERSION is set: SANDBOX_HA_VERSION=2026.11.0 mise run sandbox.
 SANDBOX_PORT = "8124"
+# The HACS release `mise run sandbox:hacs` installs.
+SANDBOX_HACS_VERSION = "2.0.5"
 
 [tasks.install]
 description = "Install test dependencies"
@@ -65,6 +67,33 @@ run = "python scripts/sandbox.py"
 description = "Run the sandbox from a brand-new house, throwing away its state"
 depends = ["sandbox:install"]
 run = "python scripts/sandbox.py --reset"
+
+[tasks."sandbox:hacs:install"]
+description = "Download HACS into .venv-sandbox/hacs/ and install its requirements"
+depends = ["sandbox:install"]
+run = """
+if [ "$(cat .venv-sandbox/hacs/installed 2>/dev/null)" = "$SANDBOX_HACS_VERSION" ]; then
+  exit 0
+fi
+echo "Installing HACS $SANDBOX_HACS_VERSION into .venv-sandbox/hacs/"
+rm -rf .venv-sandbox/hacs
+mkdir -p .venv-sandbox/hacs
+curl -fsSL -o .venv-sandbox/hacs.zip "https://github.com/hacs/integration/releases/download/$SANDBOX_HACS_VERSION/hacs.zip"
+unzip -q .venv-sandbox/hacs.zip -d .venv-sandbox/hacs/hacs
+rm .venv-sandbox/hacs.zip
+uv pip install -q -p .venv-sandbox $(.venv-sandbox/bin/python -c 'import json; print(" ".join(json.load(open(".venv-sandbox/hacs/hacs/manifest.json"))["requirements"]))')
+echo "$SANDBOX_HACS_VERSION" > .venv-sandbox/hacs/installed
+"""
+
+[tasks."sandbox:hacs"]
+description = "Run a separate sandbox with HACS and no FLARE, to install FLARE as a user would"
+depends = ["sandbox:hacs:install"]
+run = "python scripts/sandbox.py --hacs"
+
+[tasks."sandbox:hacs:reset"]
+description = "Run the HACS sandbox from a brand-new house, throwing away its state"
+depends = ["sandbox:hacs:install"]
+run = "python scripts/sandbox.py --hacs --reset"
 
 [tasks."sandbox:record:install"]
 description = "Install Playwright, its Chromium and ffmpeg into .venv-record/ for recording the sandbox"
