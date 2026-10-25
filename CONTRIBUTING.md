@@ -157,9 +157,29 @@ mise run sandbox:reset
   `sandbox/custom_components/sandbox_house/`.
 - Home Assistant runs from `.sandbox/`, rebuilt from `sandbox/` on every start (FLARE and the fake house are
   symlinked in). Restart it to pick up a change to FLARE's Python, from the terminal or from Home Assistant's
-  own Restart.
+  own Restart. Whatever stops Home Assistant, the sandbox starts it again; only stopping `mise run sandbox`
+  itself (Ctrl-C) ends it.
 - The owner account is `sandbox` / `sandbox`, for when you need to log in from another device.
-- FLARE is linked in, not installed through HACS, so HACS isn't part of what the sandbox tests.
+- FLARE is linked in, not installed through HACS, so HACS isn't part of what the sandbox tests. For that, use
+  the HACS sandbox below.
+
+### Installing through HACS
+
+To try installing FLARE as a user does, from the HACS store, run:
+
+```bash
+mise run sandbox:hacs
+```
+
+It's a second house, kept in `.sandbox-hacs/`, with HACS installed and no FLARE at all. Add HACS under
+**Settings → Devices & services** (it signs in to GitHub with a device code), then find FLARE in HACS and
+download a release. To start again from a brand-new house, run `mise run sandbox:hacs:reset`.
+
+- It installs whatever HACS downloads from GitHub, not this checkout, so a change has to be pushed (and
+  released, for HACS to offer it) before it shows up here.
+- The HACS release is `SANDBOX_HACS_VERSION` in `mise.toml`'s `[env]`. HACS is copied in fresh on every
+  start, so updating it from its own UI lasts only until the next start.
+- It uses the same port as the other sandbox, so run one at a time.
 
 ### Recording walkthroughs
 

@@ -1300,7 +1300,10 @@ test module never imports another.
   `SANDBOX_PORT` running this checkout's FLARE over a fake house
   (`sandbox/`), already onboarded. It's for trying setup and the UI as a
   new user would before touching the live instance, not a test layer.
-  `--reset` gives a brand-new house. `mise run sandbox:record`
+  `--reset` gives a brand-new house. `mise run sandbox:hacs` is a second
+  house (`.sandbox-hacs/`) with HACS and no FLARE, for installing from the
+  store as a user does; it never links this checkout, since HACS would
+  write through the link into it. `mise run sandbox:record`
   (`scripts/sandbox_record.py`, Playwright) records walkthrough videos
   of it, and writes the published copies once every scene has recorded:
   the docs' videos (`docs/assets/video/`) and the README's GIF
