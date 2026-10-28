@@ -79,7 +79,7 @@ customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrate
 class FlareLightsViewStrategy extends HTMLElement {
   static async generate(config, hass) {
     const totals = flareTotals(hass);
-    if (!totals.claims) {
+    if (!totals.controlled) {
       return notice(
         'FLARE\'s **Settings** entry isn\'t set up, so nothing is tracking ' +
           'which lights FLARE controls. Add FLARE under **Settings → Devices ' +
@@ -146,7 +146,7 @@ class FlareDashboardStrategy extends HTMLElement {
       path: slug,
       strategy: { type: 'custom:flare-schedule', sensor: slug },
     }));
-    const lights = flareTotals(hass).claims
+    const lights = flareTotals(hass).controlled
       ? [{ title: 'Lights', path: 'lights', strategy: { type: 'custom:flare-lights' } }]
       : [];
     const views = [...schedules, ...lights];

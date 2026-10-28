@@ -15,51 +15,38 @@ def _light(name, state="on", **attributes):
     return {"state": state, "attributes": {"friendly_name": name, **attributes}}
 
 
-def _asked(**target):
-    return {"observed": None, "latest": {"context_id": "c", "target": target}}
+KITCHEN = ["automation.kitchen"]
+ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
 
-def _status(light, status):
-    """A light's status sensor: its state, and the entity it's for."""
-    return {"state": status, "attributes": {"light": light}}
+def _status(light, status, *, rooms, claimed=True, asked=None):
+    """A light's status sensor: its state, and what it says of its light."""
+    return {"state": status, "attributes": {"light": light, "rooms": rooms, "claimed": claimed, "asked": asked}}
 
 
 # Upstairs has the Bedroom; Downstairs the Kitchen; the Study is on no floor.
 # The Bed Lamp is placed through its device; the Hall has no room light.
-CLAIMS = {
-    "attributes": {
-        "claims": {
-            "light.k1": _asked(brightness=200, color_temp_kelvin=3000),
-            "light.k2": _asked(state="off"),
-            "light.k3": _asked(brightness=200, color_temp_kelvin=3000),
-            "light.bed_lamp": {"observed": {"context_id": "c", "target": None}, "latest": None},
-        },
-        "rooms": {
-            "automation.kitchen": {"lights": ["light.k1", "light.k2", "light.k3"]},
-            "automation.bedroom": {"lights": ["light.bed_lamp", "light.bed_ceiling"]},
-            "automation.study": {"lights": ["light.study"]},
-        },
-        "statuses": {
-            "light.k1": "controlled",
-            "light.k2": "controlled",
-            "light.k3": "overridden",
-            "light.bed_lamp": "overridden",
-        },
-    }
+STATUSES = {
+    "k1": _status("light.k1", "controlled", rooms=KITCHEN, asked=ASKED),
+    "k2": _status("light.k2", "mismatched", rooms=KITCHEN, asked={"state": "off"}),
+    "k3": _status("light.k3", "overridden", rooms=KITCHEN, asked=ASKED),
+    # Its room let it go, so it isn't a room light any more.
+    "k4": _status("light.k4", "untracked", rooms=[], claimed=False),
+    # Marked as someone else's: claimed, but nothing asked.
+    "bed_lamp": _status("light.bed_lamp", "overridden", rooms=["automation.bedroom"]),
+    "bed_ceiling": _status("light.bed_ceiling", "untracked", rooms=["automation.bedroom"], claimed=False),
+    "study": _status("light.study", "untracked", rooms=["automation.study"], claimed=False),
 }
 HOUSE = {
     "states": {
-        "sensor.flare_claims": CLAIMS,
         "light.bed_lamp": _light("Bed Lamp"),
         "light.bed_ceiling": _light("Bed Ceiling"),
         "light.k1": _light("Kitchen 1", brightness=200, color_temp_kelvin=3000),
         "light.k2": _light("Kitchen 2", "off"),
         "light.k3": _light("Kitchen 3", brightness=51, rgb_color=[255, 0, 0]),
-        "sensor.k1_flare_status": _status("light.k1", "controlled"),
-        "sensor.k3_flare_status": _status("light.k3", "overridden"),
-        # The claims sensor counts a mismatched light as controlled.
-        "sensor.k2_flare_status": _status("light.k2", "mismatched"),
+        "light.k4": _light("Kitchen 4"),
         "light.study": _light("Study"),
+        **{f"sensor.{light}_flare_status": state for light, state in STATUSES.items()},
     },
     "floors": {
         "upstairs": {"floor_id": "upstairs", "name": "Upstairs", "level": 1, "icon": "mdi:home-floor-1"},
@@ -81,11 +68,12 @@ HOUSE = {
         "light.k3": {"entity_id": "light.k3", "area_id": "kitchen"},
         "light.study": {"entity_id": "light.study", "area_id": "study"},
         "light.hall": {"entity_id": "light.hall", "area_id": "hall"},
+        "light.k4": {"entity_id": "light.k4", "area_id": "kitchen"},
         **{
             f"sensor.{light}_flare_status": {
                 "entity_id": f"sensor.{light}_flare_status", "platform": "flare", "translation_key": "status"
             }
-            for light in ("k1", "k2", "k3")
+            for light in STATUSES
         },
     },
     "config": {"components": ["logbook"]},
@@ -100,7 +88,7 @@ const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
 const {{ areaSummary, areaLights, claimedIn, describe, detail }} = await import({js_path(WWW / "flare-area-lights-card.js")});
-const empty = {{ ...input, states: {{ ...input.states, 'sensor.flare_claims': {{ attributes: {{}} }} }} }};
+const empty = {{ ...input, entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => e.translation_key !== 'status')) }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
   view: await defined['ll-strategy-view-flare-lights'].generate({{}}, input),
@@ -179,16 +167,15 @@ def test_an_areas_row_is_its_heading_then_its_lights(view):
 
 def test_an_areas_counts_agree_with_its_lights(result):
     """A light counts in its own area, or its device's, by the status its list
-    shows: Kitchen 2's sensor says mismatched, though the claims sensor would
-    count it as controlled."""
+    shows: Kitchen 2 is mismatched, so it's in neither."""
     assert result["kitchen"] == {"controlled": 1, "overridden": 1}
     assert result["bedroom"] == {"controlled": 0, "overridden": 1}
     assert result["hall"] == {"controlled": 0, "overridden": 0}
 
 
 def test_an_areas_lights_are_listed_overridden_first(result):
-    """Status from each light's status sensor, else the claims sensor's,
-    else untracked."""
+    """From each light's status sensor. Kitchen 4's room let it go, so it
+    isn't listed."""
     assert [(light["name"], light["status"], light["claimed"]) for light in result["kitchenLights"]] == [
         ("Kitchen 3", "overridden", True),
         ("Kitchen 2", "mismatched", True),

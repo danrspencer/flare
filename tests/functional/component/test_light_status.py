@@ -2,6 +2,7 @@
 claims_check says, kept through a rename, gone with the light."""
 
 from datetime import timedelta
+from unittest.mock import ANY
 
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -9,6 +10,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
+from custom_components.flare.diagnostics import async_get_config_entry_diagnostics
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 
 ROOM = "automation.kitchen"
@@ -113,7 +115,6 @@ async def test_a_light_changed_by_hand_reads_overridden_once_the_grace_has_passe
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert hass.states.get("sensor.lamp_flare_status").state == "overridden"
-    assert hass.states.get("sensor.flare_claims").attributes["statuses"][lamp] == "overridden"
 
 
 async def test_it_is_unavailable_while_its_light_is(stub_entry_setup, hass: HomeAssistant):
@@ -187,3 +188,42 @@ async def test_it_follows_a_light_flare_holds_nothing_on(stub_entry_setup, hass:
     await hass.async_block_till_done()
 
     assert hass.states.get("sensor.spot_flare_status").state == "off"
+
+
+async def test_the_sensor_that_held_the_claims_before_is_removed(stub_entry_setup, hass: HomeAssistant):
+    entry = MockConfigEntry(
+        domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, unique_id=f"{DOMAIN}_tracking", version=3, minor_version=2
+    )
+    entry.add_to_hass(hass)
+    er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, f"{entry.entry_id}_claims", suggested_object_id="flare_claims", config_entry=entry
+    )
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert er.async_get(hass).async_get("sensor.flare_claims") is None
+
+
+async def test_it_says_what_flare_last_asked_for_and_whether_flare_holds_it(stub_entry_setup, hass: HomeAssistant):
+    await _set_up(hass)
+    lamp, spot = _bulb(hass, "lamp"), _bulb(hass, "spot")
+
+    await _apply(hass, [lamp], room_entities=[lamp, spot])
+
+    lamp_state = hass.states.get("sensor.lamp_flare_status")
+    assert lamp_state.attributes["asked"] == {"brightness": 200, "color_temp_kelvin": 3000}
+    assert lamp_state.attributes["claimed"] is True
+    spot_state = hass.states.get("sensor.spot_flare_status")
+    assert (spot_state.attributes["asked"], spot_state.attributes["claimed"]) == (None, False)
+
+
+async def test_diagnostics_has_every_claim_and_room(stub_entry_setup, hass: HomeAssistant):
+    entry = await _set_up(hass)
+    lamp = _bulb(hass, "lamp")
+    await _apply(hass, [lamp])
+
+    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert set(diagnostics["claims"]) == {lamp}
+    assert diagnostics["rooms"] == {ROOM: {"lights": [lamp], "last_seen": ANY}}

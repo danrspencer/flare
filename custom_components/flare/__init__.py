@@ -151,6 +151,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """The claims, the services and the area ticks."""
     registry = ClaimRegistry(hass)
+    await registry.async_load()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
 
     # Pruning catches entities deleted outright, which the listener never
@@ -184,6 +185,11 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
     await hass.config_entries.async_forward_entry_setups(entry, SETTINGS_PLATFORMS)
+    # Once the claim events are listening, so these are announced: rooms whose
+    # lights went dark while HA wasn't watching won't change again to be
+    # released, and claims from long ago are stale.
+    registry.release_settled_dark_rooms()
+    await registry.async_prune_stale()
     entry.async_on_unload(_tick_areas(hass, scheduler))
 
 

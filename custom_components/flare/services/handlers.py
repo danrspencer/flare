@@ -547,9 +547,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         return {"results": results}
 
     async def claims_record(call: ServiceCall) -> ServiceResponse:
-        """flare.claims_record - call it before your write. Returns only the
-        entities actually recorded, which may be fewer if the claims sensor
-        isn't up yet."""
+        """flare.claims_record - call it before your write. Returns the
+        entities recorded."""
         entities = call.data["entities"]
         targets = call.data.get("targets", {})
         live_context_before_write = {

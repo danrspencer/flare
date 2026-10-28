@@ -34,8 +34,8 @@ custom_components/flare/
         claims.py
                          the claims: what context.id and target this
                          integration last wrote each light with, and each
-                         room's lights. They live on the claims sensor and
-                         are restored across a restart
+                         room's lights, saved in HA's storage
+                         (.storage/flare.claims) across a restart
         matching.py      what a light shows, against what was asked for
         ticker.py        fires each area's tick in turn, a gap apart
     flares/        flares: a light over each room's automation (the entity

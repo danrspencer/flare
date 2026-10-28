@@ -8,9 +8,10 @@ tracks its writes by naming a room (`room_id`, usually its automation)
 and the room's lights; with no room, nothing is tracked. A room's claims
 are released once none of its claimed lights is on.
 
-Claims and rooms live on the claims sensor, a RestoreEntity, so they
-survive restarts. A restart gives every light a new context, so
-restored claims are matched by value (see classify()).
+Claims and rooms live here, saved to HA's storage (`.storage/flare.claims`)
+moments after each change, so they survive restarts. A restart gives every
+light a new context, so restored claims are matched by value (see
+classify()). What they say is shown through each light's status sensor.
 
 Two claims per light
 --------------------
@@ -44,6 +45,7 @@ from typing import Optional, Protocol
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
@@ -64,31 +66,36 @@ STALE_RECORD_MAX_AGE_DAYS = 1
 
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
-# Fired whenever the claims change, so the count sensors refresh.
+# Fired whenever the claims change, so the sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
 
+STORAGE_KEY = "flare.claims"
+STORAGE_VERSION = 1
+# Seconds a change waits to be saved, so a room's writes are saved together.
+SAVE_DELAY = 5
 
-class ClaimStore(Protocol):
-    """The claims sensor, as ClaimRegistry needs it. Structural, to avoid
-    importing sensor.py circularly."""
 
-    claims: dict[str, _WriteRecord]
-    # Room key -> {"lights": [...], "last_seen": iso}.
-    rooms: dict[str, dict]
+class ClaimListener(Protocol):
+    """What announces claim changes (sensor.py's ClaimEvents). Structural,
+    to avoid importing sensor.py circularly."""
 
     def async_claims_changed(self) -> None:
-        """Publish the mutated claims as the entity's own state."""
+        """The claims changed."""
 
     def async_announce_released(self, room: str | None, entity_ids: list[str]) -> None:
         """Say the room let these lights go."""
 
 
 class ClaimRegistry:
-    """Reads and writes the claims on the claims sensor, which holds them."""
+    """Every claim and room, and the rules for keeping them."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         self._hass = hass
-        self._store: ClaimStore | None = None
+        self.claims: dict[str, _WriteRecord] = {}
+        # Room key -> {"lights": [...], "last_seen": iso}.
+        self.rooms: dict[str, dict] = {}
+        self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+        self._listener: ClaimListener | None = None
         # Where each light last came back online, tracked or not: its claim
         # was dropped when it went, so the next write may come after.
         self._reconnects: dict[str, datetime] = {}
@@ -97,13 +104,23 @@ class ClaimRegistry:
         """When the light last came back online this run, or None."""
         return self._reconnects.get(entity_id)
 
+    async def async_load(self) -> None:
+        """The claims and rooms from before the restart."""
+        data = await self._storage.async_load() or {}
+        self.claims = dict(data.get("claims") or {})
+        self.rooms = dict(data.get("rooms") or {})
+
     @callback
-    def register(self, store: ClaimStore) -> None:
-        self._store = store
+    def _save(self) -> None:
+        self._storage.async_delay_save(lambda: {"claims": self.claims, "rooms": self.rooms}, SAVE_DELAY)
+
+    @callback
+    def register(self, listener: ClaimListener) -> None:
+        self._listener = listener
 
     @callback
     def unregister(self) -> None:
-        self._store = None
+        self._listener = None
 
     def room_key(self, room_id: str | None) -> str | None:
         """A room's key: an entity's registry id, which survives a rename, else
@@ -127,23 +144,21 @@ class ClaimRegistry:
 
     def record(self, entity_id: str) -> _WriteRecord | None:
         """This light's claims, or None if it has none."""
-        return self._store.claims.get(entity_id) if self._store else None
+        return self.claims.get(entity_id)
 
     def all_records(self) -> dict[str, _WriteRecord]:
-        return dict(self._store.claims) if self._store else {}
+        return dict(self.claims)
 
     def room_keys(self) -> list[str]:
-        return list(self._store.rooms) if self._store else []
+        return list(self.rooms)
 
     def room_lights(self, key: str) -> list[str]:
         """Every light a room has named."""
-        return list(self._store.rooms.get(key, {}).get("lights", ())) if self._store else []
+        return list(self.rooms.get(key, {}).get("lights", ()))
 
     def rooms_of(self, entity_id: str) -> list[str]:
         """Every room this light is one of, by key, sorted."""
-        if self._store is None:
-            return []
-        return sorted(key for key, room in self._store.rooms.items() if entity_id in room.get("lights", ()))
+        return sorted(key for key, room in self.rooms.items() if entity_id in room.get("lights", ()))
 
     @callback
     def note_mismatch(self, entity_id: str) -> bool:
@@ -158,22 +173,21 @@ class ClaimRegistry:
         )
         if disagrees(status) and not record.get("mismatch_since"):
             record["mismatch_since"] = dt_util.utcnow().isoformat()
-            return True
-        if not disagrees(status) and record.pop("mismatch_since", None) is not None:
-            return True
-        return False
+        elif disagrees(status) or record.pop("mismatch_since", None) is None:
+            return False
+        self._save()
+        return True
 
     @callback
     def note_mismatches(self) -> bool:
         """note_mismatch for every claimed light. True if any changed."""
-        if self._store is None:
-            return False
-        return any([self.note_mismatch(entity_id) for entity_id in list(self._store.claims)])
+        return any([self.note_mismatch(entity_id) for entity_id in list(self.claims)])
 
     @callback
     def _notify(self) -> None:
-        if self._store is not None:
-            self._store.async_claims_changed()
+        self._save()
+        if self._listener is not None:
+            self._listener.async_claims_changed()
         async_dispatcher_send(self._hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
@@ -181,28 +195,26 @@ class ClaimRegistry:
         """Remembers a room's lights: as its latest write named them, plus
         what it just wrote and any light it still holds a claim on, so every
         claim it made can be released with it."""
-        if self._store is None or key is None:
+        if key is None:
             return
-        held = [e for e in self._store.rooms.get(key, {}).get("lights", ()) if e in self._store.claims]
+        held = [e for e in self.rooms.get(key, {}).get("lights", ()) if e in self.claims]
         lights = set(room_entities or ()) | set(written) | set(held)
-        self._store.rooms[key] = {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}
+        self.rooms[key] = {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}
 
     async def async_clear(self, entity_ids: list[str], *, announce: bool = False) -> list[str]:
         """Discards claims - behind claims_clear, the escape hatch for a light
         stuck "overridden", and the Clear button, which announces it, once per
         room. Returns what was cleared."""
-        if self._store is None:
-            return []
         rooms = {entity_id: self.rooms_of(entity_id) for entity_id in entity_ids}
         # A list, not any(...pop...): any() short-circuits and would stop popping.
-        cleared = [entity_id for entity_id in entity_ids if self._store.claims.pop(entity_id, None) is not None]
+        cleared = [entity_id for entity_id in entity_ids if self.claims.pop(entity_id, None) is not None]
         if cleared and announce:
             by_room: dict[str | None, list[str]] = {}
             for entity_id in cleared:
                 # Under its first room, so each light is announced once.
                 by_room.setdefault(next(iter(rooms[entity_id]), None), []).append(entity_id)
             for key, lights in sorted(by_room.items(), key=lambda item: item[0] or ""):
-                self._store.async_announce_released(key, sorted(lights))
+                self._announce_released(key, sorted(lights))
         if cleared:
             self._notify()
         return cleared
@@ -212,14 +224,14 @@ class ClaimRegistry:
         is an `observed` nothing will ever match, by context or by value, so
         the light reads "overridden" until its room goes dark, its claim is
         cleared, or a forced write takes it back."""
-        if self._store is None or not entity_ids:
+        if not entity_ids:
             return
         key = self.room_key(room_id)
         now = dt_util.utcnow().isoformat()
         # Someone said so, so there's nothing to wait for.
         overridden_since = (dt_util.utcnow() - MISMATCH_GRACE).isoformat()
         for entity_id in entity_ids:
-            self._store.claims[entity_id] = {
+            self.claims[entity_id] = {
                 "observed": {
                     "context_id": ulid_util.ulid_now(),
                     "secondary_context_id": None,
@@ -239,15 +251,15 @@ class ClaimRegistry:
         send, so nothing was written to them: their claim is what they show
         now. Claimed lights are left alone. No-op without a room."""
         key = self.room_key(room_id)
-        if self._store is None or key is None:
+        if key is None:
             return
         now = dt_util.utcnow().isoformat()
         adopted = []
         for entity_id in entity_ids:
             state = self._hass.states.get(entity_id)
-            if state is None or state.state != "on" or entity_id in self._store.claims:
+            if state is None or state.state != "on" or entity_id in self.claims:
                 continue
-            self._store.claims[entity_id] = {
+            self.claims[entity_id] = {
                 "observed": {
                     "context_id": state.context.id,
                     "secondary_context_id": None,
@@ -284,10 +296,9 @@ class ClaimRegistry:
         the brightness and colour steps' contexts.
         room_entities: the room's lights, which it releases together."""
         key = self.room_key(room_id)
-        # Also covers a claims sensor that isn't up yet.
-        if not entity_ids or key is None or self._store is None:
+        if not entity_ids or key is None:
             return
-        claims = self._store.claims
+        claims = self.claims
         targets = targets or {}
         secondary_context_ids = secondary_context_ids or {}
         context_id_overrides = context_id_overrides or {}
@@ -331,27 +342,24 @@ class ClaimRegistry:
         """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
         cleanup an entity deleted from HA, or a room no longer used, ever
         gets. A record with no parseable `last_seen` is kept."""
-        if self._store is None:
-            return
         cutoff = dt_util.utcnow() - timedelta(days=STALE_RECORD_MAX_AGE_DAYS)
 
         def stale(record: dict) -> bool:
             parsed = dt_util.parse_datetime(record.get("last_seen") or "")
             return parsed is not None and parsed < cutoff
 
-        lights = [entity_id for entity_id, record in self._store.claims.items() if stale(record)]
-        rooms = [key for key, room in self._store.rooms.items() if stale(room)]
+        lights = [entity_id for entity_id, record in self.claims.items() if stale(record)]
+        rooms = [key for key, room in self.rooms.items() if stale(room)]
         for entity_id in lights:
-            self._store.claims.pop(entity_id, None)
+            self.claims.pop(entity_id, None)
         for key in rooms:
-            self._store.rooms.pop(key, None)
+            self.rooms.pop(key, None)
         if lights or rooms:
             self._notify()
 
     def _claimed_lights(self, key: str) -> list[str]:
-        assert self._store is not None
-        lights = self._store.rooms.get(key, {}).get("lights", ())
-        return [entity_id for entity_id in lights if entity_id in self._store.claims]
+        lights = self.rooms.get(key, {}).get("lights", ())
+        return [entity_id for entity_id in lights if entity_id in self.claims]
 
     @callback
     def _release_if_dark(self, key: str) -> bool:
@@ -367,13 +375,18 @@ class ClaimRegistry:
             if state is not None and state.state == "on":
                 return False
         for entity_id in claimed:
-            self._store.claims.pop(entity_id, None)
-        self._store.async_announce_released(key, sorted(claimed))
+            self.claims.pop(entity_id, None)
+        self._announce_released(key, sorted(claimed))
         return True
 
     @callback
+    def _announce_released(self, key: str | None, entity_ids: list[str]) -> None:
+        if self._listener is not None:
+            self._listener.async_announce_released(key, entity_ids)
+
+    @callback
     def _release_if_settled_dark(self, key: str) -> bool:
-        """_release_if_dark for claims that came back with the store (a
+        """_release_if_dark for claims that came back from storage (a
         restart, a restore): its lights may have gone off while HA wasn't
         watching, so no on -> off ever reaches the listener. Only once every
         claimed light has reported on or off, so a room isn't released while
@@ -385,9 +398,7 @@ class ClaimRegistry:
     @callback
     def release_settled_dark_rooms(self) -> None:
         """_release_if_settled_dark for every room, when the claims come back."""
-        if self._store is None:
-            return
-        if any([self._release_if_settled_dark(key) for key in list(self._store.rooms)]):
+        if any([self._release_if_settled_dark(key) for key in list(self.rooms)]):
             self._notify()
 
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
@@ -417,10 +428,9 @@ class ClaimRegistry:
                 and old.state in UNREACHABLE_STATES
             ):
                 reconnects[entity_id] = new.last_changed
-            store = self._store
-            if store is None or entity_id not in store.claims:
+            if entity_id not in self.claims:
                 return
-            if new is not None and _context_matches(store.claims[entity_id].get("latest"), new.context.id):
+            if new is not None and _context_matches(self.claims[entity_id].get("latest"), new.context.id):
                 # FLARE's write landed: the light has settled under FLARE.
                 reconnects.pop(entity_id, None)
             old_available = is_reachable(old)
@@ -434,7 +444,7 @@ class ClaimRegistry:
 
             rooms = self.rooms_of(entity_id)
             if dropped:
-                store.claims.pop(entity_id, None)
+                self.claims.pop(entity_id, None)
             changed = self.note_mismatch(entity_id)
             if dropped or went_off:
                 for key in rooms:

@@ -40,8 +40,9 @@ CI — see `.github/workflows/release.yml`.
   - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
     `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
     `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
-  - Each zone's entities are gone. `sensor.flare_claims` holds every claim, and
-    `button.flare_clear` clears them all.
+  - Each zone's entities are gone. `button.flare_clear` clears every claim, each light's
+    status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
+    all.
 
 ## [1.2.0] - Unreleased
 

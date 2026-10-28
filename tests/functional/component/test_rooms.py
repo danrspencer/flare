@@ -1,4 +1,4 @@
-"""Rooms and the claims sensor: claims are FLARE's, one per light, and a
+"""Rooms and the claim events: claims are FLARE's, one per light, and a
 room - whatever a caller names, usually its automation - releases the
 lights it wrote together. Also the counts, Clear and the events."""
 
@@ -25,7 +25,7 @@ from custom_components.flare.const import (
     SUBENTRY_TYPE_SENSOR,
 )
 from custom_components.flare.schedule.coordinator import ScheduleCoordinator, schedule_instances
-from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS
+from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS, ClaimEvents
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
@@ -41,10 +41,10 @@ _TRACKERS: list = []
 
 @pytest.fixture(autouse=True)
 async def _stop_trackers(hass: HomeAssistant):
-    """Cancels the claims sensor's pending recheck."""
+    """Cancels the claim events' pending timers."""
     yield
     while _TRACKERS:
-        await _TRACKERS.pop().async_will_remove_from_hass()
+        _TRACKERS.pop()._cancel_timers()
 
 
 async def _setup(hass: HomeAssistant):
@@ -57,15 +57,16 @@ async def _setup(hass: HomeAssistant):
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
     await button_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    tracker = next(e for e in added if hasattr(e, "claims"))
+    # The tests refresh the statuses themselves.
+    tracker = registry._listener
     tracker.async_claims_changed = lambda: None
-    registry.register(tracker)
+    added.append(tracker)
     _TRACKERS.append(tracker)
     return entry, registry, added
 
 
-def _tracker(added: list):
-    return next(e for e in added if hasattr(e, "claims"))
+def _tracker(added: list) -> ClaimEvents:
+    return next(e for e in added if isinstance(e, ClaimEvents))
 
 
 def _entity(added: list, entity_id: str):
@@ -95,34 +96,6 @@ async def test_a_write_naming_no_room_is_not_tracked(hass: HomeAssistant):
     await _record(registry, None, "light.elsewhere", "ctx-1", ASKED)
     assert registry.all_records() == {}
     assert claim_field(registry, "light.elsewhere", "latest", "context_id") is None
-
-
-async def test_a_write_before_the_claims_sensor_exists_is_dropped(hass: HomeAssistant):
-    """Services exist before platforms, so this can really happen."""
-    registry = ClaimRegistry(hass)  # nothing registered yet
-    _light(hass, "light.a")
-
-    await _record(registry, KITCHEN, "light.a", "ctx-1", ASKED)
-
-    assert registry.all_records() == {}
-
-
-async def test_claims_and_rooms_live_on_the_claims_sensor_and_are_published_there(hass: HomeAssistant):
-    _entry, registry, added = await _setup(hass)
-    tracker = _tracker(added)
-    _light(hass, "light.a")
-
-    await _record(registry, KITCHEN, "light.a", "ctx-1", ASKED, room_lights=["light.a", "light.b"])
-    tracker._refresh_statuses()
-
-    # The registry mutated these very dicts.
-    assert registry.all_records()["light.a"] is tracker.claims["light.a"]
-    assert tracker.native_value == 1
-    attributes = tracker.extra_state_attributes
-    assert attributes["claims"]["light.a"]["latest"]["context_id"] == "ctx-1"
-    assert attributes["rooms"][KITCHEN]["lights"] == ["light.a", "light.b"]
-    assert attributes["statuses"] == {"light.a": "controlled"}
-    assert {"claims", "rooms", "statuses"} <= tracker._unrecorded_attributes
 
 
 async def test_a_room_named_by_an_automation_survives_its_rename(hass: HomeAssistant):
@@ -522,7 +495,7 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
     hass.states.async_set("light.a", "unavailable", {})
-    await tracker.async_update()
+    tracker._poll(None)
     await hass.async_block_till_done()
 
     assert refreshed, "the poll must tell the counters to recompute"
@@ -643,18 +616,3 @@ async def test_an_adopted_light_is_released_with_its_room(hass: HomeAssistant):
 
     assert registry.all_records() == {}
     unsub()
-
-
-async def test_each_published_state_is_a_snapshot(hass: HomeAssistant):
-    """A later write mustn't change a state already published, or the
-    frontend, which is sent only what changed, never hears of it."""
-    _entry, registry, added = await _setup(hass)
-    tracker = _tracker(added)
-    _light(hass, "light.k")
-    _light(hass, "light.h")
-    await _record(registry, KITCHEN, "light.k", "ctx-k", ASKED)
-    published = tracker.extra_state_attributes
-
-    await _record(registry, HALL, "light.h", "ctx-h", ASKED)
-
-    assert (set(published["rooms"]), set(published["claims"])) == ({KITCHEN}, {"light.k"})

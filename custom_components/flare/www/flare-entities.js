@@ -49,12 +49,11 @@ export function flareDevices(hass) {
 }
 
 /**
- * The Settings entry's entities, on FLARE's own device: the claims sensor,
- * the totals and Clear. {device, claims, controlled, overridden, clear},
- * each an id or undefined.
+ * The Settings entry's entities, on FLARE's own device: the totals and
+ * Clear. {device, controlled, overridden, clear}, each an id or undefined.
  */
 export function flareTotals(hass) {
-  const roles = { claims: 'claims', all_controlled: 'controlled', all_overridden: 'overridden', clear: 'clear' };
+  const roles = { all_controlled: 'controlled', all_overridden: 'overridden', clear: 'clear' };
   const totals = {};
   for (const entry of Object.values((hass && hass.entities) || {})) {
     if (entry.platform !== 'flare' || !roles[entry.translation_key]) continue;
@@ -73,26 +72,46 @@ export function lightArea(hass, entityId) {
 }
 
 /**
- * Every room light by area, from the claims sensor: area_id -> {lights,
- * claimed, controlled, overridden}, each a sorted list of entity_ids. A
- * room light is one some automation named; claimed ones have a status.
+ * Each light's status sensor, by light: light -> {status, claimed, asked,
+ * rooms}. Only lights a room names or FLARE claims: a light whose room has
+ * let it go keeps its sensor, but isn't a room light any more.
+ */
+export function lightStatuses(hass) {
+  const lights = new Map();
+  for (const entry of Object.values((hass && hass.entities) || {})) {
+    if (entry.platform !== 'flare' || entry.translation_key !== 'status') continue;
+    const state = hass.states && hass.states[entry.entity_id];
+    const attributes = (state && state.attributes) || {};
+    const rooms = attributes.rooms || [];
+    if (!attributes.light || !(rooms.length || attributes.claimed)) continue;
+    lights.set(attributes.light, {
+      status: state.state,
+      claimed: Boolean(attributes.claimed),
+      asked: attributes.asked || null,
+      rooms,
+    });
+  }
+  return lights;
+}
+
+/**
+ * Every room light by area: area_id -> {lights, claimed, controlled,
+ * overridden}, each a sorted list of entity_ids. Like the totals, a claimed
+ * light FLARE hasn't seen report yet counts as controlled.
  */
 export function claimsByArea(hass) {
-  const claims = flareTotals(hass).claims;
-  const attributes = (claims && hass.states && hass.states[claims] && hass.states[claims].attributes) || {};
-  const statuses = attributes.statuses || {};
-  const lights = new Set(Object.keys(statuses));
-  for (const room of Object.values(attributes.rooms || {})) (room.lights || []).forEach((l) => lights.add(l));
+  const lights = lightStatuses(hass);
   const byArea = new Map();
-  for (const light of [...lights].sort()) {
+  for (const light of [...lights.keys()].sort()) {
     const area = lightArea(hass, light);
     if (!area) continue;
     if (!byArea.has(area)) byArea.set(area, { lights: [], claimed: [], controlled: [], overridden: [] });
     const entry = byArea.get(area);
+    const { status, claimed } = lights.get(light);
     entry.lights.push(light);
-    if (statuses[light]) entry.claimed.push(light);
-    if (statuses[light] === 'controlled') entry.controlled.push(light);
-    if (statuses[light] === 'overridden') entry.overridden.push(light);
+    if (claimed) entry.claimed.push(light);
+    if (status === 'controlled' || (status === 'untracked' && claimed)) entry.controlled.push(light);
+    if (status === 'overridden') entry.overridden.push(light);
   }
   return byArea;
 }

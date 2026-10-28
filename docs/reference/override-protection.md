@@ -29,16 +29,19 @@ else's and leave alone a light you've changed yourself. Its entities and options
 
 | Entity | Description |
 |---|---|
-| `sensor.flare_claims` | Where FLARE stores its claims and rooms. The state is the number of lights tracked; the `claims` attribute has each light's claims, `rooms` each room's lights, and `statuses` each light's status. Don't disable it: without it FLARE can't record anything. |
 | `sensor.flare_controlled_lights` | The number of lights FLARE is setting. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
-| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in. |
+| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, and `asked` what FLARE last asked it for. |
 
 The two counts and each light's status are recorded in history, with long-term statistics for
-the counts, but the attributes of `sensor.flare_claims` aren't. A light that's unavailable or
-has no claim isn't included in either count. The [dashboard](../../dashboard/) shows the counts
-and each light for each area too.
+the counts. `asked` isn't recorded, since it changes with every update. A light that's
+unavailable or has no claim isn't included in either count. The [dashboard](../../dashboard/)
+shows the counts and each light for each area too.
+
+FLARE keeps its claims in Home Assistant's own storage, so they're kept across a restart. To see
+every claim at once, download the diagnostics from **FLARE → Settings**: they list each light's
+claims and each room's lights.
 
 A light's status sensor appears the first time a room names the light, under **Diagnostic** on
 the light's device page, and stays after its room lets the light go. It's unavailable while the

@@ -244,7 +244,7 @@ async def test_prune_stale_leaves_a_record_with_no_last_seen_alone(setup_integra
     """Age can't be judged, so it's kept."""
     hass = setup_integration
     tracker = claim_registry(hass)
-    tracker._store.claims["light.a"] = {  # this shape shouldn't occur naturally
+    tracker.claims["light.a"] = {  # this shape shouldn't occur naturally
         "observed": {"context_id": "ctx-old", "recorded_at": None, "target": None},
         "latest": None,
         "last_seen": None,

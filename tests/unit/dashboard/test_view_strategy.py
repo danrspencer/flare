@@ -16,14 +16,13 @@ STATES = {
     "sensor.upstairs_flare": {"attributes": {"points": [], "friendly_name": "Upstairs"}},
     # A schedule sensor with no friendly name - falls back to the slug.
     "sensor.loft_flare": {"attributes": {"points": []}},
-    # The claims sensor's siblings, which must not become sections.
+    # Other FLARE sensors on a schedule's slug, which must not become sections.
     "sensor.downstairs_flare_claims": {"attributes": {}},
     "sensor.downstairs_flare_controlled": {"attributes": {}},
     "sensor.downstairs_flare_overridden": {"attributes": {}},
     # Someone else's sensor that happens to end the same way.
     "sensor.solar_flare": {"attributes": {}},
     "light.kitchen": {"attributes": {}},
-    "sensor.flare_claims": {"attributes": {"rooms": {}, "statuses": {}}},
 }
 
 # The registry is what says which are FLARE's, and what each one is.
@@ -133,7 +132,7 @@ def test_sections_are_named_and_ordered_by_the_sensors_own_name(result):
 
 
 def test_only_schedule_sensors_become_sections(result):
-    """Not the claims sensor, and not someone else's sensor.solar_flare."""
+    """Not FLARE's other sensors, and not someone else's sensor.solar_flare."""
     slugs = [s["slug"] for s in result["sensors"]]
 
     assert slugs == ["downstairs", "loft", "upstairs"]

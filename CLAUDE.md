@@ -370,8 +370,8 @@ blocked like an override, but counted in neither sensor and not
 announced. Each claim record carries `mismatch_since`, set when the light
 first stops matching and cleared when it matches again or can't be
 reached. `ClaimRegistry.note_mismatch` keeps it, from the state listener,
-each write, and every claims-sensor refresh (which also catches a
-restored claim's), so it lives with the claim, not in loose state. It's
+each write, and every status refresh by the claim events (which also
+catches a restored claim's), so it lives with the claim, not in loose state. It's
 persisted with the claims, so an override from before a restart is still
 one. A new write starts afresh. `claims_override` sets it already expired,
 since someone said so. Short-lived mismatches seen live, all now silent:
@@ -379,7 +379,7 @@ a bulb's stale first report after a reconnect (10/8130 on a bulb at
 204/8105, corrected 0.4s later), FLARE's own write still landing on a bulb
 whose previous write was never confirmed, and another automation
 switching a room off light by light (the room goes dark and releases them
-first). The claims sensor rechecks once the grace has passed.
+first). The claim events recheck once the grace has passed.
 
 **A light already showing what `apply_lighting` would send is adopted**
 (`ClaimRegistry.adopt`): no write goes to it, so if it's on and unclaimed
@@ -390,10 +390,12 @@ hand change to one went unnoticed.
 **Each room light has a status sensor** (`_LightStatusSensor`,
 `sensor.<light>_flare_status`, translation key `status`): what
 `classify_state` says of it, unmapped (so `untracked` stays `untracked`,
-unlike the counts), unavailable while the light is. At the user's
-direction, so tracked state is visible in HA's own UI without storing it
-on anything per room. One source still: it reads the registry, holding no
-state.
+unlike the counts), unavailable while the light is, with `claimed` and
+`asked` (what FLARE last asked for; unrecorded, it changes with every
+write) beside `rooms`. At the user's direction, so tracked state is visible
+in HA's own UI without storing it on anything per room. It's how FLARE's
+state is shown, as the Store is where it's kept: it reads the registry,
+holding none itself. The dashboard reads these, not the registry.
 
 - **It sits on the light's own device** through `device_entry`, as HA's
   own helpers link to a source device. `DeviceInfo` with the device's
@@ -414,10 +416,23 @@ curve the value match drifts further away. The room going dark clears it;
 
 ### Claims across restarts and reconnects
 
-The claims sensor (`_ClaimsSensor`, `sensor.flare_claims`) is a
-`RestoreEntity`; its claims and rooms are its `extra_restore_state_data`,
-restored before it registers. Without the rooms, nothing would release a
-restored claim.
+**The registry holds the claims and rooms, saved in a `Store`**
+(`.storage/flare.claims`, `SAVE_DELAY` seconds after each change, and at
+shutdown), loaded before the platforms. Without the rooms, nothing would
+release a restored claim. They lived on a `RestoreEntity` claims sensor
+until 2.0, at the user's direction moved out: where the data lives matters
+less than how it's shown (the status sensors, counts, events and the
+Settings entry's diagnostics), and an entity holding it broke FLARE when
+disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
+dropped for being hidden; the status sensors are what make this one not.
+
+**The claim events aren't an entity** (`sensor.ClaimEvents`): they
+refresh statuses on each claim change and a 30 s poll (live state changes
+without any claim changing), fire the overridden, controlled and released
+events, and recheck after the grace. A room restored dark is released and
+stale claims pruned only once they're listening, after the platforms, so
+the release is announced.
+
 Persistence was tried once and reverted: a restart gives every entity a
 fresh context, and with context-only matching every light read
 `overridden`. The value fallback above is what makes it safe now: a
@@ -435,7 +450,7 @@ Two listener rules, pinned in `test_claim_persistence.py`:
   time; the first back being `off` while its siblings are `unknown` must
   not release the room.
 - **A room restored dark lets go of its claims**
-  (`release_settled_dark_rooms`), checked when the claims sensor is added and
+  (`release_settled_dark_rooms`), checked once setup has loaded them and
   whenever a claimed light reports in from none/unavailable/unknown, once
   *every* claimed light reports on or off and none is on. Lights that went
   off while HA wasn't watching (switched off during a restart, FLARE's own
@@ -447,9 +462,8 @@ Two listener rules, pinned in `test_claim_persistence.py`:
 A restart is not an escape hatch for a light stuck `overridden`. Known
 residuals, both ending when the room goes dark: a bulb that power-cycled
 while HA was down, and a write that dropped just before a restart on a
-light with no confirmed write. Restore state is saved every 15 minutes
-and at shutdown, so a crash loses up to 15 minutes of claims, failing
-open.
+light with no confirmed write. A crash loses the last `SAVE_DELAY`
+seconds of claims, failing open.
 
 **Reconnects** (`classify_state`'s `reconnected_at`; the `ClaimRegistry`
 notes when any light goes unavailable/unknown -> on/off, and forgets it
@@ -469,11 +483,11 @@ claim, because a light's claim is dropped when it goes offline):
 - Still parked: the same loss when FLARE wrote *before* the reconnect
   (needed three restarts in fifteen minutes, which ordinary use doesn't).
 
-**Testing restore needs a real entity add.** The usual harnesses attach
-the claims sensor with a capturing `async_add_entities`, so
-`async_added_to_hass` never runs. `test_claim_persistence.py` adds it
-through `MockEntityPlatform` with `mock_restore_cache_with_extra_data`,
-and saves through `async_mock_restore_state_shutdown_restart`.
+**Testing restore needs a real setup.** The component harness forwards
+platforms without the frontend, so they fail and the claim events never
+start. `test_claim_persistence.py` sets the entry up through HA over
+`stub_entry_setup`, preloading `hass_storage[STORAGE_KEY]`, and reads what
+was saved back out of `hass_storage` after moving time past `SAVE_DELAY`.
 
 ### Three config entries
 
@@ -482,7 +496,7 @@ services, the claim registry, the area ticks and the options) and
 *Flares*. HA's integration page renders one section per subentry with no
 way to group them by type (`ha-config-entry-row.ts`); the entry is the
 only level that can group them. Settings has no subentries since 2.0
-removed zones; its entities (`sensor.flare_claims`, the totals and
+removed zones; its entities (the totals and
 `button.flare_clear`) sit on one "FLARE" service device
 (`settings_device_info`), so their events can be filed on a device (see
 "Claim events").
@@ -1226,7 +1240,7 @@ overshoot and draw brightness the schedule never asks for.
 **The Lights view** copies HA's Light dashboard (`light-view-strategy.ts`):
 an "All lights" totals row (Clear where that has "All off", the counts
 beside it), then a section per floor and a heading per area holding a room
-light (any light in the claims sensor's `rooms`), with the area's lights
+light (any light whose status sensor names a room), with the area's lights
 under it. "Lights", not "Rooms", at the user's direction: it lists lights.
 
 - **The totals' counts are two tiles each**, one shown at a time -
@@ -1243,9 +1257,8 @@ under it. "Lights", not "Rooms", at the user's direction: it lists lights.
   and Clear all (`flare.claims_clear` on its claimed lights, `claimedIn()`,
   not announced in Activity); it replaced a Clear card and two count cards
   per area, at the user's direction. Then each light (`areaLights()`),
-  overridden and mismatched first: its status (from its status sensor,
-  else the claims sensor's, else untracked), what FLARE last asked for
-  (`latest`'s target, else `observed`'s) beside what it shows, and a Clear
+  overridden and mismatched first: its status, what FLARE last asked for
+  (`asked`), both from its status sensor, beside what it shows, and a Clear
   for that light. Its name opens the light's more-info. The counts come
   from the same statuses as the list, so the two agree.
 - **Clear is `custom:flare-clear-card`**, drawn like the "All off"

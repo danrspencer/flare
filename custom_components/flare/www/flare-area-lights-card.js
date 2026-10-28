@@ -1,6 +1,5 @@
 /**
- * An area's lights, worked out live from FLARE's claims sensor and each
- * light's status sensor: a header with the area's Controlled and Overridden
+ * An area's lights, worked out live from each light's status sensor: a header with the area's Controlled and Overridden
  * counts and Clear all, then each light with its status, what FLARE asked
  * for, what it shows, and its own Clear.
  *
@@ -8,7 +7,7 @@
  *   area: kitchen
  */
 
-import { claimsByArea, flareTotals } from './flare-entities.js';
+import { claimsByArea, lightStatuses } from './flare-entities.js';
 
 const BLUE = 'var(--blue-color, #2196f3)';
 const AMBER = 'var(--amber-color, #ffc107)';
@@ -52,17 +51,6 @@ function summarise(lights) {
   };
 }
 
-/** Light -> status, from each light's status sensor. */
-function lightStatuses(hass) {
-  const statuses = {};
-  for (const entry of Object.values(hass.entities || {})) {
-    if (entry.platform !== 'flare' || entry.translation_key !== 'status') continue;
-    const state = hass.states?.[entry.entity_id];
-    if (state?.attributes?.light) statuses[state.attributes.light] = state.state;
-  }
-  return statuses;
-}
-
 /**
  * Brightness as a percentage, then colour: "78% · 3000K", "off", or null
  * for nothing to say.
@@ -92,21 +80,16 @@ function showing(state) {
 export function areaLights(hass, area) {
   const entry = claimsByArea(hass).get(area);
   if (!entry) return [];
-  const claimsSensor = flareTotals(hass).claims;
-  const attributes = hass.states?.[claimsSensor]?.attributes || {};
-  const claims = attributes.claims || {};
-  const claimed = attributes.statuses || {};
-  const sensors = lightStatuses(hass);
+  const lights = lightStatuses(hass);
   return entry.lights
     .map((entityId) => {
-      const claim = claims[entityId];
-      const target = claim && ((claim.latest && claim.latest.target) || (claim.observed && claim.observed.target));
+      const { status, claimed, asked } = lights.get(entityId);
       return {
         entity_id: entityId,
         name: nameOf(hass, entityId),
-        status: sensors[entityId] || claimed[entityId] || 'untracked',
-        claimed: Boolean(claim),
-        asked: describe(target),
+        status,
+        claimed,
+        asked: describe(asked),
         showing: showing(hass.states?.[entityId]),
       };
     })

@@ -24,10 +24,9 @@ def schedule_entities(device_id: str, slug: str) -> dict[str, dict]:
 
 
 def settings_entities(device_id: str = "flare_device") -> dict[str, dict]:
-    """The Settings entry's entities, on FLARE's own device: the claims,
-    their totals and Clear."""
+    """The Settings entry's entities, on FLARE's own device: the totals and
+    Clear."""
     roles = {
-        "claims": "sensor.flare_claims",
         "all_controlled": "sensor.flare_controlled_lights",
         "all_overridden": "sensor.flare_overridden_lights",
         "clear": "button.flare_clear",

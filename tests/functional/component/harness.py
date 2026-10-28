@@ -4,9 +4,7 @@ services as one room ("automation.test_room").
 async_setup_entry is called directly rather than through
 hass.config_entries.async_setup(), which would also load the manifest's
 http/frontend dependencies - the large frontend package these tests don't
-need. For the same reason the claims sensor is attached through the
-real sensor platform with a capturing async_add_entities;
-test_claim_persistence.py covers a properly added entity.
+need.
 """
 
 from __future__ import annotations
@@ -20,7 +18,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.flare import async_setup_entry
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
-from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.claims import ClaimRegistry
 
 CT = ["color_temp"]
@@ -49,12 +46,6 @@ async def setup_settings_entry(hass: HomeAssistant, options: dict | None = None)
     entry.mock_state(hass, ConfigEntryState.LOADED)
     assert await async_setup_entry(hass, entry)
     await hass.async_block_till_done()
-
-    added: list = []
-    await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    store = next(e for e in added if hasattr(e, "claims"))
-    store.async_claims_changed = lambda: None
-    claim_registry(hass).register(store)
     return entry
 
 
@@ -63,8 +54,8 @@ def claim_registry(hass: HomeAssistant) -> ClaimRegistry:
 
 
 def claims_store(hass: HomeAssistant):
-    """The claims sensor the registry holds its claims on."""
-    return claim_registry(hass)._store
+    """Where the claims and rooms are held."""
+    return claim_registry(hass)
 
 
 def settings_entry(hass: HomeAssistant):
