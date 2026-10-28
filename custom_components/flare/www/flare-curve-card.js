@@ -5,6 +5,8 @@
  * override; the curve doesn't.
  */
 
+import { localize } from './flare-i18n.js';
+
 // Re-render interval, and the granularity of "now" in the render cache.
 const RENDER_INTERVAL_MS = 30000;
 
@@ -331,7 +333,7 @@ class FlareCurveCard extends HTMLElement {
     this._hass = hass;
     const phase = hass.states[this._sensorId];
     if (!phase) {
-      this._renderError(`Missing entity: ${this._sensorId}`);
+      this._renderError(localize(hass, 'curve.missing_entity', { entity: this._sensorId }));
       return;
     }
 
@@ -427,6 +429,18 @@ class FlareCurveCard extends HTMLElement {
     });
   }
 
+  _t(key, values) {
+    return localize(this._hass, key, values);
+  }
+
+  // A phase as the schedule names it ("Evening"), in the user's language;
+  // anything else as it is.
+  _phaseName(name) {
+    const key = `phase.${String(name).toLowerCase()}`;
+    const text = this._t(key);
+    return text === key ? name : text;
+  }
+
   _header() {
     return cardHeader(this._config, this._hass && this._hass.states[this._sensorId]);
   }
@@ -446,7 +460,7 @@ class FlareCurveCard extends HTMLElement {
     if (!b) return '';
     const eveningTime = fmtTime(b.evening);
     if (b.eveningEarliest == null || b.eveningLatest == null || !this._sun || !this._sun.attributes.next_setting) {
-      return `Evening starts at ${eveningTime}.`;
+      return this._t('curve.evening_starts', { time: eveningTime });
     }
     const earliestTs = b.eveningEarliest;
     const latestTs = b.eveningLatest;
@@ -454,13 +468,13 @@ class FlareCurveCard extends HTMLElement {
 
     let reason;
     if (Math.abs(b.evening - latestTs) < 60 && sunsetTs > latestTs) {
-      reason = `capped at its latest bound (${fmtTime(latestTs)}) — tonight's sunset is later, at ${fmtTime(sunsetTs)}`;
+      reason = this._t('curve.capped_latest', { bound: fmtTime(latestTs), sunset: fmtTime(sunsetTs) });
     } else if (Math.abs(b.evening - earliestTs) < 60 && sunsetTs < earliestTs) {
-      reason = `capped at its earliest bound (${fmtTime(earliestTs)}) — tonight's sunset is earlier, at ${fmtTime(sunsetTs)}`;
+      reason = this._t('curve.capped_earliest', { bound: fmtTime(earliestTs), sunset: fmtTime(sunsetTs) });
     } else {
-      reason = `following tonight's sunset`;
+      reason = this._t('curve.following_sunset');
     }
-    return `Evening starts at ${eveningTime}, ${reason}.`;
+    return this._t('curve.evening_starts_because', { time: eveningTime, reason });
   }
 
   _render() {
@@ -507,7 +521,7 @@ class FlareCurveCard extends HTMLElement {
       .map(([name, t]) => {
         const frac = xOf(t) / VB_W;
         // The desired position, so layout can rerun at any width.
-        return `<span class="boundary-label" style="left:${(frac * 100).toFixed(2)}%" data-x-frac="${frac.toFixed(5)}" title="${fmtTime(t)}">${name}</span>`;
+        return `<span class="boundary-label" style="left:${(frac * 100).toFixed(2)}%" data-x-frac="${frac.toFixed(5)}" title="${fmtTime(t)}">${this._phaseName(name)}</span>`;
       })
       .join('');
 
@@ -547,8 +561,8 @@ class FlareCurveCard extends HTMLElement {
       })
       .join('');
     const sunLabel = [
-      sunriseTs != null ? `Sunrise ${fmtTime(sunriseTs)}` : null,
-      sunsetTs != null ? `Sunset ${fmtTime(sunsetTs)}` : null,
+      sunriseTs != null ? this._t('curve.sunrise', { time: fmtTime(sunriseTs) }) : null,
+      sunsetTs != null ? this._t('curve.sunset', { time: fmtTime(sunsetTs) }) : null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -583,12 +597,12 @@ class FlareCurveCard extends HTMLElement {
     const swatch = (hex) => `<span class="swatch" style="background:${hex};border:${swatchBorder};"></span>`;
 
     const nowLabel = haveNow
-      ? `Now ${fmtTime(now)} · ${this._brightnessNow} bri · ${this._kelvinNow}K${this._phaseState ? ' · <span class="phase"></span>' : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
+      ? `${this._t('curve.now', { time: fmtTime(now) })} · ${this._t('curve.brightness', { value: this._brightnessNow })} · ${this._kelvinNow}K${this._phaseState ? ' · <span class="phase"></span>' : ''} ${swatch(rgbToHex(kelvinToRgb(this._kelvinNow)))}`
       : '<span class="phase"></span>';
 
     const footnote = haveSamples
       ? this._eveningNote()
-      : `${this._eveningNote()} (curve still populating — it refreshes every minute)`;
+      : `${this._eveningNote()} ${this._t('curve.populating')}`;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -675,7 +689,7 @@ class FlareCurveCard extends HTMLElement {
     // Text from entities and options goes in as text, never as markup.
     this.shadowRoot.querySelector('ha-card').setAttribute('header', this._header());
     const phaseEl = this.shadowRoot.querySelector('.phase');
-    if (phaseEl) phaseEl.textContent = this._phaseState || '';
+    if (phaseEl) phaseEl.textContent = this._phaseState ? this._phaseName(this._phaseState) : '';
 
     this._svgEl = this.shadowRoot.querySelector('svg.chart');
     this._tooltipEl = this.shadowRoot.querySelector('.tooltip');
@@ -705,11 +719,12 @@ class FlareCurveCard extends HTMLElement {
       const hex = rgbToHex(kelvinToRgb(s.kelvin));
       const phase = phaseAt(s.t, b.morning, b.day, b.evening, b.night);
       // Already shifted into the display window.
-      const sunState = sunriseTs != null && sunsetTs != null ? (s.t >= sunriseTs && s.t < sunsetTs ? 'Sun up' : 'Sun down') : '';
+      const sunState =
+        sunriseTs != null && sunsetTs != null ? this._t(s.t >= sunriseTs && s.t < sunsetTs ? 'curve.sun_up' : 'curve.sun_down') : '';
       this._tooltipEl.style.display = 'block';
       this._tooltipEl.style.left = `${clamp((clientX - rect.left), 0, rect.width - 170)}px`;
       this._tooltipEl.style.top = '4px';
-      this._tooltipEl.innerHTML = `<b>${phase} · ${fmtTime(s.t)}${sunState ? ` · ${sunState}` : ''}</b><br>${s.brightness} bri &nbsp; ${s.kelvin}K ${swatch(hex)}`;
+      this._tooltipEl.innerHTML = `<b>${this._phaseName(phase)} · ${fmtTime(s.t)}${sunState ? ` · ${sunState}` : ''}</b><br>${this._t('curve.brightness', { value: s.brightness })} &nbsp; ${s.kelvin}K ${swatch(hex)}`;
     };
     const onLeave = () => {
       this._tooltipEl.style.display = 'none';

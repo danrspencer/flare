@@ -241,6 +241,26 @@ formatter and rejects ICU plurals, though HA's frontend would format them.
 The same test applies hassfest's rule, so word a count so it needs no
 plural form ("Flares added: {count}").
 
+**Other languages** (`translations/de.json`, from stefanr09 in
+danrspencer/flare#301) must have exactly strings.json's keys and
+placeholders; the same test fails on a missing, stale or mistyped one, so
+a changed English string needs its translations revisited too.
+
+**The dashboard translates itself** (`www/flare-i18n.js`): HA's
+translations only reach an integration's backend strings, so the cards
+and views look their text up by key in `www/translations/<lang>.js`, by
+`hass.locale.language` (or `hass.language`), its base ("de" for "de-CH"),
+else English. Strategies take `hass` for it; cards that build before
+`hass` arrives fill their text in once it does. Composed names are
+patterns (`{phase} colour temp`), since languages order words
+differently. Phase names stay English as data (they match the schedule
+sensor's states and curve.py) and are translated only when shown.
+`tests/unit/dashboard/test_i18n.py` holds every table to English's keys
+and placeholders. The contributor's first version rewrote the page's text
+every two seconds; don't go back to that. Not translated: errors a card
+throws from `setConfig` (no `hass` yet) and the card picker's
+descriptions.
+
 ### Services
 
 Twelve, all tested. Field contracts are in `docs/reference/services.md`

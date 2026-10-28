@@ -3,13 +3,15 @@
  * flare-view-strategy.js. No DOM or HA imports.
  */
 
+import { localize } from './flare-i18n.js';
+
 // Colour encodes the phase and icon the channel. Colours follow the
 // temperature each phase reaches, so Morning (coldest) is blue.
 export const PHASES = [
-  { key: 'morning', label: 'Morning', color: 'blue', icon: 'mdi:weather-sunset-up' },
-  { key: 'day', label: 'Day', color: 'yellow', icon: 'mdi:weather-sunny' },
-  { key: 'evening', label: 'Evening', color: 'orange', icon: 'mdi:weather-sunset-down' },
-  { key: 'night', label: 'Night', color: 'indigo', icon: 'mdi:weather-night' },
+  { key: 'morning', color: 'blue', icon: 'mdi:weather-sunset-up' },
+  { key: 'day', color: 'yellow', icon: 'mdi:weather-sunny' },
+  { key: 'evening', color: 'orange', icon: 'mdi:weather-sunset-down' },
+  { key: 'night', color: 'indigo', icon: 'mdi:weather-night' },
 ];
 
 const BRIGHTNESS_ICON = 'mdi:brightness-6';
@@ -18,11 +20,11 @@ const TRANSITION_ICON = 'mdi:timer-sand';
 
 // Evening has both of its bounds.
 const SCHEDULE_TIMES = [
-  { entity: 'morning_time', name: 'Morning', phase: 'morning' },
-  { entity: 'day_time', name: 'Day', phase: 'day' },
-  { entity: 'evening_earliest_time', name: 'Evening (earliest)', phase: 'evening' },
-  { entity: 'evening_latest_time', name: 'Evening (latest)', phase: 'evening' },
-  { entity: 'night_time', name: 'Night', phase: 'night' },
+  { entity: 'morning_time', name: 'phase.morning', phase: 'morning' },
+  { entity: 'day_time', name: 'phase.day', phase: 'day' },
+  { entity: 'evening_earliest_time', name: 'schedule.evening_earliest', phase: 'evening' },
+  { entity: 'evening_latest_time', name: 'schedule.evening_latest', phase: 'evening' },
+  { entity: 'night_time', name: 'phase.night', phase: 'night' },
 ];
 
 const phase = (key) => PHASES.find((p) => p.key === key);
@@ -34,11 +36,6 @@ const KELVIN_SLIDER = [{ type: 'custom:flare-kelvin-feature' }];
 const brightnessSlider = (kelvinEntity) => [
   { type: 'custom:flare-brightness-feature', tint_from: kelvinEntity },
 ];
-
-const TRANSITIONS_NOTE =
-  'How long before each phase ends to start easing into the next one, in ' +
-  'minutes. 0 is a hard cut. Values are clamped to the phase, so anything ' +
-  'longer than the phase itself means "ease across the whole phase".';
 
 // Puts the control on the name's row, halving tile height.
 function tile({ entity, name, icon, color, columns, features }) {
@@ -75,22 +72,24 @@ const pairGrid = (cards) => ({
 
 /**
  * The section for one schedule, from scheduleSensors(): its title and its
- * entities by role.
+ * entities by role, in hass's language.
  */
-export function sectionConfig({ title, entities }) {
+export function sectionConfig({ title, entities }, hass) {
   const id = (role) => entities[role];
+  const t = (key, values) => localize(hass, key, values);
+  const label = (p) => t(`phase.${p.key}`);
   const curve = pairGrid(
     PHASES.flatMap((p) => [
       tile({
         entity: id(`${p.key}_kelvin`),
-        name: `${p.label} colour temp`,
+        name: t('schedule.curve_kelvin', { phase: label(p) }),
         icon: KELVIN_ICON,
         color: p.color,
         features: KELVIN_SLIDER,
       }),
       tile({
         entity: id(`${p.key}_brightness`),
-        name: `${p.label} brightness`,
+        name: t('schedule.curve_brightness', { phase: label(p) }),
         icon: BRIGHTNESS_ICON,
         color: p.color,
         features: brightnessSlider(id(`${p.key}_kelvin`)),
@@ -104,25 +103,25 @@ export function sectionConfig({ title, entities }) {
     PHASES.flatMap((p) => [
       tile({
         entity: id(`${p.key}_kelvin_transition`),
-        name: `${p.label} colour`,
+        name: t('schedule.transition_kelvin', { phase: label(p) }),
         icon: TRANSITION_ICON,
         color: p.color,
       }),
       tile({
         entity: id(`${p.key}_brightness_transition`),
-        name: `${p.label} brightness`,
+        name: t('schedule.transition_brightness', { phase: label(p) }),
         icon: TRANSITION_ICON,
         color: p.color,
       }),
     ])
   );
 
-  const times = SCHEDULE_TIMES.map((t) =>
+  const times = SCHEDULE_TIMES.map((time) =>
     tile({
-      entity: id(t.entity),
-      name: t.name,
-      icon: phase(t.phase).icon,
-      color: phase(t.phase).color,
+      entity: id(time.entity),
+      name: localize(hass, time.name),
+      icon: phase(time.phase).icon,
+      color: phase(time.phase).color,
       columns: 4,
     })
   );
@@ -137,49 +136,49 @@ export function sectionConfig({ title, entities }) {
       heading(title, 'title', {
         icon: 'mdi:chart-bell-curve',
         badges: [
-          { type: 'entity', entity: sensor, show_state: true, show_icon: true, name: 'Phase' },
+          { type: 'entity', entity: sensor, show_state: true, show_icon: true, name: t('schedule.badge_phase') },
           {
             type: 'entity',
             entity: sensor,
             state_content: 'brightness',
             icon: BRIGHTNESS_ICON,
-            name: 'Brightness',
+            name: t('schedule.badge_brightness'),
           },
           {
             type: 'entity',
             entity: sensor,
             state_content: 'color_temp',
             icon: KELVIN_ICON,
-            name: 'Colour',
+            name: t('schedule.badge_colour'),
           },
           {
             type: 'entity',
             entity: select,
             show_state: true,
             icon: 'mdi:hand-back-right',
-            name: 'Override',
+            name: t('schedule.badge_override'),
             // Almost always "Auto", so not worth showing.
             visibility: [{ condition: 'state', entity: select, state_not: 'Auto' }],
           },
         ],
       }),
       { type: 'custom:flare-curve-card', sensor, grid_options: { columns: 'full' }, title: '' },
-      heading('Override', 'subtitle'),
-      tile({ entity: select, name: 'Phase', columns: 6, features: [{ type: 'select-options' }] }),
+      heading(t('schedule.override'), 'subtitle'),
+      tile({ entity: select, name: t('schedule.override_phase'), columns: 6, features: [{ type: 'select-options' }] }),
       tile({
         entity: id('sticky_phase_override'),
-        name: 'Sticky',
+        name: t('schedule.override_sticky'),
         columns: 6,
         features: [{ type: 'toggle' }],
       }),
-      heading('Schedule', 'subtitle'),
+      heading(t('schedule.times'), 'subtitle'),
       ...times,
-      heading('Curve', 'subtitle'),
+      heading(t('schedule.curve'), 'subtitle'),
       curve,
-      heading('Transitions', 'subtitle'),
-      { type: 'markdown', text_only: true, grid_options: { columns: 'full' }, content: TRANSITIONS_NOTE },
+      heading(t('schedule.transitions'), 'subtitle'),
+      { type: 'markdown', text_only: true, grid_options: { columns: 'full' }, content: t('schedule.transitions_note') },
       transitions,
-      heading('Copy or paste', 'subtitle'),
+      heading(t('schedule.transfer'), 'subtitle'),
       { type: 'custom:flare-schedule-transfer-card', sensor },
     ],
   };

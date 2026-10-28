@@ -14,6 +14,7 @@
  */
 
 import { scheduleSensors, normaliseSlug, flareTotals, claimsByArea } from './flare-entities.js';
+import { localize } from './flare-i18n.js';
 import { sectionConfig } from './flare-section.js';
 import { areaSections, totalsSection } from './flare-lights-section.js';
 // Not used by these views any more, but dashboards someone took control of
@@ -42,13 +43,10 @@ class FlareScheduleViewStrategy extends HTMLElement {
     const wanted = normaliseSlug(config && config.sensor);
 
     if (!all.length) {
-      return notice(
-        'No FLARE schedules found yet.\n\nAdd one under **Settings → Devices & ' +
-          'Services → FLARE → Add schedule**, and it will appear here automatically.'
-      );
+      return notice(localize(hass, 'view.no_schedules'));
     }
 
-    if (!wanted) return view(all.map(sectionConfig));
+    if (!wanted) return view(all.map((schedule) => sectionConfig(schedule, hass)));
 
     // The slug, or the sensor's entity_id, renamed or not.
     const asGiven = typeof config.sensor === 'string' ? config.sensor.trim() : null;
@@ -56,12 +54,10 @@ class FlareScheduleViewStrategy extends HTMLElement {
     if (!match) {
       // List the slugs that exist, so a typo is fixable.
       const available = all.map((s) => `- \`${s.slug}\``).join('\n');
-      return notice(
-        `No FLARE schedule called \`${wanted}\`.\n\nAvailable schedules:\n\n${available}`
-      );
+      return notice(localize(hass, 'view.unknown_schedule', { name: wanted, available }));
     }
 
-    return view([sectionConfig(match)]);
+    return view([sectionConfig(match, hass)]);
   }
 }
 
@@ -82,14 +78,10 @@ class FlareLightsViewStrategy extends HTMLElement {
   static async generate(config, hass) {
     const totals = flareTotals(hass);
     if (!totals.controlled) {
-      return notice(
-        'FLARE\'s **Settings** entry isn\'t set up, so nothing is tracking ' +
-          'which lights FLARE controls. Add FLARE under **Settings → Devices ' +
-          '& Services**.'
-      );
+      return notice(localize(hass, 'view.no_settings'));
     }
     const areas = [...claimsByArea(hass).keys()];
-    const lightsView = { type: 'sections', max_columns: 2, sections: [totalsSection(totals), ...areaSections(hass, areas)] };
+    const lightsView = { type: 'sections', max_columns: 2, sections: [totalsSection(totals, hass), ...areaSections(hass, areas)] };
     if (!areas.length) {
       lightsView.sections.push({
         type: 'grid',
@@ -97,9 +89,7 @@ class FlareLightsViewStrategy extends HTMLElement {
         cards: [
           {
             type: 'markdown',
-            content:
-              'No lights yet. A light appears here once a room\'s automation has ' +
-              'set it, grouped by area.',
+            content: localize(hass, 'view.no_lights'),
           },
         ],
       });
@@ -113,13 +103,13 @@ class FlareLightsViewStrategy extends HTMLElement {
           {
             type: 'grid',
             cards: [
-              { type: 'heading', heading: 'Activity', heading_style: 'title' },
+              { type: 'heading', heading: localize(hass, 'view.activity'), heading_style: 'title' },
               { type: 'custom:flare-activity-card', device_id: [totals.device], hours_to_show: 24 },
             ],
           },
         ],
-        content_label: 'Overrides',
-        sidebar_label: 'Activity',
+        content_label: localize(hass, 'view.overrides'),
+        sidebar_label: localize(hass, 'view.activity'),
       },
     };
   }
@@ -149,11 +139,13 @@ class FlareDashboardStrategy extends HTMLElement {
       strategy: { type: 'custom:flare-schedule', sensor: slug },
     }));
     const lights = flareTotals(hass).controlled
-      ? [{ title: 'Overrides', path: 'overrides', strategy: { type: 'custom:flare-lights' } }]
+      ? [{ title: localize(hass, 'view.overrides'), path: 'overrides', strategy: { type: 'custom:flare-lights' } }]
       : [];
     const views = [...schedules, ...lights];
     // The schedule view explains an empty install.
-    return { views: views.length ? views : [{ title: 'Lighting', strategy: { type: 'custom:flare-schedule' } }] };
+    return {
+      views: views.length ? views : [{ title: localize(hass, 'view.lighting'), strategy: { type: 'custom:flare-schedule' } }],
+    };
   }
 }
 

@@ -11,6 +11,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **FLARE speaks German**, in setup and on the dashboard, following your Home Assistant language. Thanks to
+  @stefanr09 for the translation ([#301](https://github.com/danrspencer/flare/issues/301)). The dashboard's cards
+  now translate their own text, so other languages can follow.
+
 - **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
   is setting it or something else has taken it over, with history.
 - **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for

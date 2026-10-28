@@ -1,0 +1,260 @@
+{
+  "config": {
+    "initiate_flow": {
+      "user": "Bereich einrichten"
+    },
+    "step": {
+      "schedules": {
+        "title": "FLARE einrichten",
+        "description": "Ein Zeitplan ist die Lichtstimmung des Tages: wann jede Phase beginnt und wie hell und warm das Licht ist. Für die meisten Haushalte reicht ein Zeitplan, aber jede Etage kann einen eigenen haben.\n\nDu kannst Zeitpläne später auf der FLARE-Integrationsseite hinzufügen oder entfernen.",
+        "data": {
+          "layout": "Zeitpläne"
+        }
+      },
+      "schedule_names": {
+        "title": "Zeitpläne benennen",
+        "description": "Vergib einen Namen für jeden gewünschten Zeitplan. Jeder Name wird Teil der Entitäts-IDs dieses Zeitplans – wähle also Namen, die du behalten möchtest. Hat ein Zeitplan denselben Namen wie eine Etage, starten die Bereiche dieser Etage im nächsten Schritt mit diesem Zeitplan.",
+        "data": {
+          "names": "Zeitplan"
+        }
+      },
+      "automations": {
+        "title": "Raum-Automationen einrichten?",
+        "description": "FLARE kann jetzt für jeden Bereich eine Automation einrichten, die seine Lampen nach seinem Zeitplan steuert.\n\nSteuern schon eigene Automationen deine Lampen? Dann überspring das vorerst und zieh deine Räume nach und nach mit „Bereich einrichten“ auf der FLARE-Integrationsseite um.",
+        "menu_options": {
+          "areas": "Raum-Automationen einrichten",
+          "schedules_only": "Vorerst überspringen"
+        }
+      },
+      "areas": {
+        "title": "Bereiche einrichten",
+        "description": "Jeder eingerichtete Bereich bekommt eine Raum-Automation aus dem FLARE-Blueprint, die seine Lampen steuert. Er kann außerdem einen Flare bekommen: eine Lampe für den ganzen Raum, für Sprachassistenten und HomeKit.\n\nWähle den Zeitplan, dem jeder Bereich folgt, oder leere das Feld, um den Bereich wegzulassen. Weitere Bereiche richtest du später über „Bereich einrichten“ auf der FLARE-Integrationsseite ein; den Zeitplan eines Raums änderst du in seiner Automation.",
+        "data": {
+          "set_up": "Was in jedem Bereich eingerichtet wird"
+        },
+        "sections": {
+          "areas": {
+            "name": "Bereiche"
+          },
+          "other_areas": {
+            "name": "Weitere Bereiche"
+          }
+        }
+      }
+    },
+    "abort": {
+      "setup_complete": "FLARE ist eingerichtet, mit den Zeitplänen {schedules}. Raum-Automationen: {automations}. Flares: {flares}.\n\n{reload}, um das FLARE-Lighting-Dashboard über Einstellungen → Dashboards → Dashboard hinzufügen einzubinden. Falls es dort nicht aufgeführt ist, lade die Seite noch einmal neu.",
+      "schedules_set_up": "FLARE ist eingerichtet, mit den Zeitplänen {schedules}, aber noch ohne Raum-Automationen. Richte über „Bereich einrichten“ auf der FLARE-Integrationsseite einen Raum ein, wann immer du so weit bist.\n\n{reload}, um das FLARE-Lighting-Dashboard über Einstellungen → Dashboards → Dashboard hinzufügen einzubinden. Falls es dort nicht aufgeführt ist, lade die Seite noch einmal neu.",
+      "areas_set_up": "Raum-Automationen: {automations}. Flares: {flares}.",
+      "no_schedules": "Füge zuerst einen Zeitplan hinzu: Die Automation eines Bereichs braucht einen, dem sie folgt.",
+      "automations_not_loaded": "Die Raum-Automationen konnten nicht erstellt werden: Home Assistant lädt automations.yaml nicht, die Datei, in der der Automations-Editor speichert. Füge `automation: !include automations.yaml` zur configuration.yaml hinzu, starte neu und verwende dann erneut „Bereich einrichten“.",
+      "automations_invalid": "Die Raum-Automationen konnten nicht erstellt werden: automations.yaml ist keine Liste von Automationen, die Home Assistant lesen kann. Behebe das Problem in der Datei und verwende dann erneut „Bereich einrichten“.",
+      "setup_failed": "Die Einrichtung der Bereiche ist fehlgeschlagen. Der Grund steht im Home-Assistant-Protokoll.",
+      "no_areas": "Kein Bereich hat Lampen. Ordne deine Lampen Bereichen zu und versuche es erneut."
+    },
+    "error": {
+      "invalid_name": "Gib jedem Zeitplan einen Namen mit mindestens einem Buchstaben oder einer Zahl",
+      "duplicate_name": "Zwei Zeitpläne dürfen nicht denselben Namen haben",
+      "no_names": "Benenne mindestens einen Zeitplan"
+    }
+  },
+  "config_subentries": {
+    "sensor": {
+      "entry_type": "Sensor",
+      "initiate_flow": {
+        "user": "Zeitplan hinzufügen"
+      },
+      "step": {
+        "user": {
+          "title": "Zeitplan hinzufügen",
+          "description": "Ein Zeitplan ist die Lichtstimmung des Tages: wann jede Phase beginnt und wie hell und warm das Licht ist. Er bekommt ein Gerät mit diesem Namen, und seine Entitäts-IDs beginnen mit dem Namen: „Wohnzimmer“ ergibt sensor.wohnzimmer_flare. Zeiten und Kurve starten mit den FLARE-Standardwerten; du kannst sie auf der Geräteseite oder im FLARE-Lighting-Dashboard ändern.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "reconfigure": {
+          "title": "Diesen Zeitplan exportieren oder importieren",
+          "description": "Das ist der vollständige Inhalt dieses Zeitplans: seine Zeiten, Helligkeiten, Farbtemperaturen und Übergänge. Du kannst ihn kopieren, um ihn aufzubewahren oder zu teilen. Um diesen Zeitplan zu ersetzen, füge einen anderen ein und sende ihn ab. Alles, was du weglässt, behält seinen aktuellen Wert.",
+          "data": {
+            "schedule": "Zeitplan"
+          }
+        }
+      },
+      "error": {
+        "already_configured": "Ein Zeitplan mit diesem Namen existiert bereits",
+        "invalid_schedule": "{error}"
+      },
+      "abort": {
+        "schedule_imported": "Zeitplan importiert."
+      }
+    },
+    "flare": {
+      "entry_type": "Flare",
+      "initiate_flow": {
+        "user": "Flare hinzufügen",
+        "reconfigure": "Flare neu konfigurieren"
+      },
+      "step": {
+        "user": {
+          "title": "Flare hinzufügen",
+          "description": "Ein Flare ist eine Lampe für einen ganzen Raum – nutzbar über Sprachassistenten, HomeKit oder ein Dashboard. Das Einschalten startet die Raum-Automation, sodass der Raum so angeht wie gewohnt.\n\nWenn du ihn mit einer Helligkeit oder Farbe einschaltest, wird jede Lampe im Raum darauf gesetzt; das Ausschalten schaltet jede Lampe im Raum aus. Danach lässt FLARE den Raum in Ruhe, bis er leer und dunkel ist.",
+          "menu_options": {
+            "blueprint": "Räume aus dem FLARE-Blueprint",
+            "custom": "Eine andere Automation"
+          }
+        },
+        "blueprint": {
+          "title": "Flares für deine Räume hinzufügen",
+          "description": "Jeder gewählte Raum bekommt einen Flare, benannt nach seiner Automation, im Bereich der Automation; du kannst ihn danach umbenennen. Räume, die bereits einen Flare haben, werden nicht aufgeführt.",
+          "data": {
+            "automation": "Räume"
+          }
+        },
+        "custom": {
+          "title": "Automation wählen",
+          "data": {
+            "automation": "Automation"
+          },
+          "data_description": {
+            "automation": "Das Einschalten des Flare ohne weitere Angaben startet diese Automation."
+          }
+        },
+        "custom_inputs": {
+          "title": "Wo sind seine Lampen?",
+          "data": {
+            "lights_input": "Lampen-Eingang"
+          },
+          "data_description": {
+            "lights_input": "Der Eingang der Automation, der die gesteuerten Lampen benennt."
+          }
+        },
+        "custom_target": {
+          "title": "Welche Lampen?",
+          "data": {
+            "lights_target": "Lampen"
+          },
+          "data_description": {
+            "lights_target": "Die Lampen, die diese Automation steuert. Sie hat keine Eingänge, um sie daraus zu lesen."
+          }
+        },
+        "details": {
+          "title": "Flare benennen",
+          "data": {
+            "name": "Name",
+            "area_id": "Bereich"
+          },
+          "data_description": {
+            "area_id": "Der Raum des Flare – so wissen Sprachassistenten und HomeKit, wo er ist. Anfangs ist es der Bereich der Automation."
+          }
+        },
+        "reconfigure": {
+          "title": "Flare bearbeiten",
+          "data": {
+            "name": "Name",
+            "lights_input": "Lampen-Eingang",
+            "lights_target": "Lampen"
+          },
+          "description": "Startet die Automation **{automation}**. Für eine andere Automation füge einen neuen Flare hinzu.",
+          "data_description": {
+            "lights_input": "Der Eingang der Automation, der die gesteuerten Lampen benennt.",
+            "lights_target": "Die Lampen, die diese Automation steuert."
+          }
+        }
+      },
+      "error": {
+        "already_configured": "Ein Flare mit diesem Namen existiert bereits",
+        "input_not_set": "Diese Automation setzt diesen Eingang nicht"
+      },
+      "abort": {
+        "no_room_automations": "Noch keine Automation nutzt den FLARE-Blueprint. Erstelle zuerst eine oder füge den Flare als andere Automation hinzu.",
+        "no_light_inputs": "Der Blueprint dieser Automation hat keinen Eingang, der Lampen, Bereiche oder Geräte wählt.",
+        "reconfigure_successful": "Flare aktualisiert",
+        "flares_added": "Flares hinzugefügt: {count}.",
+        "every_room_has_a_flare": "Jede Raum-Automation aus dem FLARE-Blueprint hat bereits einen Flare."
+      }
+    }
+  },
+  "issues": {
+    "outdated_blueprint": {
+      "title": "FLARE-Blueprint ist veraltet",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "FLARE-Blueprint aktualisieren",
+            "description": "FLAREs Integration und Blueprint werden getrennt installiert, und dein Blueprint ist älter als der, den diese Version mitbringt ({current}).\n\n{blueprints}\n\nMit dem Absenden wird Version {current} über die oben genannten Kopien installiert und die Automationen, die sie nutzen, neu geladen. Deine Automationen behalten ihre Einstellungen.\n\nWenn du den Blueprint selbst bearbeitet hast, sende dies nicht ab – ignoriere stattdessen die Reparatur, da das Update deine Änderungen überschreiben würde."
+          }
+        },
+        "abort": {
+          "update_failed": "Der Blueprint konnte nicht aktualisiert werden. Der Grund steht im Home-Assistant-Protokoll."
+        }
+      }
+    },
+    "blueprint_not_installed": {
+      "title": "FLAREs Blueprint ist nicht installiert",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "FLARE-Blueprint installieren",
+            "description": "FLARE bringt einen fertigen Automations-Blueprint mit, der nicht installiert ist. Mit dem Absenden wird er installiert.\n\nDie Schnellanleitung beschreibt das Erstellen einer Automation daraus."
+          }
+        },
+        "abort": {
+          "install_failed": "Der Blueprint konnte nicht installiert werden. Der Grund steht im Home-Assistant-Protokoll."
+        }
+      }
+    },
+    "reload_for_dashboard": {
+      "title": "Neu laden, um FLAREs Dashboard hinzuzufügen",
+      "description": "FLARE wurde eingerichtet, während diese Seite geöffnet war, und Home Assistant lädt das Dashboard einer Integration nur beim Laden der Seite. {reload}, und suche dann **FLARE Lighting** unter Einstellungen → Dashboards → Dashboard hinzufügen.\n\nFalls es immer noch nicht aufgeführt ist, lade die Seite erneut: Dein Browser zeigt möglicherweise zuerst eine gespeicherte Kopie an. Diese Reparatur verschwindet, sobald ein Browser FLAREs Dashboard geladen hat."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Einstellungen",
+        "description": "**Zweischritt-Lampenmodelle** listet die Lampenmodelle, die Helligkeit und Farbe getrennt benötigen – ein Muster pro Zeile. Jedes Muster wird mit Hersteller und Modell einer Lampe abgeglichen, Groß-/Kleinschreibung wird ignoriert, und * passt auf alles, wie bei *TRADFRI bulb* oder IKEA*.\n\nDas Feld ist mit FLAREs Standardmustern vorausgefüllt. Deine gespeicherte Liste ersetzt diese Standardwerte vollständig – du kannst also ein Muster entfernen oder hinzufügen, erhältst aber Muster aus späteren Versionen nicht automatisch. Wenn du das Feld leer speicherst, verwendet FLARE wieder die Standardwerte.\n\nJeder Bereich tickt einmal pro **Aktualisierungsintervall**, mit Abstand zum nächsten Bereich, damit nicht alle Räume gleichzeitig senden. Eine Änderung kleiner als die **Minimale Helligkeitsänderung** oder **Minimale Farbtemperaturänderung** wird nicht gesendet.",
+        "data": {
+          "two_step_models": "Zweischritt-Lampenmodelle",
+          "tick_interval": "Aktualisierungsintervall",
+          "tick_gap": "Abstand zwischen Bereichen",
+          "min_brightness_change": "Minimale Helligkeitsänderung",
+          "min_color_temp_change": "Minimale Farbtemperaturänderung"
+        },
+        "data_description": {
+          "tick_interval": "Wie oft jeder Bereich tickt, in Minuten.",
+          "tick_gap": "Sekunden zwischen dem Tick eines Bereichs und dem nächsten. Wird automatisch kleiner, wenn die Bereiche sonst nicht in das Intervall passen würden.",
+          "min_brightness_change": "Eine Lampe, deren Helligkeit nahe genug an der Zielhelligkeit liegt, wird in Ruhe gelassen.",
+          "min_color_temp_change": "Eine Lampe, deren Farbtemperatur nahe genug an der Ziel-Farbtemperatur liegt, wird in Ruhe gelassen."
+        }
+      }
+    }
+  },
+  "selector": {
+    "set_up": {
+      "options": {
+        "automation": "Eine Automation",
+        "flare": "Eine Automation und ein Flare"
+      }
+    },
+    "layout": {
+      "options": {
+        "home": "Einer für das ganze Zuhause",
+        "custom": "Benutzerdefiniert"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "FLARE-Status",
+        "state": {
+          "controlled": "Gesteuert",
+          "overridden": "Überschrieben",
+          "mismatched": "Abweichend",
+          "untracked": "Nicht verfolgt",
+          "off": "Aus"
+        }
+      }
+    }
+  }
+}

@@ -3,13 +3,15 @@
  * No DOM or HA imports.
  */
 
+import { localize } from './flare-i18n.js';
+
 /**
  * The house's totals: the two counts and Clear all, three tiles in a row.
  * Each count is coloured while it has lights and grey at none, so overrides
  * stand out. Two tiles, one shown at a time: a tile's colour takes no
  * template. Clear all presses the Clear button.
  */
-export function totalsSection(totals) {
+export function totalsSection(totals, hass) {
   const { controlled, overridden, clear } = totals;
   const any = (entity) => ({ condition: 'numeric_state', entity, above: 0 });
   const count = (entity, name, color) => [
@@ -21,8 +23,8 @@ export function totalsSection(totals) {
     type: 'grid',
     column_span: 2,
     cards: [
-      { type: 'heading', heading: 'Overrides', heading_style: 'title', icon: 'mdi:lightbulb-group' },
-      { type: 'heading', heading: 'All lights', heading_style: 'subtitle' },
+      { type: 'heading', heading: localize(hass, 'view.overrides'), heading_style: 'title', icon: 'mdi:lightbulb-group' },
+      { type: 'heading', heading: localize(hass, 'overrides.all_lights'), heading_style: 'subtitle' },
       {
         // One card, so the three stay in a row: a loose tile is never
         // narrower than half a 12-column section.
@@ -30,12 +32,12 @@ export function totalsSection(totals) {
         columns: 3,
         square: false,
         cards: [
-          ...count(controlled, 'Controlled', 'blue'),
-          ...count(overridden, 'Overridden', 'amber'),
+          ...count(controlled, localize(hass, 'overrides.controlled'), 'blue'),
+          ...count(overridden, localize(hass, 'overrides.overridden'), 'amber'),
           {
             type: 'tile',
             entity: clear,
-            name: 'Clear all',
+            name: localize(hass, 'overrides.clear_all'),
             icon: 'mdi:backup-restore',
             hide_state: true,
             tap_action: press,
@@ -86,6 +88,7 @@ export function areaSections(hass, areaIds) {
     section(floors[id].name, floors[id].icon || 'mdi:home-floor-0', rows(areas.filter((area) => area.floor_id === id)))
   );
   const floorless = areas.filter((area) => !floorIds.includes(area.floor_id));
-  if (floorless.length) sections.push(section(sections.length ? 'Other areas' : 'Areas', null, rows(floorless)));
+  const floorlessHeading = localize(hass, sections.length ? 'overrides.other_areas' : 'overrides.areas');
+  if (floorless.length) sections.push(section(floorlessHeading, null, rows(floorless)));
   return sections;
 }

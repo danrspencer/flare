@@ -212,6 +212,19 @@ Re-record whenever setup or the dashboard changes, and commit the new files. If 
 and a screenshot of the failed step is left in `sandbox/recordings/` with the working files. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
 Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
+## Translations
+
+FLARE has two sets of text, and a language needs both:
+
+- **The integration's** (setup, options, repairs): `custom_components/flare/strings.json` is the English, copied to
+  `translations/en.json`; a language is `translations/<code>.json` with the same keys.
+- **The dashboard's**: `custom_components/flare/www/translations/en.js`; a language is `<code>.js` beside it, added
+  to `LANGUAGES` in `www/flare-i18n.js`.
+
+`tests/checks/test_translations.py` and `tests/unit/dashboard/test_i18n.py` fail if a language is missing a key, has
+one English no longer uses, or fills in different placeholders, so change a translation whenever its English
+changes. German came from @stefanr09 in [#301](https://github.com/danrspencer/flare/issues/301).
+
 ## Previewing the dashboard card
 
 The [curve playground](https://danrspencer.github.io/flare/playground/) on this site renders the real card against synthetic data, with no
@@ -262,7 +275,9 @@ Two things about it are less obvious than they look:
   paths — which need no baseurl to be correct.
 
 - **The playground runs the real dashboard card.** `docs/playground.html` loads the actual
-  `flare-curve-card.js`, copied in by the workflow rather than committed twice. The schedule maths
+  `flare-curve-card.js`, copied in by the workflow rather than committed twice, with `flare-i18n.js` and
+  `translations/`, which it imports its text from. Copy those three into `docs/assets/js/` to preview the
+  playground locally. The schedule maths
   behind the sliders is `docs/assets/js/curve.js`, a port of `curve.py`; `tests/test_curve_js_parity.py` runs
   both it and the card itself under node against a grid of inputs and fails if either drifts from `curve.py`.
 

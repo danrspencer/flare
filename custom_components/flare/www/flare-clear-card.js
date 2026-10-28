@@ -8,6 +8,8 @@
  *   entity: button.flare_clear   # pressed; or a list, pressed together
  */
 
+import { localize } from './flare-i18n.js';
+
 class FlareClearCard extends HTMLElement {
   setConfig(config) {
     const entity = config && config.entity;
@@ -19,6 +21,12 @@ class FlareClearCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._showName();
+  }
+
+  _showName() {
+    const name = this.shadowRoot && this.shadowRoot.querySelector('.name');
+    if (name) name.textContent = this._config.name || localize(this._hass, 'clear.name');
   }
 
   getGridOptions() {
@@ -51,7 +59,7 @@ class FlareClearCard extends HTMLElement {
         <span class="name"></span>
       </div>
     `;
-    this.shadowRoot.querySelector('.name').textContent = this._config.name || 'Clear';
+    this._showName();
     this.shadowRoot.querySelector('button').addEventListener('click', () => this._press());
   }
 }

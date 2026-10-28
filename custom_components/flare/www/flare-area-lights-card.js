@@ -8,27 +8,33 @@
  */
 
 import { claimsByArea, lightStatuses } from './flare-entities.js';
+import { language, localize } from './flare-i18n.js';
 
 const BLUE = 'var(--blue-color, #2196f3)';
 const AMBER = 'var(--amber-color, #ffc107)';
 const GREY = 'var(--grey-color, #9e9e9e)';
 const COUNTS = [
-  { key: 'controlled', name: 'controlled', color: BLUE },
-  { key: 'overridden', name: 'overridden', color: AMBER },
+  { key: 'controlled', color: BLUE },
+  { key: 'overridden', color: AMBER },
 ];
 const STATUSES = {
-  overridden: { label: 'Overridden', color: AMBER, icon: 'mdi:lightbulb-alert-outline' },
-  mismatched: { label: 'Mismatched', color: AMBER, icon: 'mdi:lightbulb-question-outline' },
-  controlled: { label: 'Controlled', color: BLUE, icon: 'mdi:lightbulb-auto-outline' },
-  untracked: { label: 'Untracked', color: GREY, icon: 'mdi:lightbulb-outline' },
+  overridden: { label: 'status.overridden', color: AMBER, icon: 'mdi:lightbulb-alert-outline' },
+  mismatched: { label: 'status.mismatched', color: AMBER, icon: 'mdi:lightbulb-question-outline' },
+  controlled: { label: 'status.controlled', color: BLUE, icon: 'mdi:lightbulb-auto-outline' },
+  untracked: { label: 'status.untracked', color: GREY, icon: 'mdi:lightbulb-outline' },
   // No claim either way: the icon says whether it's on.
-  off: { label: 'Untracked', color: GREY, icon: 'mdi:lightbulb-off-outline' },
-  unavailable: { label: 'Unavailable', color: GREY, icon: 'mdi:lightbulb-off-outline' },
+  off: { label: 'status.untracked', color: GREY, icon: 'mdi:lightbulb-off-outline' },
+  unavailable: { label: 'status.unavailable', color: GREY, icon: 'mdi:lightbulb-off-outline' },
 };
-/** How a status is shown: {label, color, icon}. */
-export function statusLook(status) {
-  return STATUSES[status] || STATUSES.untracked;
+/** How a status is shown, in hass's language: {label, color, icon}. */
+export function statusLook(status, hass) {
+  const look = STATUSES[status] || STATUSES.untracked;
+  return { ...look, label: localize(hass, look.label) };
 }
+
+// A light's on/off/unavailable, in hass's language; values pass through.
+const WORDS = new Set(['on', 'off', 'unavailable']);
+const word = (hass, text) => (WORDS.has(text) ? localize(hass, `overrides.${text}`) : text);
 
 // The order lights are listed in: what needs a look first.
 const ORDER = ['overridden', 'mismatched', 'controlled', 'untracked', 'off', 'unavailable'];
@@ -95,18 +101,19 @@ export function areaLights(hass, area) {
         name: nameOf(hass, entityId),
         status,
         claimed,
-        asked: describe(asked),
-        showing: showing(hass.states?.[entityId]),
+        asked: word(hass, describe(asked)),
+        showing: word(hass, showing(hass.states?.[entityId])),
       };
     })
     .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
 }
 
 /** A light's line under its name: "Asked 78% · 3000K, showing 20% · 3000K". */
-export function detail(light) {
-  if (light.asked && light.showing) return `Asked ${light.asked}, showing ${light.showing}`;
-  if (light.asked) return `Asked ${light.asked}`;
-  return light.showing ? `Showing ${light.showing}` : '';
+export function detail(light, hass) {
+  const { asked, showing: shown } = light;
+  if (asked && shown) return localize(hass, 'overrides.asked_showing', { asked, showing: shown });
+  if (asked) return localize(hass, 'overrides.asked', { asked });
+  return shown ? localize(hass, 'overrides.showing', { showing: shown }) : '';
 }
 
 function badge(icon, color) {
@@ -140,7 +147,7 @@ class FlareAreaLightsCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     const lights = areaLights(hass, this._config.area);
-    const key = JSON.stringify(lights);
+    const key = JSON.stringify([language(hass), lights]);
     if (key === this._key) return;
     this._key = key;
     this._render(lights);
@@ -197,14 +204,15 @@ class FlareAreaLightsCard extends HTMLElement {
     header.className = 'header';
     header.innerHTML =
       '<div class="counts"></div>' +
-      '<button class="clear-all"><ha-icon icon="mdi:backup-restore"></ha-icon><span>Clear all</span></button>';
+      '<button class="clear-all"><ha-icon icon="mdi:backup-restore"></ha-icon><span></span></button>';
+    header.querySelector('.clear-all span').textContent = localize(this._hass, 'overrides.clear_all');
     for (const count of COUNTS) {
       const value = summary[count.key];
       const item = document.createElement('span');
       item.className = 'count';
       item.innerHTML = '<span class="dot"></span><span></span>';
       item.querySelector('.dot').style.background = value > 0 ? count.color : GREY;
-      item.lastChild.textContent = `${value} ${count.name}`;
+      item.lastChild.textContent = localize(this._hass, `overrides.count_${count.key}`, { count: value });
       header.querySelector('.counts').append(item);
     }
     const claimed = claimedIn(lights);
@@ -213,23 +221,24 @@ class FlareAreaLightsCard extends HTMLElement {
     clearAll.addEventListener('click', () => this._clear(claimed));
     card.append(header);
     for (const light of lights) {
-      const look = statusLook(light.status);
+      const look = statusLook(light.status, this._hass);
       const row = document.createElement('div');
       row.className = 'row';
       row.append(badge(look.icon, look.color));
       row.insertAdjacentHTML(
         'beforeend',
         '<div class="text"><span class="name"></span><span class="value"></span></div><span class="status"></span>' +
-          '<button aria-label="Clear"><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
+          '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
       );
       row.querySelector('.name').textContent = light.name;
-      row.querySelector('.value').textContent = detail(light);
+      row.querySelector('.value').textContent = detail(light, this._hass);
       const status = row.querySelector('.status');
       status.textContent = look.label;
       status.style.color = look.color;
       const clear = row.querySelector('button');
       clear.hidden = !light.claimed;
-      clear.title = `Clear ${light.name}`;
+      clear.title = localize(this._hass, 'overrides.clear_light', { name: light.name });
+      clear.setAttribute('aria-label', clear.title);
       clear.addEventListener('click', () => this._clear([light.entity_id]));
       row.querySelector('.text').addEventListener('click', () => this._moreInfo(light.entity_id));
       card.append(row);

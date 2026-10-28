@@ -15,15 +15,16 @@
  */
 
 import { flareDevices } from './flare-entities.js';
+import { localize } from './flare-i18n.js';
 
 const DEFAULT_HOURS_TO_SHOW = 24;
 const FILTER_KEY = 'flare-activity-filter';
 
 // The tiles' colours, so an entry matches the count it changed.
 export const KINDS = [
-  { key: 'controlled', role: 'all_controlled', label: 'Controlled', color: 'var(--blue-color, #2196f3)' },
-  { key: 'overridden', role: 'all_overridden', label: 'Overridden', color: 'var(--amber-color, #ffc107)' },
-  { key: 'cleared', role: 'clear', label: 'Cleared', color: 'var(--grey-color, #9e9e9e)' },
+  { key: 'controlled', role: 'all_controlled', color: 'var(--blue-color, #2196f3)' },
+  { key: 'overridden', role: 'all_overridden', color: 'var(--amber-color, #ffc107)' },
+  { key: 'cleared', role: 'clear', color: 'var(--grey-color, #9e9e9e)' },
 ];
 
 /** entity_id -> {kind, device} for the devices the card follows. */
@@ -221,12 +222,13 @@ class FlareActivityCard extends HTMLElement {
     this._kinds = kinds;
 
     const chips = this.shadowRoot.querySelector('.chips');
-    chips.innerHTML = [{ key: 'all', label: 'All' }, ...KINDS]
+    chips.innerHTML = [{ key: 'all' }, ...KINDS]
       .map(
         (k) =>
           `<button class="chip" data-filter="${k.key}" aria-pressed="${this._filter === k.key}">` +
           (k.color ? `<span class="dot" style="background:${k.color}"></span>` : '') +
-          `${k.label}</button>`
+          // FLARE's own text, never an entity's or a user's.
+          `${localize(this._hass, `activity.${k.key}`)}</button>`
       )
       .join('');
 
