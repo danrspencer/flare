@@ -21,9 +21,15 @@ const STATUSES = {
   mismatched: { label: 'Mismatched', color: AMBER, icon: 'mdi:lightbulb-question-outline' },
   controlled: { label: 'Controlled', color: BLUE, icon: 'mdi:lightbulb-auto-outline' },
   untracked: { label: 'Untracked', color: GREY, icon: 'mdi:lightbulb-outline' },
-  off: { label: 'Off', color: GREY, icon: 'mdi:lightbulb-off-outline' },
+  // No claim either way: the icon says whether it's on.
+  off: { label: 'Untracked', color: GREY, icon: 'mdi:lightbulb-off-outline' },
   unavailable: { label: 'Unavailable', color: GREY, icon: 'mdi:lightbulb-off-outline' },
 };
+/** How a status is shown: {label, color, icon}. */
+export function statusLook(status) {
+  return STATUSES[status] || STATUSES.untracked;
+}
+
 // The order lights are listed in: what needs a look first.
 const ORDER = ['overridden', 'mismatched', 'controlled', 'untracked', 'off', 'unavailable'];
 
@@ -207,7 +213,7 @@ class FlareAreaLightsCard extends HTMLElement {
     clearAll.addEventListener('click', () => this._clear(claimed));
     card.append(header);
     for (const light of lights) {
-      const look = STATUSES[light.status] || STATUSES.untracked;
+      const look = statusLook(light.status);
       const row = document.createElement('div');
       row.className = 'row';
       row.append(badge(look.icon, look.color));

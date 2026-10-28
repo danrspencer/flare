@@ -1297,7 +1297,9 @@ strategy type and files kept the name `lights`.
   per area, at the user's direction. Then each light (`areaLights()`),
   overridden and mismatched first: its status, what FLARE last asked for
   (`asked`), both from its status sensor, beside what it shows, and a Clear
-  for that light. Its name opens the light's more-info. The counts come
+  for that light. Its name opens the light's more-info. `off` (no claim,
+  light off) is labelled Untracked like `untracked` (user's call); only the
+  icon says it's off. The counts come
   from the same statuses as the list, so the two agree.
 - **`custom:flare-clear-card`** (a round icon and a label, like the "All
   off" toggle-group, pressing `entity:` or a list of buttons) isn't used

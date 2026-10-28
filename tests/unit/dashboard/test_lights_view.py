@@ -91,7 +91,7 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
-const {{ areaSummary, areaLights, claimedIn, describe, detail }} = await import({js_path(WWW / "flare-area-lights-card.js")});
+const {{ areaSummary, areaLights, claimedIn, describe, detail, statusLook }} = await import({js_path(WWW / "flare-area-lights-card.js")});
 const empty = {{ ...input, entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => e.translation_key !== 'status')) }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
@@ -111,6 +111,7 @@ return {{
     describe(null),
   ],
   details: areaLights(input, 'kitchen').map(detail),
+  labels: ['untracked', 'off', 'controlled'].map((status) => statusLook(status).label),
   clearAll: {{ kitchen: claimedIn(areaLights(input, 'kitchen')), bedroom: claimedIn(areaLights(input, 'bedroom')) }},
 }};
 """,
@@ -244,3 +245,7 @@ def test_with_no_lights_yet_it_says_so(result):
 def test_without_the_settings_entry_it_says_so(result):
     content = result["noSettings"]["sections"][0]["cards"][1]["content"]
     assert "Settings" in content
+
+
+def test_a_light_with_no_claim_is_untracked_whether_on_or_off(result):
+    assert result["labels"] == ["Untracked", "Untracked", "Controlled"]
