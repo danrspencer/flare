@@ -132,6 +132,13 @@ class ClaimRegistry:
     def all_records(self) -> dict[str, _WriteRecord]:
         return dict(self._store.claims) if self._store else {}
 
+    def room_keys(self) -> list[str]:
+        return list(self._store.rooms) if self._store else []
+
+    def room_lights(self, key: str) -> list[str]:
+        """Every light a room has named."""
+        return list(self._store.rooms.get(key, {}).get("lights", ())) if self._store else []
+
     def rooms_of(self, entity_id: str) -> list[str]:
         """Every room this light is one of, by key, sorted."""
         if self._store is None:

@@ -55,7 +55,8 @@ export function totalsSection(totals) {
 
 /**
  * One area's row: a heading linking to the area's page, Clear for its
- * claimed lights, and its counts, worked out live (flare-area-card.js).
+ * claimed lights, its counts, then each light, worked out live
+ * (flare-area-card.js).
  */
 export function areaCards(area) {
   return [
@@ -68,6 +69,7 @@ export function areaCards(area) {
     { type: 'custom:flare-clear-card', area: area.area_id, grid_options: { columns: 3, rows: 1 } },
     { type: 'custom:flare-area-card', area: area.area_id, grid_options: { columns: 9 }, visibility: [LARGE_SCREEN] },
     { type: 'custom:flare-area-card', area: area.area_id, grid_options: { columns: 'full' }, visibility: [SMALL_SCREEN] },
+    { type: 'custom:flare-area-lights-card', area: area.area_id, grid_options: { columns: 'full' } },
   ];
 }
 

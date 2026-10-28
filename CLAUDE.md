@@ -387,6 +387,26 @@ it gets an `observed` claim of its current context and values, and joins
 the room. Otherwise a Clear in a lit room left most lights unclaimed, and a
 hand change to one went unnoticed.
 
+**Each room light has a status sensor** (`_LightStatusSensor`,
+`sensor.<light>_flare_status`, translation key `status`): what
+`classify_state` says of it, unmapped (so `untracked` stays `untracked`,
+unlike the counts), unavailable while the light is. At the user's
+direction, so tracked state is visible in HA's own UI without storing it
+on anything per room. One source still: it reads the registry, holding no
+state.
+
+- **It sits on the light's own device** through `device_entry`, as HA's
+  own helpers link to a source device. `DeviceInfo` with the device's
+  identifiers doesn't: since HA 2026.9 identifiers are unique per config
+  entry, so it registers a second device of FLARE's own.
+- `_LightStatuses` adds one the first time any room names a light (claims
+  or `rooms`) and on setup for every one already registered, so a sensor
+  outlives its claims and keeps its history. Keyed by the light's registry
+  id, so a rename keeps it; removed when the light's registry entry is.
+  A light with no device gets one named after it.
+- It updates on `SIGNAL_CLAIMS_UPDATED` and on its light's own state
+  changes: an unclaimed light changes status without any claim changing.
+
 **Known limitation, partly mitigated:** an `overridden` light is excluded
 from every group, so it never gets a fresher claim, and on a ramping
 curve the value match drifts further away. The room going dark clears it;
@@ -1219,8 +1239,14 @@ and Overridden counts beside it.
   browser from `sensor.flare_claims`'s `statuses` and each light's area
   (`claimsByArea()`): there are no per-area entities, and per-room devices
   would repeat `owner_id`'s devices-from-arbitrary-strings problem. It
-  draws the same blue/amber/grey counts and names the overridden lights.
+  draws the same blue/amber/grey counts.
   The claims sensor's statuses refresh on claim changes and its poll.
+- **Under them, `custom:flare-area-lights-card` lists each light**
+  (`areaLights()`), overridden and mismatched first: its status (from its
+  status sensor, else the claims sensor's, else untracked), what FLARE last
+  asked for (`latest`'s target, else `observed`'s) beside what it shows,
+  and a Clear for that light (`flare.claims_clear`). Its name opens the
+  light's more-info.
 - **Clear is `custom:flare-clear-card`**, drawn like the "All off"
   toggle-group (no card, a round icon, a label): a tile looked like one
   more count, and `toggle-group` is always a power icon with on/off

@@ -33,10 +33,24 @@ else's and leave alone a light you've changed yourself. Its entities and options
 | `sensor.flare_controlled_lights` | The number of lights FLARE is setting. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
+| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in. |
 
-The two counts are recorded in history, with long-term statistics, but the attributes of
-`sensor.flare_claims` aren't. A light that's unavailable or has no claim isn't included in
-either count. The [dashboard](../../dashboard/) shows the counts for each area too.
+The two counts and each light's status are recorded in history, with long-term statistics for
+the counts, but the attributes of `sensor.flare_claims` aren't. A light that's unavailable or
+has no claim isn't included in either count. The [dashboard](../../dashboard/) shows the counts
+and each light for each area too.
+
+A light's status sensor appears the first time a room names the light, under **Diagnostic** on
+the light's device page, and stays after its room lets the light go. It's unavailable while the
+light is, and it's removed with the light. A light with no device, such as a light group, gets
+one named after it instead. An automation can trigger on it:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: sensor.kitchen_1_flare_status
+    to: overridden
+```
 
 **Clear** discards every claim, not only for the overridden lights. FLARE then sets every light
 again on its next update.
@@ -195,7 +209,7 @@ triggers:
 
 ## Inspecting tracked state
 
-`flare.claims_check` returns each light's status:
+`flare.claims_check` returns each light's status, and each light's status sensor shows it:
 
 | Status | Meaning |
 |---|---|

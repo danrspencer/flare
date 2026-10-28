@@ -11,15 +11,29 @@ from tests.support.registry import settings_entities
 pytestmark = requires_node
 
 
-def _light(name):
-    return {"attributes": {"friendly_name": name}}
+def _light(name, state="on", **attributes):
+    return {"state": state, "attributes": {"friendly_name": name, **attributes}}
+
+
+def _asked(**target):
+    return {"observed": None, "latest": {"context_id": "c", "target": target}}
+
+
+def _status(light, status):
+    """A light's status sensor: its state, and the entity it's for."""
+    return {"state": status, "attributes": {"light": light}}
 
 
 # Upstairs has the Bedroom; Downstairs the Kitchen; the Study is on no floor.
 # The Bed Lamp is placed through its device; the Hall has no room light.
 CLAIMS = {
     "attributes": {
-        "claims": {},
+        "claims": {
+            "light.k1": _asked(brightness=200, color_temp_kelvin=3000),
+            "light.k2": _asked(state="off"),
+            "light.k3": _asked(brightness=200, color_temp_kelvin=3000),
+            "light.bed_lamp": {"observed": {"context_id": "c", "target": None}, "latest": None},
+        },
         "rooms": {
             "automation.kitchen": {"lights": ["light.k1", "light.k2", "light.k3"]},
             "automation.bedroom": {"lights": ["light.bed_lamp", "light.bed_ceiling"]},
@@ -38,9 +52,13 @@ HOUSE = {
         "sensor.flare_claims": CLAIMS,
         "light.bed_lamp": _light("Bed Lamp"),
         "light.bed_ceiling": _light("Bed Ceiling"),
-        "light.k1": _light("Kitchen 1"),
-        "light.k2": _light("Kitchen 2"),
-        "light.k3": _light("Kitchen 3"),
+        "light.k1": _light("Kitchen 1", brightness=200, color_temp_kelvin=3000),
+        "light.k2": _light("Kitchen 2", "off"),
+        "light.k3": _light("Kitchen 3", brightness=51, rgb_color=[255, 0, 0]),
+        "sensor.k1_flare_status": _status("light.k1", "controlled"),
+        "sensor.k3_flare_status": _status("light.k3", "overridden"),
+        # The claims sensor counts a mismatched light as controlled.
+        "sensor.k2_flare_status": _status("light.k2", "mismatched"),
         "light.study": _light("Study"),
     },
     "floors": {
@@ -63,6 +81,12 @@ HOUSE = {
         "light.k3": {"entity_id": "light.k3", "area_id": "kitchen"},
         "light.study": {"entity_id": "light.study", "area_id": "study"},
         "light.hall": {"entity_id": "light.hall", "area_id": "hall"},
+        **{
+            f"sensor.{light}_flare_status": {
+                "entity_id": f"sensor.{light}_flare_status", "platform": "flare", "translation_key": "status"
+            }
+            for light in ("k1", "k2", "k3")
+        },
     },
     "config": {"components": ["logbook"]},
 }
@@ -75,7 +99,7 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
-const {{ areaSummary }} = await import({js_path(WWW / "flare-area-card.js")});
+const {{ areaSummary, areaLights, describe, detail }} = await import({js_path(WWW / "flare-area-card.js")});
 const empty = {{ ...input, states: {{ ...input.states, 'sensor.flare_claims': {{ attributes: {{}} }} }} }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
@@ -86,6 +110,15 @@ return {{
   kitchen: areaSummary(input, 'kitchen'),
   bedroom: areaSummary(input, 'bedroom'),
   hall: areaSummary(input, 'hall'),
+  kitchenLights: areaLights(input, 'kitchen'),
+  bedroomLights: areaLights(input, 'bedroom'),
+  described: [
+    describe({{ brightness: 255, color_temp_kelvin: 2700 }}),
+    describe({{ brightness: 128, rgb_color: [255, 0, 10] }}),
+    describe({{ state: 'off' }}),
+    describe(null),
+  ],
+  details: areaLights(input, 'kitchen').map(detail),
 }};
 """,
         HOUSE,
@@ -131,9 +164,9 @@ def test_areas_with_room_lights_are_grouped_by_floor(view):
     assert [_headings(s, "subtitle") for s in sections] == [["Kitchen"], ["Bedroom"], ["Study"]]
 
 
-def test_an_areas_row_is_clear_then_its_live_counts(view):
+def test_an_areas_row_is_clear_then_its_live_counts_then_its_lights(view):
     downstairs = view["sections"][1]
-    heading, clear, wide, narrow = downstairs["cards"][1:5]
+    heading, clear, wide, narrow, lights = downstairs["cards"][1:6]
 
     assert heading["tap_action"] == {"action": "navigate", "navigation_path": "/config/areas/area/kitchen"}
     assert (clear["type"], clear["area"]) == ("custom:flare-clear-card", "kitchen")
@@ -142,13 +175,51 @@ def test_an_areas_row_is_clear_then_its_live_counts(view):
     assert wide["visibility"] == [{"condition": "view_columns", "min": 2}]
     assert (narrow["area"], narrow["grid_options"]) == ("kitchen", {"columns": "full"})
     assert narrow["visibility"] == [{"condition": "view_columns", "max": 1}]
+    assert (lights["type"], lights["area"], lights["grid_options"]) == (
+        "custom:flare-area-lights-card",
+        "kitchen",
+        {"columns": "full"},
+    )
 
 
-def test_an_areas_counts_come_from_the_claims_sensor(result):
-    """A light counts in its own area, or its device's."""
-    assert result["kitchen"] == {"controlled": 2, "overridden": 1, "overriddenNames": ["Kitchen 3"]}
-    assert result["bedroom"] == {"controlled": 0, "overridden": 1, "overriddenNames": ["Bed Lamp"]}
-    assert result["hall"] == {"controlled": 0, "overridden": 0, "overriddenNames": []}
+def test_an_areas_counts_agree_with_its_lights(result):
+    """A light counts in its own area, or its device's, by the status its list
+    shows: Kitchen 2's sensor says mismatched, though the claims sensor would
+    count it as controlled."""
+    assert result["kitchen"] == {"controlled": 1, "overridden": 1}
+    assert result["bedroom"] == {"controlled": 0, "overridden": 1}
+    assert result["hall"] == {"controlled": 0, "overridden": 0}
+
+
+def test_an_areas_lights_are_listed_overridden_first(result):
+    """Status from each light's status sensor, else the claims sensor's,
+    else untracked."""
+    assert [(light["name"], light["status"], light["claimed"]) for light in result["kitchenLights"]] == [
+        ("Kitchen 3", "overridden", True),
+        ("Kitchen 2", "mismatched", True),
+        ("Kitchen 1", "controlled", True),
+    ]
+    assert [(light["name"], light["status"], light["claimed"]) for light in result["bedroomLights"]] == [
+        ("Bed Lamp", "overridden", True),
+        ("Bed Ceiling", "untracked", False),
+    ]
+
+
+def test_each_light_says_what_flare_asked_for_and_what_it_shows(result):
+    assert result["details"] == [
+        "Asked 78% · 3000K, showing 20% · RGB 255, 0, 0",
+        "Asked off, showing off",
+        "Asked 78% · 3000K, showing 78% · 3000K",
+    ]
+
+
+def test_a_light_marked_as_someone_elses_has_nothing_asked(result):
+    lamp = next(light for light in result["bedroomLights"] if light["name"] == "Bed Lamp")
+    assert lamp["asked"] is None
+
+
+def test_values_read_as_brightness_then_colour(result):
+    assert result["described"] == ["100% · 2700K", "50% · RGB 255, 0, 10", "off", None]
 
 
 def test_activity_follows_flares_device_in_the_sidebar(view):

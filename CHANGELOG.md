@@ -9,6 +9,13 @@ CI — see `.github/workflows/release.yml`.
 
 ## [2.0.0] - Unreleased
 
+### Added
+
+- **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
+  is setting it or something else has taken it over, with history.
+- **The Rooms view lists each area's lights**: each light's status, what FLARE last asked for
+  and what the light is showing, and a **Clear** for that light alone.
+
 ### Changed
 
 - **Zones are gone.** FLARE keeps one record of the lights it's driving, and each room's

@@ -17,8 +17,10 @@ name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 - **Rooms** starts with **All rooms**: how many lights FLARE is driving across the house, how
   many something else has taken over, and a **Clear** button for every light at once. Below
   that is each area with lights a room automation drives, by floor, laid out like Home
-  Assistant's Lights dashboard: its controlled and overridden counts, which lights are
-  overridden, and a **Clear** button to hand them back. An area's name opens its page. Beside
+  Assistant's Lights dashboard: its controlled and overridden counts, a **Clear** button to hand
+  them back, and each of its lights, overridden ones first. Each light shows its status, what
+  FLARE last asked it for and what it's showing, with its own **Clear**; press its name to open
+  the light. An area's name opens its page. Beside
   the areas, **Activity** lists the last 24 hours of what the rooms did, coloured by kind - blue
   when a room takes its lights, amber when something else overrides one, grey when a room lets
   them go - and the buttons at its top show one kind at a time. On a narrow screen, Activity is

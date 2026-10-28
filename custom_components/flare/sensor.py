@@ -5,22 +5,23 @@ attributes carry the current brightness/color_temp/rgb_color, today's
 boundaries, and the full-day `points` curve.
 
 Settings: the sensor holding every claim and room, plus
-`controlled`/`overridden` counts."""
+`controlled`/`overridden` counts, and a status sensor for each room light,
+on the light's own device."""
 
 from __future__ import annotations
 
 import copy
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import ExtraStoredData, RestoredExtraData, RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -53,6 +54,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             *(_CountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")),
         ]
     )
+    _LightStatuses(hass, registry, entry, async_add_entities).start()
 
 
 def _classify_tracked(
@@ -332,6 +334,165 @@ class _CountSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         lights, total = self._matching_lights()
         return {"lights": lights, "total_tracked": total}
+
+
+# What a light's status sensor can say; an unreachable light makes it
+# unavailable instead.
+LIGHT_STATUSES = ("controlled", "overridden", "mismatched", "untracked", "off")
+STATUS_UNIQUE_ID = "{entry_id}_status_{light}"
+
+
+class _LightStatuses:
+    """A status sensor for every light some room has named, added as each
+    first appears and kept after, so its history carries on. Keyed by the
+    light's registry id (its entity_id if it has none), so a rename keeps
+    it. Removed with the light."""
+
+    def __init__(
+        self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, add: AddEntitiesCallback
+    ) -> None:
+        self._hass = hass
+        self._registry = registry
+        self._entry = entry
+        self._add = add
+        # Light key -> its sensor.
+        self._sensors: dict[str, _LightStatusSensor] = {}
+
+    def start(self) -> None:
+        prefix = STATUS_UNIQUE_ID.format(entry_id=self._entry.entry_id, light="")
+        known = [
+            e.unique_id[len(prefix) :]
+            for e in er.async_entries_for_config_entry(er.async_get(self._hass), self._entry.entry_id)
+            if e.unique_id.startswith(prefix)
+        ]
+        self._add_for(known)
+        self._entry.async_on_unload(async_dispatcher_connect(self._hass, SIGNAL_CLAIMS_UPDATED, self._claims_changed))
+        self._entry.async_on_unload(
+            self._hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._registry_updated)
+        )
+
+    def _key(self, entity_id: str) -> str:
+        entry = er.async_get(self._hass).async_get(entity_id)
+        return entry.id if entry is not None else entity_id
+
+    @callback
+    def _add_for(self, keys) -> None:
+        new = [_LightStatusSensor(self._hass, self._registry, self._entry, key) for key in keys if key not in self._sensors]
+        for sensor in new:
+            self._sensors[sensor.light_key] = sensor
+        if new:
+            self._add(new)
+
+    @callback
+    def _claims_changed(self) -> None:
+        lights = set(self._registry.all_records())
+        for key in self._registry.room_keys():
+            lights.update(self._registry.room_lights(key))
+        self._add_for(sorted({self._key(entity_id) for entity_id in lights}))
+
+    @callback
+    def _registry_updated(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
+        if event.data["action"] != "remove" or not event.data["entity_id"].startswith("light."):
+            return
+        # The light's registry entry is gone, so it's keyed by the id the
+        # sensor remembered.
+        for key, sensor in list(self._sensors.items()):
+            if sensor.light_entity_id == event.data["entity_id"]:
+                del self._sensors[key]
+                if sensor.registry_entry is not None:
+                    er.async_get(self._hass).async_remove(sensor.entity_id)
+
+
+class _LightStatusSensor(SensorEntity):
+    """What FLARE makes of one light, as claims_check says it, on the light's
+    own device so its page shows it. Untracked is FLARE holding nothing on
+    it. Unavailable while the light is."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = list(LIGHT_STATUSES)
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "status"
+    _attr_should_poll = False
+
+    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, key: str) -> None:
+        self.hass = hass
+        self._registry = registry
+        self.light_key = key
+        self._attr_unique_id = STATUS_UNIQUE_ID.format(entry_id=entry.entry_id, light=key)
+        light = er.async_get(hass).async_get(key)
+        self.light_entity_id = light.entity_id if light is not None else key
+        device = dr.async_get(hass).async_get(light.device_id) if light and light.device_id else None
+        if device is not None:
+            # The light's device itself, as HA's own helpers link to their
+            # source's: device info would register a device of FLARE's own,
+            # since identifiers are unique per config entry.
+            self._attr_has_entity_name = True
+            self.device_entry = device
+        else:
+            state = hass.states.get(self.light_entity_id)
+            self._attr_has_entity_name = False
+            self._attr_name = f"{state.name if state else self.light_entity_id} FLARE status"
+        self.entity_id = f"sensor.{self.light_entity_id.split('.', 1)[1]}_flare_status"
+        self._unsubscribe_light = None
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CLAIMS_UPDATED, self._handle_update))
+        self.async_on_remove(self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._light_renamed))
+        self.async_on_remove(self._stop_following)
+        self._follow_light()
+
+    @callback
+    def _stop_following(self) -> None:
+        if self._unsubscribe_light is not None:
+            self._unsubscribe_light()
+            self._unsubscribe_light = None
+
+    @callback
+    def _follow_light(self) -> None:
+        if self._unsubscribe_light is not None:
+            self._unsubscribe_light()
+        self._unsubscribe_light = async_track_state_change_event(
+            self.hass, [self.light_entity_id], self._light_changed
+        )
+
+    @callback
+    def _light_changed(self, _event: Event) -> None:
+        self.async_write_ha_state()
+
+    @callback
+    def _light_renamed(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
+        if event.data["action"] == "update" and event.data.get("old_entity_id") == self.light_entity_id:
+            self.light_entity_id = event.data["entity_id"]
+            self._follow_light()
+            self._handle_update()
+
+    @callback
+    def _handle_update(self) -> None:
+        self.async_write_ha_state()
+
+    def _status(self) -> str:
+        status, _via = classify_state(
+            self.hass.states.get(self.light_entity_id),
+            self._registry.record(self.light_entity_id),
+            reconnected_at=self._registry.reconnected_at(self.light_entity_id),
+        )
+        return status
+
+    @property
+    def available(self) -> bool:
+        return self._status() != "unavailable"
+
+    @property
+    def native_value(self) -> str | None:
+        status = self._status()
+        return status if status in LIGHT_STATUSES else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            "light": self.light_entity_id,
+            "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(self.light_entity_id)],
+        }
 
 
 class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
