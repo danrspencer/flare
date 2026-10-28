@@ -1,5 +1,5 @@
 /**
- * The Lights view's sections, as config objects for flare-view-strategy.js.
+ * The Overrides view's sections, as config objects for flare-view-strategy.js.
  * No DOM or HA imports.
  */
 
@@ -21,7 +21,7 @@ export function totalsSection(totals) {
     type: 'grid',
     column_span: 2,
     cards: [
-      { type: 'heading', heading: 'Lights', heading_style: 'title', icon: 'mdi:lightbulb-group' },
+      { type: 'heading', heading: 'Overrides', heading_style: 'title', icon: 'mdi:lightbulb-group' },
       { type: 'heading', heading: 'All lights', heading_style: 'subtitle' },
       {
         // One card, so the three stay in a row: a loose tile is never

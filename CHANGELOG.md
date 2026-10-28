@@ -13,7 +13,7 @@ CI — see `.github/workflows/release.yml`.
 
 - **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
   is setting it or something else has taken it over, with history.
-- **The Lights view lists each area's lights**: each light's status, what FLARE last asked for
+- **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for
   and what the light is showing, and a **Clear** for that light alone.
 
 ### Changed
@@ -37,7 +37,7 @@ CI — see `.github/workflows/release.yml`.
   - A room updates on the tick of the first area in its **Lights & Occupancy**. A room naming no
     area updates every minute, on the minute.
   - **FLARE → Zones** is now **FLARE → Settings**, where the options are.
-  - The dashboard's Zones view is now **Lights**, with each area's lights, counts and **Clear all**.
+  - The dashboard's Zones view is now **Overrides**, with each area's lights, counts and **Clear all**.
   - Two automations driving the same light no longer treat each other's changes as overrides,
     so there's no more notification about a light in two zones.
 - **If you call FLARE's services or listen for its events yourself**, these changed:

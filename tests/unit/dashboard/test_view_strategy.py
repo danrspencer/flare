@@ -333,7 +333,7 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
     ]
 
 
-# --- The Lights view -----------------------------------------------
+# --- The Overrides view --------------------------------------------
 
 
 def test_the_lights_strategy_is_registered_separately(result):
@@ -350,7 +350,7 @@ def test_the_two_strategies_do_not_claim_each_others_sensors(result):
 def test_the_dashboard_is_a_view_per_schedule_then_lights(result):
     views = result["dashboard"]["views"]
 
-    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Lights"]
+    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Overrides"]
     assert [v["strategy"] for v in views] == [
         {"type": "custom:flare-schedule", "sensor": "downstairs"},
         {"type": "custom:flare-schedule", "sensor": "loft"},
@@ -391,7 +391,7 @@ def test_the_lights_view_has_an_activity_feed_of_flares_device(result):
     assert heading["heading"] == "Activity"
     assert logbook["type"] == "custom:flare-activity-card"
     assert logbook["device_id"] == ["flare_device"]
-    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Lights", "Activity")
+    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Overrides", "Activity")
 
 
 def test_no_activity_feed_without_the_logbook(result):

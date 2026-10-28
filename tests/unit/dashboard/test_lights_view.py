@@ -1,4 +1,4 @@
-"""The Lights view's layout: totals at the top, then every area holding a
+"""The Overrides view's layout: totals at the top, then every area holding a
 room light by floor like Home Assistant's Light dashboard, each with its
 lights under its counts and Clear all."""
 
@@ -131,7 +131,7 @@ def test_the_totals_are_the_counts_then_clear_all_in_one_row(view):
     title, heading, row = view["sections"][0]["cards"]
     *counts, clear = row["cards"]
 
-    assert (title["heading"], heading["heading"]) == ("Lights", "All lights")
+    assert (title["heading"], heading["heading"]) == ("Overrides", "All lights")
     assert "tap_action" not in heading
     assert (row["type"], row["columns"], row["grid_options"]) == ("grid", 3, {"columns": "full"})
     assert {t["entity"] for t in counts} == {"sensor.flare_controlled_lights", "sensor.flare_overridden_lights"}

@@ -68,13 +68,13 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * The Lights view: the totals, then every area holding a room light, laid
+ * The Overrides view: the totals, then every area holding a room light, laid
  * out by floor like Home Assistant's Light dashboard, and an Activity
  * sidebar, as HA's Security dashboard has: FLARE's device's logbook
  * (flare-activity-card.js).
  *
  *   views:
- *     - title: Lights
+ *     - title: Overrides
  *       strategy:
  *         type: custom:flare-lights
  */
@@ -118,7 +118,7 @@ class FlareLightsViewStrategy extends HTMLElement {
             ],
           },
         ],
-        content_label: 'Lights',
+        content_label: 'Overrides',
         sidebar_label: 'Activity',
       },
     };
@@ -130,7 +130,7 @@ customElements.define('ll-strategy-view-flare-lights', FlareLightsViewStrategy);
 customElements.define('ll-strategy-view-flare-zone', class extends FlareLightsViewStrategy {});
 
 /**
- * The whole dashboard: a view per schedule, then Lights once FLARE tracks
+ * The whole dashboard: a view per schedule, then Overrides once FLARE tracks
  * claims.
  *
  *   strategy:
@@ -149,7 +149,7 @@ class FlareDashboardStrategy extends HTMLElement {
       strategy: { type: 'custom:flare-schedule', sensor: slug },
     }));
     const lights = flareTotals(hass).controlled
-      ? [{ title: 'Lights', path: 'lights', strategy: { type: 'custom:flare-lights' } }]
+      ? [{ title: 'Overrides', path: 'overrides', strategy: { type: 'custom:flare-lights' } }]
       : [];
     const views = [...schedules, ...lights];
     // The schedule view explains an empty install.

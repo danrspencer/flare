@@ -208,7 +208,7 @@ which also means:
   voice assistant for 100%, the room goes back to the curve at the next update. Turning the flare
   on and off works as usual.
 
-A room with override protection off isn't counted in the [Lights view](../../dashboard/).
+A room with override protection off isn't counted in the [Overrides view](../../dashboard/).
 
 If you turn override protection off because of your bulbs, please
 [open an issue](https://github.com/danrspencer/flare/issues) with their make and model, so FLARE

@@ -384,7 +384,7 @@ room's next write lights dark-claimed lights as FLARE's.
   its light's entity-registry entry is removed. Clear still discards
   them, back to no claim at all.
 - **The Controlled counts include a dark room's lights** (both sensors
-  and the Lights view), since they read `controlled`. Counting only lit
+  and the Overrides view), since they read `controlled`. Counting only lit
   lights was tried and dropped at the user's direction: it looked wrong.
 
 **A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
@@ -1224,7 +1224,7 @@ an update is the whole migration and a new schedule or room just appears.
 generator whose layout changed five times in a session.)
 
 - `custom:flare` (`ll-strategy-dashboard-flare`) is the dashboard: a view
-  per schedule, then Lights once the Settings entry exists. The views are
+  per schedule, then Overrides once the Settings entry exists. The views are
   `custom:flare-schedule` and `custom:flare-lights` (`custom:flare-zone`
   still answers, for dashboards someone took control of).
 - **Entities are found by device and role** (`flare-entities.js`:
@@ -1233,7 +1233,7 @@ generator whose layout changed five times in a session.)
   still show. The cards' `sensor:` option takes the short name
   (`sensor: home` for `sensor.home_flare`) or any entity ID.
 - `flare-section.js` is a schedule's section and `flare-lights-section.js`
-  the Lights layout: plain config objects, no DOM.
+  the Overrides layout: plain config objects, no DOM.
 - The sidebar icon `flare:logo` is registered on `window.customIcons` by
   `flare-icon.js`, a glyph generated from the logo by
   `brand/generate_icon.py`.
@@ -1271,12 +1271,13 @@ Corner easing uses a quadratic whose control point is the corner, so it
 only cuts inward; **don't use an interpolating spline**, which would
 overshoot and draw brightness the schedule never asks for.
 
-**The Lights view** copies HA's Light dashboard (`light-view-strategy.ts`):
+**The Overrides view** copies HA's Light dashboard (`light-view-strategy.ts`):
 an "All lights" totals row (the counts and Clear all; a line naming the
 overridden lights under it was dropped at the user's direction), then a
 section per floor and a heading per area holding a room
 light (any light whose status sensor names a room), with the area's lights
-under it. "Lights", not "Rooms", at the user's direction: it lists lights.
+under it. Called "Overrides" (user's call, after "Rooms" and "Lights"); its
+strategy type and files kept the name `lights`.
 
 - **The totals' counts are two tiles each**, one shown at a time -
   Controlled blue, Overridden amber while above zero, grey at zero -
