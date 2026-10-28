@@ -1003,6 +1003,28 @@ Other blueprint facts:
   entities - which is why `flare-kelvin-feature.js`,
   `flare-brightness-feature.js` and `flare-value-slider.js` exist.
 
+### Parked: an empty room switching off lights someone switched on
+
+Not built; parked at the user's direction, recorded so it isn't re-derived.
+
+Once every sensor has been clear for the Wait time, the room switches off
+all its lights (motion_off and self-heal, `flare.turn_off`, no claims
+checked), hand-set ones included. With PIR, someone sitting still after
+switching a lamp on by hand loses it, and nothing tells that apart from
+having switched it on and left.
+
+- **Who turned a light on is readable since dark claims**: controlled
+  (FLARE lit it), overridden (someone switched it on in a dark room or
+  changed it), untracked (never FLARE's). Intent isn't.
+- The user's direction if it's picked up: track who turned each light on
+  (FLARE vs by hand) and act on that.
+- Considered and not built: a second, longer wait for hand-set lights
+  (the blueprint splitting the room's lit lights with `flare.claims_check`,
+  self-heal taking the hand-set ones once the longer wait passes), the
+  usual "manual override timeout". Turning off only FLARE's lights was
+  rejected outright: a forgotten lamp in an empty room stays on forever.
+  Presence (mmWave) sensors remove the cause, but that's hardware.
+
 ### Parked: scene handling in `apply_lighting`
 
 Not built; recorded so it isn't re-derived.
