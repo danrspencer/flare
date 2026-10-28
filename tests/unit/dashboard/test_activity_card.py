@@ -1,5 +1,5 @@
-"""The zones' Activity: FLARE's events for the zones' devices, live from the
-logbook's stream, filtered by kind, each row HA's own ha-logbook-entry with
+"""FLARE's Activity: its events for FLARE's device, live from the logbook's
+stream, filtered by kind, each row HA's own ha-logbook-entry with
 its dot in the kind's colour."""
 
 import time
@@ -8,21 +8,21 @@ import pytest
 
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
-from tests.support.registry import zone_entities
+from tests.support.registry import settings_entities
 
 pytestmark = requires_node
 
 NOW = time.time()
 DAY = 86400
-ENTITIES = {**zone_entities("kitchen_zone", "kitchen"), **zone_entities("hall_zone", "hall")}
+ENTITIES = settings_entities("flare_device")
 EVENTS = [
-    {"when": NOW - 600, "name": "Kitchen", "message": "now controlling 6 lights", "entity_id": "sensor.kitchen_flare_controlled"},
-    {"when": NOW - 300, "name": "Hall", "message": "released Hall Spot to something else", "entity_id": "sensor.hall_flare_overridden"},
-    {"when": NOW - 200, "name": "Kitchen", "message": "cleared 6 lights", "entity_id": "button.kitchen_flare_clear"},
+    {"when": NOW - 600, "name": "Kitchen", "message": "now controlling 6 lights", "entity_id": "sensor.flare_controlled_lights"},
+    {"when": NOW - 300, "name": "Hall", "message": "released Hall Spot to something else", "entity_id": "sensor.flare_overridden_lights"},
+    {"when": NOW - 200, "name": "Kitchen", "message": "cleared 6 lights", "entity_id": "button.flare_clear"},
     # The Clear press itself, as the button's state change: no message.
-    {"when": NOW - 200, "state": "2026-10-08T10:00:00", "entity_id": "button.kitchen_flare_clear"},
+    {"when": NOW - 200, "state": "2026-10-08T10:00:00", "entity_id": "button.flare_clear"},
     # Before the window.
-    {"when": NOW - 90000, "name": "Hall", "message": "now controlling 2 lights", "entity_id": "sensor.hall_flare_controlled"},
+    {"when": NOW - 90000, "name": "Hall", "message": "now controlling 2 lights", "entity_id": "sensor.flare_controlled_lights"},
     # Someone else's device.
     {"when": NOW - 100, "name": "Lamp", "message": "turned on", "entity_id": "light.lamp"},
 ]
@@ -73,7 +73,7 @@ const hass = {{
   }},
 }};
 const card = new Card();
-card.setConfig({{ device_id: ['kitchen_zone', 'hall_zone'] }});
+card.setConfig({{ device_id: ['flare_device'] }});
 card.hass = hass;
 await card._loading;
 const rows = parts['.list'].children.map((c) =>
@@ -83,7 +83,7 @@ listeners['click']({{ composedPath: () => [{{ dataset: {{ filter: 'overridden' }
 const overriddenOnly = parts['.list'].children.filter((c) => c.item).map((c) => c.item.message);
 listeners['logbook-entry-selected']({{ stopPropagation() {{}}, detail: {{ item: input.events[1] }} }});
 
-const kinds = entityKinds(hass, ['kitchen_zone', 'hall_zone']);
+const kinds = entityKinds(hass, ['flare_device']);
 const since = Date.now() / 1000 - 24 * 3600;
 const today = Date.now() / 1000;
 return {{
@@ -95,7 +95,7 @@ return {{
   shown: visibleEntries(input.events, kinds, 'all', since).map((e) => e.message),
   cleared: visibleEntries(input.events, kinds, 'cleared', since).map((e) => e.message),
   plan: plan(
-    [{{ when: today, entity_id: 'sensor.kitchen_flare_controlled' }}, {{ when: today - 60, entity_id: 'sensor.hall_flare_overridden' }}, {{ when: today - 2 * 86400, entity_id: 'button.kitchen_flare_clear' }}],
+    [{{ when: today, entity_id: 'sensor.flare_controlled_lights' }}, {{ when: today - 60, entity_id: 'sensor.flare_overridden_lights' }}, {{ when: today - 2 * 86400, entity_id: 'button.flare_clear' }}],
     kinds
   ).map((r) => (r.day !== undefined ? 'day' : [r.nodeColor, r.firstOfDay, r.lastOfDay])),
   headings: [dayHeading(today, 'en-GB'), dayHeading(today - 86400, 'en-GB')],
@@ -105,16 +105,18 @@ return {{
     )
 
 
-def test_it_follows_the_zones_devices_on_the_logbook_stream(result):
+def test_it_follows_flares_device_on_the_logbook_stream(result):
+    """By device, since the logbook leaves out sensors with a unit when asked
+    for entities."""
     (message,) = result["subscribed"]
     assert message["type"] == "logbook/event_stream"
-    assert message["device_ids"] == ["kitchen_zone", "hall_zone"]
+    assert message["device_ids"] == ["flare_device"]
 
 
-def test_an_events_kind_is_the_zone_entity_it_is_filed_under(result):
-    assert result["kinds"]["sensor.kitchen_flare_controlled"] == {"kind": "controlled", "device": "kitchen_zone"}
-    assert result["kinds"]["sensor.hall_flare_overridden"] == {"kind": "overridden", "device": "hall_zone"}
-    assert result["kinds"]["button.kitchen_flare_clear"] == {"kind": "cleared", "device": "kitchen_zone"}
+def test_an_events_kind_is_the_entity_it_is_filed_under(result):
+    assert result["kinds"]["sensor.flare_controlled_lights"] == {"kind": "controlled", "device": "flare_device"}
+    assert result["kinds"]["sensor.flare_overridden_lights"] == {"kind": "overridden", "device": "flare_device"}
+    assert result["kinds"]["button.flare_clear"] == {"kind": "cleared", "device": "flare_device"}
 
 
 def test_only_flares_events_in_the_window_are_shown_newest_first(result):
@@ -156,8 +158,8 @@ def test_days_are_headed_as_the_logbook_heads_them(result):
     assert yesterday.startswith("Yesterday · ")
 
 
-def test_selecting_an_entry_opens_its_zones_device_page(result):
-    assert result["navigated"] == "/config/devices/device/hall_zone"
+def test_selecting_an_entry_opens_flares_device_page(result):
+    assert result["navigated"] == "/config/devices/device/flare_device"
 
 
 @pytest.fixture(scope="module")
@@ -198,12 +200,12 @@ const hass = {{
   }},
 }};
 const card = new Card();
-card.setConfig({{ device_id: ['kitchen_zone', 'hall_zone'] }});
+card.setConfig({{ device_id: ['flare_device'] }});
 card.hass = hass;
 await card._loading;
 card.disconnectedCallback();
 card.connectedCallback();
-card.setConfig({{ device_id: ['kitchen_zone', 'hall_zone'] }});
+card.setConfig({{ device_id: ['flare_device'] }});
 // A superseded subscription's message, arriving before its unsubscribe lands.
 send(callbacks[0]);
 // The live stream repeating an entry it has already sent.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
@@ -19,21 +20,22 @@ async def setup_room_automation(
     hass: HomeAssistant,
     *,
     room_target: dict,
-    zone: str | None = None,
-    zoned: bool = True,
     schedule: str | None = None,
     entity_id: str = "automation.room",
     alias: str = "room",
+    area_ticks: bool = True,
     **extra_inputs,
 ):
     """A room automation from the blueprint, following `schedule` (else one
-    carrying SENSOR) in `zone` (else a fresh one, or none if not `zoned`)."""
+    carrying SENSOR), with every area ticking on the minute as FLARE's would
+    (unless not `area_ticks`)."""
     input_ = {
         "schedule": schedule or add_schedule(hass),
         "room_target": room_target,
-        **({"zone": zone or add_zone(hass)} if zoned else {}),
         **extra_inputs,
     }
+    if area_ticks:
+        tick_areas(hass)
     assert await async_setup_component(
         hass, "automation", {"automation": [{"alias": alias, "use_blueprint": {"path": BLUEPRINT_PATH, "input": input_}}]}
     )
@@ -94,25 +96,22 @@ def add_schedule(hass: HomeAssistant, sensor: str | None = SENSOR, slug: str = "
     return device.id
 
 
-def add_zone(hass: HomeAssistant, area_id: str | None = None, slug: str = "room", ticks: bool = True) -> str:
-    """A zone as the blueprint sees it: a FLARE device with model "Zone" and
-    (if `ticks`) a tick event naming it at the top of every minute, as FLARE's
-    scheduler would. Returns its device_id."""
-    entry = MockConfigEntry(domain="flare")
-    entry.add_to_hass(hass)
-    device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, identifiers={("flare", slug)}, name=slug, model="Zone"
-    )
-    if area_id is not None:
-        dr.async_get(hass).async_update_device(device.id, area_id=area_id)
+_TICKING = "flare_test_area_ticks"
+
+
+def tick_areas(hass: HomeAssistant) -> None:
+    """A tick naming each area at the top of every minute, as FLARE's
+    scheduler fires them (all at once here). Once per hass."""
+    if hass.data.get(_TICKING):
+        return
+    hass.data[_TICKING] = True
 
     @callback
     def _tick(now) -> None:
-        hass.bus.async_fire("flare_tick", {"device_id": device.id})
+        for area in ar.async_get(hass).async_list_areas():
+            hass.bus.async_fire("flare_tick", {"area_id": area.id})
 
-    if ticks:
-        async_track_time_change(hass, _tick, second=0)
-    return device.id
+    async_track_time_change(hass, _tick, second=0)
 
 
 def effective(call, entity_id):

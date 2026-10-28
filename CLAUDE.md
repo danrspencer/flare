@@ -90,8 +90,8 @@ Blueprint input mechanics:
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
   name for `!input`.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
-- **Schedule and Zone are device selectors** (`integration: flare`,
-  `model: Schedule` / `model: Zone`). The blueprint finds the schedule's
+- **Schedule is a device selector** (`integration: flare`,
+  `model: Schedule`). The blueprint finds the schedule's
   sensor in `variables:`. Triggers can't do that lookup, hence the
   schedule's Phase `event` entity. There is no "bring your own sensor":
   anything different is someone's own automation on the services.
@@ -110,7 +110,7 @@ entities, live state is sensors and events, and everything FLARE does is
 a service. Most "can it do X differently?" answers are an automation
 changing an entity or calling a service. Keep new behaviour in that shape
 - an entity or a service before a config option. The homepage's "Made of
-ordinary Home Assistant parts" section promises it. (The Zones entry's
+ordinary Home Assistant parts" section promises it. (The Settings entry's
 options - tick timing, minimum change, two-step models - are the
 exception: entry-wide plumbing.)
 
@@ -193,8 +193,8 @@ claims are each exposed through both.
 - `schedule/` - what lights should look like: `curve.py`,
   `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`),
   `transfer.py` (YAML export/import).
-- `zone/` - who owns a light (`override_protection.py`, `claims.py`),
-  the zone device (`instance.py`) and when each zone ticks (`ticker.py`).
+- `tracking/` - who owns a light (`override_protection.py`, `claims.py`,
+  `matching.py`) and when each area ticks (`ticker.py`).
 - `flares/` - lights over automations: reading an automation's inputs
   (`automation.py`), what counts as a bare turn-on (`bare.py`), the flare
   (`instance.py`). The entity is the root `light.py`.
@@ -206,13 +206,13 @@ claims are each exposed through both.
   `logbook`, `const`, and the eight entity platform modules, which
   **cannot** move into a folder (HA imports
   `custom_components.flare.<platform>`). Also `area_setup`, which needs
-  zones, flares and the blueprint at once, and `dashboard_reload` (getting
+  flares and the blueprint at once, and `dashboard_reload` (getting
   the dashboard into a page open during setup). `services.yaml`,
   `strings.json` and `translations/` stay at the root; `www/` is the
   dashboard.
 
-**Dependencies run one way**: `schedule/`, `zone/` and `flares/` import
-only `const.py`; `services/` may use `schedule/`, `zone/` and
+**Dependencies run one way**: `schedule/`, `tracking/` and `flares/` import
+only `const.py`; `services/` may use `schedule/`, `tracking/` and
 `flares/identity.py` (which lights are flares); the root may use
 everything. `tests/checks/test_layering.py` enforces it.
 `services/__init__.py` holds no imports.
@@ -224,7 +224,7 @@ copy where one is practical:
 - Reachability: `const.is_reachable()` (`test_one_reachability_check.py`).
   A light with no state was reachable to grouping and unavailable to
   override protection.
-- What a light shows: `zone/matching.py` (`test_one_value_matcher.py`).
+- What a light shows: `tracking/matching.py` (`test_one_value_matcher.py`).
 - Which lights are flares: `flares/identity.py`.
 - A schedule's values: `schedule/coordinator.read_schedule()`, used by
   the curve (which defaults what's missing) and export (which omits it).
@@ -270,7 +270,7 @@ Each tracked light carries two claims, `observed` (a write seen landing)
 and `latest` (the most recent attempt). The model and why it needs two
 are in `claims.py`'s docstring; the decision table is
 `override_protection.classify()`; the user-facing contract is
-`docs/reference/zones.md`. **Everything judges a light through
+`docs/reference/override-protection.md`. **Everything judges a light through
 `classify_state()`** - `grouping.py`'s `externally_set()`, the sensors'
 `_classify_tracked()` and `claims_check` - because they drifted apart
 twice when each did its own. `tests/checks/test_one_classifier_adapter.py`
@@ -291,7 +291,7 @@ Facts verified against HA core:
 - **A bulb's advertised colour range isn't always honest**
   (`light.utility_spot_1` claims max 4000K and reports 5813K), so
   `matching.shows` accepts the raw target or the clamped one.
-- **What a light shows is decided in one place, `zone/matching.py`**:
+- **What a light shows is decided in one place, `tracking/matching.py`**:
   `shows()` (override matching, `_already_set`), `reported_kelvin()` and
   `shown()` (adoption, the override event's `live`). Its docstring is the
   rule set: Kelvin from `color_temp_kelvin`, else from a white's `xy_color`
@@ -309,19 +309,31 @@ Facts verified against HA core:
   decides what's worth sending, and widening override matching by the
   same amount would let a hand-set light near the curve read as FLARE's.
   Colour is in mireds because a flat Kelvin gap is ~4x coarser at 6500K.
-  Defaults 5/5, on the Zones entry's options; a call can override them.
-- **`force` is the only bypass.** A light's claims belong to whatever
-  zone a caller names.
+  Defaults 5/5, on the Settings entry's options; a call can override them.
+- **`force` is the only bypass.**
 
-**Zone is caller-supplied, never resolved.** Every claims service takes
-`zone_device_id` (a zone's device), which `resolve_zone_device()` turns
-into a subentry id. It is optional only on `apply_lighting` /
-`compute_lighting_groups` ("write, track nothing"), and required on
-`claims_check` / `claims_record` / `claims_clear`, which have nothing to
-do without one. A device that isn't one of this entry's zones raises
-`ServiceValidationError`. Nothing guesses a zone from areas or devices -
-removed at the user's direction: *"there's just too much weird behaviour
-if it gets the wrong one"*.
+**Claims are FLARE's; rooms only say when to let go** (2.0, replacing
+zones). There's one claim per light, whichever caller wrote it, so two
+automations driving a light never read each other's writes as overrides.
+A caller tracks its writes by naming a **room**: `room_id` (the blueprint
+passes `this.entity_id`) and `room_entities` (its picker's lights,
+`resolved_entities`). No `room_id` means "write, track nothing", and such
+a call doesn't read claims either: it's the opt-out (the blueprint's
+**Override Protection** input). `claims_record` / `claims_override`
+require a room; `claims_check` / `claims_clear` take none. A room is keyed
+by its entity's registry id (`room_key()`), so renaming the automation
+keeps it. A room's lights are the latest `room_entities`, plus what it
+wrote and any light it still claims (`_join`), so every claim it made can
+be released with it. Rooms are caller-supplied, never resolved: guessing
+a zone from areas was removed at the user's direction (*"there's just too
+much weird behaviour if it gets the wrong one"*), and a picker can split
+an area across automations anyway.
+
+The model was `owner_id` once (2026-08): per-caller *ownership*, which
+made two automations in one room read each other as intruders, spawned
+devices from arbitrary strings and kept claims in a hidden Store. The
+room is the caller identifying itself without owning anything; don't let
+it grow ownership back.
 
 **Being switched off is an override.** `classify()` doesn't
 short-circuit on off. A FLARE turn-off records `{"state": "off"}` as its
@@ -343,17 +355,14 @@ awaits inside. **"Seen landing" means a context match only.** Pinned by
 `flare.claims_record` is documented as call-before-your-write for the same
 reason.
 
-**A light claimed in two zones raises a persistent notification**
-(`flare_light_in_two_zones_<entity_id>`; a notification, not a repair,
-at the user's direction), once per light per run. Each zone would read
-the other's writes as overrides. Detected at write time, so it covers
-service callers too.
-
-**A zone releases every claim once none of its lights is `on`**
-(`_release_if_dark`). Anything not `on` counts as dark, unavailable
-included, or one dead entity would block the release forever. "The room"
-is the zone: an untracked light holds nothing open. It fires only on a
-transition from a real on/off state (see below).
+**A room releases its claims once none of its claimed lights is `on`**
+(`_release_if_dark`, per room containing the light that changed).
+Anything not `on` counts as dark, unavailable included, or one dead
+entity would block the release forever. Only claimed lights count, so a
+lamp in the picker that something else runs (a TV backlight, a `null`
+level) can't hold a room open. A light in two rooms is released when
+either goes dark - accepted and documented, not detected. It fires only
+on a transition from a real on/off state (see below).
 
 **A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
 30s), at the user's direction. Until then the light is `mismatched`:
@@ -369,24 +378,26 @@ since someone said so. Short-lived mismatches seen live, all now silent:
 a bulb's stale first report after a reconnect (10/8130 on a bulb at
 204/8105, corrected 0.4s later), FLARE's own write still landing on a bulb
 whose previous write was never confirmed, and another automation
-switching a room off light by light (the zone goes dark and releases them
+switching a room off light by light (the room goes dark and releases them
 first). The claims sensor rechecks once the grace has passed.
 
 **A light already showing what `apply_lighting` would send is adopted**
 (`ClaimRegistry.adopt`): no write goes to it, so if it's on and unclaimed
-in every zone it gets an `observed` claim of its current context and
-values. Otherwise a Clear in a lit room left most lights unclaimed, and a
+it gets an `observed` claim of its current context and values, and joins
+the room. Otherwise a Clear in a lit room left most lights unclaimed, and a
 hand change to one went unnoticed.
 
 **Known limitation, partly mitigated:** an `overridden` light is excluded
 from every group, so it never gets a fresher claim, and on a ramping
-curve the value match drifts further away. The zone going dark clears it;
-`claims_clear` and the Clear button cover a room that never fully does.
+curve the value match drifts further away. The room going dark clears it;
+`claims_clear` and the Clear buttons cover a room that never fully does.
 
 ### Claims across restarts and reconnects
 
-The claims sensor (`_ZoneClaimsSensor`) is a `RestoreEntity`; its claims
-are its `extra_restore_state_data`, restored before it registers.
+The claims sensor (`_ClaimsSensor`, `sensor.flare_claims`) is a
+`RestoreEntity`; its claims and rooms are its `extra_restore_state_data`,
+restored before it registers. Without the rooms, nothing would release a
+restored claim.
 Persistence was tried once and reverted: a restart gives every entity a
 fresh context, and with context-only matching every light read
 `overridden`. The value fallback above is what makes it safe now: a
@@ -402,15 +413,15 @@ Two listener rules, pinned in `test_claim_persistence.py`:
   reach `on` from their own untagged `unknown`. Don't rebuild it.
 - **`went_off` needs a real starting state.** Lights reconnect one at a
   time; the first back being `off` while its siblings are `unknown` must
-  not release the zone.
-- **A zone restored dark lets go of its claims**
-  (`release_if_settled_dark`), checked when the claims sensor is added and
+  not release the room.
+- **A room restored dark lets go of its claims**
+  (`release_settled_dark_rooms`), checked when the claims sensor is added and
   whenever a claimed light reports in from none/unavailable/unknown, once
   *every* claimed light reports on or off and none is on. Lights that went
   off while HA wasn't watching (switched off during a restart, FLARE's own
   turn-off racing a shutdown, a restore) never send an on -> off, so the
-  zone stayed claimed with every light `overridden` and motion ignored
-  until Clear (seen live: 18 lights in three zones after a restore). A
+  room stayed claimed with every light `overridden` and motion ignored
+  until Clear (seen live: 18 lights in three rooms after a restore). A
   claimed light that never reports holds it, as the rule above requires.
 
 A restart is not an escape hatch for a light stuck `overridden`. Known
@@ -446,23 +457,30 @@ and saves through `async_mock_restore_state_shutdown_restart`.
 
 ### Three config entries
 
-FLARE installs as **three** entries: *Schedules*, *Zones* (the services,
-the claim registry, the tick scheduler and the zones) and *Flares*. HA's
-integration page renders one section per subentry with no way to group
-them by type (`ha-config-entry-row.ts`), so one entry flattened 19
-schedules and zones into a single list; the entry is the only level that
-can group them. The services live with zones because they're all about
-which lights are driven by whom and need the claim registry.
+FLARE installs as **three** entries: *Schedules*, *Settings* (the
+services, the claim registry, the area ticks and the options) and
+*Flares*. HA's integration page renders one section per subentry with no
+way to group them by type (`ha-config-entry-row.ts`); the entry is the
+only level that can group them. Settings has no subentries since 2.0
+removed zones; its entities (`sensor.flare_claims`, the totals and
+`button.flare_clear`) sit on one "FLARE" service device
+(`settings_device_info`), so their events can be filed on a device (see
+"Claim events").
 
 - **Entry titles have no "FLARE" prefix** (the page already says FLARE);
-  docs write the path as **FLARE → Zones**. User's call.
-- **The stored values can't follow the user-facing names**:
-  `ENTRY_TYPE_ZONES` is `"tracking"` and `SUBENTRY_TYPE_ZONE` is
-  `"state"`, because HA can't retype a subentry and recreating zones
-  would change their device ids.
-- Schedules and Zones both use the sensor platform; each platform module
+  docs write the path as **FLARE → Settings**. User's call.
+- **The stored value can't follow the user-facing name**:
+  `ENTRY_TYPE_SETTINGS` is `"tracking"`.
+- **2.0's migration is minor version 2** (`async_migrate_entry`): it
+  removes the old zone subentries (`SUBENTRY_TYPE_ZONE`, `"state"`), which
+  takes their devices, entities and claims, and retitles a "Zones" entry
+  "Settings". Dropping the claims fails open: FLARE takes every room back
+  on its next update. Old automations' stored `zone` input is ignored
+  (blueprint validation only checks for missing inputs), and a flare's
+  stored `zone_input` is dropped on its next Reconfigure.
+- Schedules and Settings both use the sensor platform; each platform module
   branches on `entry.data[CONF_ENTRY_TYPE]`. **`async_setup_entry` treats
-  anything that isn't Zones or Flares as Schedules**, so a new entry type
+  anything that isn't Settings or Flares as Schedules**, so a new entry type
   must branch before that fallthrough.
 
 **One "Add Integration" sets FLARE up ready to use, rooms included** -
@@ -495,15 +513,14 @@ overstated version of this caused a wrong call.
 **Once every entry exists, the main flow is "Set up area"**
 (`config.initiate_flow.user`). The integration page's top row is the main
 flow's button and then one Add button per subentry type, so it reads Set
-up area, Add schedule, Add zone, Add flare. The main flow is the only one
+up area, Add schedule, Add flare. The main flow is the only one
 not tied to an entry, and area setup touches all three.
 
-**Area setup** (`area_setup.py`), per area: a zone (reused if one has
-the area's name), an automation from the blueprint, and a flare named
-after the area. **For each area, set up** is one dropdown for the whole
-run: zone / + automation / + flare (radios took three rows, and HA can't
-lay them side by side or disable one checkbox from another, so a dropdown
-it is). Set up area can just be run again.
+**Area setup** (`area_setup.py`), per area: an automation from the
+blueprint, and a flare named after the area. **For each area, set up** is
+one dropdown for the whole run: automation / + flare (radios took rows,
+and HA can't lay them side by side or disable one checkbox from another,
+so a dropdown it is). Set up area can just be run again.
 
 - **The automation is written to automations.yaml as HA's automation
   editor does** (`components/config/automation.py`): load, append, dump,
@@ -515,24 +532,21 @@ it is). Set up area can just be run again.
   successful write drops comments in the file, as the editor does.
 - **Each automation gets the "FLARE" label** (created the first time, in
   amber), at the user's request, so they're easy to find and manage.
-- **Not yet handled: a failure partway leaves what was created.** Zones
-  (and on first setup the entries) exist before automations.yaml is
-  written. Deliberately left for a decision of its own.
-- **The zone's device is created by `area_setup`**, since the automation
-  needs its id now; the entry's reload finds it by identifiers. The tick
-  trigger matches on the device id alone, so the automation works before
-  the zone's entities exist.
-- **"Already set up" means a zone with the area's name exists**, which
+- **Not yet handled: a failure partway leaves what was created.** On
+  first setup the entries exist before automations.yaml is written.
+  Deliberately left for a decision of its own.
+- **"Already set up" means an automation with the FLARE label sits in
+  the area** (`areas_set_up`; setup puts its automations there), which
   only unticks the area; every area with lights is listed (user's call,
   after reading automations' targets proved unreliable). Re-running an
-  area reuses its zone but adds another automation and flare.
+  area adds another automation and flare.
 - **Each area is an optional dropdown of schedules named after it** (the
   dialog falls back to a field's name when it has no translation, the
   only way to label fields made at runtime), and an empty one isn't set
   up (user's call, over a "-- Don't set up --" choice). Its schedule is a
   suggested value, not a default, or a cleared area would be filled back
   in. It starts on the schedule named like the area's floor, else the
-  first, or empty if the area has a zone. One field per area so it can't be set up
+  first, or empty if the area is already set up. One field per area so it can't be set up
   wrong. They sit in a `data_entry_flow.section` per floor, lowest first
   (user's call: rooms organised by floor whatever the schedules), keyed
   by the floor's name, which the dialog shows as the heading when there's
@@ -580,7 +594,8 @@ leaves the room wherever the bulbs restored to.
   unless the light supports it, hence the test's `supports_transition`
   bulbs.
 - **On with values, and off, mark the lights overridden first**
-  (`flare.claims_override`, in the zone named by the zone input), then
+  (`flare.claims_override`, with the automation as the room, so the
+  room going dark hands them back), then
   forward as `LightGroup` does. Without it an unclaimed light - every
   light once a room goes dark - is `untracked`, and the run the change
   itself triggers took it over, dimming Siri's "100%" back to the curve,
@@ -592,10 +607,10 @@ leaves the room wherever the bulbs restored to.
   `test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation`
   pins it, with `reports_off_late` bulbs.
 - **A flare stores the automation (by entity-registry id, so a rename
-  doesn't orphan it) and the NAMES of the inputs holding its lights and
-  zone**, read live - `room_target`/`zone` for our blueprint
-  (`BLUEPRINT_*_INPUT`, pinned by `tests/checks/test_flare_inputs.py`). A
-  plain automation stores a target instead.
+  doesn't orphan it) and the NAME of the input holding its lights**, read
+  live - `room_target` for our blueprint (`BLUEPRINT_LIGHTS_INPUT`, pinned
+  by `tests/checks/test_flare_inputs.py`). A plain automation stores a
+  target instead.
 - **The inputs come from the automation entity's private
   `_blueprint_inputs`** (`raw_config` is the substituted config). An
   accepted risk, kept to `flares/automation.py:blueprint_inputs`; the
@@ -745,32 +760,37 @@ would switch off every light turned on there.
 **Triggers:** `phase_change` (`event.received` on the schedule's Phase
 entity, fired only on a real phase change, and once after setup so a
 restart repaints rooms), `tick` (an `event` trigger on `flare_tick` with
-the zone's `device_id`), `extra`, `motion_on` / `motion_off`, and
+the room's `tick_area`), `extra`, `motion_on` / `motion_off`, and
 `recovered`.
 
-- **Zone ticks stop every room writing in the same second.** All rooms'
+- **Area ticks stop every room writing in the same second.** All rooms'
   `time_pattern`s fired within 0.2s of :00, and Zigbee route failures
-  clustered in seconds 0-4 of each minute. `zone/ticker.py` fires each
-  zone's tick a gap apart, in title order. The decision is still made
-  fresh at trigger time, so this is not the removed jitter.
+  clustered in seconds 0-4 of each minute. `tracking/ticker.py` fires each
+  area's tick a gap apart, in name order, for every area in the area
+  registry (kept in step with it). The decision is still made fresh at
+  trigger time, so this is not the removed jitter.
+- **A room follows its first area's tick** (`tick_area`, a trigger
+  variable: the first `area_id` in `room_target`, string or list). Trigger
+  templates are *limited*, so they can read trigger variables but can't
+  call `area_devices()` and friends - hence matching on `area_id` rather
+  than looking up a device. `this` is available there too, but ticking per
+  automation would need FLARE to know every automation, and a brand-new
+  automation's `this` can be empty when its triggers attach; ticking areas
+  just works (user's call). A picker naming no area (lights, devices, a
+  floor, a label) gets a `time_pattern` with the same `tick` id instead,
+  chosen by trigger `enabled:` templates on `tick_area`, so the two never
+  both run.
 - **The tick is a plain bus event, not an entity** (user's call): as an
-  event entity it logged every minute in every zone's Activity and
-  history. Undescribed bus events never reach the logbook. Nothing then
-  cancels the scheduler at shutdown, hence the explicit
-  `EVENT_HOMEASSISTANT_STOP` listener (the tests fail on lingering timers
-  without it). One recorder row per zone per interval, accepted.
-- **The zone is its own input**: Lights & Occupancy's target picker lists
-  a device only if it has an entity passing the light/sensor filter
-  (`getDevices`), which a zone doesn't.
-- **Zone is optional** (`default: null`, at the user's request): the
-  escape hatch for a room whose bulbs report something other than what
-  they show. `null` rather than `""`, so `zone_device_id: !input zone`
-  passes None, which `apply_lighting`/`turn_off` take as "track nothing".
-  Without one the zone tick is disabled and a `time_pattern` with the
-  same `tick` id takes over, chosen by trigger `enabled:` templates on the
-  `zone` trigger variable, so a zoned room never runs the fallback. The
-  `claims_clear` step is skipped, as it requires a zone. Area setup still
-  always creates one.
+  event entity it logged every minute in every Activity and history.
+  Undescribed bus events never reach the logbook. Nothing then cancels the
+  scheduler at shutdown, hence the explicit `EVENT_HOMEASSISTANT_STOP`
+  listener (the tests fail on lingering timers without it). One recorder
+  row per area per interval, accepted.
+- **Override Protection** (`override_protection`, default on, at the
+  user's request): the escape hatch for a room whose bulbs report
+  something other than what they show. Off makes `room_id` none, which
+  `apply_lighting`/`turn_off` take as "track nothing", and skips the
+  `claims_clear` step.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
 - `recovered` arms on "at least one of our lights is reachable". The
@@ -783,7 +803,7 @@ the zone's `device_id`), `extra`, `motion_on` / `motion_off`, and
 `variables:` render once, at trigger time, so anything after a delay acts
 on a snapshot. A 0-15s jitter delay made a light switched off by hand
 inside the window get relit by a run that had already decided the room
-was in use. Override protection can't catch it: turning off the zone's
+was in use. Override protection can't catch it: turning off the room's
 last light rightly releases every claim, so the only thing saying no is
 `allow_turn_on`, and a delay makes that stale. Pinned by
 `test_nothing_delays_the_action_before_it_decides`.
@@ -900,7 +920,7 @@ Other blueprint facts:
   another automation".
 - **Jitter, in any form.** It caused the relight bug above, while the
   tolerance check already keeps routine ticks nearly silent. The observed
-  congestion was answered with zone ticks: deterministic spacing before
+  congestion was answered with area ticks: deterministic spacing before
   the decision. If congestion shows up again, the shape is a rate limiter
   at dispatch, never a delay before the decision. (Zigbee's general
   answer is group addressing.)
@@ -934,7 +954,7 @@ Not built; recorded so it isn't re-derived.
 
 Some bulbs (IKEA TRADFRI) need brightness and colour sent as two steps.
 A light is routed that way if its device's `"<manufacturer> <model>"`
-matches a case-insensitive glob in `CONF_TWO_STEP_MODELS` (the Zones
+matches a case-insensitive glob in `CONF_TWO_STEP_MODELS` (the Settings
 entry's options, read fresh per call), **or** it carries the
 `no_combined_transition` label. `two_step.py` holds only the pure
 matching. The option is seeded with the shipped defaults and holds the
@@ -982,7 +1002,7 @@ real dispatch - keep patterns narrow.
   The install uses `allow_override=False` (it's only for the no-blueprint
   case); the update writes the shipped file over each stale copy where it
   was found, with `allow_override=True`, which reloads the automations.
-- **The check runs via `async_at_started`**, from the Zones entry only:
+- **The check runs via `async_at_started`**, from the Settings entry only:
   during setup automations haven't loaded, so every blueprint looks
   unused.
 - A blueprint that fails to load comes back from `async_get_blueprints()`
@@ -1103,7 +1123,7 @@ Until the first release, the beta is also the root.
 for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
 which imports each module that registers something; modules that
 register nothing (`flare-entities.js`, `flare-section.js`,
-`flare-zone-section.js`, `flare-value-slider.js`, `flare-clear-card.js`,
+`flare-rooms-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-card.js`,
 `flare-activity-card.js`) are pulled in by the imports of those that do.
 `test_every_module_that_registers_something_is_loaded` follows the
 imports from the loader.
@@ -1131,21 +1151,21 @@ imports from the loader.
   would throw. `tests/checks/test_static_imports.py` pins relative imports.
 
 **The dashboard is Lovelace strategies**, regenerated on every load, so
-an update is the whole migration and a new schedule or zone just appears.
+an update is the whole migration and a new schedule or room just appears.
 "Take control" is the one-way escape hatch. (It replaced a docs-site YAML
 generator whose layout changed five times in a session.)
 
 - `custom:flare` (`ll-strategy-dashboard-flare`) is the dashboard: a view
-  per schedule, then Zones. The views are `custom:flare-schedule` and
-  `custom:flare-zone`, kept separate because a house has one zone per
-  room against a few schedules.
+  per schedule, then Rooms once the Settings entry exists. The views are
+  `custom:flare-schedule` and `custom:flare-rooms` (`custom:flare-zone`
+  still answers, for dashboards someone took control of).
 - **Entities are found by device and role** (`flare-entities.js`:
   `flareDevices()` from `hass.entities`, using each entry's platform and
   translation key), never by building entity IDs, so renamed entities
   still show. The cards' `sensor:` option takes the short name
   (`sensor: home` for `sensor.home_flare`) or any entity ID.
-- `flare-section.js` is a schedule's section and `flare-zone-section.js`
-  the zone layout: plain config objects, no DOM.
+- `flare-section.js` is a schedule's section and `flare-rooms-section.js`
+  the Rooms layout: plain config objects, no DOM.
 - The sidebar icon `flare:logo` is registered on `window.customIcons` by
   `flare-icon.js`, a glyph generated from the logo by
   `brand/generate_icon.py`.
@@ -1183,48 +1203,46 @@ Corner easing uses a quadratic whose control point is the corner, so it
 only cuts inward; **don't use an interpolating spline**, which would
 overshoot and draw brightness the schedule never asks for.
 
-**The Zones view** copies HA's Light dashboard (`light-view-strategy.ts`):
-a section per floor, a heading per zone, and on wide screens Clear where
-that has "All off", with the zone's Controlled and Overridden counts
-beside it.
+**The Rooms view** copies HA's Light dashboard (`light-view-strategy.ts`):
+an "All rooms" totals row, then a section per floor and a heading per area
+holding a room light (any light in the claims sensor's `rooms`), and on
+wide screens Clear where that has "All off", with the area's Controlled
+and Overridden counts beside it.
 
-- The counts share one `grid` card: with the Activity sidebar taking one
-  of `max_columns: 2`, a zone section is always 12 columns, and a tile's
-  `min_columns` is 6, so loose tiles wrapped under Clear.
-- **Each count is two tiles**, one shown at a time - Controlled blue,
-  Overridden amber while above zero, grey at zero - because a tile's
-  `color` takes no template. It's how a zone with overrides is spotted.
-  Left for later, at the user's direction, to let the view settle: a list
-  of overridden lights under the totals, tiles for the lights themselves,
-  and a Clear per light.
+- **The totals' counts are two tiles each**, one shown at a time -
+  Controlled blue, Overridden amber while above zero, grey at zero -
+  because a tile's `color` takes no template. They share one `grid` card:
+  with the Activity sidebar taking one of `max_columns: 2`, a section is
+  always 12 columns, and a tile's `min_columns` is 6, so loose tiles
+  wrapped under Clear.
+- **An area's counts are `custom:flare-area-card`**, worked out live in the
+  browser from `sensor.flare_claims`'s `statuses` and each light's area
+  (`claimsByArea()`): there are no per-area entities, and per-room devices
+  would repeat `owner_id`'s devices-from-arbitrary-strings problem. It
+  draws the same blue/amber/grey counts and names the overridden lights.
+  The claims sensor's statuses refresh on claim changes and its poll.
 - **Clear is `custom:flare-clear-card`**, drawn like the "All off"
   toggle-group (no card, a round icon, a label): a tile looked like one
   more count, and `toggle-group` is always a power icon with on/off
-  counts. On narrow screens it's a button badge on the heading.
-- A zone's area is its device's, else the area named after it; it takes
-  the area's name unless two zones share the area.
-- **The totals are an "All zones" row built like a zone's**, at the
-  user's direction: the Zones entry's device-less total sensors
-  (`sensor.flare_{controlled,overridden}_lights`, translation keys
-  `all_controlled`/`all_overridden`, found by `flareTotals()`) as its
-  tiles, and a Clear card pressing every zone's Clear button at once (the
-  card takes a list). A markdown line of sums came first, and a stacked
-  statistics graph before that was dropped as ugly.
+  counts. With `entity:` it presses a button (`button.flare_clear` for
+  the totals); with `area:` it calls `flare.claims_clear` for that area's
+  claimed lights, which isn't announced in Activity.
 - **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
-  to the logbook's `logbook/event_stream` for the zones' devices itself,
+  to the logbook's `logbook/event_stream` for FLARE's device itself,
   filters by kind, and renders each entry as HA's own `ha-logbook-entry`
   with `nodeColor` (2026.10+) set to the kind's colour (the tiles'
   blue/amber/grey), so rows look exactly like HA's logbook. Only the list
   around them - day headings and the scrolling box - is ours, copied from
   `ha-logbook-renderer`, which can't colour rows individually. Selecting a
-  row (`logbook-entry-selected`) opens the zone's device page. An event's
-  kind is the zone entity it's filed under (below); entries without a
+  row (`logbook-entry-selected`) opens FLARE's device page. An event's
+  kind is the entity it's filed under (below); entries without a
   message, i.e. the Clear button's own state change, are left out.
   - Why not HA's logbook card, as the Security dashboard uses: it asks for
     a device target's entities only, never `deviceIds`
     (`hui-logbook-card.ts`), and the logbook server drops sensors with a
-    unit from that list (`async_filter_entities`), so zone events never
-    showed; and it can't colour or filter rows.
+    unit from that list (`async_filter_entities`), so the count sensors'
+    events never showed; and it can't colour or filter rows. That's also
+    why the Settings entities have a device at all.
   - `ha-logbook-entry` is a frontend internal, lazy-loaded (the card has
     `loadCardHelpers` create a logbook card first, which imports it). An
     accepted risk like `ha-control-slider`; its properties were the same
@@ -1232,17 +1250,20 @@ beside it.
     look like HA's logbook** (user's call): if HA restyles
     `ha-logbook-renderer`'s day headings or container, follow them.
 
-**Zone events** (`flare_lights_controlled`, `flare_lights_released`,
-`flare_light_overridden`) carry a zone entity as `entity_id` - the
-Controlled count, the Overridden count, or the Clear button for a release
-(`_zone_data`) - and the zone's `device_id`, with the lights in
-`light`/`lights`, so they show on the zone's device page and in its
-Activity, and the Activity card can tell the three apart. The logbook
-matches events to entities only through `entity_id`, so they can't also
-be on each light's timeline; the user chose the zone.
+**Claim events** (`flare_lights_controlled`, `flare_lights_released`,
+`flare_light_overridden`) carry one of FLARE's entities as `entity_id` -
+the Controlled total, the Overridden total, or Clear for a release
+(`_filed_under`) - and FLARE's `device_id`, with the lights in
+`light`/`lights` and the automation in `room` (`rooms` for an override,
+every room the light is in), so they show in FLARE's Activity and the
+Activity card can tell the three apart. A logbook row shows the
+`entity_id`'s name ("Controlled lights"), not the describer's name, so
+each message starts with the room's name ("Kitchen Lighting is now
+controlling 7 lights"). The logbook matches events to entities only
+through `entity_id`, so they can't also be on each light's timeline.
 
-- The zone speaks for the room (user's call): "now controlling 7 lights",
-  "cleared 7 lights" (the room going dark or Clear; not the blueprint's
+- The room speaks for itself (user's call): "is now controlling 7
+  lights", "cleared 7 lights" (the room going dark or Clear; not the blueprint's
   bookkeeping `claims_clear`). Only an override names a single light. A
   light becoming controlled again after an override is silent; an event
   for it was built and removed as churn.
@@ -1326,7 +1347,7 @@ test module never imports another.
 - `async_fire_time_changed` trips timers but doesn't advance `now()`; a
   template comparing `now() - last_changed` needs the frozen clock moved.
   It can also run a timer ~0.1s early, which is why `test_ticks.py`
-  spaces zones 10s apart.
+  spaces areas 10s apart.
 - Move time relative to `utcnow()`, never to an absolute
   `.replace(minute=N)`, which can land in the past.
 - Two identical `hass.states.async_set` calls collapse into one

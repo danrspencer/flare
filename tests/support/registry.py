@@ -1,5 +1,5 @@
 """Entity-registry entries as the front end sees them (`hass.entities`),
-for FLARE's schedules and zones under their usual entity IDs."""
+for FLARE's schedules and settings under their usual entity IDs."""
 
 from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS
 
@@ -23,23 +23,16 @@ def schedule_entities(device_id: str, slug: str) -> dict[str, dict]:
     return flare_entities(device_id, roles)
 
 
-def zone_entities(device_id: str, slug: str) -> dict[str, dict]:
+def settings_entities(device_id: str = "flare_device") -> dict[str, dict]:
+    """The Settings entry's entities, on FLARE's own device: the claims,
+    their totals and Clear."""
     roles = {
-        "claims": f"sensor.{slug}_flare_claims",
-        "controlled": f"sensor.{slug}_flare_controlled",
-        "overridden": f"sensor.{slug}_flare_overridden",
-        "clear": f"button.{slug}_flare_clear",
+        "claims": "sensor.flare_claims",
+        "all_controlled": "sensor.flare_controlled_lights",
+        "all_overridden": "sensor.flare_overridden_lights",
+        "clear": "button.flare_clear",
     }
-    return flare_entities(device_id, roles)
-
-
-def totals_entities() -> dict[str, dict]:
-    """The Zones entry's totals across zones, which have no device."""
     return {
-        f"sensor.flare_{status}_lights": {
-            "entity_id": f"sensor.flare_{status}_lights",
-            "platform": "flare",
-            "translation_key": f"all_{status}",
-        }
-        for status in ("controlled", "overridden")
+        entity_id: {"entity_id": entity_id, "device_id": device_id, "platform": "flare", "translation_key": role}
+        for role, entity_id in roles.items()
     }

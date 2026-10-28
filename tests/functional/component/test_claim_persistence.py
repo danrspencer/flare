@@ -7,7 +7,6 @@ from datetime import timedelta
 import pytest
 from freezegun import freeze_time
 
-from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant, State
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
@@ -17,15 +16,15 @@ from pytest_homeassistant_custom_component.common import (
     mock_restore_cache_with_extra_data,
 )
 
-from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, SUBENTRY_TYPE_ZONE
-from custom_components.flare.zone.instance import zone_instances
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.zone.claims import ClaimRegistry
-from custom_components.flare.zone.override_protection import MISMATCH_GRACE
+from custom_components.flare.tracking.claims import ClaimRegistry
+from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 from tests.support.claims import after_the_grace
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
+ROOM = "automation.kitchen"
 
 
 _STARTED: list = []
@@ -49,36 +48,31 @@ def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
     return {"observed": one(f"{context_id}-before"), "latest": one(context_id), "last_seen": seen}
 
 
-async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
-    """One zone, its claims sensor added for real, with claims in the
-    restore cache if given."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
-        subentries_data=[
-            ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_ZONE,
-                title="Kitchen",
-                unique_id="kitchen",
-                data={},
-            )
-        ],
-    )
+def _room(*lights: str) -> dict:
+    return {ROOM: {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}}
+
+
+async def _start(hass: HomeAssistant, restored_claims: dict | None = None, restored_rooms: dict | None = None):
+    """The claims sensor added for real, with claims in the restore cache if
+    given, all in one room unless rooms are given too."""
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, version=3, minor_version=2)
     entry.add_to_hass(hass)
-    registry = ClaimRegistry(hass, entry)
+    registry = ClaimRegistry(hass)
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
     tracker = next(e for e in added if hasattr(e, "claims"))
     if restored_claims is not None:
+        rooms = restored_rooms if restored_rooms is not None else _room(*restored_claims)
         mock_restore_cache_with_extra_data(
-            hass, [(State(tracker.entity_id, str(len(restored_claims))), {"claims": restored_claims})]
+            hass,
+            [(State(tracker.entity_id, str(len(restored_claims))), {"claims": restored_claims, "rooms": rooms})],
         )
 
     platform = MockEntityPlatform(hass, domain="sensor", platform_name=DOMAIN)
     platform.config_entry = entry
-    await platform.async_add_entities([tracker], config_subentry_id=zone_instances(entry)[0].subentry_id)
+    await platform.async_add_entities([tracker])
     await hass.async_block_till_done()
     _STARTED.append(tracker)
     return registry, tracker
@@ -93,26 +87,29 @@ def _status(hass: HomeAssistant, tracker, entity_id: str) -> str:
     return _classify_tracked(hass, tracker._registry, entity_id, tracker.claims[entity_id])[0]
 
 
-async def test_what_is_saved_is_the_claims_themselves(hass: HomeAssistant):
+async def test_what_is_saved_is_the_claims_and_rooms_themselves(hass: HomeAssistant):
     """Through a real dump to storage, so through HA's JSON encoder too."""
     _, tracker = await _start(hass)
     claim = _claim("ctx-ours")
+    room = _room("light.a")
     tracker.claims["light.a"] = claim
+    tracker.rooms.update(room)
 
     saved = await async_mock_restore_state_shutdown_restart(hass)
 
-    assert saved.last_states[tracker.entity_id].extra_data.as_dict() == {"claims": {"light.a": claim}}
+    assert saved.last_states[tracker.entity_id].extra_data.as_dict() == {"claims": {"light.a": claim}, "rooms": room}
 
 
-async def test_claims_come_back_after_a_restart(hass: HomeAssistant):
+async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant):
     registry, _ = await _start(hass, {"light.a": _claim("ctx-ours")})
 
     assert set(registry.all_records()) == {"light.a"}
+    assert registry.rooms_of("light.a") == [ROOM]
 
 
 async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant):
     """We asked for 200; it shows 90. Left alone at once, and an override
-    once the zone's poll has noted it and the grace has passed."""
+    once the claims sensor's poll has noted it and the grace has passed."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
 
     registry, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
@@ -171,7 +168,7 @@ async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: H
 
 async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: HomeAssistant):
     """The first light back being off, with siblings still unknown, must not
-    release the zone's restored claims."""
+    release the room's restored claims."""
     registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     unsub = registry.async_start_listening(hass)
 
@@ -186,7 +183,7 @@ async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: H
     unsub()
 
 
-async def test_a_zone_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
+async def test_a_room_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
     """Its lights went off while HA wasn't watching (during a restart, a
     shutdown racing FLARE's own turn-off, a restore), so no on -> off ever
     arrives to release it, and every light would read overridden."""
@@ -202,7 +199,7 @@ async def test_a_zone_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
     assert [e.data["lights"] for e in released] == [["light.a", "light.b"]]
 
 
-async def test_a_zone_restored_dark_waits_for_every_light_to_report(hass: HomeAssistant):
+async def test_a_room_restored_dark_waits_for_every_light_to_report(hass: HomeAssistant):
     """Lights reporting in after the claims came back, one at a time."""
     registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     unsub = registry.async_start_listening(hass)
@@ -218,7 +215,7 @@ async def test_a_zone_restored_dark_waits_for_every_light_to_report(hass: HomeAs
     unsub()
 
 
-async def test_a_zone_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant):
+async def test_a_room_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant):
     _light(hass, "light.a", "on", **ASKED)
     _light(hass, "light.b", "off")
 
@@ -226,3 +223,18 @@ async def test_a_zone_restored_with_a_light_on_keeps_its_claims(hass: HomeAssist
     await hass.async_block_till_done()
 
     assert set(registry.all_records()) == {"light.a", "light.b"}
+
+
+async def test_each_room_restored_dark_is_released_on_its_own(hass: HomeAssistant):
+    """A lit room keeps its claims while a dark one lets go of its own."""
+    _light(hass, "light.a", "on", **ASKED)
+    _light(hass, "light.b", "off")
+    rooms = {
+        "automation.lit": {"lights": ["light.a"], "last_seen": dt_util.utcnow().isoformat()},
+        "automation.dark": {"lights": ["light.b"], "last_seen": dt_util.utcnow().isoformat()},
+    }
+
+    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")}, rooms)
+    await hass.async_block_till_done()
+
+    assert set(registry.all_records()) == {"light.a"}

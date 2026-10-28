@@ -1,11 +1,10 @@
 /**
- * Finding FLARE's schedules and zones, and each one's entities, for the
+ * Finding FLARE's schedules and claims, and their entities, for the
  * dashboard. No DOM or HA imports.
  */
 
 const SENSOR_PREFIX = 'sensor.';
 const SCHEDULE_SUFFIX = '_flare';
-const CLAIMS_SUFFIX = '_flare_claims';
 
 // Only when a sensor has no friendly_name.
 function titleCase(slug) {
@@ -50,17 +49,52 @@ export function flareDevices(hass) {
 }
 
 /**
- * The totals across every zone, which belong to no device:
- * {controlled, overridden}, each an entity_id or undefined.
+ * The Settings entry's entities, on FLARE's own device: the claims sensor,
+ * the totals and Clear. {device, claims, controlled, overridden, clear},
+ * each an id or undefined.
  */
 export function flareTotals(hass) {
+  const roles = { claims: 'claims', all_controlled: 'controlled', all_overridden: 'overridden', clear: 'clear' };
   const totals = {};
   for (const entry of Object.values((hass && hass.entities) || {})) {
-    if (entry.platform !== 'flare') continue;
-    if (entry.translation_key === 'all_controlled') totals.controlled = entry.entity_id;
-    if (entry.translation_key === 'all_overridden') totals.overridden = entry.entity_id;
+    if (entry.platform !== 'flare' || !roles[entry.translation_key]) continue;
+    totals[roles[entry.translation_key]] = entry.entity_id;
+    if (entry.device_id) totals.device = entry.device_id;
   }
   return totals;
+}
+
+/** A light's area: its own, else its device's. */
+export function lightArea(hass, entityId) {
+  const entry = (hass && hass.entities && hass.entities[entityId]) || {};
+  if (entry.area_id) return entry.area_id;
+  const device = entry.device_id && hass.devices && hass.devices[entry.device_id];
+  return (device && device.area_id) || null;
+}
+
+/**
+ * Every room light by area, from the claims sensor: area_id -> {lights,
+ * claimed, controlled, overridden}, each a sorted list of entity_ids. A
+ * room light is one some automation named; claimed ones have a status.
+ */
+export function claimsByArea(hass) {
+  const claims = flareTotals(hass).claims;
+  const attributes = (claims && hass.states && hass.states[claims] && hass.states[claims].attributes) || {};
+  const statuses = attributes.statuses || {};
+  const lights = new Set(Object.keys(statuses));
+  for (const room of Object.values(attributes.rooms || {})) (room.lights || []).forEach((l) => lights.add(l));
+  const byArea = new Map();
+  for (const light of [...lights].sort()) {
+    const area = lightArea(hass, light);
+    if (!area) continue;
+    if (!byArea.has(area)) byArea.set(area, { lights: [], claimed: [], controlled: [], overridden: [] });
+    const entry = byArea.get(area);
+    entry.lights.push(light);
+    if (statuses[light]) entry.claimed.push(light);
+    if (statuses[light] === 'controlled') entry.controlled.push(light);
+    if (statuses[light] === 'overridden') entry.overridden.push(light);
+  }
+  return byArea;
 }
 
 // Every FLARE device with an entity in `role`, as {slug, title, device,
@@ -81,14 +115,4 @@ function devicesWith(hass, role, suffix, title) {
 /** Every schedule, by its sensor. */
 export function scheduleSensors(hass) {
   return devicesWith(hass, 'schedule', SCHEDULE_SUFFIX, (friendly) => friendly);
-}
-
-/** Every zone, by its claims sensor. The title drops the trailing "Claims". */
-export function listZones(hass) {
-  return devicesWith(hass, 'claims', CLAIMS_SUFFIX, (friendly) => (friendly || '').replace(/\s*Claims$/, ''));
-}
-
-/** Each zone's device. */
-export function zoneDevices(hass, zones = listZones(hass)) {
-  return zones.map((zone) => zone.device);
 }

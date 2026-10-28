@@ -168,9 +168,9 @@ starting from scratch, is not.
 | the curve | external | The day's brightness and colour over time. Not "the schedule" — see below. |
 | schedule | external | The times that divide the day into phases. A *schedule sensor* publishes one. |
 | transition | external | Two unrelated meanings, so always qualify. A *phase transition* is the easing between phases; a *transition duration* is how long a light takes to change. |
-| zone | external | The named thing, usually one per room, that remembers which lights FLARE is driving and whose tick tells the room's automation when to update. Not *tracking scope*. |
+| room | external | What an automation drives, for override protection: a call's `room_id` (usually the automation itself) and its lights, which FLARE releases together once they're all off. Not *zone* (gone in 2.0, and HA's own word for `zone.home`), nor *tracking scope*. |
 | flare | external | A light over an automation, for voice assistants and HomeKit: `light.<name>_flare`. Lower case in running prose; **Flares** when naming the entry. |
-| tick | external | A zone's `flare_tick` event, fired once per update interval. Lower case: it's an event, not an entity. The update it causes is still *the regular update*. |
+| tick | external | An area's `flare_tick` event, fired once per update interval. Lower case: it's an event, not an entity. The update it causes is still *the regular update*. |
 
 ### Behaviour
 
@@ -197,7 +197,7 @@ starting from scratch, is not.
 
 Never paraphrase these. They are what the user types or clicks.
 
-- **Blueprint inputs** — the UI labels, verbatim: Schedule, Zone,
+- **Blueprint inputs** — the UI labels, verbatim: Schedule, Override Protection,
   Lights & Occupancy, Additional Triggers, Prefer RGB During,
   Scene Template, Morning/Day/Evening/Night Scene,
   Brightness Template, Lights Off During Morning/Day/Evening/Night,
@@ -210,10 +210,10 @@ Never paraphrase these. They are what the user types or clicks.
   `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`,
   `flare.claims_override`, `flare.export_schedule`, `flare.import_schedule`.
-- **Config entries** — Schedules, Zones, Flares, under FLARE. Write the path as
-  **FLARE → Zones**.
+- **Config entries** — Schedules, Settings, Flares, under FLARE. Write the path as
+  **FLARE → Settings**.
 - **Dashboard** — **FLARE Lighting** (`custom:flare`), and its views `custom:flare-schedule`
-  and `custom:flare-zone`.
+  and `custom:flare-rooms`.
 
 ## Keeping this honest
 
@@ -222,5 +222,5 @@ changes, or a new one is added, grep `docs/` for the old one in the same
 change — and check `strings.json` too, since a term the UI says is a term
 the docs are then obliged to say.
 
-A zone's subentry type is still stored as `state` (HA can't retype a
-subentry), behind `SUBENTRY_TYPE_ZONE`. Nothing user-facing says it.
+The Settings entry's type is still stored as `tracking`, behind
+`ENTRY_TYPE_SETTINGS`. Nothing user-facing says it.

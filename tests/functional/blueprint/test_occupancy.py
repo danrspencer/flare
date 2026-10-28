@@ -11,7 +11,6 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from tests.functional.blueprint.harness import (
     light,
     occupancy,
-    add_zone,
     setup_room_automation,
 )
 
@@ -44,14 +43,13 @@ class TestOccupancyDrivenOnOff:
 
         assert apply_lighting_calls == []
 
-    async def test_the_turn_off_names_the_rooms_zone(self, hass, turn_off_calls):
+    async def test_the_turn_off_names_the_room(self, hass, turn_off_calls):
         """Otherwise every emptied room's turn-off reads as an override."""
-        zone = add_zone(hass)
         occupancy(hass, "binary_sensor.occ", "on")
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
         await setup_room_automation(
-            hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]}, zone=zone, no_motion_wait=0
+            hass, room_target={"entity_id": ["light.a", "binary_sensor.occ"]}, no_motion_wait=0
         )
 
         occupancy(hass, "binary_sensor.occ", "off")
@@ -60,7 +58,7 @@ class TestOccupancyDrivenOnOff:
         await hass.async_block_till_done()
 
         assert turn_off_calls, "precondition: the room should have been turned off"
-        assert turn_off_calls[-1].data["zone_device_id"] == zone
+        assert (turn_off_calls[-1].data["room_id"], turn_off_calls[-1].data["room_entities"]) == ("automation.room", ["light.a"])
 
     async def test_occupancy_cleared_turns_lights_off_after_the_wait(self, hass, turn_off_calls):
         occupancy(hass, "binary_sensor.occ", "on")

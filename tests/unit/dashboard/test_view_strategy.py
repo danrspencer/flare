@@ -6,7 +6,7 @@ import pytest
 from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
-from tests.support.registry import flare_entities, schedule_entities, zone_entities
+from tests.support.registry import flare_entities, schedule_entities, settings_entities
 
 pytestmark = requires_node
 
@@ -23,18 +23,7 @@ STATES = {
     # Someone else's sensor that happens to end the same way.
     "sensor.solar_flare": {"attributes": {}},
     "light.kitchen": {"attributes": {}},
-    # Zones: identified by `claims`, named "<Zone> Claims".
-    "sensor.bedroom_flare_claims": {
-        "attributes": {"claims": {}, "friendly_name": "Bedroom Claims"}
-    },
-    "sensor.dining_room_flare_claims": {
-        "attributes": {"claims": {}, "friendly_name": "Dining Room Claims"}
-    },
-    # No friendly name - falls back to the title-cased slug.
-    "sensor.utility_flare_claims": {"attributes": {"claims": {}}},
-    # A zone's count sensors, which aren't zones themselves.
-    "sensor.bedroom_flare_controlled": {"attributes": {"lights": []}},
-    "sensor.bedroom_flare_overridden": {"attributes": {"lights": []}},
+    "sensor.flare_claims": {"attributes": {"rooms": {}, "statuses": {}}},
 }
 
 # The registry is what says which are FLARE's, and what each one is.
@@ -42,9 +31,7 @@ ENTITIES = {
     **schedule_entities("downstairs_schedule", "downstairs"),
     **schedule_entities("upstairs_schedule", "upstairs"),
     **schedule_entities("loft_schedule", "loft"),
-    **zone_entities("bedroom_zone", "bedroom"),
-    **zone_entities("dining_room_zone", "dining_room"),
-    **zone_entities("utility_zone", "utility"),
+    **settings_entities(),
 }
 GROUND_FLOOR = {e["translation_key"]: e["entity_id"] for e in schedule_entities("ground", "ground_floor").values()}
 
@@ -53,18 +40,6 @@ RENAMED_ROLES = {e["translation_key"]: e["entity_id"].replace("garden", "outside
 RENAMED = {
     "states": {"sensor.outside_flare": {"attributes": {"points": [], "friendly_name": "Garden"}}},
     "entities": flare_entities("garden", RENAMED_ROLES),
-}
-
-
-# A house for the Activity feed: the Bedroom zone's claims sensor names its
-# device.
-ACTIVITY = {
-    "states": {
-        "sensor.bedroom_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Bedroom Claims"}},
-        "sensor.attic_flare_claims": {"attributes": {"claims": {}, "friendly_name": "Attic Claims"}},
-    },
-    "entities": {**zone_entities("bedroom_zone", "bedroom"), **zone_entities("attic_zone", "attic")},
-    "config": {"components": ["logbook"]},
 }
 
 
@@ -79,17 +54,17 @@ def result():
 // Record registrations, which the shim otherwise drops.
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
-const {{ scheduleSensors, normaliseSlug, listZones, zoneDevices }} = await import({js_path(WWW / "flare-entities.js")});
+const {{ scheduleSensors, normaliseSlug }} = await import({js_path(WWW / "flare-entities.js")});
 const {{ sectionConfig }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
-const Zone = defined['ll-strategy-view-flare-zone'];
+const Rooms = defined['ll-strategy-view-flare-rooms'];
 const Dashboard = defined['ll-strategy-dashboard-flare'];
 const hass = {{ states: input.states, entities: input.entities }};
-const zoneRoles = ['claims', 'controlled', 'overridden', 'clear'];
+const settingsRoles = ['claims', 'all_controlled', 'all_overridden', 'clear'];
 const schedulesOnly = {{
   states: input.states,
-  entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => !zoneRoles.includes(e.translation_key))),
+  entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => !settingsRoles.includes(e.translation_key))),
 }};
 const empty = {{ states: {{}}, entities: {{}} }};
 const generate = async (h, config = {{}}) => (Strategy ? await Strategy.generate(config, h) : null);
@@ -106,17 +81,13 @@ return {{
   unknown: await generate(hass, {{ sensor: 'nosuchroom' }}),
   blankSensor: await generate(hass, {{ sensor: '   ' }}),
   slugs: input.slugCases.map(normaliseSlug),
-  zones: listZones(hass),
-  zone: Zone ? await Zone.generate({{}}, hass) : null,
-  emptyZones: Zone ? await Zone.generate({{}}, empty) : null,
+  rooms: Rooms ? await Rooms.generate({{}}, hass) : null,
   dashboard: Dashboard ? await Dashboard.generate({{}}, hass) : null,
-  dashboardWithoutZones: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
+  dashboardWithoutRooms: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
   emptyDashboard: Dashboard ? await Dashboard.generate({{}}, empty) : null,
   customStrategies: globalThis.window.customStrategies,
   createSuggestions: Dashboard ? await Dashboard.getCreateSuggestions({{}}) : null,
-  zoneDevices: zoneDevices(input.activity),
-  activityView: Zone ? await Zone.generate({{}}, input.activity) : null,
-  noLogbookView: Zone ? await Zone.generate({{}}, {{ ...input.activity, config: {{ components: [] }} }}) : null,
+  activityView: Rooms ? await Rooms.generate({{}}, {{ ...hass, config: {{ components: ['logbook'] }} }}) : null,
 }};""",
         {
             "states": STATES,
@@ -124,7 +95,6 @@ return {{
             "groundFloor": GROUND_FLOOR,
             "renamed": RENAMED,
             "slugCases": SLUG_CASES,
-            "activity": ACTIVITY,
         },
     )
 
@@ -163,7 +133,7 @@ def test_sections_are_named_and_ordered_by_the_sensors_own_name(result):
 
 
 def test_only_schedule_sensors_become_sections(result):
-    """Not the zones' sensors, and not someone else's sensor.solar_flare."""
+    """Not the claims sensor, and not someone else's sensor.solar_flare."""
     slugs = [s["slug"] for s in result["sensors"]]
 
     assert slugs == ["downstairs", "loft", "upstairs"]
@@ -364,60 +334,34 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
     ]
 
 
-# --- The zone view -------------------------------------------------
+# --- The rooms view ------------------------------------------------
 
 
-def test_the_zone_strategy_is_registered_separately(result):
-    assert "ll-strategy-view-flare-zone" in result["registeredAs"]
-
-
-def test_the_zone_name_drops_the_entitys_own_trailing_word(result):
-    """"Bedroom Claims" is the sensor; the zone is "Bedroom"."""
-    titles = [s["title"] for s in result["zones"]]
-
-    assert "Bedroom" in titles
-    assert "Bedroom Claims" not in titles
-
-
-def test_the_count_sensors_do_not_become_zones_of_their_own(result):
-    """Every zone also has _flare_controlled and _flare_overridden sensors."""
-    slugs = [s["slug"] for s in result["zones"]]
-
-    assert slugs == ["bedroom", "dining_room", "utility"]
+def test_the_rooms_strategy_is_registered_separately(result):
+    assert "ll-strategy-view-flare-rooms" in result["registeredAs"]
 
 
 def test_the_two_strategies_do_not_claim_each_others_sensors(result):
-    schedule_slugs = {s["slug"] for s in result["sensors"]}
-    zone_slugs = {s["slug"] for s in result["zones"]}
-
-    assert schedule_slugs == {"downstairs", "loft", "upstairs"}
-    assert zone_slugs == {"bedroom", "dining_room", "utility"}
-
-
-def test_no_zones_explains_itself_rather_than_rendering_blank(result):
-    content = result["emptyZones"]["sections"][0]["cards"][1]["content"]
-
-    assert "No FLARE zones found" in content
-    assert "Add zone" in content
+    assert {s["slug"] for s in result["sensors"]} == {"downstairs", "loft", "upstairs"}
 
 
 # --- The dashboard -------------------------------------------------------
 
 
-def test_the_dashboard_is_a_view_per_schedule_then_zones(result):
+def test_the_dashboard_is_a_view_per_schedule_then_rooms(result):
     views = result["dashboard"]["views"]
 
-    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Zones"]
+    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Rooms"]
     assert [v["strategy"] for v in views] == [
         {"type": "custom:flare-schedule", "sensor": "downstairs"},
         {"type": "custom:flare-schedule", "sensor": "loft"},
         {"type": "custom:flare-schedule", "sensor": "upstairs"},
-        {"type": "custom:flare-zone"},
+        {"type": "custom:flare-rooms"},
     ]
 
 
-def test_the_dashboard_has_no_zones_view_without_zones(result):
-    assert [v["title"] for v in result["dashboardWithoutZones"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
+def test_the_dashboard_has_no_rooms_view_without_the_settings_entry(result):
+    assert [v["title"] for v in result["dashboardWithoutRooms"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
 
 
 def test_an_empty_dashboard_explains_itself(result):
@@ -441,18 +385,15 @@ def test_add_dashboard_suggests_flare_and_its_icon(result):
 # --- Activity --------------------------------------------------------------
 
 
-def test_the_zone_view_has_an_activity_feed_of_the_zones_devices(result):
-    """The same entries as each zone's own Activity."""
+def test_the_rooms_view_has_an_activity_feed_of_flares_device(result):
     sidebar = result["activityView"]["sidebar"]
     heading, logbook = sidebar["sections"][0]["cards"]
 
-    assert result["zoneDevices"] == ["attic_zone", "bedroom_zone"]
     assert heading["heading"] == "Activity"
     assert logbook["type"] == "custom:flare-activity-card"
-    assert logbook["device_id"] == ["attic_zone", "bedroom_zone"]
-    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Zones", "Activity")
+    assert logbook["device_id"] == ["flare_device"]
+    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Rooms", "Activity")
 
 
 def test_no_activity_feed_without_the_logbook(result):
-    assert "sidebar" not in result["noLogbookView"]
-    assert "sidebar" not in result["zone"], "nor without the zones' devices"
+    assert "sidebar" not in result["rooms"]

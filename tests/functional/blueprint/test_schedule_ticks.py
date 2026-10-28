@@ -1,4 +1,4 @@
-"""Ticks from the schedule sensor, the zone's Tick and Additional Triggers."""
+"""Ticks from the schedule sensor, the area's tick and Additional Triggers."""
 
 from __future__ import annotations
 
@@ -63,9 +63,9 @@ class TestAdaptiveScheduleAndTransitions:
         assert calls[-1].data["color_temp_kelvin"] == 4000
         assert calls[-1].data["rgb_color"] is None
 
-    async def test_a_flat_curve_still_gets_a_tick_from_the_zone(self, hass, apply_lighting_calls):
+    async def test_a_flat_curve_still_gets_a_tick(self, hass, apply_lighting_calls):
         """On a flat stretch the sensor emits state_reported, not state_changed,
-        so only the zone's Tick guarantees a tick."""
+        so only the tick guarantees an update."""
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
         await hass.async_block_till_done()

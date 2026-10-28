@@ -1,4 +1,4 @@
-"""What happens to claims as lights change on their own: a zone going
+"""What happens to claims as lights change on their own: a room going
 dark, a light dropping and recovering, and pruning."""
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
-from custom_components.flare.zone.claims import STALE_RECORD_MAX_AGE_DAYS
+from custom_components.flare.tracking.claims import STALE_RECORD_MAX_AGE_DAYS
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,
@@ -20,11 +20,11 @@ from tests.functional.component.harness import (
     claims_check,
     claims_record,
     set_light,
-    zone_device_id,
+    ROOM,
 )
 
 
-async def test_the_last_light_going_off_releases_the_whole_zone(setup_integration: HomeAssistant):
+async def test_the_last_light_going_off_releases_the_whole_room(setup_integration: HomeAssistant):
     """Nobody is using the room, so every light is free again."""
     hass = setup_integration
     our_context = Context()
@@ -34,14 +34,14 @@ async def test_the_last_light_going_off_releases_the_whole_zone(setup_integratio
     await hass.async_block_till_done()
 
     assert await claims_check(hass, ["light.a"]) == {
-        "light.a": {"blocked": False, "status": "off", "matched_via": None, "zone": "Test Zone"}
+        "light.a": {"blocked": False, "status": "off", "matched_via": None, "rooms": [ROOM]}
     }
 
 
 async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_integration: HomeAssistant):
     """Switching one light off in a room still in use is a choice: the sibling
-    holds the zone, so the claim stays. (The zone, not the physical room:
-    an untracked light holds nothing open.)"""
+    holds the room, so the claim stays. (Its claimed lights, not the physical
+    room: an untracked light holds nothing open.)"""
     hass = setup_integration
     ours = Context()
     for e in ("light.a", "light.sibling"):
@@ -133,7 +133,7 @@ async def test_recovered_light_is_freed_while_an_unrelated_override_stays_protec
             "entities": ["light.recovering", "light.sibling"],
             "brightness": 180,
             "color_temp_kelvin": 3200,
-            "zone_device_id": zone_device_id(hass),
+            "room_id": ROOM,
         },
         blocking=True,
         return_response=True,
@@ -189,7 +189,7 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
             "entities": ["light.a"],
             "brightness": 180,
             "color_temp_kelvin": 3200,
-            "zone_device_id": zone_device_id(hass),
+            "room_id": ROOM,
         },
         blocking=True,
         return_response=True,
@@ -244,7 +244,7 @@ async def test_prune_stale_leaves_a_record_with_no_last_seen_alone(setup_integra
     """Age can't be judged, so it's kept."""
     hass = setup_integration
     tracker = claim_registry(hass)
-    tracker._stores[next(iter(tracker._stores))].claims["light.a"] = {  # this shape shouldn't occur naturally
+    tracker._store.claims["light.a"] = {  # this shape shouldn't occur naturally
         "observed": {"context_id": "ctx-old", "recorded_at": None, "target": None},
         "latest": None,
         "last_seen": None,
@@ -259,7 +259,7 @@ async def _groups(hass: HomeAssistant) -> list[str]:
     result = await hass.services.async_call(
         DOMAIN,
         "compute_lighting_groups",
-        {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "zone_device_id": zone_device_id(hass)},
+        {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM},
         blocking=True,
         return_response=True,
     )

@@ -1,8 +1,8 @@
 /**
- * The zones' Activity: what each zone did, from the logbook's live stream
- * for the zones' devices, coloured and filtered by kind. An event's kind is
- * the zone entity it's filed under (sensor.py's _zone_data): its
- * Controlled or Overridden count, or Clear for a release.
+ * FLARE's Activity: what each room did, from the logbook's live stream for
+ * FLARE's device, coloured and filtered by kind. An event's kind is the
+ * entity it's filed under (sensor.py's _filed_under): the Controlled or
+ * Overridden count, or Clear for a release.
  *
  * Each row is Home Assistant's own `ha-logbook-entry`, with its dot in the
  * kind's colour (`nodeColor`, HA 2026.10), so the card looks like HA's
@@ -10,7 +10,7 @@
  * copies `ha-logbook-renderer`, which can't colour rows individually.
  *
  *   type: custom:flare-activity-card
- *   device_id: [<zone device id>, ...]
+ *   device_id: [<FLARE's device id>]
  *   hours_to_show: 24   # optional
  */
 
@@ -21,12 +21,12 @@ const FILTER_KEY = 'flare-activity-filter';
 
 // The tiles' colours, so an entry matches the count it changed.
 export const KINDS = [
-  { key: 'controlled', role: 'controlled', label: 'Controlled', color: 'var(--blue-color, #2196f3)' },
-  { key: 'overridden', role: 'overridden', label: 'Overridden', color: 'var(--amber-color, #ffc107)' },
+  { key: 'controlled', role: 'all_controlled', label: 'Controlled', color: 'var(--blue-color, #2196f3)' },
+  { key: 'overridden', role: 'all_overridden', label: 'Overridden', color: 'var(--amber-color, #ffc107)' },
   { key: 'cleared', role: 'clear', label: 'Cleared', color: 'var(--grey-color, #9e9e9e)' },
 ];
 
-/** entity_id -> {kind, device} for the zones' devices. */
+/** entity_id -> {kind, device} for the devices the card follows. */
 export function entityKinds(hass, deviceIds) {
   const devices = flareDevices(hass);
   const kinds = {};
@@ -275,9 +275,9 @@ class FlareActivityCard extends HTMLElement {
   _entrySelected(ev) {
     ev.stopPropagation();
     const item = ev.detail && ev.detail.item;
-    const zone = item && this._kinds && this._kinds[item.entity_id];
-    if (!zone) return;
-    window.history.pushState(null, '', `/config/devices/device/${zone.device}`);
+    const kind = item && this._kinds && this._kinds[item.entity_id];
+    if (!kind) return;
+    window.history.pushState(null, '', `/config/devices/device/${kind.device}`);
     window.dispatchEvent(new CustomEvent('location-changed'));
   }
 }

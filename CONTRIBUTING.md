@@ -12,10 +12,10 @@ custom_components/flare/
                    entries, the blueprint repairs, the logbook
                    descriptions, the dashboard front-end files
     subentry_flows.py, options_flow.py
-                   adding and reconfiguring schedules, zones and
-                   flares; the Zones entry's options
-    area_setup.py  setting up an area: a zone, a room automation written
-                   to automations.yaml, and a flare
+                   adding and reconfiguring schedules and flares; the
+                   Settings entry's options
+    area_setup.py  setting up an area: a room automation written to
+                   automations.yaml, and a flare
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
     event.py, light.py
                    the entities. Home Assistant requires platform
@@ -27,26 +27,26 @@ custom_components/flare/
         coordinator.py   the schedule computation behind the schedule
                          entities - one per sensor added via "Add Sensor"
         transfer.py      a schedule as YAML, for export and import
-    zone/          zones: who owns a light, and when each zone ticks
+    tracking/      who owns a light, and when each area ticks
         override_protection.py
                          classify_state(): controlled / overridden /
                          mismatched / untracked / off / unavailable
         claims.py
                          the claims: what context.id and target this
-                         integration last wrote each light with. They live
-                         on each zone's entity and are restored across a
-                         restart
-        instance.py      the zone device itself (one per room, usually)
-        ticker.py        fires each zone's tick in turn, a gap apart
+                         integration last wrote each light with, and each
+                         room's lights. They live on the claims sensor and
+                         are restored across a restart
+        matching.py      what a light shows, against what was asked for
+        ticker.py        fires each area's tick in turn, a gap apart
     flares/        flares: a light over each room's automation (the entity
                    itself is light.py)
-        automation.py    reads an automation's lights and zone from its
-                         blueprint inputs
+        automation.py    reads an automation's lights from its blueprint
+                         inputs
         bare.py          what counts as a bare turn-on, which runs the
                          automation
         instance.py      the flare device itself
     services/      the services, and the planning behind them
-        handlers.py      the zone services (lighting and claims), registered
+        handlers.py      the lighting and claims services, registered
                          against real HA state
         schedules.py     export_schedule / import_schedule, registered for the
                          domain rather than by either entry
@@ -80,12 +80,12 @@ custom_components/flare/
 
 The four folders are grouped by concept rather than by how something is exposed, because the
 schedule and the claims are each exposed through both entities and services - so neither could
-live with either. Imports run one way: `schedule/`, `zone/` and `flares/` import nothing but
-`const.py`, `services/` may use `schedule/` and `zone/`, and everything at the package root may
+live with either. Imports run one way: `schedule/`, `tracking/` and `flares/` import nothing but
+`const.py`, `services/` may use `schedule/` and `tracking/`, and everything at the package root may
 use all of them.
 `tests/checks/test_layering.py` enforces it.
 
-`schedule/`, `zone/` and most of `services/` are never handed a `hass` - testable with plain
+`schedule/`, `tracking/` and most of `services/` are never handed a `hass` - testable with plain
 values or fakes. (`curve.py` and `override_protection.py` each import one colour helper from
 `homeassistant.util.color`.) `services/handlers.py`, the entity platforms and the rest of the
 package root are the Home Assistant side: they take `hass` or an entry, and read or write real state.
@@ -119,7 +119,8 @@ docs/
                       inputs, scenes, voice assistants and HomeKit,
                       building without the blueprint
     reference/        the technical docs: the blueprint's inputs,
-                      schedules, zones, flares and services
+                      schedules, override protection, flares and
+                      services
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call
@@ -308,7 +309,7 @@ Three layers under `tests/`:
   static imports and the package layering.
 - `functional/` - a real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `component/` covers the integration (services, claims, zones, schedules, config flows, repairs);
+  `component/` covers the integration (services, claims, rooms, schedules, config flows, repairs);
   `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
   `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
   faked, and asserts on the state the bulbs end up in.

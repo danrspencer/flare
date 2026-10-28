@@ -1,4 +1,4 @@
-"""The Zones entry's options."""
+"""The Settings entry's options."""
 
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 
 class FlareOptionsFlow(config_entries.OptionsFlow):
-    """The Zones entry's options: which bulb models need two-step transitions
-    (see two_step.py), the zones' tick timing, and the smallest change worth
+    """The Settings entry's options: which bulb models need two-step transitions
+    (see two_step.py), the areas' tick timing, and the smallest change worth
     sending. The models field is pre-filled with the shipped defaults and is
     the whole list."""
 

@@ -7,14 +7,14 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
 from ..const import is_reachable
-from ..zone.matching import (
+from ..tracking.matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
     DEFAULT_RGB_COLOR_TOLERANCE,
     Tolerance,
     shows,
 )
-from ..zone.override_protection import classify_state, is_blocked
+from ..tracking.override_protection import classify_state, is_blocked
 from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ class EntityLookup:
     labels: Callable[[str], list]
     # (None, None) for an entity with no device.
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
-    # The light's claims in the caller's zone, or None - see claims.py.
+    # The light's claims, or None if it has none or the caller tracks nothing - see claims.py.
     claims: Callable[[str], Optional[dict]]
     # When the light last came back online, or None - see claims.py.
     reconnected_at: Callable[[str], Optional[datetime]] = lambda _eid: None

@@ -16,8 +16,8 @@ creates.
   automation, and how a room behaves.
 - **[Schedules]({{ site.baseurl }}/reference/schedules/)** — a schedule's entities, the curve's
   transitions, and copying a schedule.
-- **[Zones]({{ site.baseurl }}/reference/zones/)** — a zone's entities, override protection,
-  and when zones tick.
+- **[Override protection]({{ site.baseurl }}/reference/override-protection/)** — how FLARE
+  leaves your changes alone, its entities and events, and when rooms update.
 - **[Flares]({{ site.baseurl }}/reference/flares/)** — a flare's settings, and what each
   light command does.
 - **[Services]({{ site.baseurl }}/reference/services/)** — each service, its fields and what it

@@ -1,6 +1,5 @@
 """Override protection's decision table: given one light's claims and live
-state, is it ours to write? Pure; the caller supplies the claims for
-whatever zone it named. grouping.py's externally_set(), sensor.py's status
+state, is it ours to write? Pure; the caller supplies the claims. grouping.py's externally_set(), sensor.py's status
 and claims_check all go through classify_state(), so they can't disagree.
 
 Each light has two claims: `observed`, a state we've seen and can safely
@@ -198,8 +197,8 @@ def _written_since(record: _WriteRecord, when: datetime) -> bool:
 
 
 def is_blocked(status: str, force: bool = False) -> bool:
-    """classify()'s status as a yes/no. There's no owner check: callers naming
-    the same zone share its claims. `force` bypasses."""
+    """classify()'s status as a yes/no. There's no owner check: every
+    caller's writes are FLARE's. `force` bypasses."""
     if force:
         return False
     return disagrees(status)

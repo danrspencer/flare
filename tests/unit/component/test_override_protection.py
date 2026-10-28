@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from homeassistant.core import Context, State
 
-from custom_components.flare.zone.override_protection import _context_matches, classify, classify_state, is_blocked
+from custom_components.flare.tracking.override_protection import _context_matches, classify, classify_state, is_blocked
 
 ON_TARGET = {"brightness": 200, "color_temp_kelvin": 3000}
 

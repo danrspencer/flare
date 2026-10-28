@@ -1,5 +1,5 @@
 """Setting FLARE up, and then its areas: the integration page's main
-button. Each area gets a zone, an automation from the blueprint in
+button. Each area gets an automation from the blueprint in
 automations.yaml, and a flare."""
 
 from pathlib import Path
@@ -19,10 +19,9 @@ from custom_components.flare.const import (
     DOMAIN,
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_ZONES,
+    ENTRY_TYPE_SETTINGS,
 )
 from custom_components.flare.schedule.coordinator import schedule_instances
-from custom_components.flare.zone.instance import zone_instances
 from tests.support import BLUEPRINT_PATH
 
 
@@ -52,7 +51,7 @@ def _automations(path: Path) -> list[dict]:
 
 
 def _device(hass: HomeAssistant, subentry_id: str) -> str:
-    """The device of a schedule or zone subentry."""
+    """The device of a schedule subentry."""
     entry_id = next(e.entry_id for e in hass.config_entries.async_entries(DOMAIN) if subentry_id in e.subentries)
     return dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry_id).id
 
@@ -154,7 +153,7 @@ def _picked(hass: HomeAssistant, result) -> list[str]:
 # --- First setup -------------------------------------------------------
 
 
-async def test_first_setup_gives_every_area_with_lights_a_zone_automation_and_flare(
+async def test_first_setup_gives_every_area_with_lights_an_automation_and_flare(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):
     kitchen = _area(hass, "Kitchen", "light.k")
@@ -171,17 +170,14 @@ async def test_first_setup_gives_every_area_with_lights_a_zone_automation_and_fl
 
     assert result["reason"] == "setup_complete"
     assert _summary(result) == {
-        "schedules": "Home", "zones": "2", "automations": "2", "flares": "2"
+        "schedules": "Home", "automations": "2", "flares": "2"
     }
-    zones = {z.title: z.subentry_id for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))}
-    assert set(zones) == {"Hall", "Kitchen"}
     (schedule,) = schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES))
     written = {a["alias"]: a for a in _automations(automations_file)}
     assert written["Kitchen Lighting"]["use_blueprint"] == {
         "path": INSTALL_PATH,
         "input": {
             "schedule": _device(hass, schedule.subentry_id),
-            "zone": _device(hass, zones["Kitchen"]),
             "room_target": {"area_id": kitchen},
         },
     }
@@ -225,7 +221,7 @@ async def test_each_area_starts_on_the_schedule_named_like_its_floor(
     result = await _submit(hass, result, _answer(result, {"Kitchen": "schedule_1", "Bedroom": "schedule_2"}))
 
     assert _summary(result) == {
-        "schedules": "Downstairs, Upstairs", "zones": "2", "automations": "2", "flares": "2"
+        "schedules": "Downstairs, Upstairs", "automations": "2", "flares": "2"
     }
     schedules = {s.title: s.subentry_id for s in schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES))}
     followed = {a["alias"]: a["use_blueprint"]["input"]["schedule"] for a in _automations(automations_file)}
@@ -362,9 +358,8 @@ async def test_a_house_with_no_lights_in_areas_still_gets_its_schedule(
     result = await _first_setup(hass, ["Home"])
 
     assert result["reason"] == "setup_complete"
-    assert _summary(result) == {"schedules": "Home", "zones": "0", "automations": "0", "flares": "0"}
+    assert _summary(result) == {"schedules": "Home", "automations": "0", "flares": "0"}
     assert len(hass.config_entries.async_entries(DOMAIN)) == 3
-    assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
 
 
 async def test_first_setup_can_be_skipped(stub_entry_setup, automations_file, hass: HomeAssistant):
@@ -378,7 +373,7 @@ async def test_first_setup_can_be_skipped(stub_entry_setup, automations_file, ha
     assert result["reason"] == "setup_skipped"
     assert len(hass.config_entries.async_entries(DOMAIN)) == 3
     assert schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES)) == []
-    assert zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES)) == []
+    assert _entry_of_type(hass, ENTRY_TYPE_SETTINGS).title == "Settings"
     assert _automations(automations_file) == []
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["reason"] == "no_schedules"
@@ -393,7 +388,7 @@ async def _set_up_flare(hass: HomeAssistant, areas: list[str]) -> None:
         await _submit(hass, result, _choose(hass, result, areas))
 
 
-async def test_set_up_area_lists_every_area_and_ticks_those_without_a_zone(
+async def test_set_up_area_lists_every_area_and_ticks_those_not_set_up(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):
     kitchen = _area(hass, "Kitchen", "light.k")
@@ -407,11 +402,11 @@ async def test_set_up_area_lists_every_area_and_ticks_those_without_a_zone(
     result = await _submit(hass, result, _choose(hass, result, [hall]))
 
     assert result["reason"] == "areas_set_up"
-    assert result["description_placeholders"] == {"zones": "1", "automations": "1", "flares": "1"}
+    assert result["description_placeholders"] == {"automations": "1", "flares": "1"}
     assert sorted(a["alias"] for a in _automations(automations_file)) == ["Hall Lighting", "Kitchen Lighting"]
 
 
-async def test_with_several_schedules_an_area_with_a_zone_starts_empty(
+async def test_with_several_schedules_an_area_already_set_up_starts_empty(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):
     _area(hass, "Kitchen", "light.k", floor="Upstairs")
@@ -433,46 +428,28 @@ async def test_set_up_area_with_no_lights_in_areas_says_so(stub_entry_setup, aut
     assert result["reason"] == "no_areas"
 
 
-async def test_an_existing_zone_with_the_areas_name_is_reused(stub_entry_setup, automations_file, hass: HomeAssistant):
-    await _set_up_flare(hass, [])
-    zones = _entry_of_type(hass, ENTRY_TYPE_ZONES)
-    result = await hass.config_entries.subentries.async_init((zones.entry_id, "state"), context={"source": "user"})
-    await hass.config_entries.subentries.async_configure(result["flow_id"], {"name": "Kitchen"})
-    await hass.async_block_till_done()
-    (zone,) = zone_instances(zones)
+async def test_an_area_counts_as_set_up_by_its_flare_labelled_automation(
+    stub_entry_setup, automations_file, hass: HomeAssistant
+):
+    """Moving the automation to another area moves which area is set up."""
     kitchen = _area(hass, "Kitchen", "light.k")
+    hall = _area(hass, "Hall", "light.h")
+    await _set_up_flare(hass, [kitchen])
+    assert _picked(hass, await _start(hass)) == [hall]
 
-    result = await _start(hass)
-    assert _picked(hass, result) == [], "it has a zone, so it isn't ticked"
-    result = await _submit(hass, result, _choose(hass, result, [kitchen]))
+    er.async_get(hass).async_update_entity("automation.kitchen_lighting", area_id=hall)
 
-    assert result["description_placeholders"] == {"zones": "0", "automations": "1", "flares": "1"}
-    assert [z.subentry_id for z in zone_instances(zones)] == [zone.subentry_id]
-    (written,) = _automations(automations_file)
-    assert written["use_blueprint"]["input"]["zone"] == _device(hass, zone.subentry_id)
+    assert _picked(hass, await _start(hass)) == [kitchen]
 
 
-async def test_an_area_can_get_just_a_zone(stub_entry_setup, automations_file, hass: HomeAssistant):
-    """It starts unpicked next time, but can still be picked for the rest."""
-    kitchen = _area(hass, "Kitchen", "light.k")
-
-    result = await _submit(hass, (result := await _first_setup(hass, ["Home"])), _choose(hass, result, [kitchen], set_up="zone"))
-
-    assert _summary(result) == {"schedules": "Home", "zones": "1", "automations": "0", "flares": "0"}
-    assert [z.title for z in zone_instances(_entry_of_type(hass, ENTRY_TYPE_ZONES))] == ["Kitchen"]
-    assert _automations(automations_file) == []
-    result = await _start(hass)
-    assert _picked(hass, result) == []
-
-
-async def test_an_area_can_get_a_zone_and_automation_without_a_flare(
+async def test_an_area_can_get_an_automation_without_a_flare(
     stub_entry_setup, automations_file, hass: HomeAssistant
 ):
     kitchen = _area(hass, "Kitchen", "light.k")
 
     result = await _submit(hass, (result := await _first_setup(hass, ["Home"])), _choose(hass, result, [kitchen], set_up="automation"))
 
-    assert _summary(result) == {"schedules": "Home", "zones": "1", "automations": "1", "flares": "0"}
+    assert _summary(result) == {"schedules": "Home", "automations": "1", "flares": "0"}
     assert hass.states.get("automation.kitchen_lighting") is not None
     assert _entry_of_type(hass, ENTRY_TYPE_FLARES).subentries == {}
 
@@ -550,7 +527,7 @@ async def test_an_entry_deleted_by_hand_is_created_again(stub_entry_setup, autom
 
 
 async def test_set_up_area_needs_a_schedule(stub_entry_setup, hass: HomeAssistant):
-    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES):
+    for entry_type in (ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_SETTINGS, ENTRY_TYPE_FLARES):
         MockConfigEntry(
             domain=DOMAIN, data={CONF_ENTRY_TYPE: entry_type}, unique_id=f"{DOMAIN}_{entry_type}", version=3
         ).add_to_hass(hass)

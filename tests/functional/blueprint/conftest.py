@@ -10,7 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.services.handlers import async_setup_services
 from custom_components.flare.services.targets import async_setup_target_services
-from custom_components.flare.zone.claims import ClaimRegistry
+from custom_components.flare.tracking.claims import ClaimRegistry
 from tests.functional.blueprint.harness import SENSOR
 
 
@@ -19,7 +19,7 @@ def read_only_services(hass: HomeAssistant):
     """The real flare.compute_scene_coverage and flare.resolve_target, and no
     other FLARE service. The mocks depend on it, since it removes the rest."""
     entry = MockConfigEntry(domain=DOMAIN)
-    async_setup_services(hass, entry, ClaimRegistry(hass, entry))
+    async_setup_services(hass, entry, ClaimRegistry(hass))
     for service in list(hass.services.async_services_for_domain(DOMAIN)):
         if service != "compute_scene_coverage":
             hass.services.async_remove(DOMAIN, service)

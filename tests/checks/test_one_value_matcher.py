@@ -1,12 +1,12 @@
 """A light's reported values are read, converted and compared with a
-target only in zone/matching.py, so override protection, grouping and
+target only in tracking/matching.py, so override protection, grouping and
 adoption can't disagree about what a light shows."""
 
 import ast
 
 from tests.support import COMPONENT as PACKAGE
 
-HOME = PACKAGE / "zone" / "matching.py"
+HOME = PACKAGE / "tracking" / "matching.py"
 # The curve converts Kelvin for sending, never for comparing.
 CONVERTS_FOR_SENDING = {PACKAGE / "schedule" / "curve.py"}
 # What a light reports about its colour; reading any of these is matching.py's job.
@@ -27,7 +27,7 @@ def test_only_matching_converts_colours():
         for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom) and node.module == "homeassistant.util.color"
     ]
-    assert importers == [], "compare a light's colour through zone/matching.py"
+    assert importers == [], "compare a light's colour through tracking/matching.py"
 
 
 def test_only_matching_reads_a_lights_colour_from_its_state():
@@ -41,4 +41,4 @@ def test_only_matching_reads_a_lights_colour_from_its_state():
             on_attributes = node.func.attr == "get" and getattr(node.func.value, "attr", None) == "attributes"
             if (on_attributes or node.func.attr == "state_attr") and LIGHT_COLOUR_ATTRIBUTES & set(args):
                 readers.append(f"{path.relative_to(PACKAGE)}:{node.lineno}")
-    assert readers == [], "read a light's colour through zone/matching.py"
+    assert readers == [], "read a light's colour through tracking/matching.py"

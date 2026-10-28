@@ -30,10 +30,9 @@ from custom_components.flare.const import (
     DOMAIN,
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_ZONES,
+    ENTRY_TYPE_SETTINGS,
     SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
-    SUBENTRY_TYPE_ZONE,
 )
 from tests.support import REPO_ROOT
 
@@ -51,8 +50,8 @@ NIGHT_BRIGHTNESS = 80
 PHASE_STARTS = {"Night": time(22, 0, 2)}
 
 HALL_SENSOR = "binary_sensor.hall_occupancy"
-# The `zone` fixture's zone, and the name of the area it's placed in.
-ZONE = "behaviour_test_room"
+# The area the `area` fixture's bulbs sit in.
+ROOM_AREA = "behaviour_test_room"
 # Several fittings, so they share one brightness group as a real room's do.
 HALL_BULBS = ("hall_pendant", "hall_spot_1", "hall_spot_2", "hall_spot_3", "hall_spot_4", "hall_lamp")
 
@@ -215,22 +214,17 @@ async def setup_schedule(hass: HomeAssistant) -> MockConfigEntry:
     return entry
 
 
-async def setup_zones(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
-    """A real Zones entry with a zone per name, plus an area of each name
-    for bulbs to sit in. Returns {name: area_id}."""
+async def setup_settings(hass: HomeAssistant, names: list[str], *, options: dict | None = None) -> dict[str, str]:
+    """The real Settings entry, which ticks every area, plus an area of each
+    name for bulbs to sit in. Returns {name: area_id}."""
     areas = {name: ar.async_get(hass).async_get_or_create(name).id for name in names}
     entry = MockConfigEntry(
         domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
-        unique_id=f"{DOMAIN}_{ENTRY_TYPE_ZONES}",
+        data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS},
+        unique_id=f"{DOMAIN}_{ENTRY_TYPE_SETTINGS}",
         version=3,
+        minor_version=2,
         options=options or {},
-        subentries_data=[
-            ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_ZONE, title=name, unique_id=name, data={}
-            )
-            for name, area_id in areas.items()
-        ],
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -280,7 +274,7 @@ async def add_flare(hass: HomeAssistant, automation: str = "automation.room", *,
         (entry.entry_id, SUBENTRY_TYPE_FLARE), context={"source": "reconfigure", "subentry_id": subentry_id}
     )
     result = await hass.config_entries.subentries.async_configure(
-        result["flow_id"], {"name": name, "lights_input": "room_target", "zone_input": "zone"}
+        result["flow_id"], {"name": name, "lights_input": "room_target"}
     )
     assert result["reason"] == "reconfigure_successful", result
     await hass.async_block_till_done()
@@ -304,16 +298,6 @@ def schedule_device(hass: HomeAssistant) -> str:
     (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == "Test"]
     device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry.entry_id)
     assert device is not None, "the Test schedule has no device"
-    return device.id
-
-
-def zone_device(hass: HomeAssistant, name: str) -> str:
-    """The device of the zone called `name`, which the blueprint's Zone input
-    takes."""
-    (entry,) = [e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES]
-    (subentry_id,) = [i for i, s in entry.subentries.items() if s.title == name]
-    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, subentry_id), entry.entry_id)
-    assert device is not None, f"zone {name} has no device"
     return device.id
 
 

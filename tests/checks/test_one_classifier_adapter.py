@@ -5,7 +5,7 @@ import ast
 
 from tests.support import COMPONENT as PACKAGE
 
-HOME = PACKAGE / "zone" / "override_protection.py"
+HOME = PACKAGE / "tracking" / "override_protection.py"
 
 
 def test_only_override_protection_calls_classify_directly():

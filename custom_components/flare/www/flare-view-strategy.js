@@ -1,6 +1,6 @@
 /**
  * Two Lovelace view strategies: `custom:flare-schedule` (what lights are
- * scheduled to do) and `custom:flare-zone` (what FLARE is driving), and a
+ * scheduled to do) and `custom:flare-rooms` (what FLARE is driving), and a
  * dashboard strategy, `custom:flare`, made of them.
  *
  *   views:
@@ -13,10 +13,11 @@
  * every load, so layout changes arrive with an update.
  */
 
-import { scheduleSensors, normaliseSlug, listZones, zoneDevices, flareTotals } from './flare-entities.js';
+import { scheduleSensors, normaliseSlug, flareTotals, claimsByArea } from './flare-entities.js';
 import { sectionConfig } from './flare-section.js';
-import { zoneSections, zoneTotalsSection } from './flare-zone-section.js';
+import { areaSections, totalsSection } from './flare-rooms-section.js';
 import './flare-clear-card.js';
+import './flare-area-card.js';
 import './flare-activity-card.js';
 
 const view = (sections) => ({ type: 'sections', max_columns: 4, sections });
@@ -65,55 +66,70 @@ class FlareScheduleViewStrategy extends HTMLElement {
 customElements.define('ll-strategy-view-flare-schedule', FlareScheduleViewStrategy);
 
 /**
- * The zone view: the totals, then every zone laid out by floor and area
- * like Home Assistant's Light dashboard, and an Activity sidebar, as HA's
- * Security dashboard has: the zones' devices' logbook, the same entries
- * as each zone's own page (flare-activity-card.js).
+ * The rooms view: the totals, then every area holding a room light, laid
+ * out by floor like Home Assistant's Light dashboard, and an Activity
+ * sidebar, as HA's Security dashboard has: FLARE's device's logbook
+ * (flare-activity-card.js).
  *
  *   views:
- *     - title: Zones
+ *     - title: Rooms
  *       strategy:
- *         type: custom:flare-zone
+ *         type: custom:flare-rooms
  */
-class FlareZoneViewStrategy extends HTMLElement {
+class FlareRoomsViewStrategy extends HTMLElement {
   static async generate(config, hass) {
-    const zones = listZones(hass);
-
-    if (!zones.length) {
+    const totals = flareTotals(hass);
+    if (!totals.claims) {
       return notice(
-        'No FLARE zones found yet.\n\nAdd one under **Settings → Devices ' +
-          '& Services → FLARE → Add zone**, and it will appear here ' +
-          'automatically.'
+        'FLARE\'s **Settings** entry isn\'t set up, so nothing is tracking ' +
+          'which lights FLARE controls. Add FLARE under **Settings → Devices ' +
+          '& Services**.'
       );
     }
-
-    const zoneView = { type: 'sections', max_columns: 2, sections: [zoneTotalsSection(zones, flareTotals(hass)), ...zoneSections(hass, zones)] };
-    const devices = zoneDevices(hass, zones);
+    const areas = [...claimsByArea(hass).keys()];
+    const roomsView = { type: 'sections', max_columns: 2, sections: [totalsSection(totals), ...areaSections(hass, areas)] };
+    if (!areas.length) {
+      roomsView.sections.push({
+        type: 'grid',
+        column_span: 2,
+        cards: [
+          {
+            type: 'markdown',
+            content:
+              'No rooms yet. A room appears here once its automation has set ' +
+              'its lights, grouped by the lights\' areas.',
+          },
+        ],
+      });
+    }
     const hasLogbook = (hass.config?.components || []).includes('logbook');
-    if (!hasLogbook || !devices.length) return zoneView;
+    if (!hasLogbook || !totals.device) return roomsView;
     return {
-      ...zoneView,
+      ...roomsView,
       sidebar: {
         sections: [
           {
             type: 'grid',
             cards: [
               { type: 'heading', heading: 'Activity', heading_style: 'title' },
-              { type: 'custom:flare-activity-card', device_id: devices, hours_to_show: 24 },
+              { type: 'custom:flare-activity-card', device_id: [totals.device], hours_to_show: 24 },
             ],
           },
         ],
-        content_label: 'Zones',
+        content_label: 'Rooms',
         sidebar_label: 'Activity',
       },
     };
   }
 }
 
-customElements.define('ll-strategy-view-flare-zone', FlareZoneViewStrategy);
+customElements.define('ll-strategy-view-flare-rooms', FlareRoomsViewStrategy);
+// Its name before 2.0, for dashboards someone took control of.
+customElements.define('ll-strategy-view-flare-zone', class extends FlareRoomsViewStrategy {});
 
 /**
- * The whole dashboard: a view per schedule, then Zones if there are any.
+ * The whole dashboard: a view per schedule, then Rooms once FLARE tracks
+ * claims.
  *
  *   strategy:
  *     type: custom:flare
@@ -130,10 +146,10 @@ class FlareDashboardStrategy extends HTMLElement {
       path: slug,
       strategy: { type: 'custom:flare-schedule', sensor: slug },
     }));
-    const zones = listZones(hass).length
-      ? [{ title: 'Zones', path: 'zones', strategy: { type: 'custom:flare-zone' } }]
+    const rooms = flareTotals(hass).claims
+      ? [{ title: 'Rooms', path: 'rooms', strategy: { type: 'custom:flare-rooms' } }]
       : [];
-    const views = [...schedules, ...zones];
+    const views = [...schedules, ...rooms];
     // The schedule view explains an empty install.
     return { views: views.length ? views : [{ title: 'Lighting', strategy: { type: 'custom:flare-schedule' } }] };
   }
@@ -147,6 +163,6 @@ window.customStrategies.push({
   type: 'flare',
   strategyType: 'dashboard',
   name: 'FLARE Lighting',
-  description: 'A view for each FLARE schedule, and one for your zones. Keeps up as you add more.',
+  description: 'A view for each FLARE schedule, and one for your rooms. Keeps up as you add more.',
   documentationURL: 'https://danrspencer.github.io/flare/dashboard/',
 });

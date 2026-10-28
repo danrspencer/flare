@@ -30,7 +30,7 @@ behaves.
 | Input | Default | Description |
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
-| **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
+| **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. Turn it off for a room [whose bulbs misreport](#turning-override-protection-off). |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 
@@ -56,8 +56,9 @@ To choose the sensors yourself while still picking an area for the lights, turn 
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
-If a room has two automations, for example one for a lamp and one for the ceiling light, give
-both the same **Zone**.
+A room can have two automations, for example one for a lamp and one for the ceiling light.
+Each releases the lights it drives once they're all off; a light in both is released when
+either room goes dark.
 
 ## Brightness
 
@@ -148,9 +149,10 @@ leaves Morning and Day on colour temperature.
 ### When the room updates
 
 A room updates straight away when the phase changes, a sensor detects someone, an Additional
-Trigger changes, or one of its lights comes back online. Between those, it updates on its zone's
-[tick](../zones/#when-zones-tick), which is every minute by default. A room without a **Zone**
-updates every minute, on the minute.
+Trigger changes, or one of its lights comes back online. Between those, it updates on the
+[tick](../override-protection/#when-rooms-update) of the first area in **Lights & Occupancy**,
+which is every minute by default. A room whose **Lights & Occupancy** names no area updates every
+minute, on the minute.
 
 ### When lights turn on and off
 
@@ -173,11 +175,11 @@ changed.
 
 - **Someone else changed it.** A light changed from a wall switch, an app, a voice assistant or
   another automation, including being turned off, is left alone until every light in the room is
-  off. See [override protection](../zones/#override-protection).
+  off. See [override protection](../override-protection/).
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour
-  temperature aren't sent. You can change both limits under **FLARE → Zones → Configure**.
+  temperature aren't sent. You can change both limits under **FLARE → Settings → Configure**.
 - **It's unavailable.** FLARE sets it once it comes back online.
 - **A scene has it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).
@@ -194,8 +196,8 @@ were sent, and some settle on a colour outside the range they say they support. 
 reports something FLARE didn't send, it reads as overridden even though nobody touched it, and
 FLARE leaves it alone until every light in the room is off.
 
-If a room's lights keep getting stuck like this, you can leave **Zone** empty in the room's
-automation. FLARE then sets the room's lights on every update without checking what they report,
+If a room's lights keep getting stuck like this, you can turn off **Override Protection** in the
+room's automation. FLARE then sets the room's lights on every update without checking what they report,
 which also means:
 
 - A light someone else changes, from a wall switch, an app or another automation, goes back to
@@ -205,8 +207,7 @@ which also means:
   voice assistant for 100%, the room goes back to the curve at the next update. Turning the flare
   on and off works as usual.
 
-A room without a zone updates every minute, on the minute, and doesn't appear in the
-[Zones view](../../dashboard/).
+A room with override protection off isn't counted in the [Rooms view](../../dashboard/).
 
 If you turn override protection off because of your bulbs, please
 [open an issue](https://github.com/danrspencer/flare/issues) with their make and model, so FLARE

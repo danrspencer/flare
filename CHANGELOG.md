@@ -7,6 +7,35 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.0.0] - Unreleased
+
+### Changed
+
+- **Zones are gone.** FLARE keeps one record of the lights it's driving, and each room's
+  automation lets its lights go once they're all off, so there's nothing to set up per room.
+  Updating removes your zones and their devices, and FLARE takes every room back on its next
+  update.
+  - The blueprint's **Zone** input is replaced by **Override Protection**, on by default. Turn it
+    off in any room where you'd left **Zone** empty.
+  - A room updates on the tick of the first area in its **Lights & Occupancy**. A room naming no
+    area updates every minute, on the minute.
+  - **FLARE → Zones** is now **FLARE → Settings**, where the options are.
+  - The dashboard's Zones view is now **Rooms**, with each area's counts and **Clear**.
+  - Two automations driving the same light no longer treat each other's changes as overrides,
+    so there's no more notification about a light in two zones.
+- **If you call FLARE's services or listen for its events yourself**, these changed:
+  - `zone_device_id` is replaced by `room_id`, usually `{{ this.entity_id }}`, and an optional
+    `room_entities`, on `flare.apply_lighting`, `flare.turn_off`,
+    `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
+    `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
+    returns `rooms` instead of `zone`.
+  - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
+  - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
+    `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
+    `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
+  - Each zone's entities are gone. `sensor.flare_claims` holds every claim, and
+    `button.flare_clear` clears them all.
+
 ## [1.2.0] - Unreleased
 
 ### Added

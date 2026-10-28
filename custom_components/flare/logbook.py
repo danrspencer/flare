@@ -1,7 +1,7 @@
-"""Describes FLARE's zone events in the logbook. Each is filed under one of
-the zone's count sensors and its device, so it shows in the zone's
-Activity and in a logbook card targeting the zone. Worded as hand-overs,
-not failures."""
+"""Describes FLARE's claim events in the logbook. Each is filed under one
+of the count sensors, or Clear for a release, which the logbook shows as
+the entry's name, so the message names the room (the automation) it's
+about. Worded as hand-overs, not failures."""
 
 from __future__ import annotations
 
@@ -22,10 +22,21 @@ def _light_name(hass: HomeAssistant, entity_id: str | None) -> str:
     return state.name if state else (entity_id or "a light")
 
 
-def _entry(data, message: str) -> dict[str, str]:
-    """Filed under the count sensor the event names. Read with .get: one
+def _room_name(hass: HomeAssistant, data) -> str:
+    """The room the event is about, by its entity's name, else "FLARE". An
+    override names every room the light is in."""
+    rooms = data.get("rooms") or ([data["room"]] if data.get("room") else [])
+    names = []
+    for room in rooms:
+        state = hass.states.get(room) if isinstance(room, str) else None
+        names.append(state.name if state else str(room))
+    return ", ".join(names) or "FLARE"
+
+
+def _entry(hass: HomeAssistant, data, message: str) -> dict[str, str]:
+    """Filed under the entity the event names. Read with .get: one
     describer raising breaks the whole logbook."""
-    entry = {LOGBOOK_ENTRY_NAME: data.get("zone") or "FLARE", LOGBOOK_ENTRY_MESSAGE: message}
+    entry = {LOGBOOK_ENTRY_NAME: _room_name(hass, data), LOGBOOK_ENTRY_MESSAGE: message}
     if data.get("entity_id"):
         entry[LOGBOOK_ENTRY_ENTITY_ID] = data["entity_id"]
     return entry
@@ -52,15 +63,17 @@ def async_describe_events(
             found = f"{live.get('brightness')}/{live.get(colour)}"
             detail = f" (last asked for {asked}, found {found})"
         light = _light_name(hass, data.get("light"))
-        return _entry(data, f"released {light} to something else{detail}")
+        return _entry(hass, data, f"{_room_name(hass, data)} released {light} to something else{detail}")
 
     @callback
     def async_describe_controlled(event: Event) -> dict[str, str]:
-        return _entry(event.data, f"now controlling {_plural(event.data.get('controlled', 0))}")
+        controlled = _plural(event.data.get("controlled", 0))
+        return _entry(hass, event.data, f"{_room_name(hass, event.data)} is now controlling {controlled}")
 
     @callback
     def async_describe_released(event: Event) -> dict[str, str]:
-        return _entry(event.data, f"cleared {_plural(len(event.data.get('lights') or []))}")
+        cleared = _plural(len(event.data.get("lights") or []))
+        return _entry(hass, event.data, f"{_room_name(hass, event.data)} cleared {cleared}")
 
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)
     async_describe_event(DOMAIN, EVENT_LIGHTS_CONTROLLED, async_describe_controlled)

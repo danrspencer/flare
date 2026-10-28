@@ -1,9 +1,9 @@
 """Config flow for FLARE.
 
-Adding the integration creates the Schedules, Zones and Flares entries,
-and after that the main flow sets up areas. Adding a schedule, zone or
-flare is a subentry flow (subentry_flows.py); the Zones entry's options
-are options_flow.py."""
+Adding the integration creates the Schedules, Settings and Flares entries,
+and after that the main flow sets up areas. Adding a schedule or flare is
+a subentry flow (subentry_flows.py); the Settings entry's options are
+options_flow.py."""
 
 from __future__ import annotations
 
@@ -27,8 +27,8 @@ from .area_setup import (
     AutomationsFileInvalid,
     AutomationsNotLoaded,
     SetupResult,
+    areas_set_up,
     areas_with_lights,
-    areas_with_zones,
     async_set_up_areas,
 )
 from .const import (
@@ -36,18 +36,17 @@ from .const import (
     DOMAIN,
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_ZONES,
+    ENTRY_TYPE_SETTINGS,
     FLARES_ENTRY_TITLE,
     SCHEDULES_ENTRY_TITLE,
+    SETTINGS_ENTRY_TITLE,
     SUBENTRY_TYPE_FLARE,
     SUBENTRY_TYPE_SENSOR,
-    SUBENTRY_TYPE_ZONE,
-    ZONES_ENTRY_TITLE,
 )
 from .dashboard_reload import async_raise as async_raise_reload, reload_link
 from .schedule.coordinator import schedule_instances
 from .options_flow import FlareOptionsFlow
-from .subentry_flows import FlareSubentryFlow, SensorSubentryFlow, ZoneSubentryFlow
+from .subentry_flows import FlareSubentryFlow, SensorSubentryFlow
 
 # The one schedule's name, for the whole home.
 DEFAULT_SCHEDULE_NAME = "Home"
@@ -68,8 +67,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """The integration page's main button. The first time, it creates every
-    entry and the schedules; after that it sets up areas. Each area gets a
-    zone, an automation from the blueprint and a flare.
+    entry and the schedules; after that it sets up areas. Each area gets an
+    automation from the blueprint and a flare.
 
     The entries are created through SOURCE_IMPORT and the flow ends on an
     abort carrying a summary. Completing on an entry instead would show
@@ -77,6 +76,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     every device that entry has, with no way to suppress it."""
 
     VERSION = 3
+    # 2: FLARE 2.0, which removed zones (see async_migrate_entry).
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         self._new_schedules: list[str] = []
@@ -88,7 +89,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_skip(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """FLARE's entries with nothing in them, for someone setting up
-        their own schedules, zones and automations, or only using the
+        their own schedules and automations, or only using the
         services."""
         await self._create_entries()
         return self.async_abort(reason="setup_skipped")
@@ -152,8 +153,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Which areas to set up and, with more than one schedule, which
         schedule each follows. Every area with lights is listed; those
-        without a zone yet are picked."""
-        first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_ZONES, ENTRY_TYPE_FLARES}
+        not set up yet are picked."""
+        first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_SETTINGS, ENTRY_TYPE_FLARES}
         schedules = self._schedule_choices()
         if not schedules:
             return self.async_abort(reason="no_schedules")
@@ -164,7 +165,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is None and areas:
             return self.async_show_form(
                 step_id="areas",
-                data_schema=_areas_schema(self.hass, areas, schedules, areas_with_zones(self.hass)),
+                data_schema=_areas_schema(self.hass, areas, schedules, areas_set_up(self.hass)),
                 description_placeholders={"schedules": ", ".join(name for _, name in schedules)},
             )
 
@@ -175,7 +176,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         plan = {area: schedule_ids[key] for area, key in chosen.items()}
         try:
             level = (user_input or {}).get(SET_UP, FLARE)
-            result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0, 0)
+            result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0)
         except AutomationsNotLoaded:
             return self.async_abort(reason="automations_not_loaded")
         except AutomationsFileInvalid:
@@ -184,7 +185,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Could not set up %s", ", ".join(area.name for area in plan))
             return self.async_abort(reason="setup_failed")
 
-        counts = {"zones": result.zones, "automations": result.automations, "flares": result.flares}
+        counts = {"automations": result.automations, "flares": result.flares}
         placeholders = {key: str(count) for key, count in counts.items()}
         if first_setup:
             placeholders["schedules"] = ", ".join(self._new_schedules)
@@ -221,8 +222,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         configured = self._configured()
         if ENTRY_TYPE_SCHEDULES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_SCHEDULES, "schedules": self._new_schedules})
-        if ENTRY_TYPE_ZONES not in configured:
-            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES})
+        if ENTRY_TYPE_SETTINGS not in configured:
+            await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS})
         if ENTRY_TYPE_FLARES not in configured:
             await self._import({CONF_ENTRY_TYPE: ENTRY_TYPE_FLARES})
 
@@ -235,7 +236,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self._create_schedules_entry(import_data["schedules"])
         if import_data[CONF_ENTRY_TYPE] == ENTRY_TYPE_FLARES:
             return await self._create_flares_entry()
-        return await self._create_zones_entry()
+        return await self._create_settings_entry()
 
     async def _create_schedules_entry(self, schedules: list[str]) -> FlowResult:
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_SCHEDULES}")
@@ -249,10 +250,10 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ],
         )
 
-    async def _create_zones_entry(self) -> FlowResult:
-        await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_ZONES}")
+    async def _create_settings_entry(self) -> FlowResult:
+        await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_SETTINGS}")
         self._abort_if_unique_id_configured()
-        return self.async_create_entry(title=ZONES_ENTRY_TITLE, data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES})
+        return self.async_create_entry(title=SETTINGS_ENTRY_TITLE, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS})
 
     async def _create_flares_entry(self) -> FlowResult:
         await self.async_set_unique_id(f"{DOMAIN}_{ENTRY_TYPE_FLARES}")
@@ -262,8 +263,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_get_supported_subentry_types(cls, config_entry: ConfigEntry) -> dict[str, type[ConfigSubentryFlow]]:
-        if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
-            return {SUBENTRY_TYPE_ZONE: ZoneSubentryFlow}
+        if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
+            return {}
         if config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
             return {SUBENTRY_TYPE_FLARE: FlareSubentryFlow}
         return {SUBENTRY_TYPE_SENSOR: SensorSubentryFlow}
@@ -271,8 +272,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @classmethod
     @callback
     def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
-        """Only the Zones entry has options; nothing reads the Schedules entry's."""
-        return config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES
+        """Only the Settings entry has options; nothing reads the Schedules entry's."""
+        return config_entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS
 
     @staticmethod
     @callback
@@ -281,12 +282,12 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 def _areas_schema(
-    hass: HomeAssistant, areas: list[Area], schedules: list[tuple[str, str]], zoned: set[str]
+    hass: HomeAssistant, areas: list[Area], schedules: list[tuple[str, str]], set_up: set[str]
 ) -> vol.Schema:
     """What to set up, then the areas, a section per floor (lowest first,
     each named after its floor, which the dialog shows as its heading)
     with the floorless areas last. Each area is a dropdown of schedules,
-    named after the area; an empty one isn't set up. An area with a zone
+    named after the area; an empty one isn't set up. An area already set up
     starts empty; the others start on the schedule named like their floor,
     else the first."""
     fields: dict = {
@@ -310,7 +311,7 @@ def _areas_schema(
         floor = _floor_name(hass, area.area_id)
         # Suggested rather than a default, so an area cleared to nothing
         # stays cleared: that's how it's left out.
-        suggested = None if area.area_id in zoned else by_floor.get(slugify(floor or ""), schedules[0][0])
+        suggested = None if area.area_id in set_up else by_floor.get(slugify(floor or ""), schedules[0][0])
         by_section[floor or floorless][vol.Optional(area.name, description={"suggested_value": suggested})] = dropdown
     for key, per_area in by_section.items():
         if per_area:
