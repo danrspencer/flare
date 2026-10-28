@@ -28,7 +28,7 @@ A flare is a light entity that sits over an automation. Flares are under **Setti
 | **Lights** | For an automation not built from a blueprint: the lights, picked directly. |
 | **Area** | Only when adding: the area the flare's device starts in, which defaults to the automation's area. After that, the device's area is set the usual way. |
 
-**Set up area** creates a flare for each area, named after it. Adding flares from **Rooms from
+**Set up area** can create a flare for each area, named after it. Adding flares from **Rooms from
 the FLARE blueprint** creates one for each room picked, named after its automation. Either way,
 the flare starts in the automation's area.
 

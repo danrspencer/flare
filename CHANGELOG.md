@@ -18,6 +18,13 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **Setup is simpler.** Setting up an area gives it an automation, not a flare as well, unless
+  you ask for one. And after your schedules, FLARE asks whether to set up room automations now:
+  if automations of your own already control your lights, skip it and move one room at a time
+  with **Set up area**.
+- **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
+  **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
+  back beside **Lights & Occupancy**. Existing rooms keep their values.
 - **Zones are gone.** FLARE keeps one record of the lights it's driving, and each room's
   automation lets its lights go once they're all off, so there's nothing to set up per room.
   Updating removes your zones and their devices, and FLARE takes every room back on its next

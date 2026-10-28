@@ -43,6 +43,9 @@ It asks:
   floor** (offered when your home has more than one floor, and named after them), or
   **Custom**, to name the schedules yourself.
   A schedule's name becomes part of its entity IDs, so pick names you're happy to keep.
+- **Whether to set up room automations now.** If automations of your own already control your
+  lights, choose **Skip for now**: FLARE sets up just your schedules, and you can move one room
+  at a time with **Set up area** (see [Adding a room later](#adding-a-room-later)).
 - **What to set up for each area**, and **which schedule each area follows**. Every area with
   lights is listed, grouped by floor, and starts on the schedule with the same name as its floor,
   or on your first schedule if none matches. To leave an area out, clear its schedule.
@@ -51,17 +54,17 @@ None of this is final. You can add or remove schedules later from FLARE's integr
 up more areas with **Set up area** (see [Adding a room later](#adding-a-room-later)), and change
 which schedule a room follows in its automation.
 
-Each area you set up gets up to two things, named after it. Both is the default, and what most
-rooms want:
+Each area you set up gets a room automation, and a flare if you ask for one, named after it:
 
 | | What it does |
 |---|---|
 | A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, its occupancy and motion sensors turn them on and off, and a light you change yourself is [left alone]({{ site.baseurl }}/reference/override-protection/). Called "*Area* Lighting", with a **FLARE** label so you can find them. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
-Leave out the flare if you don't use voice assistants and don't want a light for the whole room.
+Choose **An automation and a flare** under **What to set up in each area** if you want a light
+for the whole room. You can add flares later too, with **Add flare**.
 
-With both, the room is ready to use. The automation is an ordinary one in **Settings →
+The room is ready to use. The automation is an ordinary one in **Settings →
 Automations & Scenes**, so you can change its inputs there.
 
 {: .note }
@@ -84,7 +87,7 @@ with a view for each schedule and one for your rooms, and it keeps up as you add
 
 **Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights. An area
 that already has an automation from setup starts empty, because setting it up again gives it
-another automation and flare, so only pick a schedule for it if it doesn't have them.
+another automation, so only pick a schedule for it if it doesn't have one.
 
 The other buttons there add one thing at a time: **Add schedule** and **Add flare**.
 

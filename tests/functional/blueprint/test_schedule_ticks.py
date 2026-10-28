@@ -189,7 +189,7 @@ class TestAdaptiveScheduleAndTransitions:
 
 
 class TestRgbColour:
-    """docs/reference/blueprint.md#colour"""
+    """docs/reference/blueprint.md#prefer-rgb-during"""
 
     async def test_prefer_rgb_color_is_true_only_during_a_configured_phase(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")

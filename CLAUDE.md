@@ -88,7 +88,11 @@ HA's trace UI.
 Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
-  name for `!input`.
+  name for `!input`, so regrouping isn't breaking. The top level is what a
+  room needs (Schedule, Lights & Occupancy, Wait time, Additional
+  Triggers); a collapsed **Settings** section holds the switches most rooms
+  never touch (Override Protection, Sensors From Areas, Prefer RGB During).
+  `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
   `model: Schedule`). The blueprint finds the schedule's
@@ -519,12 +523,20 @@ removed zones; its entities (the totals and
 
 **One "Add Integration" sets FLARE up ready to use, rooms included** -
 the goal, at the user's direction, is a painless first install. The main
-flow asks for schedules, then which areas to set up, creates each missing
-entry through `SOURCE_IMPORT`, and hands the areas to
-`area_setup.async_set_up_areas`. Each entry can still be added alone, so
-deleting one and adding it back works. It opens on a menu, set up or
-**Skip setup** (user's call), which creates the three entries empty, for
-someone setting things up by hand or only using the services.
+flow asks for schedules, then whether to set up room automations, then
+which areas to set up, creates each missing entry through `SOURCE_IMPORT`,
+and hands the areas to `area_setup.async_set_up_areas`. Each entry can
+still be added alone, so deleting one and adding it back works. It opens
+on a menu, set up or **Skip setup** (user's call), which creates the three
+entries empty, for someone setting things up by hand or only using the
+services.
+
+- **Room automations are a question of their own** (`automations` menu,
+  first setup only, skipped with no areas with lights): **Skip for now**
+  (`schedules_only`) creates the entries and schedules and nothing else,
+  for someone whose own automations already drive their lights, to move a
+  room at a time with Set up area. At the user's direction, after feedback
+  that setup did too much and confused people.
 
 - **Schedules are a choice of shape, not a count** (user's call, after a
   number box and names that had to match the floors exactly felt fiddly):
@@ -551,8 +563,9 @@ up area, Add schedule, Add flare. The main flow is the only one
 not tied to an entry, and area setup touches all three.
 
 **Area setup** (`area_setup.py`), per area: an automation from the
-blueprint, and a flare named after the area. **For each area, set up** is
-one dropdown for the whole run: automation / + flare (radios took rows,
+blueprint, and, if asked, a flare named after the area. **For each area,
+set up** is one dropdown for the whole run: automation (the default) /
++ flare (radios took rows,
 and HA can't lay them side by side or disable one checkbox from another,
 so a dropdown it is). Set up area can just be run again.
 
@@ -590,8 +603,9 @@ so a dropdown it is). Set up area can just be run again.
   floors' sections can't carry translated text. Tried and dropped: radios (three rows per area), HA's area
   picker (closes after every pick), and a checkbox list per schedule
   (always expanded, and an area could be ticked under two schedules).
-- **The flare is part of the default**, the one exception to "nothing
-  creates flares automatically" - the user is choosing to set the area up.
+- **The flare is an option, not the default** (user's call, from the same
+  feedback), and the one exception to "nothing creates flares
+  automatically": the user picks it.
 
 **The dashboard is offered, not created**: `custom:flare` is listed in
 **Settings → Dashboards → Add dashboard** through the frontend's public

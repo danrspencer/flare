@@ -21,7 +21,7 @@ from homeassistant.helpers import selector
 from homeassistant.util import slugify
 
 from .area_setup import (
-    FLARE,
+    AUTOMATION,
     LEVELS,
     Area,
     AutomationsFileInvalid,
@@ -67,8 +67,9 @@ _LOGGER = logging.getLogger(__name__)
 
 class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """The integration page's main button. The first time, it creates every
-    entry and the schedules; after that it sets up areas. Each area gets an
-    automation from the blueprint and a flare.
+    entry and the schedules, then sets up areas unless asked not to; after
+    that it sets up areas. Each area gets an automation from the blueprint,
+    and a flare if asked for.
 
     The entries are created through SOURCE_IMPORT and the flow ends on an
     abort carrying a summary. Completing on an entry instead would show
@@ -104,7 +105,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if errors := _name_errors(names):
                 return await self.async_step_schedule_names(suggested=names, errors=errors)
             self._new_schedules = names
-            return await self.async_step_areas()
+            return await self.async_step_automations()
 
         # One floor or none would make "per floor" the whole home under
         # another name. Its label lists the floors, so it isn't translated.
@@ -137,7 +138,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             names = [name.strip() for name in user_input.get(NAMES) or [] if name.strip()]
             if not (errors := _name_errors(names)):
                 self._new_schedules = names
-                return await self.async_step_areas()
+                return await self.async_step_automations()
             suggested = names
         if suggested is None:
             suggested = [DEFAULT_SCHEDULE_NAME]
@@ -149,6 +150,21 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors or {},
         )
+
+    async def async_step_automations(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Whether to set up room automations now. Someone whose own
+        automations already drive their lights can skip it and move one
+        room at a time."""
+        if not areas_with_lights(self.hass):
+            return await self.async_step_areas()
+        return self.async_show_menu(step_id="automations", menu_options=["areas", "schedules_only"])
+
+    async def async_step_schedules_only(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """The entries and schedules, with no automations yet."""
+        await self._create_entries()
+        placeholders = {"schedules": ", ".join(self._new_schedules), "reload": reload_link()}
+        async_raise_reload(self.hass, placeholders["reload"])
+        return self.async_abort(reason="schedules_set_up", description_placeholders=placeholders)
 
     async def async_step_areas(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Which areas to set up and, with more than one schedule, which
@@ -175,7 +191,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schedule_ids = self._schedule_ids()
         plan = {area: schedule_ids[key] for area, key in chosen.items()}
         try:
-            level = (user_input or {}).get(SET_UP, FLARE)
+            level = (user_input or {}).get(SET_UP, AUTOMATION)
             result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0)
         except AutomationsNotLoaded:
             return self.async_abort(reason="automations_not_loaded")
@@ -291,7 +307,7 @@ def _areas_schema(
     starts empty; the others start on the schedule named like their floor,
     else the first."""
     fields: dict = {
-        vol.Required(SET_UP, default=FLARE): selector.SelectSelector(
+        vol.Required(SET_UP, default=AUTOMATION): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=list(LEVELS), translation_key="set_up", mode=selector.SelectSelectorMode.DROPDOWN
             )

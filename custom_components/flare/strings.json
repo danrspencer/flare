@@ -26,9 +26,17 @@
           "names": "Schedule"
         }
       },
+      "automations": {
+        "title": "Set up room automations?",
+        "description": "FLARE can set up an automation for each area now, which drives the area's lights from its schedule.\n\nIf automations of your own already control your lights, you might want to skip this for now and move one room at a time: **Set up area** on FLARE's integration page sets up a room whenever you're ready.",
+        "menu_options": {
+          "areas": "Set up room automations",
+          "schedules_only": "Skip for now"
+        }
+      },
       "areas": {
         "title": "Set up areas",
-        "description": "Each area you set up gets a room automation from the FLARE blueprint, which drives its lights. By default it also gets a flare: a light for the whole room, for voice assistants and HomeKit.\n\nPick the schedule each area follows, or clear it to leave that area out. You can set up more areas later with **Set up area** on FLARE's integration page, and change which schedule a room follows in its automation.",
+        "description": "Each area you set up gets a room automation from the FLARE blueprint, which drives its lights. It can also get a flare: a light for the whole room, for voice assistants and HomeKit.\n\nPick the schedule each area follows, or clear it to leave that area out. You can set up more areas later with **Set up area** on FLARE's integration page, and change which schedule a room follows in its automation.",
         "data": {
           "set_up": "What to set up in each area"
         },
@@ -44,6 +52,7 @@
     },
     "abort": {
       "setup_complete": "FLARE is set up, with the schedules {schedules}. Room automations: {automations}. Flares: {flares}.\n\n{reload} to add the FLARE Lighting dashboard from Settings → Dashboards → Add dashboard. If it isn't listed there, reload the page once more.",
+      "schedules_set_up": "FLARE is set up, with the schedules {schedules}, and no room automations yet. Use **Set up area** on FLARE's integration page to set up a room when you're ready.\n\n{reload} to add the FLARE Lighting dashboard from Settings → Dashboards → Add dashboard. If it isn't listed there, reload the page once more.",
       "areas_set_up": "Room automations: {automations}. Flares: {flares}.",
       "no_schedules": "Add a schedule first: an area's automation needs one to follow.",
       "automations_not_loaded": "The room automations couldn't be set up: Home Assistant isn't loading automations.yaml, the file its automation editor saves to. Add `automation: !include automations.yaml` to configuration.yaml, restart, then use Set up area again.",

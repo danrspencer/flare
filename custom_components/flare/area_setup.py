@@ -113,7 +113,7 @@ def areas_set_up(hass: HomeAssistant) -> set[str]:
 
 
 async def async_set_up_areas(
-    hass: HomeAssistant, schedule_for_area: dict[Area, str], level: str = FLARE
+    hass: HomeAssistant, schedule_for_area: dict[Area, str], level: str = AUTOMATION
 ) -> SetupResult:
     """For each area an automation following the schedule subentry given
     for it and, depending on `level`, a flare over that. Raises

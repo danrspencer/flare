@@ -27,22 +27,12 @@ blueprint:
           filter:
             - integration: flare
               model: Schedule
-    override_protection:
-      name: Override Protection
-      description: >
-        Leaves a light alone once something else changes it, until all of
-        the room's lights are off. Turn it off for a room whose bulbs report
-        something other than what they show.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
-      default: true
-      selector:
-        boolean:
     room_target:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
         controlled, occupancy and motion sensors within it decide when (see
-        Sensors From Areas, under Triggers).
+        Sensors From Areas, under Settings).
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
@@ -65,6 +55,17 @@ blueprint:
           min: 0
           max: 3600
           unit_of_measurement: seconds
+    extra_triggers:
+      name: Additional Triggers (Optional)
+      description: >
+        Entities that make the room update as soon as they change, such as
+        an entity Scene Template or Brightness Template depends on. They
+        only adjust lights that are already on, and never switch one on.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+      default: []
+      selector:
+        entity:
+          multiple: true
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
@@ -80,7 +81,7 @@ blueprint:
             exclusions below - those only fill in entities it doesn't
             already mention.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
@@ -128,7 +129,7 @@ blueprint:
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
@@ -196,7 +197,7 @@ blueprint:
             returns one - they're the fallback for phases it doesn't
             cover.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
@@ -226,32 +227,6 @@ blueprint:
           selector:
             entity:
               domain: scene
-    triggers:
-      name: Triggers
-      icon: mdi:lightning-bolt-outline
-      collapsed: true
-      input:
-        use_area_sensors:
-          name: Sensors From Areas
-          description: >
-            When disabled, occupancy and motion sensors won't be inferred
-            from the areas, floors, devices or labels in Lights & Occupancy.
-            Only explicitly selected sensors will be used.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
-          default: true
-          selector:
-            boolean: {}
-        extra_triggers:
-          name: Additional Triggers (Optional)
-          description: >
-            Entities that make the room update as soon as they change, such as
-            an entity Scene Template or Brightness Template depends on. They
-            only adjust lights that are already on, and never switch one on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            entity:
-              multiple: true
     timing:
       name: Transitions
       icon: mdi:timer-outline
@@ -284,11 +259,31 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
-    colour:
-      name: Colour
-      icon: mdi:palette
+    settings:
+      name: Settings
+      icon: mdi:cog-outline
       collapsed: true
       input:
+        override_protection:
+          name: Override Protection
+          description: >
+            Leaves a light alone once something else changes it, until all of
+            the room's lights are off. Turn it off for a room whose bulbs report
+            something other than what they show.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#override-protection).
+          default: true
+          selector:
+            boolean:
+        use_area_sensors:
+          name: Sensors From Areas
+          description: >
+            When disabled, occupancy and motion sensors won't be inferred
+            from the areas, floors, devices or labels in Lights & Occupancy.
+            Only explicitly selected sensors will be used.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+          default: true
+          selector:
+            boolean: {}
         rgb_phases:
           name: Prefer RGB During
           description: >
@@ -298,7 +293,7 @@ blueprint:
             blue-tinted rather than a clean white, so those phases are
             off by default - Evening/Night's warmer values don't have
             that problem.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#prefer-rgb-during).
           default: [Evening, Night]
           selector:
             select:
