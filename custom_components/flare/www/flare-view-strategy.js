@@ -16,6 +16,8 @@
 import { scheduleSensors, normaliseSlug, flareTotals, claimsByArea } from './flare-entities.js';
 import { sectionConfig } from './flare-section.js';
 import { areaSections, totalsSection } from './flare-lights-section.js';
+// Not used by these views any more, but dashboards someone took control of
+// may name custom:flare-clear-card.
 import './flare-clear-card.js';
 import './flare-area-lights-card.js';
 import './flare-activity-card.js';

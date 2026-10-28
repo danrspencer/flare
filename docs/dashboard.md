@@ -15,7 +15,7 @@ name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 
 - **A schedule's view** shows the day's curve and every schedule and curve setting.
 - **Lights** starts with **All lights**: how many lights FLARE is driving across the house, how
-  many something else has taken over, and a **Clear** button for every light at once. Below
+  many something else has taken over, and **Clear all** to hand every light back at once. Below
   that is each area with lights a room automation drives, by floor, laid out like Home
   Assistant's Lights dashboard: a list of the area's lights, overridden ones first, headed by
   its controlled and overridden counts and **Clear all** to hand them back. Each light shows its

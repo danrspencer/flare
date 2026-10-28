@@ -127,15 +127,23 @@ def _headings(section, style=None):
     return [c["heading"] for c in section["cards"] if c["type"] == "heading" and c.get("heading_style") == style]
 
 
-def test_the_totals_come_first(view):
-    totals = view["sections"][0]
-    title, heading, clear = totals["cards"][:3]
-    tiles = [t["entity"] for card in totals["cards"] if card["type"] == "grid" for t in card["cards"]]
+def test_the_totals_are_the_counts_then_clear_all_in_one_row(view):
+    title, heading, row = view["sections"][0]["cards"]
+    *counts, clear = row["cards"]
 
     assert (title["heading"], heading["heading"]) == ("Lights", "All lights")
     assert "tap_action" not in heading
-    assert (clear["type"], clear["entity"]) == ("custom:flare-clear-card", "button.flare_clear")
-    assert set(tiles) == {"sensor.flare_controlled_lights", "sensor.flare_overridden_lights"}
+    assert (row["type"], row["columns"], row["grid_options"]) == ("grid", 3, {"columns": "full"})
+    assert {t["entity"] for t in counts} == {"sensor.flare_controlled_lights", "sensor.flare_overridden_lights"}
+    assert (clear["type"], clear["name"], clear["hide_state"]) == ("tile", "Clear all", True)
+
+
+def test_clear_all_presses_the_clear_button(view):
+    clear = view["sections"][0]["cards"][2]["cards"][-1]
+    press = {"action": "perform-action", "perform_action": "button.press", "target": {"entity_id": "button.flare_clear"}}
+
+    assert clear["tap_action"] == press
+    assert clear["icon_tap_action"] == press
 
 
 @pytest.mark.parametrize(("status", "color", "first"), [("controlled", "blue", 0), ("overridden", "amber", 2)])

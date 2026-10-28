@@ -3,16 +3,11 @@
  * No DOM or HA imports.
  */
 
-// The Light dashboard's screen-size conditions (view-columns-conditions.ts).
-const LARGE_SCREEN = { condition: 'view_columns', min: 2 };
-const SMALL_SCREEN = { condition: 'view_columns', max: 1 };
-
 /**
- * The house's totals, laid out like Home Assistant's Light dashboard: Clear
- * where that has "All off", pressing the Clear button, then the two totals.
+ * The house's totals: the two counts and Clear all, three tiles in a row.
  * Each count is coloured while it has lights and grey at none, so overrides
  * stand out. Two tiles, one shown at a time: a tile's colour takes no
- * template. The overridden lights are named underneath while there are any.
+ * template. Clear all presses the Clear button.
  */
 export function totalsSection(totals) {
   const { controlled, overridden, clear } = totals;
@@ -21,33 +16,33 @@ export function totalsSection(totals) {
     { type: 'tile', entity, name, color, visibility: [any(entity)] },
     { type: 'tile', entity, name, color: 'grey', visibility: [{ condition: 'not', conditions: [any(entity)] }] },
   ];
-  // The counts share one card, so they stay beside Clear: a tile is never
-  // narrower than half a 12-column section.
-  const counts = (columns, visibility) => ({
-    type: 'grid',
-    columns: 2,
-    square: false,
-    cards: [...count(controlled, 'Controlled', 'blue'), ...count(overridden, 'Overridden', 'amber')],
-    grid_options: { columns },
-    visibility: [visibility],
-  });
+  const press = { action: 'perform-action', perform_action: 'button.press', target: { entity_id: clear } };
   return {
     type: 'grid',
     column_span: 2,
     cards: [
       { type: 'heading', heading: 'Lights', heading_style: 'title', icon: 'mdi:lightbulb-group' },
       { type: 'heading', heading: 'All lights', heading_style: 'subtitle' },
-      { type: 'custom:flare-clear-card', entity: clear, grid_options: { columns: 3, rows: 1 } },
-      counts(9, LARGE_SCREEN),
-      counts('full', SMALL_SCREEN),
       {
-        type: 'markdown',
-        text_only: true,
+        // One card, so the three stay in a row: a loose tile is never
+        // narrower than half a 12-column section.
+        type: 'grid',
+        columns: 3,
+        square: false,
+        cards: [
+          ...count(controlled, 'Controlled', 'blue'),
+          ...count(overridden, 'Overridden', 'amber'),
+          {
+            type: 'tile',
+            entity: clear,
+            name: 'Clear all',
+            icon: 'mdi:backup-restore',
+            hide_state: true,
+            tap_action: press,
+            icon_tap_action: press,
+          },
+        ],
         grid_options: { columns: 'full' },
-        content:
-          `{% set lights = expand(state_attr('${overridden}', 'lights') or []) %}` +
-          `Overridden: {{ lights | map(attribute='name') | join(', ') }}`,
-        visibility: [any(overridden)],
       },
     ],
   };

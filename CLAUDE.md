@@ -1272,17 +1272,20 @@ only cuts inward; **don't use an interpolating spline**, which would
 overshoot and draw brightness the schedule never asks for.
 
 **The Lights view** copies HA's Light dashboard (`light-view-strategy.ts`):
-an "All lights" totals row (Clear where that has "All off", the counts
-beside it), then a section per floor and a heading per area holding a room
+an "All lights" totals row (the counts and Clear all; a line naming the
+overridden lights under it was dropped at the user's direction), then a
+section per floor and a heading per area holding a room
 light (any light whose status sensor names a room), with the area's lights
 under it. "Lights", not "Rooms", at the user's direction: it lists lights.
 
 - **The totals' counts are two tiles each**, one shown at a time -
   Controlled blue, Overridden amber while above zero, grey at zero -
-  because a tile's `color` takes no template. They share one `grid` card:
-  with the Activity sidebar taking one of `max_columns: 2`, a section is
-  always 12 columns, and a tile's `min_columns` is 6, so loose tiles
-  wrapped under Clear.
+  because a tile's `color` takes no template. **Clear all is a third
+  tile** (user's call: a bare round icon beside the counts looked odd),
+  pressing `button.flare_clear` through `tap_action`. All three share one
+  3-column `grid` card: with the Activity sidebar taking one of
+  `max_columns: 2`, a section is always 12 columns, and a loose tile's
+  `min_columns` is 6, so loose tiles wrapped.
 - **An area is one `custom:flare-area-lights-card`**, worked out live in
   the browser from each light's area (`claimsByArea()`): there are no
   per-area entities, and per-room devices would repeat `owner_id`'s
@@ -1295,11 +1298,10 @@ under it. "Lights", not "Rooms", at the user's direction: it lists lights.
   (`asked`), both from its status sensor, beside what it shows, and a Clear
   for that light. Its name opens the light's more-info. The counts come
   from the same statuses as the list, so the two agree.
-- **Clear is `custom:flare-clear-card`**, drawn like the "All off"
-  toggle-group (no card, a round icon, a label): a tile looked like one
-  more count, and `toggle-group` is always a power icon with on/off
-  counts. It presses `entity:` (`button.flare_clear` for the totals), or
-  a list of buttons together.
+- **`custom:flare-clear-card`** (a round icon and a label, like the "All
+  off" toggle-group, pressing `entity:` or a list of buttons) isn't used
+  by the views any more; it's still loaded for dashboards someone took
+  control of.
 - **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
   to the logbook's `logbook/event_stream` for FLARE's device itself,
   filters by kind, and renders each entry as HA's own `ha-logbook-entry`
