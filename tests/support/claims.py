@@ -20,3 +20,11 @@ def after_the_grace():
     from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 
     return freeze_time(dt_util.utcnow() + MISMATCH_GRACE + timedelta(seconds=1), real_asyncio=True)
+
+
+def held(registry) -> set[str]:
+    """The lights a room still holds: every claim but a dark room's, which
+    is FLARE's off and lets the room's next update light it."""
+    from custom_components.flare.tracking.claims import is_dark_claim
+
+    return {entity_id for entity_id, record in registry.all_records().items() if not is_dark_claim(record)}

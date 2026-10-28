@@ -94,24 +94,14 @@ export function lightStatuses(hass) {
   return lights;
 }
 
-/**
- * Every room light by area: area_id -> {lights, claimed, controlled,
- * overridden}, each a sorted list of entity_ids. Like the totals, a claimed
- * light FLARE hasn't seen report yet counts as controlled.
- */
+/** Every room light by area: area_id -> {lights}, a sorted list of entity_ids. */
 export function claimsByArea(hass) {
-  const lights = lightStatuses(hass);
   const byArea = new Map();
-  for (const light of [...lights.keys()].sort()) {
+  for (const light of [...lightStatuses(hass).keys()].sort()) {
     const area = lightArea(hass, light);
     if (!area) continue;
-    if (!byArea.has(area)) byArea.set(area, { lights: [], claimed: [], controlled: [], overridden: [] });
-    const entry = byArea.get(area);
-    const { status, claimed } = lights.get(light);
-    entry.lights.push(light);
-    if (claimed) entry.claimed.push(light);
-    if (status === 'controlled' || (status === 'untracked' && claimed)) entry.controlled.push(light);
-    if (status === 'overridden') entry.overridden.push(light);
+    if (!byArea.has(area)) byArea.set(area, { lights: [] });
+    byArea.get(area).lights.push(light);
   }
   return byArea;
 }

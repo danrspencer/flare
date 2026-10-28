@@ -300,3 +300,27 @@ async def test_a_light_switched_off_by_hand_stays_off(
     assert room_brightness(hass, bulbs) == expected, (
         "a light switched off by hand was relit by the next periodic tick"
     )
+
+
+async def test_a_light_switched_on_by_hand_in_a_dark_room_keeps_its_brightness(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """The dark room left FLARE's off on each light, so a hand switch-on
+    differs from it: when the sensor then sees someone, the rest of the room
+    comes on at the curve and that light is left as it was set."""
+    bulbs = await lit_room(hass, add_bulbs, setup_room, area, no_motion_wait=0)
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+    assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}, "precondition: a dark room"
+    target = bulbs[0]
+
+    await hass.services.async_call("light", "turn_on", {"entity_id": target.entity_id, "brightness": 5}, blocking=True)
+    await hass.async_block_till_done()
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, 60)
+
+    expected = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    expected[target.entity_id] = 5
+    assert room_brightness(hass, bulbs) == expected

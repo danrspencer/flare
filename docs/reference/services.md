@@ -325,8 +325,8 @@ Use this action to mark lights as changed by someone else, so FLARE leaves them 
 
 You don't usually need it. When something other than FLARE changes a light that FLARE is
 driving, FLARE notices on its own and leaves the light alone. It's for lights FLARE isn't
-driving yet, such as when your automation turns lights on in a dark room and you want FLARE to
-leave them as they are. Without it, the room's FLARE automation sets those lights back to the
+driving yet, such as when your automation turns on lights FLARE has never set and you want
+FLARE to leave them as they are. Without it, the room's FLARE automation sets those lights back to the
 curve on its next update.
 
 It marks each entity whether it's on or off. A light marked this way stays overridden until its

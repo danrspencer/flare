@@ -359,14 +359,33 @@ awaits inside. **"Seen landing" means a context match only.** Pinned by
 `flare.claims_record` is documented as call-before-your-write for the same
 reason.
 
-**A room releases its claims once none of its claimed lights is `on`**
-(`_release_if_dark`, per room containing the light that changed).
-Anything not `on` counts as dark, unavailable included, or one dead
-entity would block the release forever. Only claimed lights count, so a
-lamp in the picker that something else runs (a TV backlight, a `null`
-level) can't hold a room open. A light in two rooms is released when
-either goes dark - accepted and documented, not detected. It fires only
-on a transition from a real on/off state (see below).
+**A room hands its lights back once none of its claimed lights is `on`**
+(`_release_if_dark`, per room containing the light that changed): each
+off light's claim becomes a **dark claim** (`dark_claim()`, FLARE's own
+`{"state": "off"}` as `observed`, no `latest`). That ends overrides, as
+deleting the claims did until the user questioned it: a light switched
+on by hand in a dark room then mismatches FLARE's off and is an override,
+where with no claim it was `untracked` and taken back to the curve. The
+room's next write lights dark-claimed lights as FLARE's.
+
+- Anything not `on` counts as dark, unavailable included, or one dead
+  entity would block the release forever; an unreachable light loses its
+  claim instead of getting a dark one, as going unavailable does, so a
+  wall-switched bulb coming back is untracked, not overridden.
+- Only claimed lights count, so a lamp in the picker that something else
+  runs (a TV backlight, a `null` level) can't hold a room open.
+- Only claims that aren't already dark are handed back and announced, so
+  a light reporting off again in a dark room says nothing.
+- A light in two rooms is handed back when either goes dark - accepted
+  and documented, not detected. It fires only on a transition from a real
+  on/off state (see below).
+- **Dark claims aren't pruned by age**, or a light switched on in a room
+  dark for a day would be FLARE's again; the registry drops a claim when
+  its light's entity-registry entry is removed. Clear still discards
+  them, back to no claim at all.
+- **The Controlled counts include only lit lights** (both sensors and the
+  Lights view): a dark room's lights read `controlled` but FLARE isn't
+  setting them.
 
 **A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
 30s), at the user's direction. Until then the light is `mismatched`:

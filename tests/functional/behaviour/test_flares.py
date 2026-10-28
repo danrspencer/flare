@@ -280,9 +280,9 @@ async def test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_ru
 async def test_a_brightness_from_the_flare_holds_in_a_room_flare_had_let_go_of(
     hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    """The room went dark, so its area let go of every light. Without the
-    flare marking them overridden, the run its own change triggers would take
-    them over and set the curve."""
+    """The room went dark, so FLARE holds each light at off. Without the
+    flare marking them overridden first, the run its own change triggers
+    would take them over and set the curve."""
     bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], extra_triggers=[bulbs[0].entity_id])
@@ -290,7 +290,7 @@ async def test_a_brightness_from_the_flare_holds_in_a_room_flare_had_let_go_of(
     await hass.async_block_till_done()
     flare = await add_flare(hass)
     await _turn_off(hass, flare)
-    assert await _statuses(hass, [b.entity_id for b in bulbs]) == {b.entity_id: "off" for b in bulbs}
+    assert await _statuses(hass, [b.entity_id for b in bulbs]) == {b.entity_id: "controlled" for b in bulbs}
 
     await _turn_on(hass, flare, brightness=HAND_SET)
     await let_time_pass(hass, frozen_time, 61)

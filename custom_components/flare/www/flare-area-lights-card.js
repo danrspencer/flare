@@ -31,8 +31,8 @@ const nameOf = (hass, entityId) => hass.states?.[entityId]?.attributes?.friendly
 
 /**
  * The area's counts, as the card shows them: from the same statuses as its
- * lights, so the two agree. Like the totals, a claimed light FLARE hasn't
- * seen report yet counts as controlled.
+ * lights, so the two agree. Like the totals, only lit lights count as
+ * controlled, and a claimed light FLARE hasn't seen report yet does.
  */
 export function areaSummary(hass, area) {
   return summarise(areaLights(hass, area));
@@ -44,7 +44,7 @@ export function claimedIn(lights) {
 }
 
 function summarise(lights) {
-  const controlled = (l) => l.status === 'controlled' || (l.status === 'untracked' && l.claimed);
+  const controlled = (l) => l.lit && (l.status === 'controlled' || (l.status === 'untracked' && l.claimed));
   return {
     controlled: lights.filter(controlled).length,
     overridden: lights.filter((l) => l.status === 'overridden').length,
@@ -73,7 +73,7 @@ function showing(state) {
 
 /**
  * Each of the area's room lights, as the lights card lists them:
- * {entity_id, name, status, claimed, asked, showing}, overridden and
+ * {entity_id, name, status, claimed, lit, asked, showing}, overridden and
  * mismatched first. `asked` is FLARE's last write, null with none or when
  * the light was marked as someone else's.
  */
@@ -89,6 +89,7 @@ export function areaLights(hass, area) {
         name: nameOf(hass, entityId),
         status,
         claimed,
+        lit: hass.states?.[entityId]?.state === 'on',
         asked: describe(asked),
         showing: showing(hass.states?.[entityId]),
       };

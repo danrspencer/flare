@@ -22,6 +22,9 @@ CI — see `.github/workflows/release.yml`.
   automations now. Already have automations controlling your lights? Skip it, then move your
   rooms over one at a time with **Set up area**. Setting up an area gives it an automation, not a flare as
   well, unless you ask for one. **Skip setup** is gone: setup always sets up your schedules.
+- **A light switched on by hand in a dark room is left as you set it.** When a room goes dark,
+  FLARE now keeps holding its lights at off rather than forgetting them, so switching one on by
+  hand counts as changing it. The rest of the room still comes on at the curve.
 - **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
   **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
   back beside **Lights & Occupancy**. Existing rooms keep their values.

@@ -30,6 +30,8 @@ STATUSES = {
     "k1": _status("light.k1", "controlled", rooms=KITCHEN, asked=ASKED),
     "k2": _status("light.k2", "mismatched", rooms=KITCHEN, asked={"state": "off"}),
     "k3": _status("light.k3", "overridden", rooms=KITCHEN, asked=ASKED),
+    # In a dark room: FLARE's, but not a light FLARE is setting.
+    "k5": _status("light.k5", "controlled", rooms=KITCHEN, asked={"state": "off"}),
     # Its room let it go, so it isn't a room light any more.
     "k4": _status("light.k4", "untracked", rooms=[], claimed=False),
     # Marked as someone else's: claimed, but nothing asked.
@@ -45,6 +47,7 @@ HOUSE = {
         "light.k2": _light("Kitchen 2", "off"),
         "light.k3": _light("Kitchen 3", brightness=51, rgb_color=[255, 0, 0]),
         "light.k4": _light("Kitchen 4"),
+        "light.k5": _light("Kitchen 5", "off"),
         "light.study": _light("Study"),
         **{f"sensor.{light}_flare_status": state for light, state in STATUSES.items()},
     },
@@ -69,6 +72,7 @@ HOUSE = {
         "light.study": {"entity_id": "light.study", "area_id": "study"},
         "light.hall": {"entity_id": "light.hall", "area_id": "hall"},
         "light.k4": {"entity_id": "light.k4", "area_id": "kitchen"},
+        "light.k5": {"entity_id": "light.k5", "area_id": "kitchen"},
         **{
             f"sensor.{light}_flare_status": {
                 "entity_id": f"sensor.{light}_flare_status", "platform": "flare", "translation_key": "status"
@@ -167,7 +171,8 @@ def test_an_areas_row_is_its_heading_then_its_lights(view):
 
 def test_an_areas_counts_agree_with_its_lights(result):
     """A light counts in its own area, or its device's, by the status its list
-    shows: Kitchen 2 is mismatched, so it's in neither."""
+    shows: Kitchen 2 is mismatched, so it's in neither, and Kitchen 5 is off,
+    so FLARE isn't setting it."""
     assert result["kitchen"] == {"controlled": 1, "overridden": 1}
     assert result["bedroom"] == {"controlled": 0, "overridden": 1}
     assert result["hall"] == {"controlled": 0, "overridden": 0}
@@ -180,6 +185,7 @@ def test_an_areas_lights_are_listed_overridden_first(result):
         ("Kitchen 3", "overridden", True),
         ("Kitchen 2", "mismatched", True),
         ("Kitchen 1", "controlled", True),
+        ("Kitchen 5", "controlled", True),
     ]
     assert [(light["name"], light["status"], light["claimed"]) for light in result["bedroomLights"]] == [
         ("Bed Lamp", "overridden", True),
@@ -192,6 +198,7 @@ def test_each_light_says_what_flare_asked_for_and_what_it_shows(result):
         "Asked 78% · 3000K, showing 20% · RGB 255, 0, 0",
         "Asked off, showing off",
         "Asked 78% · 3000K, showing 78% · 3000K",
+        "Asked off, showing off",
     ]
 
 
@@ -202,7 +209,7 @@ def test_a_light_marked_as_someone_elses_has_nothing_asked(result):
 
 def test_clear_all_clears_the_areas_claimed_lights(result):
     """Not the Bed Ceiling, which FLARE holds nothing on."""
-    assert sorted(result["clearAll"]["kitchen"]) == ["light.k1", "light.k2", "light.k3"]
+    assert sorted(result["clearAll"]["kitchen"]) == ["light.k1", "light.k2", "light.k3", "light.k5"]
     assert result["clearAll"]["bedroom"] == ["light.bed_lamp"]
 
 

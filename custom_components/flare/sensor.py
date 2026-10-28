@@ -65,6 +65,11 @@ def _classify_tracked(
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
 
+def _is_on(hass: HomeAssistant, entity_id: str) -> bool:
+    state = hass.states.get(entity_id)
+    return state is not None and state.state == "on"
+
+
 # How long a room gathers lights it has taken before announcing them.
 CONTROLLED_GATHER_SECONDS = 3
 
@@ -250,13 +255,14 @@ class ClaimEvents:
         )
 
     def _is_on(self, entity_id: str) -> bool:
-        state = self.hass.states.get(entity_id)
-        return state is not None and state.state == "on"
+        return _is_on(self.hass, entity_id)
 
 
 class _CountSensor(SensorEntity):
-    """How many claimed lights are in one status. They needn't sum to the
-    total: an unavailable light is in neither."""
+    """How many claimed lights are in one status, counting only lit lights
+    as controlled: a dark room's lights are FLARE's too, but FLARE isn't
+    setting them. They needn't sum to the total: an unavailable light is in
+    neither."""
 
     _attr_has_entity_name = False
     _attr_entity_category = EntityCategory.DIAGNOSTIC
@@ -289,7 +295,7 @@ class _CountSensor(SensorEntity):
         records = self._registry.all_records()
         for entity_id, record in records.items():
             status, _via, _ctx = _classify_tracked(self.hass, self._registry, entity_id, record)
-            if status == self._status:
+            if status == self._status and (status != "controlled" or _is_on(self.hass, entity_id)):
                 lights.append(entity_id)
         return sorted(lights), len(records)
 
