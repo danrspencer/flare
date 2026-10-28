@@ -526,17 +526,18 @@ the goal, at the user's direction, is a painless first install. The main
 flow asks for schedules, then whether to set up room automations, then
 which areas to set up, creates each missing entry through `SOURCE_IMPORT`,
 and hands the areas to `area_setup.async_set_up_areas`. Each entry can
-still be added alone, so deleting one and adding it back works. It opens
-on a menu, set up or **Skip setup** (user's call), which creates the three
-entries empty, for someone setting things up by hand or only using the
-services.
+still be added alone, so deleting one and adding it back works.
 
-- **Room automations are a question of their own** (`automations` menu,
-  first setup only, skipped with no areas with lights): **Skip for now**
-  (`schedules_only`) creates the entries and schedules and nothing else,
-  for someone whose own automations already drive their lights, to move a
-  room at a time with Set up area. At the user's direction, after feedback
-  that setup did too much and confused people.
+- **It opens straight on the schedules, always** (user's call). An
+  opening "set up or **Skip setup**" menu that created the entries empty
+  was dropped for it.
+- **Room automations are the one skippable question** (`automations`
+  menu, first setup only, after the schedules, skipped with no areas with
+  lights): **Skip for now** (`schedules_only`) creates the entries and
+  schedules and nothing else, for someone whose own automations already
+  drive their lights, to move a room at a time with Set up area. At the
+  user's direction, after feedback that setup did too much and confused
+  people.
 
 - **Schedules are a choice of shape, not a count** (user's call, after a
   number box and names that had to match the floors exactly felt fiddly):

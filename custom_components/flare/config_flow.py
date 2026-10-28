@@ -67,7 +67,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """The integration page's main button. The first time, it creates every
-    entry and the schedules, then sets up areas unless asked not to; after
+    entry and the schedules, then asks whether to set up areas; after
     that it sets up areas. Each area gets an automation from the blueprint,
     and a flare if asked for.
 
@@ -85,15 +85,8 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if ENTRY_TYPE_SCHEDULES not in self._configured():
-            return self.async_show_menu(step_id="user", menu_options=["schedules", "skip"])
+            return await self.async_step_schedules()
         return await self.async_step_areas()
-
-    async def async_step_skip(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """FLARE's entries with nothing in them, for someone setting up
-        their own schedules and automations, or only using the
-        services."""
-        await self._create_entries()
-        return self.async_abort(reason="setup_skipped")
 
     async def async_step_schedules(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """One schedule for the home, one per floor, or names of your own."""

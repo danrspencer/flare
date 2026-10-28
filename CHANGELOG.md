@@ -18,10 +18,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
-- **Setup is simpler.** Setting up an area gives it an automation, not a flare as well, unless
-  you ask for one. And after your schedules, FLARE asks whether to set up room automations now:
-  if automations of your own already control your lights, skip it and move one room at a time
-  with **Set up area**.
+- **Setup is simpler.** It starts with your schedules, then asks whether to set up room
+  automations now: if automations of your own already control your lights, skip it and move one
+  room at a time with **Set up area**. Setting up an area gives it an automation, not a flare as
+  well, unless you ask for one. **Skip setup** is gone: setup always sets up your schedules.
 - **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
   **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
   back beside **Lights & Occupancy**. Existing rooms keep their values.

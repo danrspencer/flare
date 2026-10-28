@@ -57,11 +57,8 @@ def _device(hass: HomeAssistant, subentry_id: str) -> str:
 
 
 async def _start(hass: HomeAssistant):
-    """The main flow, past the first setup's menu."""
-    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    if result["type"] == "menu":
-        result = await _submit(hass, result, {"next_step_id": "schedules"})
-    return result
+    """The main flow: schedules the first time, areas after."""
+    return await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
 
 
 async def _submit(hass: HomeAssistant, result, user_input: dict, *, set_up_automations: bool = True):
@@ -365,25 +362,12 @@ async def test_a_house_with_no_lights_in_areas_still_gets_its_schedule(
     assert len(hass.config_entries.async_entries(DOMAIN)) == 3
 
 
-async def test_first_setup_can_be_skipped(stub_entry_setup, automations_file, hass: HomeAssistant):
-    """Every entry, with nothing in it; Set up area then wants a schedule."""
+async def test_first_setup_opens_on_the_schedules(stub_entry_setup, automations_file, hass: HomeAssistant):
     _area(hass, "Kitchen", "light.k")
 
-    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    assert (result["type"], result["menu_options"]) == ("menu", ["schedules", "skip"])
-    result = await _submit(hass, result, {"next_step_id": "skip"})
+    result = await _start(hass)
 
-    assert result["reason"] == "setup_skipped"
-    assert len(hass.config_entries.async_entries(DOMAIN)) == 3
-    assert schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES)) == []
-    assert _entry_of_type(hass, ENTRY_TYPE_SETTINGS).title == "Settings"
-    assert _automations(automations_file) == []
-    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
-    assert result["reason"] == "no_schedules"
-
-
-# --- Set up area, once FLARE exists --------------------------------------
-
+    assert (result["type"], result["step_id"]) == ("form", "schedules")
 
 async def _set_up_flare(hass: HomeAssistant, areas: list[str]) -> None:
     result = await _first_setup(hass, ["Home"])
