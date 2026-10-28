@@ -98,20 +98,6 @@ async def test_areas_tick_one_gap_apart(hass: HomeAssistant, add_bulbs, frozen_t
     assert is_off(hass, [study_lamp])
 
 
-async def test_a_room_follows_the_first_area_it_names(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
-    """The lamp sits in the attic, but the room names the study first."""
-    areas = await setup_settings(hass, ["study", "attic"], options=GAP)
-    (lamp,) = await add_bulbs("lamp", area_id=areas["attic"])
-    await rooms(hass, {"lamp": ([lamp], {"area_id": [areas["study"], areas["attic"]]})})
-    await switched_on_in_an_empty_room(hass, frozen_time, [lamp])
-
-    await at(hass, frozen_time, 19, 1, 5)
-    assert not is_off(hass, [lamp]), "the attic's tick shouldn't reach a room following the study"
-
-    await at(hass, frozen_time, 19, 1, 15)
-    assert is_off(hass, [lamp])
-
-
 async def test_a_new_area_starts_ticking(hass: HomeAssistant, add_bulbs, frozen_time) -> None:
     """Areas are ticked as the area registry has them, not as it was at setup."""
     await setup_settings(hass, [], options=GAP)

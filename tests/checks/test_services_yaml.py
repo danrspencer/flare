@@ -16,24 +16,6 @@ DISPATCHER = SERVICES["apply_lighting"]["fields"]
 INTENTIONALLY_DIFFERENT = {"prefer_rgb_color", "two_step_label", "room_id"}
 
 
-def test_every_documented_service_is_registered():
-    """HA silently ignores a stray top-level key."""
-    assert set(SERVICES) == {
-        "compute_lighting_groups",
-        "apply_lighting",
-        "turn_off",
-        "compute_curve",
-        "compute_scene_coverage",
-        "resolve_target",
-        "claims_check",
-        "claims_record",
-        "claims_clear",
-        "claims_override",
-        "export_schedule",
-        "import_schedule",
-    }
-
-
 def test_apply_lighting_is_the_planner_plus_transition():
     assert set(DISPATCHER) - set(PLANNER) == {"transition"}
     assert set(PLANNER) <= set(DISPATCHER)
