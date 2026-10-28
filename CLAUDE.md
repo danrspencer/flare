@@ -1143,7 +1143,7 @@ Until the first release, the beta is also the root.
 for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
 which imports each module that registers something; modules that
 register nothing (`flare-entities.js`, `flare-section.js`,
-`flare-rooms-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-card.js`,
+`flare-lights-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
 `flare-activity-card.js`) are pulled in by the imports of those that do.
 `test_every_module_that_registers_something_is_loaded` follows the
 imports from the loader.
@@ -1176,16 +1176,16 @@ an update is the whole migration and a new schedule or room just appears.
 generator whose layout changed five times in a session.)
 
 - `custom:flare` (`ll-strategy-dashboard-flare`) is the dashboard: a view
-  per schedule, then Rooms once the Settings entry exists. The views are
-  `custom:flare-schedule` and `custom:flare-rooms` (`custom:flare-zone`
+  per schedule, then Lights once the Settings entry exists. The views are
+  `custom:flare-schedule` and `custom:flare-lights` (`custom:flare-zone`
   still answers, for dashboards someone took control of).
 - **Entities are found by device and role** (`flare-entities.js`:
   `flareDevices()` from `hass.entities`, using each entry's platform and
   translation key), never by building entity IDs, so renamed entities
   still show. The cards' `sensor:` option takes the short name
   (`sensor: home` for `sensor.home_flare`) or any entity ID.
-- `flare-section.js` is a schedule's section and `flare-rooms-section.js`
-  the Rooms layout: plain config objects, no DOM.
+- `flare-section.js` is a schedule's section and `flare-lights-section.js`
+  the Lights layout: plain config objects, no DOM.
 - The sidebar icon `flare:logo` is registered on `window.customIcons` by
   `flare-icon.js`, a glyph generated from the logo by
   `brand/generate_icon.py`.
@@ -1223,11 +1223,11 @@ Corner easing uses a quadratic whose control point is the corner, so it
 only cuts inward; **don't use an interpolating spline**, which would
 overshoot and draw brightness the schedule never asks for.
 
-**The Rooms view** copies HA's Light dashboard (`light-view-strategy.ts`):
-an "All rooms" totals row, then a section per floor and a heading per area
-holding a room light (any light in the claims sensor's `rooms`), and on
-wide screens Clear where that has "All off", with the area's Controlled
-and Overridden counts beside it.
+**The Lights view** copies HA's Light dashboard (`light-view-strategy.ts`):
+an "All lights" totals row (Clear where that has "All off", the counts
+beside it), then a section per floor and a heading per area holding a room
+light (any light in the claims sensor's `rooms`), with the area's lights
+under it. "Lights", not "Rooms", at the user's direction: it lists lights.
 
 - **The totals' counts are two tiles each**, one shown at a time -
   Controlled blue, Overridden amber while above zero, grey at zero -
@@ -1235,24 +1235,24 @@ and Overridden counts beside it.
   with the Activity sidebar taking one of `max_columns: 2`, a section is
   always 12 columns, and a tile's `min_columns` is 6, so loose tiles
   wrapped under Clear.
-- **An area's counts are `custom:flare-area-card`**, worked out live in the
-  browser from `sensor.flare_claims`'s `statuses` and each light's area
-  (`claimsByArea()`): there are no per-area entities, and per-room devices
-  would repeat `owner_id`'s devices-from-arbitrary-strings problem. It
-  draws the same blue/amber/grey counts.
-  The claims sensor's statuses refresh on claim changes and its poll.
-- **Under them, `custom:flare-area-lights-card` lists each light**
-  (`areaLights()`), overridden and mismatched first: its status (from its
-  status sensor, else the claims sensor's, else untracked), what FLARE last
-  asked for (`latest`'s target, else `observed`'s) beside what it shows,
-  and a Clear for that light (`flare.claims_clear`). Its name opens the
-  light's more-info.
+- **An area is one `custom:flare-area-lights-card`**, worked out live in
+  the browser from each light's area (`claimsByArea()`): there are no
+  per-area entities, and per-room devices would repeat `owner_id`'s
+  devices-from-arbitrary-strings problem. A small header carries the
+  area's Controlled and Overridden counts (blue/amber dots, grey at zero)
+  and Clear all (`flare.claims_clear` on its claimed lights, `claimedIn()`,
+  not announced in Activity); it replaced a Clear card and two count cards
+  per area, at the user's direction. Then each light (`areaLights()`),
+  overridden and mismatched first: its status (from its status sensor,
+  else the claims sensor's, else untracked), what FLARE last asked for
+  (`latest`'s target, else `observed`'s) beside what it shows, and a Clear
+  for that light. Its name opens the light's more-info. The counts come
+  from the same statuses as the list, so the two agree.
 - **Clear is `custom:flare-clear-card`**, drawn like the "All off"
   toggle-group (no card, a round icon, a label): a tile looked like one
   more count, and `toggle-group` is always a power icon with on/off
-  counts. With `entity:` it presses a button (`button.flare_clear` for
-  the totals); with `area:` it calls `flare.claims_clear` for that area's
-  claimed lights, which isn't announced in Activity.
+  counts. It presses `entity:` (`button.flare_clear` for the totals), or
+  a list of buttons together.
 - **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
   to the logbook's `logbook/event_stream` for FLARE's device itself,
   filters by kind, and renders each entry as HA's own `ha-logbook-entry`

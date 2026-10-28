@@ -1,5 +1,5 @@
 /**
- * The Rooms view's sections, as config objects for flare-view-strategy.js.
+ * The Lights view's sections, as config objects for flare-view-strategy.js.
  * No DOM or HA imports.
  */
 
@@ -35,8 +35,8 @@ export function totalsSection(totals) {
     type: 'grid',
     column_span: 2,
     cards: [
-      { type: 'heading', heading: 'Rooms', heading_style: 'title', icon: 'mdi:lightbulb-group' },
-      { type: 'heading', heading: 'All rooms', heading_style: 'subtitle' },
+      { type: 'heading', heading: 'Lights', heading_style: 'title', icon: 'mdi:lightbulb-group' },
+      { type: 'heading', heading: 'All lights', heading_style: 'subtitle' },
       { type: 'custom:flare-clear-card', entity: clear, grid_options: { columns: 3, rows: 1 } },
       counts(9, LARGE_SCREEN),
       counts('full', SMALL_SCREEN),
@@ -54,9 +54,8 @@ export function totalsSection(totals) {
 }
 
 /**
- * One area's row: a heading linking to the area's page, Clear for its
- * claimed lights, its counts, then each light, worked out live
- * (flare-area-card.js).
+ * One area's row: a heading linking to the area's page, then its lights,
+ * under its counts and Clear all (flare-area-lights-card.js).
  */
 export function areaCards(area) {
   return [
@@ -66,9 +65,6 @@ export function areaCards(area) {
       heading_style: 'subtitle',
       tap_action: { action: 'navigate', navigation_path: `/config/areas/area/${area.area_id}` },
     },
-    { type: 'custom:flare-clear-card', area: area.area_id, grid_options: { columns: 3, rows: 1 } },
-    { type: 'custom:flare-area-card', area: area.area_id, grid_options: { columns: 9 }, visibility: [LARGE_SCREEN] },
-    { type: 'custom:flare-area-card', area: area.area_id, grid_options: { columns: 'full' }, visibility: [SMALL_SCREEN] },
     { type: 'custom:flare-area-lights-card', area: area.area_id, grid_options: { columns: 'full' } },
   ];
 }

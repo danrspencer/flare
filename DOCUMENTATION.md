@@ -213,7 +213,7 @@ Never paraphrase these. They are what the user types or clicks.
 - **Config entries** — Schedules, Settings, Flares, under FLARE. Write the path as
   **FLARE → Settings**.
 - **Dashboard** — **FLARE Lighting** (`custom:flare`), and its views `custom:flare-schedule`
-  and `custom:flare-rooms`.
+  and `custom:flare-lights`.
 
 ## Keeping this honest
 

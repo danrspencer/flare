@@ -1,12 +1,11 @@
 /**
- * An area's claims, worked out live from FLARE's claims sensor and each
- * light's status sensor.
+ * An area's lights, worked out live from FLARE's claims sensor and each
+ * light's status sensor: a header with the area's Controlled and Overridden
+ * counts and Clear all, then each light with its status, what FLARE asked
+ * for, what it shows, and its own Clear.
  *
- *   type: custom:flare-area-card          # Controlled and Overridden counts,
- *   area: kitchen                         # as the totals' tiles show them
- *
- *   type: custom:flare-area-lights-card   # each light: its status, what FLARE
- *   area: kitchen                         # asked for, what it shows, Clear
+ *   type: custom:flare-area-lights-card
+ *   area: kitchen
  */
 
 import { claimsByArea, flareTotals } from './flare-entities.js';
@@ -15,8 +14,8 @@ const BLUE = 'var(--blue-color, #2196f3)';
 const AMBER = 'var(--amber-color, #ffc107)';
 const GREY = 'var(--grey-color, #9e9e9e)';
 const COUNTS = [
-  { key: 'controlled', name: 'Controlled', icon: 'mdi:lightbulb-group', color: BLUE },
-  { key: 'overridden', name: 'Overridden', icon: 'mdi:lightbulb-alert-outline', color: AMBER },
+  { key: 'controlled', name: 'controlled', color: BLUE },
+  { key: 'overridden', name: 'overridden', color: AMBER },
 ];
 const STATUSES = {
   overridden: { label: 'Overridden', color: AMBER, icon: 'mdi:lightbulb-alert-outline' },
@@ -37,7 +36,15 @@ const nameOf = (hass, entityId) => hass.states?.[entityId]?.attributes?.friendly
  * seen report yet counts as controlled.
  */
 export function areaSummary(hass, area) {
-  const lights = areaLights(hass, area);
+  return summarise(areaLights(hass, area));
+}
+
+/** What Clear all clears: the lights FLARE holds a claim on. */
+export function claimedIn(lights) {
+  return lights.filter((light) => light.claimed).map((light) => light.entity_id);
+}
+
+function summarise(lights) {
   const controlled = (l) => l.status === 'controlled' || (l.status === 'untracked' && l.claimed);
   return {
     controlled: lights.filter(controlled).length,
@@ -134,49 +141,6 @@ const BADGE_STYLE = `
   .value { font-size: 12px; color: var(--secondary-text-color); }
 `;
 
-class FlareAreaCard extends HTMLElement {
-  setConfig(config) {
-    if (!config || !config.area) throw new Error('area is required');
-    this._config = config;
-    this._key = null;
-  }
-
-  set hass(hass) {
-    const summary = areaSummary(hass, this._config.area);
-    const key = JSON.stringify(summary);
-    if (key === this._key) return;
-    this._key = key;
-    this._render(summary);
-  }
-
-  getGridOptions() {
-    return { columns: 9, rows: 1 };
-  }
-
-  _render(summary) {
-    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host { display: block; }
-        .counts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--ha-space-2, 8px); }
-        ha-card { display: flex; align-items: center; gap: 10px; padding: 10px; height: 100%; box-sizing: border-box; }
-        ${BADGE_STYLE}
-      </style>
-      <div class="counts"></div>
-    `;
-    const counts = this.shadowRoot.querySelector('.counts');
-    for (const count of COUNTS) {
-      const value = summary[count.key];
-      const tile = document.createElement('ha-card');
-      tile.append(badge(count.icon, value > 0 ? count.color : GREY));
-      tile.insertAdjacentHTML('beforeend', '<div class="text"><span class="name"></span><span class="value"></span></div>');
-      tile.querySelector('.name').textContent = count.name;
-      tile.querySelector('.value').textContent = `${value} ${value === 1 ? 'light' : 'lights'}`;
-      counts.append(tile);
-    }
-  }
-}
-
 class FlareAreaLightsCard extends HTMLElement {
   setConfig(config) {
     if (!config || !config.area) throw new Error('area is required');
@@ -201,8 +165,8 @@ class FlareAreaLightsCard extends HTMLElement {
     this.dispatchEvent(new CustomEvent('hass-more-info', { detail: { entityId }, bubbles: true, composed: true }));
   }
 
-  _clear(entityId) {
-    this._hass?.callService('flare', 'claims_clear', { entities: [entityId] });
+  _clear(entityIds) {
+    if (entityIds.length) this._hass?.callService('flare', 'claims_clear', { entities: entityIds });
   }
 
   _render(lights) {
@@ -211,6 +175,18 @@ class FlareAreaLightsCard extends HTMLElement {
       <style>
         :host { display: block; }
         ha-card { padding: 4px 0; }
+        .header {
+          display: flex; align-items: center; gap: 12px; padding: 4px 10px 8px 16px;
+          border-bottom: 1px solid var(--divider-color);
+        }
+        .counts { flex: 1; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+        .count { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--secondary-text-color); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+        .header button.clear-all {
+          width: auto; height: 32px; border-radius: 16px; padding: 0 12px 0 8px; gap: 6px;
+          font: inherit; font-size: 13px; font-weight: 500; color: var(--primary-text-color);
+        }
+        .header button.clear-all:disabled { cursor: default; color: var(--disabled-text-color); background: none; }
         .row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; }
         .text { flex: 1; cursor: pointer; }
         .status { font-size: 12px; font-weight: 500; flex: none; }
@@ -227,6 +203,26 @@ class FlareAreaLightsCard extends HTMLElement {
       <ha-card></ha-card>
     `;
     const card = this.shadowRoot.querySelector('ha-card');
+    const summary = summarise(lights);
+    const header = document.createElement('div');
+    header.className = 'header';
+    header.innerHTML =
+      '<div class="counts"></div>' +
+      '<button class="clear-all"><ha-icon icon="mdi:backup-restore"></ha-icon><span>Clear all</span></button>';
+    for (const count of COUNTS) {
+      const value = summary[count.key];
+      const item = document.createElement('span');
+      item.className = 'count';
+      item.innerHTML = '<span class="dot"></span><span></span>';
+      item.querySelector('.dot').style.background = value > 0 ? count.color : GREY;
+      item.lastChild.textContent = `${value} ${count.name}`;
+      header.querySelector('.counts').append(item);
+    }
+    const claimed = claimedIn(lights);
+    const clearAll = header.querySelector('.clear-all');
+    clearAll.disabled = !claimed.length;
+    clearAll.addEventListener('click', () => this._clear(claimed));
+    card.append(header);
     for (const light of lights) {
       const look = STATUSES[light.status] || STATUSES.untracked;
       const row = document.createElement('div');
@@ -245,16 +241,13 @@ class FlareAreaLightsCard extends HTMLElement {
       const clear = row.querySelector('button');
       clear.hidden = !light.claimed;
       clear.title = `Clear ${light.name}`;
-      clear.addEventListener('click', () => this._clear(light.entity_id));
+      clear.addEventListener('click', () => this._clear([light.entity_id]));
       row.querySelector('.text').addEventListener('click', () => this._moreInfo(light.entity_id));
       card.append(row);
     }
   }
 }
 
-if (!customElements.get('flare-area-card')) {
-  customElements.define('flare-area-card', FlareAreaCard);
-}
 if (!customElements.get('flare-area-lights-card')) {
   customElements.define('flare-area-lights-card', FlareAreaLightsCard);
 }

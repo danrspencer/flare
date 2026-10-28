@@ -6,18 +6,13 @@
  *
  *   type: custom:flare-clear-card
  *   entity: button.flare_clear   # pressed; or a list, pressed together
- *
- *   type: custom:flare-clear-card
- *   area: kitchen                # clears that area's claimed lights
  */
-
-import { claimsByArea } from './flare-entities.js';
 
 class FlareClearCard extends HTMLElement {
   setConfig(config) {
     const entity = config && config.entity;
     const hasEntity = entity && !(Array.isArray(entity) && !entity.length);
-    if (!hasEntity && !(config && config.area)) throw new Error('entity or area is required');
+    if (!hasEntity) throw new Error('entity is required');
     this._config = config;
     this._render();
   }
@@ -32,12 +27,7 @@ class FlareClearCard extends HTMLElement {
 
   _press() {
     if (!this._hass) return;
-    if (this._config.entity) {
-      this._hass.callService('button', 'press', { entity_id: this._config.entity });
-      return;
-    }
-    const claimed = (claimsByArea(this._hass).get(this._config.area) || {}).claimed || [];
-    if (claimed.length) this._hass.callService('flare', 'claims_clear', { entities: claimed });
+    this._hass.callService('button', 'press', { entity_id: this._config.entity });
   }
 
   _render() {

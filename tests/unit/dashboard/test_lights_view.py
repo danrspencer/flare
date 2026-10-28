@@ -1,6 +1,6 @@
-"""The Rooms view's layout: totals at the top, then every area holding a
-room light by floor like Home Assistant's Light dashboard, with Clear where
-that has "All off" and the area's live counts where that has the lights."""
+"""The Lights view's layout: totals at the top, then every area holding a
+room light by floor like Home Assistant's Light dashboard, each with its
+lights under its counts and Clear all."""
 
 import pytest
 
@@ -99,14 +99,14 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
-const {{ areaSummary, areaLights, describe, detail }} = await import({js_path(WWW / "flare-area-card.js")});
+const {{ areaSummary, areaLights, claimedIn, describe, detail }} = await import({js_path(WWW / "flare-area-lights-card.js")});
 const empty = {{ ...input, states: {{ ...input.states, 'sensor.flare_claims': {{ attributes: {{}} }} }} }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
-  view: await defined['ll-strategy-view-flare-rooms'].generate({{}}, input),
+  view: await defined['ll-strategy-view-flare-lights'].generate({{}}, input),
   oldName: await defined['ll-strategy-view-flare-zone'].generate({{}}, input),
-  empty: await defined['ll-strategy-view-flare-rooms'].generate({{}}, empty),
-  noSettings: await defined['ll-strategy-view-flare-rooms'].generate({{}}, noSettings),
+  empty: await defined['ll-strategy-view-flare-lights'].generate({{}}, empty),
+  noSettings: await defined['ll-strategy-view-flare-lights'].generate({{}}, noSettings),
   kitchen: areaSummary(input, 'kitchen'),
   bedroom: areaSummary(input, 'bedroom'),
   hall: areaSummary(input, 'hall'),
@@ -119,6 +119,7 @@ return {{
     describe(null),
   ],
   details: areaLights(input, 'kitchen').map(detail),
+  clearAll: {{ kitchen: claimedIn(areaLights(input, 'kitchen')), bedroom: claimedIn(areaLights(input, 'bedroom')) }},
 }};
 """,
         HOUSE,
@@ -139,7 +140,7 @@ def test_the_totals_come_first(view):
     title, heading, clear = totals["cards"][:3]
     tiles = [t["entity"] for card in totals["cards"] if card["type"] == "grid" for t in card["cards"]]
 
-    assert (title["heading"], heading["heading"]) == ("Rooms", "All rooms")
+    assert (title["heading"], heading["heading"]) == ("Lights", "All lights")
     assert "tap_action" not in heading
     assert (clear["type"], clear["entity"]) == ("custom:flare-clear-card", "button.flare_clear")
     assert set(tiles) == {"sensor.flare_controlled_lights", "sensor.flare_overridden_lights"}
@@ -164,17 +165,11 @@ def test_areas_with_room_lights_are_grouped_by_floor(view):
     assert [_headings(s, "subtitle") for s in sections] == [["Kitchen"], ["Bedroom"], ["Study"]]
 
 
-def test_an_areas_row_is_clear_then_its_live_counts_then_its_lights(view):
+def test_an_areas_row_is_its_heading_then_its_lights(view):
     downstairs = view["sections"][1]
-    heading, clear, wide, narrow, lights = downstairs["cards"][1:6]
+    heading, lights = downstairs["cards"][1:]
 
     assert heading["tap_action"] == {"action": "navigate", "navigation_path": "/config/areas/area/kitchen"}
-    assert (clear["type"], clear["area"]) == ("custom:flare-clear-card", "kitchen")
-    assert (wide["type"], wide["area"]) == ("custom:flare-area-card", "kitchen")
-    assert clear["grid_options"]["columns"] + wide["grid_options"]["columns"] == 12
-    assert wide["visibility"] == [{"condition": "view_columns", "min": 2}]
-    assert (narrow["area"], narrow["grid_options"]) == ("kitchen", {"columns": "full"})
-    assert narrow["visibility"] == [{"condition": "view_columns", "max": 1}]
     assert (lights["type"], lights["area"], lights["grid_options"]) == (
         "custom:flare-area-lights-card",
         "kitchen",
@@ -218,6 +213,12 @@ def test_a_light_marked_as_someone_elses_has_nothing_asked(result):
     assert lamp["asked"] is None
 
 
+def test_clear_all_clears_the_areas_claimed_lights(result):
+    """Not the Bed Ceiling, which FLARE holds nothing on."""
+    assert sorted(result["clearAll"]["kitchen"]) == ["light.k1", "light.k2", "light.k3"]
+    assert result["clearAll"]["bedroom"] == ["light.bed_lamp"]
+
+
 def test_values_read_as_brightness_then_colour(result):
     assert result["described"] == ["100% · 2700K", "50% · RGB 255, 0, 10", "off", None]
 
@@ -233,9 +234,9 @@ def test_the_view_answers_to_its_name_from_before_2_0(result):
     assert result["oldName"] == result["view"]
 
 
-def test_with_no_rooms_yet_it_says_so(result):
+def test_with_no_lights_yet_it_says_so(result):
     content = result["empty"]["sections"][-1]["cards"][0]["content"]
-    assert content.startswith("No rooms yet.")
+    assert content.startswith("No lights yet.")
 
 
 def test_without_the_settings_entry_it_says_so(result):

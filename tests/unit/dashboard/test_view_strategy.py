@@ -58,7 +58,7 @@ const {{ scheduleSensors, normaliseSlug }} = await import({js_path(WWW / "flare-
 const {{ sectionConfig }} = await import({js_path(WWW / "flare-section.js")});
 await import({js_path(WWW / "flare-view-strategy.js")});
 const Strategy = defined['ll-strategy-view-flare-schedule'];
-const Rooms = defined['ll-strategy-view-flare-rooms'];
+const Lights = defined['ll-strategy-view-flare-lights'];
 const Dashboard = defined['ll-strategy-dashboard-flare'];
 const hass = {{ states: input.states, entities: input.entities }};
 const settingsRoles = ['claims', 'all_controlled', 'all_overridden', 'clear'];
@@ -81,13 +81,13 @@ return {{
   unknown: await generate(hass, {{ sensor: 'nosuchroom' }}),
   blankSensor: await generate(hass, {{ sensor: '   ' }}),
   slugs: input.slugCases.map(normaliseSlug),
-  rooms: Rooms ? await Rooms.generate({{}}, hass) : null,
+  lights: Lights ? await Lights.generate({{}}, hass) : null,
   dashboard: Dashboard ? await Dashboard.generate({{}}, hass) : null,
-  dashboardWithoutRooms: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
+  dashboardWithoutLights: Dashboard ? await Dashboard.generate({{}}, schedulesOnly) : null,
   emptyDashboard: Dashboard ? await Dashboard.generate({{}}, empty) : null,
   customStrategies: globalThis.window.customStrategies,
   createSuggestions: Dashboard ? await Dashboard.getCreateSuggestions({{}}) : null,
-  activityView: Rooms ? await Rooms.generate({{}}, {{ ...hass, config: {{ components: ['logbook'] }} }}) : null,
+  activityView: Lights ? await Lights.generate({{}}, {{ ...hass, config: {{ components: ['logbook'] }} }}) : null,
 }};""",
         {
             "states": STATES,
@@ -334,11 +334,11 @@ def test_the_override_badge_only_shows_while_an_override_is_active(result):
     ]
 
 
-# --- The rooms view ------------------------------------------------
+# --- The Lights view -----------------------------------------------
 
 
-def test_the_rooms_strategy_is_registered_separately(result):
-    assert "ll-strategy-view-flare-rooms" in result["registeredAs"]
+def test_the_lights_strategy_is_registered_separately(result):
+    assert "ll-strategy-view-flare-lights" in result["registeredAs"]
 
 
 def test_the_two_strategies_do_not_claim_each_others_sensors(result):
@@ -348,20 +348,20 @@ def test_the_two_strategies_do_not_claim_each_others_sensors(result):
 # --- The dashboard -------------------------------------------------------
 
 
-def test_the_dashboard_is_a_view_per_schedule_then_rooms(result):
+def test_the_dashboard_is_a_view_per_schedule_then_lights(result):
     views = result["dashboard"]["views"]
 
-    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Rooms"]
+    assert [v["title"] for v in views] == ["Downstairs", "Loft", "Upstairs", "Lights"]
     assert [v["strategy"] for v in views] == [
         {"type": "custom:flare-schedule", "sensor": "downstairs"},
         {"type": "custom:flare-schedule", "sensor": "loft"},
         {"type": "custom:flare-schedule", "sensor": "upstairs"},
-        {"type": "custom:flare-rooms"},
+        {"type": "custom:flare-lights"},
     ]
 
 
-def test_the_dashboard_has_no_rooms_view_without_the_settings_entry(result):
-    assert [v["title"] for v in result["dashboardWithoutRooms"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
+def test_the_dashboard_has_no_lights_view_without_the_settings_entry(result):
+    assert [v["title"] for v in result["dashboardWithoutLights"]["views"]] == ["Downstairs", "Loft", "Upstairs"]
 
 
 def test_an_empty_dashboard_explains_itself(result):
@@ -385,15 +385,15 @@ def test_add_dashboard_suggests_flare_and_its_icon(result):
 # --- Activity --------------------------------------------------------------
 
 
-def test_the_rooms_view_has_an_activity_feed_of_flares_device(result):
+def test_the_lights_view_has_an_activity_feed_of_flares_device(result):
     sidebar = result["activityView"]["sidebar"]
     heading, logbook = sidebar["sections"][0]["cards"]
 
     assert heading["heading"] == "Activity"
     assert logbook["type"] == "custom:flare-activity-card"
     assert logbook["device_id"] == ["flare_device"]
-    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Rooms", "Activity")
+    assert (sidebar["content_label"], sidebar["sidebar_label"]) == ("Lights", "Activity")
 
 
 def test_no_activity_feed_without_the_logbook(result):
-    assert "sidebar" not in result["rooms"]
+    assert "sidebar" not in result["lights"]

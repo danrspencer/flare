@@ -14,13 +14,13 @@ Add it from **Settings → Dashboards → Add dashboard**: pick **FLARE Lighting
 name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 
 - **A schedule's view** shows the day's curve and every schedule and curve setting.
-- **Rooms** starts with **All rooms**: how many lights FLARE is driving across the house, how
+- **Lights** starts with **All lights**: how many lights FLARE is driving across the house, how
   many something else has taken over, and a **Clear** button for every light at once. Below
   that is each area with lights a room automation drives, by floor, laid out like Home
-  Assistant's Lights dashboard: its controlled and overridden counts, a **Clear** button to hand
-  them back, and each of its lights, overridden ones first. Each light shows its status, what
-  FLARE last asked it for and what it's showing, with its own **Clear**; press its name to open
-  the light. An area's name opens its page. Beside
+  Assistant's Lights dashboard: a list of the area's lights, overridden ones first, headed by
+  its controlled and overridden counts and **Clear all** to hand them back. Each light shows its
+  status, what FLARE last asked it for and what it's showing, with its own **Clear**; press its
+  name to open the light. An area's name opens its page. Beside
   the areas, **Activity** lists the last 24 hours of what the rooms did, coloured by kind - blue
   when a room takes its lights, amber when something else overrides one, grey when a room lets
   them go - and the buttons at its top show one kind at a time. On a narrow screen, Activity is
@@ -39,9 +39,9 @@ views:
   - title: Lighting
     strategy:
       type: custom:flare-schedule
-  - title: Rooms
+  - title: Lights
     strategy:
-      type: custom:flare-rooms
+      type: custom:flare-lights
 ```
 
 Like the ready-made dashboard, both views find their own entities each time they load.
