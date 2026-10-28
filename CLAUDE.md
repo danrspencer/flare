@@ -383,9 +383,9 @@ room's next write lights dark-claimed lights as FLARE's.
   dark for a day would be FLARE's again; the registry drops a claim when
   its light's entity-registry entry is removed. Clear still discards
   them, back to no claim at all.
-- **The Controlled counts include only lit lights** (both sensors and the
-  Lights view): a dark room's lights read `controlled` but FLARE isn't
-  setting them.
+- **The Controlled counts include a dark room's lights** (both sensors
+  and the Lights view), since they read `controlled`. Counting only lit
+  lights was tried and dropped at the user's direction: it looked wrong.
 
 **A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
 30s), at the user's direction. Until then the light is `mismatched`:

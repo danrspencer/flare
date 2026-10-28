@@ -29,7 +29,7 @@ else's and leave alone a light you've changed yourself. Its entities and options
 
 | Entity | Description |
 |---|---|
-| `sensor.flare_controlled_lights` | The number of lights that are on and FLARE is setting. For information only. |
+| `sensor.flare_controlled_lights` | The number of lights FLARE controls, including lights in a dark room it holds at off. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
 | `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, and `asked` what FLARE last asked it for. |

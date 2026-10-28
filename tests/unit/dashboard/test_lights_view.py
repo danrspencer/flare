@@ -30,7 +30,7 @@ STATUSES = {
     "k1": _status("light.k1", "controlled", rooms=KITCHEN, asked=ASKED),
     "k2": _status("light.k2", "mismatched", rooms=KITCHEN, asked={"state": "off"}),
     "k3": _status("light.k3", "overridden", rooms=KITCHEN, asked=ASKED),
-    # In a dark room: FLARE's, but not a light FLARE is setting.
+    # In a dark room: held at FLARE's off.
     "k5": _status("light.k5", "controlled", rooms=KITCHEN, asked={"state": "off"}),
     # Its room let it go, so it isn't a room light any more.
     "k4": _status("light.k4", "untracked", rooms=[], claimed=False),
@@ -179,9 +179,9 @@ def test_an_areas_row_is_its_heading_then_its_lights(view):
 
 def test_an_areas_counts_agree_with_its_lights(result):
     """A light counts in its own area, or its device's, by the status its list
-    shows: Kitchen 2 is mismatched, so it's in neither, and Kitchen 5 is off,
-    so FLARE isn't setting it."""
-    assert result["kitchen"] == {"controlled": 1, "overridden": 1}
+    shows: Kitchen 2 is mismatched, so it's in neither, and Kitchen 5, held
+    at FLARE's off, is controlled."""
+    assert result["kitchen"] == {"controlled": 2, "overridden": 1}
     assert result["bedroom"] == {"controlled": 0, "overridden": 1}
     assert result["hall"] == {"controlled": 0, "overridden": 0}
 

@@ -630,15 +630,15 @@ async def _dark_kitchen(hass: HomeAssistant, registry: ClaimRegistry):
 
 
 async def test_a_room_gone_dark_holds_each_light_at_flares_off(hass: HomeAssistant):
-    """So the room's next update can light them, and they read as FLARE's
-    but aren't counted as lights FLARE is setting."""
+    """So the room's next update can light them: they're FLARE's, and
+    counted as controlled."""
     _entry, registry, added = await _setup(hass)
     unsub = await _dark_kitchen(hass, registry)
 
     assert set(registry.all_records()) == {"light.a", "light.b"}
     assert held(registry) == set()
     assert classify_state(hass.states.get("light.a"), registry.record("light.a"))[0] == "controlled"
-    assert _entity(added, "sensor.flare_controlled_lights").native_value == 0
+    assert _entity(added, "sensor.flare_controlled_lights").native_value == 2
     unsub()
 
 
