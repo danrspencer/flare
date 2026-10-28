@@ -379,33 +379,20 @@ awaits inside. **"Seen landing" means a context match only.** Pinned by
 `flare.claims_record` is documented as call-before-your-write for the same
 reason.
 
-**A room hands its lights back once none of its claimed lights is `on`**
-(`_release_if_dark`, per room containing the light that changed): each
-off light's claim becomes a **dark claim** (`dark_claim()`, FLARE's own
-`{"state": "off"}` as `observed`, no `latest`). That ends overrides, as
-deleting the claims did until the user questioned it: a light switched
-on by hand in a dark room then mismatches FLARE's off and is an override,
-where with no claim it was `untracked` and taken back to the curve. The
-room's next write lights dark-claimed lights as FLARE's.
-
-- Anything not `on` counts as dark, unavailable included, or one dead
-  entity would block the release forever; an unreachable light loses its
-  claim instead of getting a dark one, as going unavailable does, so a
-  wall-switched bulb coming back is untracked, not overridden.
-- Only claimed lights count, so a lamp in the picker that something else
-  runs (a TV backlight, a `null` level) can't hold a room open.
-- Only claims that aren't already dark are handed back and announced, so
-  a light reporting off again in a dark room says nothing.
-- A light in two rooms is handed back when either goes dark - accepted
-  and documented, not detected. It fires only on a transition from a real
-  on/off state (see below).
-- **Dark claims aren't pruned by age**, or a light switched on in a room
-  dark for a day would be FLARE's again; the registry drops a claim when
-  its light's entity-registry entry is removed. Clear still discards
-  them, back to no claim at all.
-- **The Controlled counts include a dark room's lights** (both sensors
-  and the Overrides view), since they read `controlled`. Counting only lit
-  lights was tried and dropped at the user's direction: it looked wrong.
+**A room releases its claims once none of its claimed lights is `on`**
+(`_release_if_dark`, per room containing the light that changed).
+Deleting them is the point: a light that then comes on unclaimed, by hand
+or back from unavailable, is `untracked`, so FLARE grabs it and sets it to
+the curve. Holding a dark room's lights at FLARE's off ("dark claims", so
+a hand switch-on read as an override) was built and reverted at the
+user's direction for that reason; keeping your own brightness in a dark
+room is what a room's flare is for.
+Anything not `on` counts as dark, unavailable included, or one dead
+entity would block the release forever. Only claimed lights count, so a
+lamp in the picker that something else runs (a TV backlight, a `null`
+level) can't hold a room open. A light in two rooms is released when
+either goes dark - accepted and documented, not detected. It fires only
+on a transition from a real on/off state (see below).
 
 **A mismatch is an override only once it has lasted** (`MISMATCH_GRACE`,
 30s), at the user's direction. Until then the light is `mismatched`:
@@ -1033,9 +1020,11 @@ checked), hand-set ones included. With PIR, someone sitting still after
 switching a lamp on by hand loses it, and nothing tells that apart from
 having switched it on and left.
 
-- **Who turned a light on is readable since dark claims**: controlled
-  (FLARE lit it), overridden (someone switched it on in a dark room or
-  changed it), untracked (never FLARE's). Intent isn't.
+- **Who turned a light on isn't recorded today**: a dark room's lights
+  have no claim, so a light switched on there reads `untracked`, the same
+  as one FLARE has never had. Tracking it would need a record that
+  survives the room going dark without making the light an override (see
+  the dark claims note under Override protection).
 - The user's direction if it's picked up: track who turned each light on
   (FLARE vs by hand) and act on that.
 - Considered and not built: a second, longer wait for hand-set lights

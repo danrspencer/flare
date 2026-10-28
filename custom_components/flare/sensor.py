@@ -255,8 +255,7 @@ class ClaimEvents:
 
 
 class _CountSensor(SensorEntity):
-    """How many claimed lights are in one status, a dark room's lights,
-    held at FLARE's off, among the controlled. They needn't sum to the
+    """How many claimed lights are in one status. They needn't sum to the
     total: an unavailable light is in neither."""
 
     _attr_has_entity_name = False

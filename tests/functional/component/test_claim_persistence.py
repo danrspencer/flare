@@ -15,7 +15,7 @@ from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SE
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.tracking.claims import SAVE_DELAY, STORAGE_KEY, STORAGE_VERSION, ClaimRegistry
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
-from tests.support.claims import after_the_grace, held
+from tests.support.claims import after_the_grace
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 ROOM = "automation.kitchen"
@@ -186,7 +186,7 @@ async def test_a_room_restored_dark_lets_go_of_its_claims(hass: HomeAssistant, h
     registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     await hass.async_block_till_done()
 
-    assert held(registry) == set()
+    assert registry.all_records() == {}
     assert [e.data["lights"] for e in released] == [["light.a", "light.b"]]
 
 
@@ -197,11 +197,11 @@ async def test_a_room_restored_dark_waits_for_every_light_to_report(hass: HomeAs
     _light(hass, "light.a", "unknown")
     _light(hass, "light.b", "off")
     await hass.async_block_till_done()
-    assert held(registry) == {"light.a", "light.b"}, "light.a hasn't reported yet"
+    assert set(registry.all_records()) == {"light.a", "light.b"}, "light.a hasn't reported yet"
 
     _light(hass, "light.a", "off")
     await hass.async_block_till_done()
-    assert held(registry) == set()
+    assert registry.all_records() == {}
 
 
 async def test_a_room_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant, hass_storage: dict[str, Any]):
@@ -226,4 +226,4 @@ async def test_each_room_restored_dark_is_released_on_its_own(hass: HomeAssistan
     registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")}, rooms)
     await hass.async_block_till_done()
 
-    assert held(registry) == {"light.a"}
+    assert set(registry.all_records()) == {"light.a"}

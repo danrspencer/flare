@@ -27,8 +27,8 @@ from custom_components.flare.schedule.coordinator import ScheduleCoordinator, sc
 from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS, ClaimEvents
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
-from custom_components.flare.tracking.override_protection import MISMATCH_GRACE, classify_state
-from tests.support.claims import after_the_grace, claim_field, held
+from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
+from tests.support.claims import after_the_grace, claim_field
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 KITCHEN = "automation.kitchen"
@@ -165,8 +165,7 @@ async def test_an_unavailable_light_holding_a_claim_does_not_hold_a_room_open(ha
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
 
-    assert held(registry) == set()
-    assert "light.dead" not in registry.all_records(), "an unavailable light loses its claim"
+    assert registry.all_records() == {}
     unsub()
 
 
@@ -182,7 +181,7 @@ async def test_a_room_light_flare_never_claimed_does_not_hold_it_open(hass: Home
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
 
-    assert held(registry) == set()
+    assert registry.all_records() == {}
     unsub()
 
 
@@ -214,7 +213,7 @@ async def test_rooms_release_independently(hass: HomeAssistant):
     hass.states.async_set("light.k", "off", {})
     await hass.async_block_till_done()
 
-    assert held(registry) == {"light.h"}
+    assert set(registry.all_records()) == {"light.h"}
     unsub()
 
 
@@ -231,7 +230,7 @@ async def test_a_light_in_two_rooms_is_released_when_either_goes_dark(hass: Home
     hass.states.async_set("light.shared", "off", {})
     await hass.async_block_till_done()
 
-    assert held(registry) == {"light.h"}
+    assert set(registry.all_records()) == {"light.h"}
     unsub()
 
 
@@ -548,7 +547,7 @@ async def test_a_room_switched_off_by_something_else_goes_dark_without_overrides
     unsub()
 
     assert events == []
-    assert held(registry) == set()
+    assert registry.all_records() == {}
 
 
 async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant):
@@ -612,86 +611,5 @@ async def test_an_adopted_light_is_released_with_its_room(hass: HomeAssistant):
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
 
-    assert held(registry) == set()
+    assert registry.all_records() == {}
     unsub()
-
-
-async def _dark_kitchen(hass: HomeAssistant, registry: ClaimRegistry):
-    """Two lights the Kitchen wrote, then switched off by hand: the room is
-    dark. Returns the listener's unsubscribe."""
-    for light in ("light.a", "light.b"):
-        _light(hass, light)
-        await _record(registry, KITCHEN, light, f"ctx-{light}", ASKED)
-    unsub = registry.async_start_listening(hass)
-    for light in ("light.a", "light.b"):
-        hass.states.async_set(light, "off", {}, context=Context())
-        await hass.async_block_till_done()
-    return unsub
-
-
-async def test_a_room_gone_dark_holds_each_light_at_flares_off(hass: HomeAssistant):
-    """So the room's next update can light them: they're FLARE's, and
-    counted as controlled."""
-    _entry, registry, added = await _setup(hass)
-    unsub = await _dark_kitchen(hass, registry)
-
-    assert set(registry.all_records()) == {"light.a", "light.b"}
-    assert held(registry) == set()
-    assert classify_state(hass.states.get("light.a"), registry.record("light.a"))[0] == "controlled"
-    assert _entity(added, "sensor.flare_controlled_lights").native_value == 2
-    unsub()
-
-
-async def test_a_light_switched_on_by_hand_in_a_dark_room_is_an_override(hass: HomeAssistant):
-    _entry, registry, added = await _setup(hass)
-    unsub = await _dark_kitchen(hass, registry)
-
-    hass.states.async_set("light.a", "on", {"brightness": 5, "color_temp_kelvin": 2700}, context=Context())
-    await hass.async_block_till_done()
-
-    with after_the_grace():
-        assert _entity(added, "sensor.flare_overridden_lights").extra_state_attributes["lights"] == ["light.a"]
-    unsub()
-
-
-async def test_a_dark_room_is_announced_once(hass: HomeAssistant):
-    """A light reporting off again in a room already dark hands nothing back."""
-    _entry, registry, _ = await _setup(hass)
-    events: list = []
-    hass.bus.async_listen("flare_lights_released", events.append)
-    unsub = await _dark_kitchen(hass, registry)
-
-    hass.states.async_set("light.a", "on", {}, context=Context())
-    hass.states.async_set("light.a", "off", {}, context=Context())
-    await hass.async_block_till_done()
-    unsub()
-
-    assert [e.data["lights"] for e in events] == [["light.a", "light.b"]]
-
-
-async def test_a_dark_rooms_claims_are_kept_however_old(hass: HomeAssistant):
-    """Or a light switched on in a room left dark for a day would be FLARE's
-    again. A claim still held is pruned as before."""
-    _entry, registry, _ = await _setup(hass)
-    unsub = await _dark_kitchen(hass, registry)
-    unsub()
-    _light(hass, "light.h")
-    await _record(registry, HALL, "light.h", "ctx-h", ASKED)
-
-    with freeze_time(dt_util.utcnow() + timedelta(days=2), real_asyncio=True):
-        await registry.async_prune_stale()
-
-    assert set(registry.all_records()) == {"light.a", "light.b"}
-
-
-async def test_a_light_deleted_from_home_assistant_loses_its_claim(hass: HomeAssistant):
-    _entry, registry, _ = await _setup(hass)
-    entities = er.async_get(hass)
-    entities.async_get_or_create("light", "test", "a", suggested_object_id="a")
-    unsub = await _dark_kitchen(hass, registry)
-
-    entities.async_remove("light.a")
-    await hass.async_block_till_done()
-    unsub()
-
-    assert set(registry.all_records()) == {"light.b"}

@@ -60,29 +60,11 @@ from .override_protection import (
     disagrees,
 )
 
-# What a turn-off asks for.
-OFF = {"state": "off"}
-
 # Pruning early is harmless: a light with no record is simply free to
 # manage.
 STALE_RECORD_MAX_AGE_DAYS = 1
 
 PRUNE_CHECK_INTERVAL = timedelta(hours=1)
-
-def dark_claim(context_id: str | None, now: str) -> _WriteRecord:
-    """FLARE's claim on a light in a room that has gone dark: off, as it is
-    now."""
-    return {
-        "observed": {"context_id": context_id, "secondary_context_id": None, "recorded_at": now, "target": OFF},
-        "latest": None,
-        "last_seen": now,
-    }
-
-
-def is_dark_claim(record: _WriteRecord) -> bool:
-    """A claim a dark room left, as dark_claim() makes it."""
-    return record.get("latest") is None and (record.get("observed") or {}).get("target") == OFF
-
 
 # Fired whenever the claims change, so the sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
@@ -358,20 +340,15 @@ class ClaimRegistry:
 
     async def async_prune_stale(self) -> None:
         """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
-        cleanup a room no longer used, or a light deleted mid-use, ever gets.
-        A dark room's claims are kept however old, or a light switched on in
-        a room dark for a day would be FLARE's again; they go with their
-        light (async_forget). A record with no parseable `last_seen` is
-        kept."""
+        cleanup an entity deleted from HA, or a room no longer used, ever
+        gets. A record with no parseable `last_seen` is kept."""
         cutoff = dt_util.utcnow() - timedelta(days=STALE_RECORD_MAX_AGE_DAYS)
 
         def stale(record: dict) -> bool:
             parsed = dt_util.parse_datetime(record.get("last_seen") or "")
             return parsed is not None and parsed < cutoff
 
-        lights = [
-            entity_id for entity_id, record in self.claims.items() if stale(record) and not is_dark_claim(record)
-        ]
+        lights = [entity_id for entity_id, record in self.claims.items() if stale(record)]
         rooms = [key for key, room in self.rooms.items() if stale(room)]
         for entity_id in lights:
             self.claims.pop(entity_id, None)
@@ -386,28 +363,20 @@ class ClaimRegistry:
 
     @callback
     def _release_if_dark(self, key: str) -> bool:
-        """Hands a room's lights back once none of its claimed lights is on:
-        each off light's claim becomes FLARE's own off claim, so the room's
-        next update can light it, while a light someone switches on in the
-        dark room doesn't match and is theirs. Switching a light off is an
-        override, so this is what ends it. Unavailable counts as dark, so
-        one dead entity can't block the release, and loses its claim, as
-        going unavailable does. True if it handed anything back."""
+        """Discards a room's claims once none of its claimed lights is on.
+        Switching a light off is an override, so this is what hands it back.
+        Unavailable counts as dark, so one dead entity can't block the
+        release. True if it released anything."""
         claimed = self._claimed_lights(key)
-        states = {entity_id: self._hass.states.get(entity_id) for entity_id in claimed}
-        if any(state is not None and state.state == "on" for state in states.values()):
+        if not claimed:
             return False
-        released = [entity_id for entity_id in claimed if not is_dark_claim(self.claims[entity_id])]
-        if not released:
-            return False
-        now = dt_util.utcnow().isoformat()
-        for entity_id in released:
-            state = states[entity_id]
-            if is_reachable(state):
-                self.claims[entity_id] = dark_claim(state.context.id, now)
-            else:
-                self.claims.pop(entity_id, None)
-        self._announce_released(key, sorted(released))
+        for entity_id in claimed:
+            state = self._hass.states.get(entity_id)
+            if state is not None and state.state == "on":
+                return False
+        for entity_id in claimed:
+            self.claims.pop(entity_id, None)
+        self._announce_released(key, sorted(claimed))
         return True
 
     @callback
@@ -442,9 +411,7 @@ class ClaimRegistry:
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
         - Off (on/off -> off): releases each of its rooms that has gone dark.
         - Arrival (none/unavailable/unknown -> on/off): releases each of its
-          rooms whose claimed lights have all now reported and none is on.
-
-        And a light deleted from the entity registry loses its claim."""
+          rooms whose claimed lights have all now reported and none is on."""
         reconnects = self._reconnects
 
         @callback
@@ -488,20 +455,4 @@ class ClaimRegistry:
             if dropped or went_off or arrived or changed:
                 self._notify()
 
-        @callback
-        def _on_registry_updated(event: Event[er.EventEntityRegistryUpdatedData]) -> None:
-            """A light deleted from HA takes its claim with it."""
-            if event.data["action"] == "remove" and self.claims.pop(event.data["entity_id"], None) is not None:
-                self._notify()
-
-        unsubscribe = [
-            hass.bus.async_listen("state_changed", _on_state_changed),
-            hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, _on_registry_updated),
-        ]
-
-        @callback
-        def stop_listening() -> None:
-            for cancel in unsubscribe:
-                cancel()
-
-        return stop_listening
+        return hass.bus.async_listen("state_changed", _on_state_changed)

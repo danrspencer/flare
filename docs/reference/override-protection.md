@@ -29,7 +29,7 @@ else's and leave alone a light you've changed yourself. Its entities and options
 
 | Entity | Description |
 |---|---|
-| `sensor.flare_controlled_lights` | The number of lights FLARE controls, including lights in a dark room it holds at off. For information only. |
+| `sensor.flare_controlled_lights` | The number of lights FLARE is setting. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
 | `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, and `asked` what FLARE last asked it for. |
@@ -128,26 +128,20 @@ turn-offs record a claim of `{"state": "off"}`, which is how FLARE tells them ap
 
 ### When FLARE sets a light again
 
-**A room hands its lights back when none of its claimed lights are on.** This is what normally
-ends an override: once the room is dark, each light's claim becomes FLARE's own off, as if FLARE
-had turned it off, so the room's next update lights it as usual.
-
-Because FLARE still holds the dark lights, a light someone switches on in a dark room doesn't
-match FLARE's off, so it counts as changed and is left as it was set, until the room is dark
-again. The rest of the room still comes on at the curve.
+**A room discards its claims when none of its claimed lights are on.** This is what normally
+ends an override: once the room is dark, FLARE sets every light in it again.
 
 - A light FLARE has no claim on doesn't count, so a lamp in the room that something else runs
   can't keep the room's claims.
-- A light that's unavailable counts as off, so one dead bulb can't either. It loses its claim
-  instead, as going unavailable does.
-- After a restart, a room whose claimed lights are all off once they've reported in hands them
-  back too, so a room switched off while Home Assistant was restarting comes on again as usual.
-- A light in two rooms is handed back when either of them goes dark.
+- A light that's unavailable counts as off, so one dead bulb can't either.
+- After a restart, a room whose claimed lights are all off once they've reported in discards its
+  claims too, so a room switched off while Home Assistant was restarting comes on again as
+  usual.
+- A light in two rooms loses its claim when either of them goes dark.
 
-A light loses its claim when it goes unavailable or is deleted from Home Assistant, and you can
-discard claims by hand with **Clear**, the dashboard's **Clear all** for an area, or
-[`flare.claims_clear`](../services/#flareclaims_clear). A light with no claim is FLARE's to set
-again, even if someone switched it on by hand.
+A light also loses its claim when it goes unavailable, and you can discard claims by hand with
+**Clear**, the dashboard's **Clear** for an area, or
+[`flare.claims_clear`](../services/#flareclaims_clear).
 
 A light that has just come back online, say switched on at the wall, starts at whatever it
 powers up as, and may miss a command sent while it boots. That isn't counted as someone
@@ -174,7 +168,7 @@ device_id: ...                               # FLARE's device
 
 > **Controlled lights** Kitchen Lighting is now controlling 6 lights
 
-When a room hands its lights back, because it went dark or you pressed **Clear**, FLARE fires
+When a room lets its lights go, because it went dark or you pressed **Clear**, FLARE fires
 `flare_lights_released`:
 
 ```yaml
@@ -222,7 +216,7 @@ triggers:
 
 | Status | Meaning |
 |---|---|
-| `controlled` | It matches one of FLARE's claims: FLARE is setting it, or, in a dark room, holds it at off. |
+| `controlled` | FLARE is setting it: it matches one of its claims. |
 | `overridden` | It has matched neither claim for at least 30 seconds, so something else has changed it. |
 | `mismatched` | It has matched neither claim for less than 30 seconds. Usually it's FLARE's own change still arriving, or a light just back online reporting late, so it isn't counted or announced as overridden yet. It's left alone meanwhile, the same as an overridden light. |
 | `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
@@ -233,8 +227,8 @@ triggers:
 `observed-context` or `observed-value`. `rooms` lists the rooms the light is one of.
 
 Each claim has a `recorded_at` time and a `context_id`, which you can use to find the change in
-Home Assistant's logbook. Claims and rooms that haven't changed for a day are discarded, except
-the claims a dark room left, which last until their light is deleted.
+Home Assistant's logbook. Claims and rooms that haven't changed for a day are discarded, so a
+light deleted from Home Assistant stops being tracked.
 
 ## When rooms update
 

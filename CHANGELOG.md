@@ -30,18 +30,12 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   automations now. Already have automations controlling your lights? Skip it, then move your
   rooms over one at a time with **Set up area**. Setting up an area gives it an automation, not a flare as
   well, unless you ask for one. **Skip setup** is gone: setup always sets up your schedules.
-- **A light switched on by hand in a dark room keeps the brightness you set while the room is in
-  use.** When a room goes dark, FLARE now keeps holding its lights at off rather than forgetting
-  them, so switching one on by hand counts as changing it, and the rest of the room comes on at the
-  curve around it. Once the room has been empty for its **Wait time**, that light goes off with
-  the rest, as before.
 - **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
   **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
   back beside **Lights & Occupancy**. Existing rooms keep their values.
-- **Zones are gone.** FLARE keeps one record of the lights it controls, across every room. Once a
-  room's lights are all off, FLARE holds them at off until the room next comes on, so a change
-  someone made while the room was in use is forgotten. Updating removes your zones and their
-  devices, and FLARE takes every room back on its next update.
+- **Zones are gone.** FLARE keeps one record of the lights it controls, across every room, and
+  lets a room's lights go once they're all off. Updating removes your zones and their devices,
+  and FLARE takes every room back on its next update.
   - The blueprint's **Zone** input is replaced by **Override Protection**, on by default. Turn it
     off in any room where you'd left **Zone** empty.
   - A room updates on the tick of the first area in its **Lights & Occupancy**. A room naming no
