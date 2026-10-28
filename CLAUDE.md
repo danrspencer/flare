@@ -875,7 +875,11 @@ Other blueprint facts:
   are PIR: clear the moment motion stops, flapping by design. Wait time
   turns that into "the room is empty", and is sized for PIR everywhere.
   A template `binary_sensor` with `device_class: occupancy` in
-  `room_target` is all a custom "occupied" signal needs.
+  `room_target` is all a custom "occupied" signal needs. Presence-class
+  sensors are supported as well, but Home Assistant has no `presence.*`
+  trigger platform (only `occupancy.*` and `motion.*`), so the blueprint
+  watches them with two template triggers that walk `room_target` the same
+  way `recovered` does and share the `motion_on`/`motion_off` ids.
 - **`docs/reference/blueprint.md`'s anchors are tested**:
   `test_every_referenced_blueprint_anchor_exists` derives kramdown's
   slugs, after a restructure silently broke six deep links.

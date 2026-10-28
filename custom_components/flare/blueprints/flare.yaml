@@ -46,8 +46,8 @@ blueprint:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
-        controlled, occupancy and motion sensors within it decide when (see
-        Sensors From Areas, under Triggers).
+        controlled, occupancy, motion and presence sensors within it decide
+        when (see Sensors From Areas, under Triggers).
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
@@ -57,12 +57,14 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
+            - domain: binary_sensor
+              device_class: presence
     no_motion_wait:
       name: Wait time
       description: >
-        Only used when the room has occupancy or motion sensors: how long
-        every one must be clear before the room counts as empty and its
-        lights turn off.
+        Only used when the room has occupancy, motion or presence sensors:
+        how long every one must be clear before the room counts as empty and
+        its lights turn off.
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       default: 120
       selector:
@@ -239,9 +241,9 @@ blueprint:
         use_area_sensors:
           name: Sensors From Areas
           description: >
-            When disabled, occupancy and motion sensors won't be inferred
-            from the areas, floors, devices or labels in Lights & Occupancy.
-            Only explicitly selected sensors will be used.
+            When disabled, occupancy, motion and presence sensors won't be
+            inferred from the areas, floors, devices or labels in Lights &
+            Occupancy. Only explicitly selected sensors will be used.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
           default: true
           selector:
@@ -349,9 +351,9 @@ trigger:
   - id: extra
     platform: state
     entity_id: !input extra_triggers
-  # Occupancy and motion sensors share the ids. Harmless with no sensor of
-  # either kind in the room. With Sensors From Areas off, `condition:` drops
-  # those from sensors not picked by name.
+  # Occupancy, motion and presence sensors share the ids. Harmless with no
+  # sensor of any kind in the room. With Sensors From Areas off, `condition:`
+  # drops those from sensors not picked by name.
   - id: motion_on
     trigger: occupancy.detected
     target: !input room_target
@@ -370,6 +372,72 @@ trigger:
     options:
       for:
         seconds: !input no_motion_wait
+  # Presence sensors have no trigger platform of their own - Home Assistant
+  # ships occupancy.* and motion.*, and nothing for device_class presence -
+  # so the room's are watched with a template instead. The target is walked
+  # the same way as in `recovered` below, since a trigger can't call
+  # flare.resolve_target.
+  - id: motion_on
+    platform: template
+    value_template: >-
+      {% set ns = namespace(entities=[], devices=[], areas=[]) %}
+      {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}
+        {% set v = room_target.get(key, []) %}
+        {% set ids = [v] if v is string else v %}
+        {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}
+        {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}
+        {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}
+        {% elif key == 'floor_id' %}
+          {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}
+        {% else %}
+          {% for l in ids %}
+            {% set ns.entities = ns.entities + label_entities(l) %}
+            {% set ns.devices = ns.devices + label_devices(l) %}
+            {% set ns.areas = ns.areas + label_areas(l) %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+      {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %}
+      {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %}
+      {% set v = room_target.get('entity_id', []) %}
+      {% set named = [v] if v is string else v %}
+      {% set sensors = ns.entities | select('match', '^binary_sensor\\.')
+           | select('is_state_attr', 'device_class', 'presence') | unique | list %}
+      {% set sensors = sensors if use_area_sensors else sensors | select('in', named) | list %}
+      {{ sensors | select('is_state', 'on') | list | count > 0 }}
+  # Per sensor, as the occupancy and motion `for:` are. The action's
+  # occupancy_clear_for_wait is what really decides, and the tick's self-heal
+  # covers a template whose timer a state change cancelled.
+  - id: motion_off
+    platform: template
+    value_template: >-
+      {% set ns = namespace(entities=[], devices=[], areas=[]) %}
+      {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}
+        {% set v = room_target.get(key, []) %}
+        {% set ids = [v] if v is string else v %}
+        {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}
+        {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}
+        {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}
+        {% elif key == 'floor_id' %}
+          {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}
+        {% else %}
+          {% for l in ids %}
+            {% set ns.entities = ns.entities + label_entities(l) %}
+            {% set ns.devices = ns.devices + label_devices(l) %}
+            {% set ns.areas = ns.areas + label_areas(l) %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+      {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %}
+      {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %}
+      {% set v = room_target.get('entity_id', []) %}
+      {% set named = [v] if v is string else v %}
+      {% set sensors = ns.entities | select('match', '^binary_sensor\\.')
+           | select('is_state_attr', 'device_class', 'presence') | unique | list %}
+      {% set sensors = sensors if use_area_sensors else sensors | select('in', named) | list %}
+      {{ sensors | select('is_state', 'on') | list | count == 0 }}
+    for:
+      seconds: !input no_motion_wait
   - id: recovered
     platform: template
     value_template: >
@@ -562,15 +630,17 @@ action:
           {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}
         {% endfor %}
         {{ ns.m }}
-      # The room's working occupancy and motion sensors; only those picked by
-      # name with Sensors From Areas off. An unavailable or unknown sensor
-      # isn't one, so a room whose only sensor is dead counts as having none
-      # rather than as empty.
+      # The room's working occupancy, motion and presence sensors; only those
+      # picked by name with Sensors From Areas off. An unavailable or unknown
+      # sensor isn't one, so a room whose only sensor is dead counts as
+      # having none rather than as empty.
       room_occupancy_entities: >
         {% set sensors = (room_entities | select('match', '^binary_sensor\\.')
              | select('is_state_attr', 'device_class', 'occupancy') | list
            + room_entities | select('match', '^binary_sensor\\.')
-             | select('is_state_attr', 'device_class', 'motion') | list)
+             | select('is_state_attr', 'device_class', 'motion') | list
+           + room_entities | select('match', '^binary_sensor\\.')
+             | select('is_state_attr', 'device_class', 'presence') | list)
            | reject('is_state', ['unavailable', 'unknown']) | list %}
         {{ sensors if use_area_sensors
            else sensors | select('in', named_entities) | list }}

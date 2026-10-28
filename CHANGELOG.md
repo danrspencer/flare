@@ -11,9 +11,14 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
+- **Presence sensors count as room sensors**, alongside occupancy and motion ones. A
+  `binary_sensor` with `device_class: presence` in **Lights & Occupancy** now turns the room on
+  and off, whether it is picked by name or inferred from an area, floor, device or label. Home
+  Assistant has no `presence.*` trigger platform, so the blueprint watches these with a
+  template trigger, with the same **Wait time** as the other two.
 - **Sensors From Areas**, a new blueprint input under the new **Triggers** section, on by
-  default. Turn it off and the room ignores the occupancy and motion sensors **Lights &
-  Occupancy** picks up through an area, floor, device or label, and uses only the sensors you
+  default. Turn it off and the room ignores the occupancy, motion and presence sensors **Lights
+  & Occupancy** picks up through an area, floor, device or label, and uses only the sensors you
   pick by name.
 
 ### Changed

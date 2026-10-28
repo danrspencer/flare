@@ -21,7 +21,7 @@ built in.
 
 FLARE sets your lights through the day, and leaves alone any light you change yourself.
 
-- **It lights the room when you walk in.** With a [motion or occupancy sensor]({{ site.baseurl }}/reference/blueprint/#room),
+- **It lights the room when you walk in.** With a [motion, occupancy or presence sensor]({{ site.baseurl }}/reference/blueprint/#room),
   the room comes on at the right brightness and colour for the time of day, or in the
   [scene]({{ site.baseurl }}/guides/scenes/) you've picked for it, and
   [turns off once it's empty]({{ site.baseurl }}/reference/blueprint/#when-lights-turn-on-and-off).

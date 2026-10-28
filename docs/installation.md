@@ -12,7 +12,7 @@ Five minutes to a room running on the curve.
 {: .note }
 > **Prerequisites** — Home Assistant 2026.10.0 or newer, and [HACS](https://hacs.xyz) installed.
 >
-> It's best to assign your lights and your occupancy and motion sensors to areas first. FLARE
+> It's best to assign your lights and your occupancy, motion and presence sensors to areas first. FLARE
 > works without that, but it sets rooms up area by area, so anything without an area is left out
 > until you add it to a room's automation by hand.
 
@@ -57,7 +57,7 @@ what most rooms want:
 | | What it does |
 |---|---|
 | A [zone]({{ site.baseurl }}/reference/zones/) | Keeps track of which lights FLARE is driving there, so it leaves alone a light you've changed yourself. |
-| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy and motion sensors turn them on and off. Called "*Area* Lighting", with a **FLARE** label so you can find them. |
+| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, and its occupancy, motion and presence sensors turn them on and off. Called "*Area* Lighting", with a **FLARE** label so you can find them. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
 The zone is always set up. Leave out the flare if you don't use voice assistants and don't
@@ -68,7 +68,7 @@ With all three, the room is ready to use. The automation is an ordinary one in *
 Automations & Scenes**, so you can change its inputs there.
 
 {: .note }
-> A room with no occupancy or motion sensor still follows the curve, but never turns its lights on or
+> A room with no occupancy, motion or presence sensor still follows the curve, but never turns its lights on or
 > off by itself.
 
 ## Step 3 — add the dashboard (optional)

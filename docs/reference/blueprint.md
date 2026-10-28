@@ -31,7 +31,7 @@ behaves.
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
-| **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
+| **Lights & Occupancy** | required | The room's lights, and the occupancy, motion and presence sensors that turn them on and off. |
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
@@ -48,8 +48,9 @@ on that target:
 
 The room's [flare](../flares/) controls the same lights.
 
-Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
-other binary sensors in the target are ignored. A room can mix both kinds.
+Sensors are `binary_sensor` entities with `device_class: occupancy`, `device_class: motion`
+or `device_class: presence`; other binary sensors in the target are ignored. A room can mix any
+of them.
 
 To choose the sensors yourself while still picking an area for the lights, turn off
 [Sensors From Areas](#triggers).
