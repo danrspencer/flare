@@ -41,9 +41,9 @@ It asks:
   floor** (offered when your home has more than one floor, and named after them), or
   **Custom**, to name the schedules yourself.
   A schedule's name becomes part of its entity IDs, so pick names you're happy to keep.
-- **Whether to set up room automations now.** If automations of your own already control your
-  lights, choose **Skip for now**: FLARE sets up just your schedules, and you can move one room
-  at a time with **Set up area** (see [Adding a room later](#adding-a-room-later)).
+- **Whether to set up room automations now.** Already have automations controlling your
+  lights? Choose **Skip for now**: FLARE sets up just your schedules, and you can move your rooms
+  over one at a time with **Set up area** (see [Adding a room later](#adding-a-room-later)).
 - **What to set up for each area**, and **which schedule each area follows**. Every area with
   lights is listed, grouped by floor, and starts on the schedule with the same name as its floor,
   or on your first schedule if none matches. To leave an area out, clear its schedule.
