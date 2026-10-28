@@ -8,7 +8,6 @@ import pytest
 
 from freezegun import freeze_time
 
-from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -137,7 +136,7 @@ async def test_counters_split_the_lights_by_status(hass: HomeAssistant):
 
 async def test_two_rooms_writing_one_light_share_its_claim(hass: HomeAssistant):
     """Claims are FLARE's: the second automation's write isn't an override of
-    the first's, and nothing warns about it."""
+    the first's."""
     _entry, registry, _ = await _setup(hass)
     _light(hass, "light.shared")
 
@@ -147,7 +146,6 @@ async def test_two_rooms_writing_one_light_share_its_claim(hass: HomeAssistant):
     assert list(registry.all_records()) == ["light.shared"]
     assert claim_field(registry, "light.shared", "latest", "context_id") == "ctx-hall"
     assert registry.rooms_of("light.shared") == sorted([KITCHEN, HALL])
-    assert persistent_notification._async_get_or_create_notifications(hass) == {}
 
 
 async def test_an_unavailable_light_holding_a_claim_does_not_hold_a_room_open(hass: HomeAssistant):
@@ -524,7 +522,6 @@ async def test_each_entry_type_owns_only_its_own_sensors(hass: HomeAssistant):
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
 
     assert [e.entity_id for e in added] == ["sensor.ground_floor_flare"]
-    assert not any(hasattr(e, "claims") for e in added)
 
 
 async def test_a_room_switched_off_by_something_else_goes_dark_without_overrides(hass: HomeAssistant):

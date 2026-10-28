@@ -49,10 +49,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
     entry.async_on_unload(ClaimEvents(hass, registry, entry).start())
-    # The sensor that held the claims before they moved to storage.
-    entities = er.async_get(hass)
-    if old := entities.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_claims"):
-        entities.async_remove(old)
     async_add_entities([_CountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")])
     _LightStatuses(hass, registry, entry, async_add_entities).start()
 

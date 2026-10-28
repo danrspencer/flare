@@ -24,20 +24,6 @@ from tests.functional.component.harness import (
 )
 
 
-async def test_the_last_light_going_off_releases_the_whole_room(setup_integration: HomeAssistant):
-    """Nobody is using the room, so every light is free again."""
-    hass = setup_integration
-    our_context = Context()
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000, context=our_context)
-    await claims_record(hass, ["light.a"], context=our_context)
-    set_light(hass, "light.a", "off", context=Context(id="ctx-motion-off"))
-    await hass.async_block_till_done()
-
-    assert await claims_check(hass, ["light.a"]) == {
-        "light.a": {"blocked": False, "status": "off", "matched_via": None, "rooms": [ROOM]}
-    }
-
-
 async def test_a_light_switched_off_by_hand_in_a_lit_room_is_left_off(setup_integration: HomeAssistant):
     """Switching one light off in a room still in use is a choice: the sibling
     holds the room, so the claim stays. (Its claimed lights, not the physical

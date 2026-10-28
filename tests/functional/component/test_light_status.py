@@ -190,21 +190,6 @@ async def test_it_follows_a_light_flare_holds_nothing_on(stub_entry_setup, hass:
     assert hass.states.get("sensor.spot_flare_status").state == "off"
 
 
-async def test_the_sensor_that_held_the_claims_before_is_removed(stub_entry_setup, hass: HomeAssistant):
-    entry = MockConfigEntry(
-        domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, unique_id=f"{DOMAIN}_tracking", version=3, minor_version=2
-    )
-    entry.add_to_hass(hass)
-    er.async_get(hass).async_get_or_create(
-        "sensor", DOMAIN, f"{entry.entry_id}_claims", suggested_object_id="flare_claims", config_entry=entry
-    )
-
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-
-    assert er.async_get(hass).async_get("sensor.flare_claims") is None
-
-
 async def test_it_says_what_flare_last_asked_for_and_whether_flare_holds_it(stub_entry_setup, hass: HomeAssistant):
     await _set_up(hass)
     lamp, spot = _bulb(hass, "lamp"), _bulb(hass, "spot")
