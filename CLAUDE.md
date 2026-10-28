@@ -1021,8 +1021,8 @@ having switched it on and left.
 - Considered and not built: a second, longer wait for hand-set lights
   (the blueprint splitting the room's lit lights with `flare.claims_check`,
   self-heal taking the hand-set ones once the longer wait passes), the
-  usual "manual override timeout". Turning off only FLARE's lights was
-  rejected outright: a forgotten lamp in an empty room stays on forever.
+  usual "manual override timeout". Turning off only FLARE's lights alone
+  would leave a forgotten lamp in an empty room on forever.
   Presence (mmWave) sensors remove the cause, but that's hardware.
 
 ### Parked: scene handling in `apply_lighting`
