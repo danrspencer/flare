@@ -289,11 +289,17 @@ def setup(d: Director) -> None:
     d.click(page.get_by_role("listitem").filter(has_text="FLARE").first, pause=1.5)
     d.click(page.get_by_text("One per floor:"), pause=0.8)
     d.click(page.get_by_role("button", name="Submit"), pause=1.5)
-    d.click(page.get_by_text("Set up room automations"), pause=1.5)
+    d.click(page.get_by_text("Set up room automations", exact=True), pause=1.5)
 
     d.pause(0.8)
     d.scroll(page.get_by_text("Pick the schedule each area follows"), 1200)
     d.pause(1)
+    d.click(page.get_by_role("button", name="Submit"), pause=2)
+
+    # A flare for every room just set up, as they come ticked.
+    d.click(page.get_by_text("Pick rooms for flares", exact=True), pause=1.5)
+    d.scroll(page.get_by_text("Each room you pick gets a flare"), 600)
+    d.pause(0.8)
     d.click(page.get_by_role("button", name="Submit"), pause=2.5)
 
     d.click(page.get_by_role("link", name="Reload this page"), pause=0)
