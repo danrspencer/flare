@@ -81,14 +81,19 @@ jobs:
       # under its own source directory. Copying it in at build time
       # rather than committing a second copy means the site can never
       # show a stale card. Its text comes from flare-i18n.js and the
-      # translations it imports, so they come too.
+      # translations it imports, so they come too - where they exist,
+      # since a release tag before 2.0 has neither.
       - name: Copy the dashboard card into the site
         run: |
-          cp custom_components/flare/www/flare-curve-card.js \
-             custom_components/flare/www/flare-i18n.js \
-             docs/assets/js/
-          mkdir -p docs/assets/js/translations
-          cp custom_components/flare/www/translations/*.js docs/assets/js/translations/
+          www=custom_components/flare/www
+          cp "$www/flare-curve-card.js" docs/assets/js/
+          if [ -f "$www/flare-i18n.js" ]; then
+            cp "$www/flare-i18n.js" docs/assets/js/
+          fi
+          if [ -d "$www/translations" ]; then
+            mkdir -p docs/assets/js/translations
+            cp "$www"/translations/*.js docs/assets/js/translations/
+          fi
 
       # The blueprint trace report, a page with no nav entry and no link
       # from anywhere else - reachable only to someone who already has the
