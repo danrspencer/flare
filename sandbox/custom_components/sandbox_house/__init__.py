@@ -1,6 +1,6 @@
 """A fake house for the FLARE sandbox: the floors and rooms in
-configuration.yaml, each room's bulbs, and a sensor whose occupancy is
-switched by hand."""
+configuration.yaml, each room's bulbs, and a sensor whose occupancy and
+illuminance are set by hand."""
 
 from __future__ import annotations
 
@@ -20,7 +20,14 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
 DOMAIN = "sandbox_house"
-PLATFORMS = [Platform.LIGHT, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.MEDIA_PLAYER]
+PLATFORMS = [
+    Platform.LIGHT,
+    Platform.BINARY_SENSOR,
+    Platform.SWITCH,
+    Platform.NUMBER,
+    Platform.SENSOR,
+    Platform.MEDIA_PLAYER,
+]
 
 ROOM_SCHEMA = vol.Schema(
     {

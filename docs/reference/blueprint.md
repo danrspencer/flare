@@ -71,11 +71,15 @@ Above `0`, the room counts as bright enough while every one of those sensors rea
 many lux. A bright room isn't switched on by:
 
 - a sensor detecting someone,
-- a [scene](#scenes), which would set every light it covers,
+- a [scene](#scenes), unless every light it covers is already on,
 - [idle brightness](#idle-brightness).
 
-Lights already on keep following the curve, so a room someone lit by hand isn't left stale, and
-nothing is switched off for being bright. Turning the room on by hand — the automation's
+If someone is still in the room when it stops being bright enough, because one of those sensors
+drops to the threshold or below, the lights come on then. Someone counts as in the room if one
+of its occupancy or motion sensors is detecting them, or was within the **Wait time**.
+
+Lights already on carry on as before: following the curve, or left to the phase's scene. Nothing
+is switched off for being bright. Turning the room on by hand — the automation's
 **Run**, the [flare](../flares/), or a voice assistant — ignores the threshold.
 
 A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
@@ -190,9 +194,9 @@ Lights turn on when a sensor detects someone, and turn off once every sensor in 
 been clear for the **Wait time**.
 
 While every light in **Lights & Occupancy** is off, the only things that turn any of them on are
-a sensor detecting someone, running the automation by hand, and
-[idle brightness](#idle-brightness). Once at least one light is on, any update can turn on the
-others. This means a phase change doesn't light up an empty room, and a bulb that comes back
+a sensor detecting someone, running the automation by hand, the room getting dark while someone
+is in it (with a [Lux Threshold](#lux-threshold)), and [idle brightness](#idle-brightness). Once
+at least one light is on, any update can turn on the others. This means a phase change doesn't light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.
 
 If a light is still on after the room has been empty for the **Wait time**, the turn-off is sent

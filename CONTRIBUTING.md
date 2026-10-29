@@ -151,8 +151,9 @@ mise run sandbox:reset
   newer release may not load in an older one; use `sandbox:reset` after going back.
 - The port is `SANDBOX_PORT` in `mise.toml`'s `[env]`.
 - The house is `sandbox/configuration.yaml`'s `sandbox_house:` block: floors and rooms, their icons, and how
-  many bulbs each room has. Every room also gets a sensor with an occupancy `binary_sensor` and a **Presence** switch to set it,
-  so you walk into the kitchen by turning on `switch.kitchen_sensor_presence`. Bulbs (`light.kitchen_bulb_1` ...)
+  many bulbs each room has. Every room also gets a sensor with an occupancy `binary_sensor` and a **Presence**
+  switch to set it, so you walk into the kitchen by turning on `switch.kitchen_sensor_presence`, and an
+  illuminance `sensor` with a **Daylight** number to set it (0 lx until you move it). Bulbs (`light.kitchen_bulb_1` ...)
   take brightness and colour temperature and keep their state across restarts. A room with `tv: true` also
   gets a TV that only turns on and off (`media_player.living_room_tv`). The fake devices are
   `sandbox/custom_components/sandbox_house/`.

@@ -18,6 +18,7 @@ from tests.functional.blueprint.harness import (
     illuminance,
     light,
     motion,
+    occupancy,
     setup_room_automation,
 )
 
@@ -145,6 +146,25 @@ class TestLuxThreshold:
 
         assert lit(apply_lighting_calls) == []
 
+    async def test_a_non_numeric_sensor_does_not_unblock_a_bright_one(
+        self, hass, apply_lighting_calls
+    ):
+        illuminance(hass, "sensor.lux", "dusk")
+        illuminance(hass, "sensor.lux_bright", 500)
+        motion(hass, "binary_sensor.hall_motion", "off")
+        light(hass, "light.a", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": [*ROOM, "sensor.lux", "sensor.lux_bright"]},
+            lux_threshold=200,
+        )
+
+        motion(hass, "binary_sensor.hall_motion", "on")
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls) == []
+
     async def test_a_manual_run_turns_the_lights_on_anyway(self, hass, apply_lighting_calls):
         """The threshold stops the automation, not someone asking for lights."""
         illuminance(hass, "sensor.lux", 500)
@@ -234,9 +254,213 @@ class TestLuxThreshold:
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls == []
-        calls = lit(apply_lighting_calls)
-        assert calls and calls[-1].data["entities"] == ["light.a"]
+        assert lit(apply_lighting_calls) == []
 
+    async def test_a_lit_scene_stays_the_scenes_once_the_room_is_bright(
+        self, hass, apply_lighting_calls, scene_turn_on_calls, frozen_time
+    ):
+        """Its lights aren't taken onto the curve when the sun comes out."""
+        illuminance(hass, "sensor.lux", 500)
+        light(hass, "light.a", "on")
+        light(hass, "light.b", "on")
+        hass.states.async_set(
+            "scene.evening_scene",
+            "2024-01-01T00:00:00+00:00",
+            {"entity_id": ["light.a", "light.b"]},
+        )
+        hass.states.async_set(
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+        )
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "sensor.lux"]},
+            evening_scene="scene.evening_scene",
+            lux_threshold=200,
+        )
+
+        frozen_time.tick(timedelta(minutes=1))
+        async_fire_time_changed(hass, dt_util.utcnow())
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls) == []
+
+
+
+    async def test_a_phase_change_moves_a_lit_scene_on_while_it_is_bright(
+        self, hass, scene_turn_on_calls
+    ):
+        """Every light it covers is already on, so it can't light anything."""
+        illuminance(hass, "sensor.lux", 500)
+        light(hass, "light.a", "on")
+        light(hass, "light.b", "on")
+        for scene in ("scene.evening_scene", "scene.night_scene"):
+            hass.states.async_set(
+                scene, "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a", "light.b"]}
+            )
+        hass.states.async_set(
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+        )
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "sensor.lux"]},
+            evening_scene="scene.evening_scene",
+            night_scene="scene.night_scene",
+            lux_threshold=200,
+        )
+
+        hass.states.async_set(
+            "sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700}
+        )
+        await hass.async_block_till_done()
+
+        assert scene_turn_on_calls[-1].data["entity_id"] == ["scene.night_scene"]
+
+class TestLuxThresholdAtDusk:
+    """docs/reference/blueprint.md#lux-threshold"""
+
+    async def _bright_room_with_someone_in_it(self, hass, **inputs):
+        illuminance(hass, "sensor.lux", 500)
+        light(hass, "light.a", "off")
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ", "sensor.lux"]},
+            lux_threshold=200,
+            **inputs,
+        )
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+    async def test_the_lights_come_on_when_it_gets_dark_with_someone_there(
+        self, hass, apply_lighting_calls
+    ):
+        await self._bright_room_with_someone_in_it(hass)
+        assert lit(apply_lighting_calls) == []
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+    async def test_a_sensor_cleared_within_the_wait_time_still_counts_as_someone_there(
+        self, hass, apply_lighting_calls
+    ):
+        """A PIR goes clear while someone sits still."""
+        await self._bright_room_with_someone_in_it(hass, no_motion_wait=600)
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+    async def test_an_empty_room_stays_dark_when_it_gets_dark(self, hass, apply_lighting_calls):
+        await self._bright_room_with_someone_in_it(hass, no_motion_wait=0)
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls) == []
+
+    async def test_a_room_without_an_occupancy_sensor_stays_dark_when_it_gets_dark(
+        self, hass, apply_lighting_calls
+    ):
+        illuminance(hass, "sensor.lux", 500)
+        light(hass, "light.a", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass, room_target={"entity_id": ["light.a", "sensor.lux"]}, lux_threshold=200
+        )
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls) == []
+
+    async def test_one_sensor_getting_dark_is_enough(self, hass, apply_lighting_calls):
+        illuminance(hass, "sensor.lux", 500)
+        illuminance(hass, "sensor.lux_window", 900)
+        light(hass, "light.a", "off")
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={
+                "entity_id": ["light.a", "binary_sensor.occ", "sensor.lux", "sensor.lux_window"]
+            },
+            lux_threshold=200,
+        )
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+    async def test_an_area_sensor_getting_dark_lights_the_room(self, hass, apply_lighting_calls):
+        area_id = await _area_room(hass)
+        illuminance(hass, "sensor.area_lux", 500)
+        light(hass, "light.a", "off")
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"area_id": area_id, "entity_id": "binary_sensor.occ"},
+            lux_threshold=200,
+        )
+
+        illuminance(hass, "sensor.area_lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+    async def test_with_area_sensors_off_only_a_picked_sensor_getting_dark_counts(
+        self, hass, apply_lighting_calls
+    ):
+        """An area sensor that's already dark doesn't stand in for the picked one."""
+        area_id = await _area_room(hass)
+        illuminance(hass, "sensor.area_lux", 20)
+        illuminance(hass, "sensor.hall_lux", 500)
+        light(hass, "light.a", "off")
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={
+                "area_id": area_id,
+                "entity_id": ["binary_sensor.occ", "sensor.hall_lux"],
+            },
+            lux_threshold=200,
+            use_area_sensors=False,
+        )
+        assert lit(apply_lighting_calls) == []
+
+        illuminance(hass, "sensor.hall_lux", 20)
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+    async def test_a_scene_held_off_while_bright_is_activated_at_dusk(
+        self, hass, scene_turn_on_calls
+    ):
+        hass.states.async_set(
+            "scene.evening_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a"]}
+        )
+        hass.states.async_set(
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+        )
+        await self._bright_room_with_someone_in_it(hass, evening_scene="scene.evening_scene")
+        assert scene_turn_on_calls == []
+
+        illuminance(hass, "sensor.lux", 20)
+        await hass.async_block_till_done()
+
+        assert scene_turn_on_calls[-1].data["entity_id"] == ["scene.evening_scene"]
 
 async def _area_room(hass) -> str:
     """A room whose area holds light.a and sensor.area_lux."""

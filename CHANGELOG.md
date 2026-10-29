@@ -25,9 +25,9 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   and what the light is showing, and a **Clear** for that light alone.
 - **Lux Threshold**, a new blueprint input beside **Lights & Occupancy**. Above 0, the room
   leaves its lights off while every illuminance sensor in it reads above that many lux: a
-  sensor, a scene and idle brightness won't switch one on. Lights already on keep following the
-  curve, and running the automation by hand still switches the room on. `0`, the default, turns
-  the check off.
+  sensor, a scene and idle brightness won't switch one on. If someone is still there when it gets
+  darker, the lights come on then. Lights already on carry on as before, and running the
+  automation by hand still switches the room on. `0`, the default, turns the check off.
 
 ### Changed
 

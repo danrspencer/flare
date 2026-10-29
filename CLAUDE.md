@@ -895,9 +895,15 @@ turning a room on (with `allow_turn_on`) and off; gating ticks on it
 skipped lights that were already on.
 
 **`allow_turn_on` = `manual_run or trigger.id == 'motion_on' or
-occupied`. It must never gain a new way to become true without the user
-explicitly asking for it in so many words** - not implied, not inferred
-as reasonable. This is the user's emphatic, standing position. Note
+occupied`, or `lux_dark` while someone is in the room. It must never gain
+a new way to become true without the user explicitly asking for it in so
+many words** - not implied, not inferred as reasonable. This is the
+user's emphatic, standing position. `lux_dark` is the one the user asked
+for (*"if the lux drops below the threshold and someone is there it
+should come on"*): a room Lux Threshold kept dark has no other way to
+light for someone sitting there, since the motion_on it blocked doesn't
+fire again while the sensor stays on. "Someone there" is a sensor on or
+within the Wait time, as for the room emptying. Note
 `automation.trigger` from another automation counts as a manual run, so
 anyone wanting an event to light a room writes their own automation.
 
@@ -976,10 +982,13 @@ Other blueprint facts:
 - **The Lux Threshold drops off lights from the call, not from `allow_turn_on`.**
   The `apply_lighting` step carries lights that are already on, so gating
   `allow_turn_on` would freeze a lit room. `lux_blocked_entities` is subtracted
-  from `target_entities` and from `idle_entities` instead, and `scene_active` is
-  forced false while it's too bright, so a scene can't set its covered lights and
-  the ones already on stay on FLARE's curve. A manual run bypasses the check by
-  definition.
+  from `target_entities` and from `idle_entities` instead. While it's too
+  bright a scene is activated only if every light it covers is already on, so
+  a phase change still moves a lit scene on; `scene_active` isn't touched, so
+  its lights stay the scene's, or the next tick would take an already-lit scene
+  onto the curve. A manual run bypasses the check by definition. The `lux_dark`
+  trigger expands the target in Jinja like `recovered`, as a wake-up only;
+  the action re-checks `too_bright` and occupancy on the resolved room.
 - **`device_class: occupancy` doesn't mean presence.** Most sensors here
   are PIR: clear the moment motion stops, flapping by design. Wait time
   turns that into "the room is empty", and is sized for PIR everywhere.
