@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from homeassistant.const import EntityCategory
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
@@ -412,6 +413,23 @@ async def test_with_several_schedules_an_area_already_set_up_starts_empty(
 
     schedules = {s.title: s.subentry_id for s in schedule_instances(_entry_of_type(hass, ENTRY_TYPE_SCHEDULES))}
     assert _defaults(result) == {"Hall": schedules["Upstairs"], "Kitchen": None}
+
+
+async def test_an_area_whose_lights_its_automation_would_leave_out_is_not_offered(
+    stub_entry_setup, automations_file, hass: HomeAssistant
+):
+    """Hidden and categorised lights aren't an area's, as the room's
+    automation finds them."""
+    kitchen = _area(hass, "Kitchen", "light.k")
+    _area(hass, "Hall", "light.hidden")
+    _area(hass, "Loft", "light.config")
+    er.async_get(hass).async_update_entity("light.hidden", hidden_by=er.RegistryEntryHider.USER)
+    er.async_get(hass).async_update_entity("light.config", entity_category=EntityCategory.CONFIG)
+    await _set_up_flare(hass, [kitchen])
+
+    result = await _start(hass)
+
+    assert set(_defaults(result)) == {"Kitchen"}
 
 
 async def test_set_up_area_with_no_lights_in_areas_says_so(stub_entry_setup, automations_file, hass: HomeAssistant):
