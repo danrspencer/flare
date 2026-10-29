@@ -99,6 +99,8 @@ class Group:
     two_step: list = field(default_factory=list)
     combined_rgb: list = field(default_factory=list)
     two_step_rgb: list = field(default_factory=list)
+    # On and already showing the target, so nothing is sent to them.
+    already_set: list = field(default_factory=list)
 
 
 def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optional[int]) -> Optional[int]:
@@ -187,13 +189,14 @@ def build_groups(
         else:
             rgb_entities, temp_entities = [], group_entities
 
-        needing_update = [
+        writable = [
             e
             for e in temp_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set(e, group.target, lookup, close_enough)
         ]
+        set_already = [e for e in writable if _already_set(e, group.target, lookup, close_enough)]
+        needing_update = [e for e in writable if e not in set_already]
         group.two_step = [
             e
             for e in needing_update
@@ -201,19 +204,21 @@ def build_groups(
         ]
         group.combined = [e for e in needing_update if e not in group.two_step]
 
-        needing_update_rgb = [
+        writable_rgb = [
             e
             for e in rgb_entities
             if lookup.reachable(e)
             and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            and not _already_set(e, group.target_rgb, lookup, close_enough)
         ]
+        set_already_rgb = [e for e in writable_rgb if _already_set(e, group.target_rgb, lookup, close_enough)]
+        needing_update_rgb = [e for e in writable_rgb if e not in set_already_rgb]
         group.two_step_rgb = [
             e
             for e in needing_update_rgb
             if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
         ]
         group.combined_rgb = [e for e in needing_update_rgb if e not in group.two_step_rgb]
+        group.already_set = set_already + set_already_rgb
 
         groups.append(group)
 

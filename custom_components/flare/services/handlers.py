@@ -30,7 +30,7 @@ from ..const import (
 )
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
-from .grouping import EntityLookup, Group, build_groups, target_brightness
+from .grouping import EntityLookup, Group, build_groups
 from ..tracking.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
 from ..tracking.override_protection import classify_state, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
@@ -475,17 +475,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         # Lights already showing what this call would send get no write, so
         # an unclaimed one is claimed as it is.
-        registry.adopt(
-            room_id,
-            [
-                e
-                for e in without_flares(hass, call.data["entities"])
-                if e not in written_entities
-                and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
-                and lookup.claims(e) is None
-            ],
-            room_entities,
-        )
+        registry.adopt(room_id, [e for g in groups for e in g.already_set], room_entities)
 
         if tasks:
             await asyncio.gather(*tasks)

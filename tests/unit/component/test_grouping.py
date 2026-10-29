@@ -60,6 +60,22 @@ class TestTolerance:
     def test_a_light_already_at_target_is_skipped(self):
         groups = _groups({"light.a": _on(180, 3050)}, brightness=180, kelvin=3050)
         assert groups[0].combined == []
+        assert groups[0].already_set == ["light.a"]
+
+    def test_only_lights_on_and_showing_the_target_are_already_set(self):
+        groups = _groups(
+            {
+                "light.there": _on(180, 3050),
+                "light.far": _on(90, 3050),
+                "light.off": _off(),
+                "light.rgb": _on(180, supported_color_modes=["rgb"], rgb_color=list(WARM_RGB)),
+            },
+            brightness=180,
+            kelvin=3050,
+            prefer_rgb_color=True,
+            rgb_color=WARM_RGB,
+        )
+        assert sorted(groups[0].already_set) == ["light.rgb", "light.there"]
 
     def test_rgb_is_compared_per_channel(self):
         close = _on(200, supported_color_modes=["rgb"], rgb_color=[253, 181, 108])
