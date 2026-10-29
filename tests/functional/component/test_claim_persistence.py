@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 from freezegun import freeze_time
 
-from homeassistant.core import Context, HomeAssistant
+from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE
+from homeassistant.core import Context, CoreState, HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
@@ -93,6 +94,23 @@ async def test_a_mismatch_noticed_after_the_restart_is_saved(hass: HomeAssistant
     await hass.async_block_till_done()
 
     assert hass_storage[STORAGE_KEY]["data"]["claims"]["light.a"]["mismatch_since"]
+
+
+async def test_lights_going_unavailable_at_shutdown_keep_their_claims(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+):
+    """MQTT marks its lights unavailable as its connection closes."""
+    _light(hass, "light.a", "on", **ASKED)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
+    registry._save()
+
+    hass.set_state(CoreState.stopping)
+    _light(hass, "light.a", "unavailable")
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
+    await hass.async_block_till_done()
+    hass.set_state(CoreState.running)
+
+    assert list(hass_storage[STORAGE_KEY]["data"]["claims"]) == ["light.a"]
 
 
 async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant, hass_storage: dict[str, Any]):

@@ -479,6 +479,13 @@ Two listener rules, pinned in `test_claim_persistence.py`:
 - **`went_off` needs a real starting state.** Lights reconnect one at a
   time; the first back being `off` while its siblings are `unknown` must
   not release the room.
+- **Nothing a light reports while HA is stopping counts**
+  (`hass.is_stopping`). MQTT marks its lights unavailable as its
+  connection closes in its stop listener, and the drop rule then deleted
+  every claim just before the Store's final save, so overridden lights
+  came back `untracked` and were taken to the curve (found in the live
+  instance's history, where MQTT lights go unavailable seconds before
+  every restart).
 - **A room restored dark lets go of its claims**
   (`release_settled_dark_rooms`), checked once setup has loaded them and
   whenever a claimed light reports in from none/unavailable/unknown, once

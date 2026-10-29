@@ -35,7 +35,7 @@ its reconnect isn't mistaken for an override. There's deliberately no
 re-baseline on reconnect: after a restart it would mark every restored
 override as ours. Both listener rules require a real on/off starting
 state, since nearly every light passes through unavailable/unknown on
-restart."""
+restart. Nothing a light reports while HA is stopping counts."""
 
 from __future__ import annotations
 
@@ -419,6 +419,10 @@ class ClaimRegistry:
             entity_id = event.data["entity_id"]
             # Claims hold lights only (the services' schemas see to it).
             if not entity_id.startswith("light."):
+                return
+            # MQTT marks its lights unavailable as its connection closes at
+            # shutdown, which would drop every claim just before the final save.
+            if hass.is_stopping:
                 return
             old, new = event.data["old_state"], event.data["new_state"]
             if (
