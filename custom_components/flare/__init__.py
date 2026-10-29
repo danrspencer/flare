@@ -35,7 +35,7 @@ from .const import (
 from homeassistant.helpers.start import async_at_started
 
 from .blueprint_check import async_check as async_check_blueprint
-from .dashboard_reload import FrontendLoadedView
+from .dashboard_reload import FrontendLoadedView, OldFingerprintView
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
 from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
@@ -63,13 +63,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     the schedule and target services, which belong to neither entry.
 
     The URL carries a fingerprint of the files and is cached hard, so any
-    change to them is a new URL. A path segment, not `?v=`: the modules
-    import each other relatively, and a query isn't inherited by relative
-    imports."""
+    change to them is a new URL; an old one redirects to it. A path
+    segment, not `?v=`: the modules import each other relatively, and a
+    query isn't inherited by relative imports."""
     www = Path(__file__).parent / "www"
     base = f"{CARD_URL_BASE}/{await hass.async_add_executor_job(www_fingerprint, www)}"
     await hass.http.async_register_static_paths([StaticPathConfig(base, str(www), cache_headers=True)])
     add_extra_js_url(hass, f"{base}/{LOADER_JS_PATH}")
+    hass.http.register_view(OldFingerprintView(base))
     hass.http.register_view(FrontendLoadedView())
     async_setup_schedule_services(hass)
     async_setup_target_services(hass)

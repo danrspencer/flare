@@ -60,6 +60,15 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
     status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
     all.
 
+## [1.2.1] - Unreleased
+
+### Fixed
+
+- **The dashboard loads after an update even when your browser shows a saved copy of the page.**
+  That copy could ask for files from an earlier version, so neither the dashboard nor its views
+  loaded ("Timeout waiting for strategy element"), and FLARE wasn't offered under **Add
+  dashboard** ([#302](https://github.com/danrspencer/flare/issues/302)).
+
 ## [1.2.0] - Unreleased
 
 ### Added
