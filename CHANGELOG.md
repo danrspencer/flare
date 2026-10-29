@@ -7,6 +7,15 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [1.2.1] - Unreleased
+
+### Fixed
+
+- **The dashboard loads after an update even when your browser shows a saved copy of the page.**
+  That copy could ask for files from an earlier version, so neither the dashboard nor its views
+  loaded ("Timeout waiting for strategy element"), and FLARE wasn't offered under **Add
+  dashboard** ([#302](https://github.com/danrspencer/flare/issues/302)).
+
 ## [1.2.0] - Unreleased
 
 ### Added

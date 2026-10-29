@@ -1,5 +1,5 @@
 """The front-end files are served from a URL carrying a fingerprint of
-them, cached hard."""
+them, cached hard. An older fingerprint redirects to it."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -69,3 +69,36 @@ def test_every_module_that_registers_something_is_loaded():
             todo += imports.findall((WWW / name).read_text())
     registering = {p.name for p in WWW.glob("*.js") if registers.search(p.read_text())}
     assert registering - reached == set()
+
+
+async def _serve_www(hass, hass_client_no_auth):
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "http", {})
+    with patch("custom_components.flare.add_extra_js_url"):
+        assert await async_setup(hass, {})
+    return await hass_client_no_auth()
+
+
+async def test_a_page_from_before_an_update_is_sent_to_the_current_files(hass, hass_client_no_auth):
+    """It asks for the previous fingerprint; its relative imports then follow
+    the redirect's target."""
+    client = await _serve_www(hass, hass_client_no_auth)
+    current = f"/flare_static/{www_fingerprint(WWW)}"
+
+    for path in ("flare-loader.js", "flare-view-strategy.js"):
+        response = await client.get(f"/flare_static/0123456789ab/{path}", allow_redirects=False)
+        assert response.status == 302, path
+        assert response.headers["Location"] == f"{current}/{path}", path
+
+        followed = await client.get(f"/flare_static/0123456789ab/{path}")
+        assert await followed.read() == (WWW / path).read_bytes(), path
+
+
+async def test_the_current_fingerprint_is_served_and_cached_hard(hass, hass_client_no_auth):
+    client = await _serve_www(hass, hass_client_no_auth)
+
+    response = await client.get(f"/flare_static/{www_fingerprint(WWW)}/flare-loader.js", allow_redirects=False)
+
+    assert response.status == 200
+    assert "max-age" in response.headers.get("Cache-Control", "")

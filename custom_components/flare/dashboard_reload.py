@@ -45,6 +45,23 @@ def async_raise(hass: HomeAssistant, link: str) -> None:
     )
 
 
+class OldFingerprintView(HomeAssistantView):
+    """Redirects any fingerprint but the current one, which its static path
+    serves first, to the current one. A page served before an update still
+    asks for the old one, and would otherwise get no dashboard at all. The
+    loader's relative imports then resolve against where it landed."""
+
+    url = "/flare_static/{fingerprint}/{path:.+}"
+    name = "flare:old_fingerprint"
+    requires_auth = False
+
+    def __init__(self, base: str) -> None:
+        self._base = base
+
+    async def get(self, request: web.Request, fingerprint: str, path: str) -> web.Response:
+        raise web.HTTPFound(f"{self._base}/{path}")
+
+
 class FrontendLoadedView(HomeAssistantView):
     """An empty module, so its request means a page has loaded FLARE's
     front end. Module scripts are fetched without credentials, hence no
