@@ -250,7 +250,8 @@ behaves.</p>
 <details open="">
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
-  <li><a href="#room" id="markdown-toc-room">Room</a>    <ul>
+  <li><a href="#room" id="markdown-toc-room">Room</a></li>
+  <li><a href="#sensors-and-triggers" id="markdown-toc-sensors-and-triggers">Sensors and triggers</a>    <ul>
       <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
       <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
     </ul>
@@ -305,21 +306,6 @@ behaves.</p>
       <td>required</td>
       <td>The room’s lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives <strong>Lux Threshold</strong>.</td>
     </tr>
-    <tr>
-      <td><strong>Wait time</strong></td>
-      <td>120s</td>
-      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
-    </tr>
-    <tr>
-      <td><strong>Lux Threshold</strong></td>
-      <td>0 (off)</td>
-      <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. <a href="#lux-threshold">Details</a>.</td>
-    </tr>
-    <tr>
-      <td><strong>Additional Triggers</strong></td>
-      <td>none</td>
-      <td>Entities that make the room update as soon as they change.</td>
-    </tr>
   </tbody>
 </table></div>
 
@@ -350,6 +336,41 @@ other binary sensors in the target are ignored. A room can mix both kinds.</p>
 <p>A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they’re all off; a light in both is released when
 either room goes dark.</p>
+<h2 id="sensors-and-triggers">
+  
+  
+    <a href="#sensors-and-triggers" class="anchor-heading" aria-labelledby="sensors-and-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors and triggers
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Wait time</strong></td>
+      <td>120s</td>
+      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+    </tr>
+    <tr>
+      <td><strong>Lux Threshold</strong></td>
+      <td>0 (off)</td>
+      <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux.</td>
+    </tr>
+    <tr>
+      <td><strong>Additional Triggers</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change.</td>
+    </tr>
+  </tbody>
+</table></div>
 <h3 id="lux-threshold">
   
   
