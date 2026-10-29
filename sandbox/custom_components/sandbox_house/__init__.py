@@ -62,6 +62,15 @@ class Room:
     def tv_device(self) -> DeviceInfo:
         return DeviceInfo(identifiers={(DOMAIN, f"{self.slug}_tv")})
 
+    def wall_switch_device(self) -> DeviceInfo:
+        return DeviceInfo(identifiers={(DOMAIN, f"{self.slug}_wall_switch")})
+
+
+def power_signal(room: Room, number: int) -> str:
+    """Tells bulb `number` whether its own Power, or the room's Wall switch,
+    is on: (source, on)."""
+    return f"{DOMAIN}_power_{room.slug}_{number}"
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Create the floors and areas, then the entry holding the devices."""
@@ -99,6 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # light.kitchen_bulb_1, switch.kitchen_sensor_presence.
         wanted = [(f"Bulb {n}", "Bulb", room.bulb_device(n)) for n in range(1, room.bulbs + 1)]
         wanted.append(("Sensor", "Presence sensor", room.sensor_device()))
+        wanted.append(("Wall switch", "Wall switch", room.wall_switch_device()))
         if room.tv:
             wanted.append(("TV", "TV", room.tv_device()))
         for name, model, info in wanted:
