@@ -304,7 +304,7 @@ def test_a_row_is_exactly_one_phase(result, group):
 
 @pytest.mark.parametrize(
     ("phase", "color"),
-    [("morning", "blue"), ("day", "yellow"), ("evening", "orange"), ("night", "indigo")],
+    [("morning", "blue"), ("day", "amber"), ("evening", "deep-orange"), ("night", "indigo")],
 )
 def test_a_phase_is_the_same_colour_everywhere_it_appears(result, phase, color):
     """Colour encodes the phase, icon the channel."""

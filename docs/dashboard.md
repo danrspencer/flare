@@ -83,7 +83,7 @@ ID, which is what to use if you've renamed it.
 
 Twenty-five near-identical controls is a lot to scan, so two things are colour-coded:
 
-- **Colour is the phase** — Morning blue, Day yellow, Evening orange, Night indigo,
+- **Colour is the phase** — Morning blue, Day amber, Evening deep orange, Night indigo,
   wherever that phase appears.
 - **Icon is the channel** — brightness, colour temperature, or an hourglass for
   transitions.

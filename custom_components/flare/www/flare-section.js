@@ -9,8 +9,8 @@ import { localize } from './flare-i18n.js';
 // temperature each phase reaches, so Morning (coldest) is blue.
 export const PHASES = [
   { key: 'morning', color: 'blue', icon: 'mdi:weather-sunset-up' },
-  { key: 'day', color: 'yellow', icon: 'mdi:weather-sunny' },
-  { key: 'evening', color: 'orange', icon: 'mdi:weather-sunset-down' },
+  { key: 'day', color: 'amber', icon: 'mdi:weather-sunny' },
+  { key: 'evening', color: 'deep-orange', icon: 'mdi:weather-sunset-down' },
   { key: 'night', color: 'indigo', icon: 'mdi:weather-night' },
 ];
 
