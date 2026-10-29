@@ -245,7 +245,7 @@ class _CountSensor(SensorEntity):
     """How many claimed lights are in one status. They needn't sum to the
     total: an unavailable light is in neither."""
 
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "lights"
@@ -259,7 +259,6 @@ class _CountSensor(SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_{status}"
         self._attr_translation_key = f"all_{status}"
         self.entity_id = f"sensor.flare_{status}_lights"
-        self._attr_name = f"FLARE {status} lights"
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:

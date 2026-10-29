@@ -25,8 +25,7 @@ class _ClearButton(ButtonEntity):
     """Discards every claim, not just overridden ones, so it's a guaranteed
     reset. Healthy lights are unprotected until their next write."""
 
-    _attr_has_entity_name = False
-    _attr_name = "FLARE clear"
+    _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:broom"
     _attr_should_poll = False
