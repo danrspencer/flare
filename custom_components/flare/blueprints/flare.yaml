@@ -414,7 +414,8 @@ trigger:
         than waiting for the next one. "At least one reachable", not "none
         unavailable", so a dead entity can't block it; a bulb recovering
         beside reachable siblings waits for the tick. Can't use `trigger.*`,
-        which isn't in scope here.
+        which isn't in scope here. Held for a few seconds, so a bulb that has
+        just powered up has booted before it's sent anything.
       #}
       {% set ns = namespace(entities=[], devices=[], areas=[]) %}
       {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}
@@ -440,6 +441,8 @@ trigger:
       {{ light_entity_ids
          | reject('is_state', 'unavailable') | reject('is_state', 'unknown')
          | list | length > 0 }}
+    for:
+      seconds: 5
 
   # The room stops being too bright for Lux Threshold, so it can light up for
   # someone already there. Only a wake-up: the action re-checks both with the

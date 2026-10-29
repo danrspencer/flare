@@ -9,6 +9,7 @@ from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     CURVE_KELVIN,
     NIGHT_BRIGHTNESS,
+    let_time_pass,
     move_to_phase,
     occupancy,
 )
@@ -112,7 +113,7 @@ async def test_a_device_matching_the_two_step_pattern_lands_at_the_right_brightn
 
 
 async def test_a_light_that_reconnects_already_on_is_corrected_immediately_not_on_the_next_scheduled_tick(
-    hass: HomeAssistant, add_bulbs, setup_room, area
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """A single bulb that drops out and returns already on, at a stale value,
     is brought back to the curve straight away by `recovered`. A single
@@ -133,6 +134,8 @@ async def test_a_light_that_reconnects_already_on_is_corrected_immediately_not_o
 
     await bulb.async_echo(is_on=True, brightness=5, color_temp_kelvin=6500)
     await hass.async_block_till_done()
+    # The trigger holds a few seconds for the bulb to boot.
+    await let_time_pass(hass, frozen_time, 6)
 
     assert hass.states.get(bulb.entity_id).attributes.get("brightness") == CURVE_BRIGHTNESS, (
         "a reconnected light reporting a stale value was left wrong instead of being "

@@ -8,8 +8,6 @@
  * which this mirrors.
  */
 
-import { cardBackgroundRgb } from './flare-slider-colour.js';
-
 const SLIDER_TAG = 'ha-control-slider';
 
 /**
@@ -41,8 +39,7 @@ function ensureSlider() {
  *   tag       custom element name (`custom:<tag>`)
  *   name      what the card editor calls it
  *   supported (hass, context) => boolean
- *   fillFor   (value, attributes, config, hass, background) => CSS colour
- *             of the fill, `background` being the card's as [r, g, b]
+ *   fillFor   (value, attributes, config, hass) => CSS colour of the fill
  *   trackFor  optional, the same for the remainder; omitted, it's the
  *             slider's neutral default
  */
@@ -112,7 +109,7 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
     _paint(value) {
       if (value == null || Number.isNaN(Number(value))) return;
       const attrs = (this._stateObj || {}).attributes || {};
-      const args = [Number(value), attrs, this._config, this._hass, this._background];
+      const args = [Number(value), attrs, this._config, this._hass];
       this._slider.style.setProperty('--control-slider-color', fillFor(...args));
       if (trackFor) {
         this._slider.style.setProperty('--control-slider-background', trackFor(...args));
@@ -132,8 +129,6 @@ export function defineValueSlider({ tag, name, supported, fillFor, trackFor }) {
 
       const attrs = stateObj.attributes || {};
       const parsed = Number(stateObj.state);
-      // Read here, not per paint: a drag repaints on every move.
-      this._background = cardBackgroundRgb(this);
       // undefined, not NaN, renders an unavailable entity as empty.
       const value = Number.isNaN(parsed) ? undefined : parsed;
 

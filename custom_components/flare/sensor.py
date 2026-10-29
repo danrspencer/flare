@@ -60,7 +60,7 @@ def _classify_tracked(
     Returns (status, matched_via, live_context_id)."""
     state = hass.states.get(entity_id)
     live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record, reconnected_at=registry.reconnected_at(entity_id))
+    raw_status, matched_via = classify_state(state, record)
     # "untracked" shows as "controlled": either way, not excluded.
     return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
 
@@ -443,7 +443,6 @@ class _LightStatusSensor(SensorEntity):
         status, _via = classify_state(
             self.hass.states.get(self.light_entity_id),
             self._registry.record(self.light_entity_id),
-            reconnected_at=self._registry.reconnected_at(self.light_entity_id),
         )
         return status
 

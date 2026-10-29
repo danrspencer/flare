@@ -39,7 +39,7 @@ restart. Nothing a light reports while HA is stopping counts."""
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional, Protocol
 
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
@@ -49,7 +49,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import UNREACHABLE_STATES, is_reachable
+from ..const import is_reachable
 from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
@@ -96,13 +96,6 @@ class ClaimRegistry:
         self.rooms: dict[str, dict] = {}
         self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._listener: ClaimListener | None = None
-        # Where each light last came back online, tracked or not: its claim
-        # was dropped when it went, so the next write may come after.
-        self._reconnects: dict[str, datetime] = {}
-
-    def reconnected_at(self, entity_id: str) -> datetime | None:
-        """When the light last came back online this run, or None."""
-        return self._reconnects.get(entity_id)
 
     async def async_load(self) -> None:
         """The claims and rooms from before the restart."""
@@ -168,9 +161,7 @@ class ClaimRegistry:
         record = self.record(entity_id)
         if record is None:
             return False
-        status, _via = classify_state(
-            self._hass.states.get(entity_id), record, reconnected_at=self.reconnected_at(entity_id)
-        )
+        status, _via = classify_state(self._hass.states.get(entity_id), record)
         if disagrees(status) and not record.get("mismatch_since"):
             record["mismatch_since"] = dt_util.utcnow().isoformat()
         elif disagrees(status) or record.pop("mismatch_since", None) is None:
@@ -404,16 +395,11 @@ class ClaimRegistry:
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
         """One listener for every tracked light:
 
-        - Back online (unavailable/unknown -> on/off), any light:
-          noted for classify_state, tracked or not, since a claim may come
-          after it. Forgotten once a write from FLARE is seen landing.
         - Any change to a tracked light: its `mismatch_since` kept.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
         - Off (on/off -> off): releases each of its rooms that has gone dark.
         - Arrival (none/unavailable/unknown -> on/off): releases each of its
           rooms whose claimed lights have all now reported and none is on."""
-        reconnects = self._reconnects
-
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
             entity_id = event.data["entity_id"]
@@ -424,19 +410,9 @@ class ClaimRegistry:
             # shutdown, which would drop every claim just before the final save.
             if hass.is_stopping:
                 return
-            old, new = event.data["old_state"], event.data["new_state"]
-            if (
-                new is not None
-                and new.state in ("on", "off")
-                and old is not None
-                and old.state in UNREACHABLE_STATES
-            ):
-                reconnects[entity_id] = new.last_changed
             if entity_id not in self.claims:
                 return
-            if new is not None and _context_matches(self.claims[entity_id].get("latest"), new.context.id):
-                # FLARE's write landed: the light has settled under FLARE.
-                reconnects.pop(entity_id, None)
+            old, new = event.data["old_state"], event.data["new_state"]
             old_available = is_reachable(old)
             # Explicitly unavailable, not removed: every entity is removed across a
             # restart.

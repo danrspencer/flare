@@ -41,6 +41,9 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   shown to begin with. **Wait time**, **Lux Threshold** and **Additional Triggers** are under a
   new **Sensors & Triggers** section, and **Override Protection**, **Sensors From Areas** and
   **Prefer RGB During** under a new **Settings** section. Existing rooms keep their values.
+- **A room waits a few seconds for its lights to start up when they come back online together**,
+  such as when they're switched on at the wall, before setting them. A command sent while a bulb
+  boots is lost, so FLARE no longer sends it then and resends it after.
 - **The dashboard is easier to read on a light theme.** A near-white colour temperature's slider
   is drawn a shade darker so you can see it, Day is amber instead of yellow, and Evening is deep
   orange so the two stay apart.

@@ -187,8 +187,8 @@ each trace takes memory, so set it back once you're done.
 
 ### When the room updates
 
-A room updates straight away when the phase changes, a sensor detects someone, an Additional
-Trigger changes, or one of its lights comes back online. Between those, it updates on the
+A room updates straight away when the phase changes, a sensor detects someone or an Additional
+Trigger changes, and a few seconds after its lights come back online. Between those, it updates on the
 [tick](../override-protection/#when-rooms-update) of the first area in **Lights & Occupancy**,
 which is every minute by default. A room whose **Lights & Occupancy** names no area updates every
 minute, on the minute.

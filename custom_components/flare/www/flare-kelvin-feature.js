@@ -7,7 +7,7 @@
  * to recolour it, so it blends into the fill near 6667K.
  */
 
-import { kelvinCss } from './flare-slider-colour.js';
+import { kelvinToRgb } from './flare-curve-card.js';
 import { defineValueSlider } from './flare-value-slider.js';
 
 // Keyed on the unit, so any Kelvin number entity works, not just FLARE's.
@@ -21,9 +21,13 @@ export function supportsKelvinFeature(hass, context) {
   return (stateObj.attributes || {}).unit_of_measurement === KELVIN_UNIT;
 }
 
-/** The curve card's colour for the value, shaded to show on the card. */
-export function sliderColor(kelvin, attributes, config, hass, background) {
-  return kelvinCss(kelvin, background);
+/**
+ * The curve card's colour for a Kelvin, with a little of the theme's text
+ * colour mixed in, so a near-white still shows on a light card.
+ */
+export function sliderColor(kelvin) {
+  const [r, g, b] = kelvinToRgb(kelvin);
+  return `color-mix(in srgb, rgb(${r}, ${g}, ${b}) 85%, var(--primary-text-color))`;
 }
 
 defineValueSlider({

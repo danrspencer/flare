@@ -12,7 +12,7 @@
  * stock slider's colour.
  */
 
-import { kelvinCss } from './flare-slider-colour.js';
+import { sliderColor } from './flare-kelvin-feature.js';
 import { defineValueSlider } from './flare-value-slider.js';
 
 /** The Kelvin to borrow a colour from, or null for the theme colour. */
@@ -25,10 +25,10 @@ export function tintKelvin(config, hass) {
 }
 
 /** Solid fill in the tinting entity's colour; the width carries the value. */
-export function brightnessColor(config, hass, background) {
+export function brightnessColor(config, hass) {
   const kelvin = tintKelvin(config, hass);
   if (kelvin === null) return 'var(--primary-color)';
-  return kelvinCss(kelvin, background);
+  return sliderColor(kelvin);
 }
 
 /** A unit-less number with a 0-255 range, like FLARE's brightness entities. */
@@ -46,6 +46,6 @@ defineValueSlider({
   tag: 'flare-brightness-feature',
   name: 'FLARE Brightness',
   supported: supportsBrightnessFeature,
-  fillFor: (value, attrs, config, hass, background) => brightnessColor(config, hass, background),
+  fillFor: (value, attrs, config, hass) => brightnessColor(config, hass),
   // No trackFor: the remainder stays the slider's neutral default.
 });

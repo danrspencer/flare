@@ -45,8 +45,9 @@ return {{
 
 
 def test_the_fill_is_the_tinting_entitys_colour_solid(result):
-    assert result["color"]["number.warm_kelvin"] == "rgb(255, 167, 87)"
-    assert result["color"]["number.cool_kelvin"] == "rgb(202, 218, 255)"
+    mix = "color-mix(in srgb, rgb({}) 85%, var(--primary-text-color))"
+    assert result["color"]["number.warm_kelvin"] == mix.format("255, 167, 87")
+    assert result["color"]["number.cool_kelvin"] == mix.format("202, 218, 255")
 
 
 @pytest.mark.parametrize("tint", ["number.unavailable_kelvin", "undefined"])
