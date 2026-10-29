@@ -1,40 +1,40 @@
 {
-  "test": "tests/functional/behaviour/test_ticks.py::test_a_room_updates_on_its_zones_tick",
+  "test": "tests/functional/behaviour/test_ticks.py::test_a_new_area_starts_ticking",
   "outcome": "passed",
   "traces": [
     {
       "last_step": "action/3/choose/1/sequence/0",
-      "run_id": "2db17a32119629524ed60d1901b1d35e",
+      "run_id": "7a58cc30d64220dfe61d9f9371b74285",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
-        "start": "2026-10-26T02:01:05+00:00",
-        "finish": "2026-10-26T02:01:05+00:00"
+        "start": "2026-10-30T02:01:05+00:00",
+        "finish": "2026-10-30T02:01:05+00:00"
       },
       "domain": "automation",
-      "item_id": "lounge",
+      "item_id": "porch",
       "trigger": "event 'flare_tick'",
       "trace": {
         "trigger/1": [
           {
             "path": "trigger/1",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "changed_variables": {
               "this": {
-                "entity_id": "automation.lounge",
+                "entity_id": "automation.porch",
                 "state": "on",
                 "attributes": {
-                  "id": "lounge",
+                  "id": "porch",
                   "last_triggered": null,
                   "mode": "restart",
                   "current": 0,
-                  "friendly_name": "lounge"
+                  "friendly_name": "porch"
                 },
-                "last_changed": "2026-10-26T02:00:02+00:00",
-                "last_reported": "2026-10-26T02:00:02+00:00",
-                "last_updated": "2026-10-26T02:00:02+00:00",
+                "last_changed": "2026-10-30T02:00:02+00:00",
+                "last_reported": "2026-10-30T02:00:02+00:00",
+                "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M5TYZ96G0D43X7T5WFZXTKWB",
+                  "id": "01M658J56G37268STSAE4XT1SJ",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -47,12 +47,12 @@
                 "event": {
                   "event_type": "flare_tick",
                   "data": {
-                    "device_id": "73514e9625d53d6654b25d5758d47e39"
+                    "area_id": "porch"
                   },
                   "origin": "LOCAL",
-                  "time_fired": "2026-10-26T02:01:05+00:00",
+                  "time_fired": "2026-10-30T02:01:05+00:00",
                   "context": {
-                    "id": "01M5TZ16Q8377TN77SRQH7BYXS",
+                    "id": "01M658M2Q8TDZ6HDKPJYHMAP46",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -61,13 +61,16 @@
               },
               "room_target": {
                 "entity_id": [
-                  "light.lounge_lamp",
+                  "light.porch_lamp",
                   "binary_sensor.tick_room_occupancy"
-                ]
+                ],
+                "area_id": "porch"
               },
-              "zone": "73514e9625d53d6654b25d5758d47e39",
               "use_area_sensors": true,
-              "schedule": "77ba1dde592f9746d857d1370976d227",
+              "tick_area": "porch",
+              "schedule": "1f70a138120c0f3f5097e8c0bc037691",
+              "override_protection_on": true,
+              "room_id": "automation.porch",
               "adaptive_sensor": "sensor.test_flare",
               "scene_template": "",
               "background_transition": 5,
@@ -82,7 +85,7 @@
               "script_transition": 5,
               "manual_run": false,
               "named_entities": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
               ]
             }
@@ -91,7 +94,7 @@
         "condition/0": [
           {
             "path": "condition/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true,
               "entities": []
@@ -101,17 +104,17 @@
         "action/0": [
           {
             "path": "action/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M5TZ16Q8VRCCK6HHSTY91KNW",
-                "parent_id": "01M5TZ16Q8377TN77SRQH7BYXS",
+                "id": "01M658M2Q851WQT60RRNM05E2V",
+                "parent_id": "01M658M2Q8TDZ6HDKPJYHMAP46",
                 "user_id": null
               },
               "room": {
                 "entities": [
                   "binary_sensor.tick_room_occupancy",
-                  "light.lounge_lamp"
+                  "light.porch_lamp"
                 ]
               }
             },
@@ -122,8 +125,11 @@
                 "service_data": {},
                 "target": {
                   "entity_id": [
-                    "light.lounge_lamp",
+                    "light.porch_lamp",
                     "binary_sensor.tick_room_occupancy"
+                  ],
+                  "area_id": [
+                    "porch"
                   ]
                 }
               },
@@ -134,14 +140,14 @@
         "action/1": [
           {
             "path": "action/1",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "changed_variables": {
               "room_entities": [
                 "binary_sensor.tick_room_occupancy",
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "resolved_entities": [
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
@@ -169,10 +175,10 @@
               "idle_brightness": {},
               "idle_entities": [],
               "reachable_entities": [
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "turn_off_entities": [
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "idle_levels": {},
               "room_occupancy_entities": [
@@ -183,11 +189,11 @@
               "occupied": true,
               "allow_turn_on": true,
               "entities_still_on": [
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "scope_entities": [
                 "binary_sensor.tick_room_occupancy",
-                "light.lounge_lamp"
+                "light.porch_lamp"
               ],
               "morning_scene": null,
               "day_scene": null,
@@ -206,13 +212,13 @@
         "action/2": [
           {
             "path": "action/2",
-            "timestamp": "2026-10-26T02:01:05+00:00"
+            "timestamp": "2026-10-30T02:01:05+00:00"
           }
         ],
         "action/2/if": [
           {
             "path": "action/2/if",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": false
             }
@@ -221,7 +227,7 @@
         "action/2/if/condition/0": [
           {
             "path": "action/2/if/condition/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": false
             }
@@ -230,7 +236,7 @@
         "action/3": [
           {
             "path": "action/3",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "choice": 1
             }
@@ -239,7 +245,7 @@
         "action/3/choose/0": [
           {
             "path": "action/3/choose/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": false
             }
@@ -248,7 +254,7 @@
         "action/3/choose/0/conditions/0": [
           {
             "path": "action/3/choose/0/conditions/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": false
             }
@@ -257,7 +263,7 @@
         "action/3/choose/1": [
           {
             "path": "action/3/choose/1",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true
             }
@@ -266,7 +272,7 @@
         "action/3/choose/1/conditions/0": [
           {
             "path": "action/3/choose/1/conditions/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true
             }
@@ -275,7 +281,7 @@
         "action/3/choose/1/conditions/1": [
           {
             "path": "action/3/choose/1/conditions/1",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true,
               "entities": []
@@ -285,7 +291,7 @@
         "action/3/choose/1/conditions/2": [
           {
             "path": "action/3/choose/1/conditions/2",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true,
               "entities": []
@@ -295,7 +301,7 @@
         "action/3/choose/1/conditions/3": [
           {
             "path": "action/3/choose/1/conditions/3",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "result": true,
               "entities": []
@@ -305,17 +311,20 @@
         "action/3/choose/1/sequence/0": [
           {
             "path": "action/3/choose/1/sequence/0",
-            "timestamp": "2026-10-26T02:01:05+00:00",
+            "timestamp": "2026-10-30T02:01:05+00:00",
             "result": {
               "params": {
                 "domain": "flare",
                 "service": "turn_off",
                 "service_data": {
                   "entities": [
-                    "light.lounge_lamp"
+                    "light.porch_lamp"
                   ],
                   "transition": 15,
-                  "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                  "room_id": "automation.porch",
+                  "room_entities": [
+                    "light.porch_lamp"
+                  ]
                 },
                 "target": {}
               },
@@ -330,15 +339,18 @@
         "trigger_variables": {
           "room_target": {
             "entity_id": [
-              "light.lounge_lamp",
+              "light.porch_lamp",
               "binary_sensor.tick_room_occupancy"
-            ]
+            ],
+            "area_id": "porch"
           },
-          "zone": "73514e9625d53d6654b25d5758d47e39",
-          "use_area_sensors": true
+          "use_area_sensors": true,
+          "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "77ba1dde592f9746d857d1370976d227",
+          "schedule": "1f70a138120c0f3f5097e8c0bc037691",
+          "override_protection_on": true,
+          "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
           "scene_template": "",
           "background_transition": 5,
@@ -359,7 +371,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "77ba1dde592f9746d857d1370976d227"
+              "device_id": "1f70a138120c0f3f5097e8c0bc037691"
             },
             "options": {
               "event_type": [
@@ -375,15 +387,15 @@
             "trigger": "event",
             "event_type": "flare_tick",
             "event_data": {
-              "device_id": "73514e9625d53d6654b25d5758d47e39"
+              "area_id": "{{ tick_area }}"
             },
-            "enabled": "{{ zone is not none }}"
+            "enabled": "{{ tick_area is not none }}"
           },
           {
             "id": "tick",
             "trigger": "time_pattern",
             "minutes": "*",
-            "enabled": "{{ zone is none }}"
+            "enabled": "{{ tick_area is none }}"
           },
           {
             "id": "extra",
@@ -395,9 +407,10 @@
             "trigger": "occupancy.detected",
             "target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             }
           },
           {
@@ -405,9 +418,10 @@
             "trigger": "motion.detected",
             "target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             }
           },
           {
@@ -415,9 +429,10 @@
             "trigger": "occupancy.cleared",
             "target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             },
             "options": {
               "for": {
@@ -430,9 +445,10 @@
             "trigger": "motion.cleared",
             "target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             },
             "options": {
               "for": {
@@ -452,9 +468,10 @@
             "action": "flare.resolve_target",
             "target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             },
             "response_variable": "room"
           },
@@ -547,7 +564,8 @@
                     "data": {
                       "entities": "{{ turn_off_entities }}",
                       "transition": 15,
-                      "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                      "room_id": "{{ room_id }}",
+                      "room_entities": "{{ resolved_entities }}"
                     }
                   },
                   {
@@ -569,7 +587,8 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": 15,
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                          "room_id": "{{ room_id }}",
+                          "room_entities": "{{ resolved_entities }}"
                         }
                       }
                     ]
@@ -610,7 +629,8 @@
                     "data": {
                       "entities": "{{ entities_still_on }}",
                       "transition": 15,
-                      "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                      "room_id": "{{ room_id }}",
+                      "room_entities": "{{ resolved_entities }}"
                     }
                   }
                 ]
@@ -666,7 +686,8 @@
                       "rgb_color": "{{ rgb_color }}",
                       "transition": "{{ script_transition }}",
                       "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                      "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                      "room_id": "{{ room_id }}",
+                      "room_entities": "{{ resolved_entities }}"
                     }
                   }
                 ]
@@ -724,7 +745,8 @@
                           "rgb_color": "{{ rgb_color }}",
                           "transition": "{{ script_transition }}",
                           "prefer_rgb_color": "{{ prefer_rgb_color }}",
-                          "zone_device_id": "73514e9625d53d6654b25d5758d47e39",
+                          "room_id": "{{ room_id }}",
+                          "room_entities": "{{ resolved_entities }}",
                           "force": "{{ manual_run }}"
                         }
                       }
@@ -737,16 +759,15 @@
                 "if": [
                   {
                     "condition": "template",
-                    "alias": "There are lights to release, in a zone",
-                    "value_template": "{{ zone is not none and handed_off_entities | length > 0 }}"
+                    "alias": "There are lights to release, with override protection on",
+                    "value_template": "{{ room_id is not none and handed_off_entities | length > 0 }}"
                   }
                 ],
                 "then": [
                   {
                     "action": "flare.claims_clear",
                     "data": {
-                      "entities": "{{ handed_off_entities }}",
-                      "zone_device_id": "73514e9625d53d6654b25d5758d47e39"
+                      "entities": "{{ handed_off_entities }}"
                     }
                   }
                 ]
@@ -761,30 +782,30 @@
             "value_template": "{{ use_area_sensors or manual_run\n   or trigger.id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
           }
         ],
-        "id": "lounge",
-        "alias": "lounge"
+        "id": "porch",
+        "alias": "porch"
       },
       "blueprint_inputs": {
-        "id": "lounge",
-        "alias": "lounge",
+        "id": "porch",
+        "alias": "porch",
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "77ba1dde592f9746d857d1370976d227",
+            "schedule": "1f70a138120c0f3f5097e8c0bc037691",
             "room_target": {
               "entity_id": [
-                "light.lounge_lamp",
+                "light.porch_lamp",
                 "binary_sensor.tick_room_occupancy"
-              ]
+              ],
+              "area_id": "porch"
             },
-            "zone": "73514e9625d53d6654b25d5758d47e39",
             "no_motion_wait": 0
           }
         }
       },
       "context": {
-        "id": "01M5TZ16Q8VRCCK6HHSTY91KNW",
-        "parent_id": "01M5TZ16Q8377TN77SRQH7BYXS",
+        "id": "01M658M2Q851WQT60RRNM05E2V",
+        "parent_id": "01M658M2Q8TDZ6HDKPJYHMAP46",
         "user_id": null
       }
     }
