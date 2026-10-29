@@ -165,7 +165,7 @@ class TestPhaseOverride:
 
     async def test_it_clears_itself_when_the_schedule_moves_on(self, schedule, frozen, hass: HomeAssistant):
         await hass.services.async_call("select", "select_option", {"entity_id": SELECT, "option": "Night"}, blocking=True)
-        await _move_to(hass, frozen, _today_at(21))  # Day -> Evening (no sun.sun: starts at 20:00)
+        await _move_to(hass, frozen, _today_at(21))  # Day -> Evening (no sunset: starts at 20:00)
         assert hass.states.get(SELECT).state == "Auto"
 
         # The follow-up refresh is debounced (10s cooldown after the poll).
@@ -184,19 +184,23 @@ class TestPhaseOverride:
 class TestEveningFollowsSunset:
     """Clamped between Evening Earliest (17:00) and Evening Latest (20:00)."""
 
-    async def _with_sunset(self, hass: HomeAssistant, next_setting: datetime):
-        hass.states.async_set("sun.sun", "above_horizon", {"next_setting": next_setting.isoformat()})
+    async def _with_sunset(self, hass: HomeAssistant, sunset, when: datetime):
+        sunset(when)
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=61))
         await hass.async_block_till_done()
         return dt_util.utc_from_timestamp(_attr(hass, "evening_start"))
 
-    async def test_sunset_within_the_window(self, schedule, hass: HomeAssistant):
-        assert await self._with_sunset(hass, _today_at(18, 30)) == _today_at(18, 30)
+    async def test_sunset_within_the_window(self, schedule, sunset, hass: HomeAssistant):
+        assert await self._with_sunset(hass, sunset, _today_at(18, 30)) == _today_at(18, 30)
 
-    @pytest.mark.parametrize(("sunset", "clamped"), [((16, 0), (17, 0)), ((21, 30), (20, 0))], ids=["early", "late"])
-    async def test_sunset_outside_the_window_is_clamped(self, schedule, hass: HomeAssistant, sunset, clamped):
-        assert await self._with_sunset(hass, _today_at(*sunset)) == _today_at(*clamped)
+    @pytest.mark.parametrize(("at", "clamped"), [((16, 0), (17, 0)), ((21, 30), (20, 0))], ids=["early", "late"])
+    async def test_sunset_outside_the_window_is_clamped(self, schedule, sunset, hass: HomeAssistant, at, clamped):
+        assert await self._with_sunset(hass, sunset, _today_at(*at)) == _today_at(*clamped)
 
-    async def test_once_sunset_has_passed_tomorrows_time_is_used_for_today(self, schedule, hass: HomeAssistant):
-        """next_setting points at tomorrow after today's sunset; comparing
-        it directly would clamp to the latest bound."""
-        assert await self._with_sunset(hass, _today_at(18, 30) + timedelta(days=1)) == _today_at(18, 30)
+    async def test_a_day_with_no_sunset_starts_evening_at_its_latest(self, schedule, sunset, hass: HomeAssistant):
+        assert await self._with_sunset(hass, sunset, None) == _today_at(20, 0)
+
+    async def test_it_asks_for_todays_sunset_where_the_home_is(self, schedule, sunset, hass: HomeAssistant):
+        """Today's local date, even after today's sunset has passed."""
+        await self._with_sunset(hass, sunset, _today_at(18, 30))
+        assert sunset.asked[-1] == dt_util.now().date()

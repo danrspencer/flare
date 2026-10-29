@@ -16,7 +16,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -125,21 +125,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Each schedule's coordinator, by subentry id.
     entry.runtime_data = coordinators = {}
     instances = schedule_instances(entry)
-    if instances:
-        for instance in instances:
-            coordinator = ScheduleCoordinator(hass, instance)
-            await coordinator.async_config_entry_first_refresh()
-            coordinators[instance.subentry_id] = coordinator
-
-        @callback
-        def _refresh_all(event) -> None:
-            # Must stay @callback: otherwise it runs in the executor, where
-            # async_create_task raises.
-            for coordinator in coordinators.values():
-                hass.async_create_task(coordinator.async_request_refresh())
-
-        # Evening tracks sunset. Config entities refresh their own coordinator.
-        entry.async_on_unload(async_track_state_change_event(hass, ["sun.sun"], _refresh_all))
+    for instance in instances:
+        coordinator = ScheduleCoordinator(hass, instance)
+        await coordinator.async_config_entry_first_refresh()
+        coordinators[instance.subentry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, SCHEDULE_PLATFORMS)
 
