@@ -259,6 +259,7 @@ sensors.</p>
   <li><a href="#a-holiday-schedule" id="markdown-toc-a-holiday-schedule">A holiday schedule</a></li>
   <li><a href="#movie-night" id="markdown-toc-movie-night">Movie night</a></li>
   <li><a href="#lighting-a-room-from-a-remote" id="markdown-toc-lighting-a-room-from-a-remote">Lighting a room from a remote</a></li>
+  <li><a href="#lamps-that-follow-a-wall-switch" id="markdown-toc-lamps-that-follow-a-wall-switch">Lamps that follow a wall switch</a></li>
   <li><a href="#something-else-at-a-phase-change" id="markdown-toc-something-else-at-a-phase-change">Something else at a phase change</a></li>
   <li><a href="#being-told-when-a-light-is-taken-over" id="markdown-toc-being-told-when-a-light-is-taken-over">Being told when a light is taken over</a></li>
 </ol>
@@ -423,6 +424,45 @@ runs the room’s automation in the same way:</p>
     <span class="na">target</span><span class="pi">:</span>
       <span class="na">entity_id</span><span class="pi">:</span> <span class="s">light.hallway_lights_flare</span>
 </code></pre></div></div>
+<h2 id="lamps-that-follow-a-wall-switch">
+  
+  
+    <a href="#lamps-that-follow-a-wall-switch" class="anchor-heading" aria-labelledby="lamps-that-follow-a-wall-switch"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lamps that follow a wall switch
+  
+  
+</h2>
+    
+
+<p>The living room has smart bulbs in its pendants, on an ordinary wall switch, and smart lamps
+around the room. Switching the pendants off at the wall cuts their power, so Home Assistant
+sees them go unavailable rather than off.</p>
+
+<p>Switching on needs nothing extra. When you switch the pendants on at the wall, they come
+back online lit, so the room counts as in use and FLARE sets the pendants to the curve and
+turns the lamps on with them.</p>
+
+<p>Switching off needs an automation of its own, because FLARE doesn’t turn the lamps off when
+the pendants lose power:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">alias</span><span class="pi">:</span> <span class="s">Living room lamps off with the pendants</span>
+<span class="na">triggers</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">trigger</span><span class="pi">:</span> <span class="s">state</span>
+    <span class="na">entity_id</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">light.living_room_pendant_1</span>
+      <span class="pi">-</span> <span class="s">light.living_room_pendant_2</span>
+    <span class="na">to</span><span class="pi">:</span> <span class="s">unavailable</span>
+<span class="na">actions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">action</span><span class="pi">:</span> <span class="s">flare.turn_off</span>
+    <span class="na">data</span><span class="pi">:</span>
+      <span class="na">entities</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">light.living_room_lamp_1</span>
+        <span class="pi">-</span> <span class="s">light.living_room_lamp_2</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">flare.turn_off</code> turns the lamps off even if you’ve dimmed one yourself. If you’d rather leave
+the lamps to another automation or a voice assistant, so FLARE never switches them on or
+off, hand them over with a <code class="language-plaintext highlighter-rouge">null</code> level, as in
+<a href="../templates/#leaving-a-light-to-another-automation">Leaving a light to another automation</a>.</p>
 <h2 id="something-else-at-a-phase-change">
   
   
