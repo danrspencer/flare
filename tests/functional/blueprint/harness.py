@@ -55,6 +55,12 @@ def motion(hass: HomeAssistant, entity_id: str, state: str) -> None:
     hass.states.async_set(entity_id, state, {"device_class": "motion"})
 
 
+def illuminance(hass: HomeAssistant, entity_id: str, value: str | int | float) -> None:
+    hass.states.async_set(
+        entity_id, str(value), {"device_class": "illuminance", "unit_of_measurement": "lx"}
+    )
+
+
 PHASES = ("Morning", "Day", "Evening", "Night")
 
 

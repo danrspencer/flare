@@ -30,8 +30,9 @@ behaves.
 | Input | Default | Description |
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
-| **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
+| **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives **Lux Threshold**. |
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
+| **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. [Details](#lux-threshold). |
 | **Additional Triggers** | none | Entities that make the room update as soon as they change. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
@@ -59,6 +60,31 @@ A room with no sensor follows the schedule but never turns its lights on or off.
 A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they're all off; a light in both is released when
 either room goes dark.
+
+### Lux Threshold
+
+Illuminance sensors are the `sensor` entities with `device_class: illuminance` in **Lights &
+Occupancy** — picked by name, or included through its area, floor, device or label. With
+[Sensors From Areas](#sensors-from-areas) off, only the ones picked by name count.
+
+Above `0`, the room counts as bright enough while every one of those sensors reads above that
+many lux. A bright room isn't switched on by:
+
+- a sensor detecting someone,
+- a [scene](#scenes), unless every light it covers is already on,
+- [idle brightness](#idle-brightness).
+
+If someone is still in the room when it stops being bright enough, because one of those sensors
+drops to the threshold or below, the lights come on then. Someone counts as in the room if one
+of its occupancy or motion sensors is detecting them, or was within the **Wait time**.
+
+Lights already on carry on as before: following the curve, or left to the phase's scene. Nothing
+is switched off for being bright. Turning the room on by hand — the automation's
+**Run**, the [flare](../flares/), or a voice assistant — ignores the threshold.
+
+A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
+doesn't count either way, and a room with no illuminance sensor never blocks. The check is off
+while **Lux Threshold** is `0`, which is the default.
 
 ### Additional triggers
 
@@ -168,9 +194,9 @@ Lights turn on when a sensor detects someone, and turn off once every sensor in 
 been clear for the **Wait time**.
 
 While every light in **Lights & Occupancy** is off, the only things that turn any of them on are
-a sensor detecting someone, running the automation by hand, and
-[idle brightness](#idle-brightness). Once at least one light is on, any update can turn on the
-others. This means a phase change doesn't light up an empty room, and a bulb that comes back
+a sensor detecting someone, running the automation by hand, the room getting dark while someone
+is in it (with a [Lux Threshold](#lux-threshold)), and [idle brightness](#idle-brightness). Once
+at least one light is on, any update can turn on the others. This means a phase change doesn't light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.
 
 If a light is still on after the room has been empty for the **Wait time**, the turn-off is sent

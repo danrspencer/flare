@@ -9,6 +9,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from tests.functional.blueprint.harness import (
+    illuminance,
     light,
     occupancy,
     setup_room_automation,
@@ -154,7 +155,7 @@ class TestAllowTurnOn:
 
     @pytest.mark.parametrize(
         "trigger_name",
-        ["phase_change", "tick", "extra", "recovered"],
+        ["phase_change", "tick", "extra", "recovered", "lux_dark"],
     )
     async def test_no_trigger_reaching_default_can_light_a_dark_empty_room(
         self, hass, apply_lighting_calls, scene_turn_on_calls, trigger_name
@@ -165,14 +166,17 @@ class TestAllowTurnOn:
         occupancy(hass, "binary_sensor.occ", "off")
         hass.states.async_set("scene.night_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a"]})
         hass.states.async_set("binary_sensor.extra_dep", "off", {})
+        illuminance(hass, "sensor.lux", 500)
         hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
         await hass.async_block_till_done()
 
         await setup_room_automation(
             hass,
-            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            room_target={"entity_id": ["light.a", "binary_sensor.occ", "sensor.lux"]},
             night_scene="scene.night_scene",
             extra_triggers=["binary_sensor.extra_dep"],
+            lux_threshold=200,
+            no_motion_wait=0,
         )
 
         if trigger_name == "phase_change":
@@ -186,6 +190,8 @@ class TestAllowTurnOn:
             light(hass, "light.a", "unavailable")
             await hass.async_block_till_done()
             light(hass, "light.a", "off")
+        elif trigger_name == "lux_dark":
+            illuminance(hass, "sensor.lux", 20)
         await hass.async_block_till_done()
 
         assert hass.states.get("automation.room").attributes.get("last_triggered") is not None, (
