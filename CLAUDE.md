@@ -31,7 +31,11 @@ lesson 3).
 **Documentation**: README.md is the only Markdown at the root besides
 CLAUDE.md, CONTRIBUTING.md (for people working on the code) and
 DOCUMENTATION.md (the docs style guide and lexicon - read it before
-touching `docs/`). Everything else is the site in `docs/`, published to
+touching `docs/`). `architecture/` is the internals for people working on
+the code: how the pieces fit and hook into Home Assistant, with diagrams
+(Mermaid, which GitHub renders). It describes the system as it is, links
+here for the why, and changes with the code it describes. Everything else
+is the site in `docs/`, published to
 <https://danrspencer.github.io/flare/> (see "Versioned docs"): the
 quickstart, playground and dashboard pages, `guides/` (how to do more,
 with worked examples) and `reference/` (the contract only).

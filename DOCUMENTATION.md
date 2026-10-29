@@ -20,6 +20,7 @@ you're in:
 | `docs/guides/` | someone using it who wants more from it | what do I write to make it do this |
 | `docs/reference/` | someone looking something up | what does this input, entity or service do |
 | `CONTRIBUTING.md`, `CLAUDE.md` | someone changing the code | how it works, and why it's shaped this way |
+| `architecture/` | someone learning the code before changing it | how the pieces fit together and hook into Home Assistant |
 
 ## The rules
 
