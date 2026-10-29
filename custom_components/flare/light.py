@@ -18,8 +18,9 @@ from homeassistant.components.group.light import LightGroup
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
-from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
+from homeassistant.helpers import area_registry as ar, device_registry as dr
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_track_entity_registry_updated_event
 from homeassistant.helpers.target import TargetStateChangedData, async_track_target_selector_state_change_event
 
 from .const import CONF_AREA, CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FLARES
@@ -70,6 +71,8 @@ class FlareLight(LightGroup):
         self._attr_device_info = instance.device_info
         self.entity_id = f"light.{instance.prefix}flare"
         self._untrack: CALLBACK_TYPE | None = None
+        # Following the automation's own registry entry, under its current id.
+        self._untrack_automation: CALLBACK_TYPE | None = None
         self._members_known = False
 
     async def async_added_to_hass(self) -> None:
@@ -77,9 +80,6 @@ class FlareLight(LightGroup):
         # with the automation, the area and the registries.
         self.async_on_remove(self._stop_tracking)
         self.async_on_remove(self.hass.bus.async_listen(EVENT_AUTOMATION_RELOADED, self._async_retrack))
-        self.async_on_remove(
-            self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._async_automation_registry_changed)
-        )
         if not self.hass.is_running:
             # Automations load after this integration, so wait for them.
             self.async_on_remove(
@@ -92,20 +92,24 @@ class FlareLight(LightGroup):
         if self._untrack is not None:
             self._untrack()
             self._untrack = None
+        if self._untrack_automation is not None:
+            self._untrack_automation()
+            self._untrack_automation = None
 
     async def _async_retrack(self, _event: Event | None = None) -> None:
         await self._async_track()
 
-    async def _async_automation_registry_changed(self, event: Event) -> None:
-        """Retrack when the automation is renamed, removed or added."""
-        if event.data.get("entity_id", "").startswith("automation.") or event.data.get(
-            "old_entity_id", ""
-        ).startswith("automation."):
-            await self._async_track()
+    async def _async_automation_registry_changed(self, _event: Event) -> None:
+        """The automation was renamed, removed or added."""
+        await self._async_track()
 
     async def _async_track(self) -> None:
         self._stop_tracking()
         entity_id = automation_entity_id(self.hass, self._instance.config)
+        if entity_id is not None:
+            self._untrack_automation = async_track_entity_registry_updated_event(
+                self.hass, entity_id, self._async_automation_registry_changed
+            )
         target = lights_target(self.hass, self._instance.config) if automation_exists(self.hass, entity_id) else None
         # With no lights the group reads as unavailable.
         if target is None:

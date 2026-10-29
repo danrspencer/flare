@@ -11,6 +11,7 @@ an entity but are filed under these."""
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
@@ -21,7 +22,11 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_state_change_event
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_entity_registry_updated_event,
+    async_track_state_change_event,
+)
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -316,9 +321,6 @@ class _LightStatuses:
         ]
         self._add_for(known)
         self._entry.async_on_unload(async_dispatcher_connect(self._hass, SIGNAL_CLAIMS_UPDATED, self._claims_changed))
-        self._entry.async_on_unload(
-            self._hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._registry_updated)
-        )
 
     def _key(self, entity_id: str) -> str:
         entry = er.async_get(self._hass).async_get(entity_id)
@@ -326,7 +328,11 @@ class _LightStatuses:
 
     @callback
     def _add_for(self, keys) -> None:
-        new = [_LightStatusSensor(self._hass, self._registry, self._entry, key) for key in keys if key not in self._sensors]
+        new = [
+            _LightStatusSensor(self._hass, self._registry, self._entry, key, self._light_removed)
+            for key in keys
+            if key not in self._sensors
+        ]
         for sensor in new:
             self._sensors[sensor.light_key] = sensor
         if new:
@@ -340,16 +346,11 @@ class _LightStatuses:
         self._add_for(sorted({self._key(entity_id) for entity_id in lights}))
 
     @callback
-    def _registry_updated(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
-        if event.data["action"] != "remove" or not event.data["entity_id"].startswith("light."):
-            return
-        # The light's registry entry is gone, so it's keyed by the id the
-        # sensor remembered.
-        for key, sensor in list(self._sensors.items()):
-            if sensor.light_entity_id == event.data["entity_id"]:
-                del self._sensors[key]
-                if sensor.registry_entry is not None:
-                    er.async_get(self._hass).async_remove(sensor.entity_id)
+    def _light_removed(self, sensor: "_LightStatusSensor") -> None:
+        """The sensor's light left the registry, so the sensor goes too."""
+        self._sensors.pop(sensor.light_key, None)
+        if sensor.registry_entry is not None:
+            er.async_get(self._hass).async_remove(sensor.entity_id)
 
 
 class _LightStatusSensor(SensorEntity):
@@ -365,9 +366,17 @@ class _LightStatusSensor(SensorEntity):
     # Changes with every write.
     _unrecorded_attributes = frozenset({"asked"})
 
-    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, key: str) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        registry: ClaimRegistry,
+        entry: ConfigEntry,
+        key: str,
+        on_removed: Callable[["_LightStatusSensor"], None],
+    ) -> None:
         self.hass = hass
         self._registry = registry
+        self._on_removed = on_removed
         self.light_key = key
         self._attr_unique_id = STATUS_UNIQUE_ID.format(entry_id=entry.entry_id, light=key)
         light = er.async_get(hass).async_get(key)
@@ -384,35 +393,38 @@ class _LightStatusSensor(SensorEntity):
             self._attr_has_entity_name = False
             self._attr_name = f"{state.name if state else self.light_entity_id} FLARE status"
         self.entity_id = f"sensor.{self.light_entity_id.split('.', 1)[1]}_flare_status"
-        self._unsubscribe_light = None
+        self._unsubscribe_light: list[CALLBACK_TYPE] = []
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CLAIMS_UPDATED, self._handle_update))
-        self.async_on_remove(self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._light_renamed))
         self.async_on_remove(self._stop_following)
         self._follow_light()
 
     @callback
     def _stop_following(self) -> None:
-        if self._unsubscribe_light is not None:
-            self._unsubscribe_light()
-            self._unsubscribe_light = None
+        for unsubscribe in self._unsubscribe_light:
+            unsubscribe()
+        self._unsubscribe_light = []
 
     @callback
     def _follow_light(self) -> None:
-        if self._unsubscribe_light is not None:
-            self._unsubscribe_light()
-        self._unsubscribe_light = async_track_state_change_event(
-            self.hass, [self.light_entity_id], self._light_changed
-        )
+        """Its light's state, and its light's registry entry, under the
+        light's current entity_id."""
+        self._stop_following()
+        self._unsubscribe_light = [
+            async_track_state_change_event(self.hass, [self.light_entity_id], self._light_changed),
+            async_track_entity_registry_updated_event(self.hass, self.light_entity_id, self._light_registry_changed),
+        ]
 
     @callback
     def _light_changed(self, _event: Event) -> None:
         self.async_write_ha_state()
 
     @callback
-    def _light_renamed(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
-        if event.data["action"] == "update" and event.data.get("old_entity_id") == self.light_entity_id:
+    def _light_registry_changed(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
+        if event.data["action"] == "remove":
+            self._on_removed(self)
+        elif event.data["action"] == "update" and event.data.get("old_entity_id") == self.light_entity_id:
             self.light_entity_id = event.data["entity_id"]
             self._follow_light()
             self._handle_update()
