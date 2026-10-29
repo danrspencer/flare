@@ -310,3 +310,10 @@ async def test_renaming_a_flare_keeps_its_entity_id(hass: HomeAssistant, add_bul
 
     assert hass.states.get(flare).name == "Landing"
     assert flare == "light.room_flare"
+
+
+async def test_a_flares_entry_with_no_flares_loads_no_light_platform_and_unloads(hass: HomeAssistant) -> None:
+    entry = await _flares_entry(hass)
+
+    assert "light" not in hass.config.components
+    assert await hass.config_entries.async_unload(entry.entry_id)
