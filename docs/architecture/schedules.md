@@ -1,4 +1,16 @@
+---
+title: Schedules and the curve
+parent: Architecture
+nav_order: 3
+permalink: /architecture/schedules/
+---
+
 # Schedules and the curve
+{: .no_toc }
+
+{: .internals }
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 A schedule answers one question: what should a light look like right now?
 It's a Python object (`ScheduleCoordinator`), the entities that hold its
@@ -169,7 +181,7 @@ The blueprint reads a schedule two ways:
   `brightness`, `color_temp` and `rgb_color`.
 
 Between phase changes, the curve still moves within a phase, so rooms also
-update on their area's [tick](event-loop.md#timers).
+update on their area's [tick]({{ site.baseurl }}/architecture/event-loop/#timers).
 
 ## Export and import
 

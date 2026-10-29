@@ -1,4 +1,16 @@
+---
+title: Code layout
+parent: Architecture
+nav_order: 1
+permalink: /architecture/layout/
+---
+
 # Code layout
+{: .no_toc }
+
+{: .internals }
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 ## The package
 
@@ -201,4 +213,4 @@ flowchart LR
 
 Then there's the sandbox (`mise run sandbox`): a real HA running this
 checkout over a fake house. It's for trying a change as a user would, and
-it isn't a test layer. See CONTRIBUTING.md.
+it isn't a test layer. See [CONTRIBUTING.md](https://github.com/danrspencer/flare/blob/main/CONTRIBUTING.md).

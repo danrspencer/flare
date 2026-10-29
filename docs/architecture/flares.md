@@ -1,4 +1,16 @@
-# Flares
+---
+title: How flares work
+parent: Architecture
+nav_order: 7
+permalink: /architecture/flares/
+---
+
+# How flares work
+{: .no_toc }
+
+{: .internals }
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 A flare (`light.<name>_flare`) is a light that fronts a room automation,
 so a voice assistant, HomeKit or a dashboard can switch a room without
