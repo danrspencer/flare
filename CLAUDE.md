@@ -1,9 +1,9 @@
 # CLAUDE.md
 
 Context for working on this repo. README.md is the user-facing pitch;
-this file is how the code is shaped and why. It records current
-architecture and the decisions behind it, not history - git is the
-changelog. A fact belongs here once it has stayed true.
+`architecture/` is how the code works; this file is why it's shaped this
+way and what not to do again. It records current decisions, not history -
+git is the changelog. A fact belongs here once it has stayed true.
 
 ## What this is
 
@@ -198,48 +198,25 @@ exception: entry-wide plumbing.)
 
 ### Code layout (`custom_components/flare/`)
 
-Grouped by **concept**, not by how something is exposed. Grouping by
-exposure (entities / services) tangled, because the schedule and the
-claims are each exposed through both.
+The tree, the entries and where each entity sits are in
+`architecture/layout.md`. What has to stay true:
 
-- `schedule/` - what lights should look like: `curve.py`,
-  `coordinator.py` (`ScheduleInstance`, `TIME_KEYS`, `CURVE_KEYS`),
-  `transfer.py` (YAML export/import).
-- `tracking/` - who owns a light (`override_protection.py`, `claims.py`,
-  `matching.py`) and when each area ticks (`ticker.py`).
-- `flares/` - lights over automations: reading an automation's inputs
-  (`automation.py`), what counts as a bare turn-on (`bare.py`), the flare
-  (`instance.py`). The entity is the root `light.py`.
-- `services/` - `handlers.py` (the claims and lighting services),
-  `schedules.py` (export/import) and the planning behind them:
-  `grouping.py`, `scenes.py`, `two_step.py`.
-- package root - what HA dictates: `__init__`, `config_flow` (the main
-  flow; `subentry_flows` and `options_flow` hold the rest), `repairs`,
-  `logbook`, `const`, and the eight entity platform modules, which
-  **cannot** move into a folder (HA imports
-  `custom_components.flare.<platform>`). Also `area_setup`, which needs
-  flares and the blueprint at once, and `dashboard_reload` (getting
-  the dashboard into a page open during setup). `services.yaml`,
-  `strings.json` and `translations/` stay at the root; `www/` is the
-  dashboard.
-
-**Dependencies run one way**: `schedule/`, `tracking/` and `flares/` import
-only `const.py`; `services/` may use `schedule/`, `tracking/` and
-`flares/identity.py` (which lights are flares); the root may use
-everything. `tests/checks/test_layering.py` enforces it.
-`services/__init__.py` holds no imports.
-
-**One definition each, shared rather than copied** - copies drifted
-before each of these was pulled together, and a check test fails on a new
-copy where one is practical:
-
-- Reachability: `const.is_reachable()` (`test_one_reachability_check.py`).
-  A light with no state was reachable to grouping and unavailable to
-  override protection.
-- What a light shows: `tracking/matching.py` (`test_one_value_matcher.py`).
-- Which lights are flares: `flares/identity.py`.
-- A schedule's values: `schedule/coordinator.read_schedule()`, used by
-  the curve (which defaults what's missing) and export (which omits it).
+- **Grouped by concept, not by how something is exposed.** Grouping by
+  exposure (entities / services) tangled, because the schedule and the
+  claims are each exposed through both.
+- The eight entity platform modules **cannot** move into a folder (HA
+  imports `custom_components.flare.<platform>`).
+- **Dependencies run one way**: `schedule/`, `tracking/` and `flares/`
+  import only `const.py`; `services/` may use those and
+  `flares/identity.py`; the root may use everything.
+  `tests/checks/test_layering.py` enforces it. `services/__init__.py`
+  holds no imports.
+- **One definition each, shared rather than copied** (reachability, what a
+  light shows, the classifier, which lights are flares, a target's
+  entities, a schedule's values; listed in `architecture/layout.md`).
+  Copies drifted before each was pulled together - a light with no state
+  was reachable to grouping and unavailable to override protection - and a
+  check test fails on a new copy where one is practical.
 
 **`strings.json` is the source and `translations/en.json` a copy**, which
 is what HA shows for a custom integration. They had drifted;
@@ -254,47 +231,31 @@ danrspencer/flare#301) must have exactly strings.json's keys and
 placeholders; the same test fails on a missing, stale or mistyped one, so
 a changed English string needs its translations revisited too.
 
-**The dashboard translates itself** (`www/flare-i18n.js`): HA's
-translations only reach an integration's backend strings, so the cards
-and views look their text up by key in `www/translations/<lang>.js`, by
-`hass.locale.language` (or `hass.language`), its base ("de" for "de-CH"),
-else English. Strategies take `hass` for it; cards that build before
-`hass` arrives fill their text in once it does. Composed names are
-patterns (`{phase} colour temp`), since languages order words
-differently. Phase names stay English as data (they match the schedule
-sensor's states and curve.py) and are translated only when shown.
-`tests/unit/dashboard/test_i18n.py` holds every table to English's keys
-and placeholders. The contributor's first version rewrote the page's text
-every two seconds; don't go back to that. Not translated: errors a card
-throws from `setConfig` (no `hass` yet) and the card picker's
-descriptions.
+**The dashboard translates itself** (`www/flare-i18n.js`, see
+`architecture/frontend.md`): HA's translations only reach an
+integration's backend strings. Phase names stay English as data (they
+match the schedule sensor's states) and are translated only when shown.
+Cards that build before `hass` arrives fill their text in once it does;
+the contributor's first version rewrote the page's text every two seconds
+instead - don't go back to that. Not translated: errors a card throws from
+`setConfig` (no `hass` yet) and the card picker's descriptions.
 
 ### Services
 
-Twelve, all tested. Field contracts are in `docs/reference/services.md`
-and `services.yaml`, not repeated here.
+Twelve, all tested. Field contracts are in `services.yaml` and
+`docs/reference/services.md`; how they work is `architecture/services.md`.
 
-- `compute_lighting_groups` / `compute_curve` / `compute_scene_coverage`
-  - pure planners.
-- `resolve_target` - a target's entities by HA's own rule. Registered in
-  `async_setup`, like the schedule services. `expand_group=False`, as a
-  flare's tracker uses.
-- `apply_lighting` - writes. Takes `brightness`/`color_temp_kelvin`/
-  `rgb_color` as **plain values**, not a sensor, so any source works;
-  don't move the sensor read into the service.
-- `turn_off` - records `{"state": "off"}`, THEN calls `light.turn_off`,
-  as one operation, with **no** override protection (a room emptying
-  takes hand-set lights too). The order and that private encoding are
-  why it exists; **don't split it back into two steps in a caller.**
-- `claims_check` / `claims_record` / `claims_clear` / `claims_override` -
-  override protection on its own. `claims_clear` is the escape hatch for
-  a light stuck `overridden`; `claims_override` marks lights as someone
-  else's (what flares use).
-- `export_schedule` / `import_schedule` - see "Schedules". Registered in
-  `async_setup`, not by an entry: they need only a schedule's entities.
-
-`rgb_color` accepts an explicit `None`, since a caller templating it from
-a missing attribute renders a literal null.
+- `apply_lighting` takes `brightness`/`color_temp_kelvin`/`rgb_color` as
+  **plain values**, not a sensor, so any source works; don't move the
+  sensor read into the service.
+- `turn_off` records `{"state": "off"}`, THEN calls `light.turn_off`, as
+  one operation, with **no** override protection (a room emptying takes
+  hand-set lights too). The order and that private encoding are why it
+  exists; **don't split it back into two steps in a caller.**
+- `resolve_target`, `export_schedule` and `import_schedule` are registered
+  in `async_setup`, not by an entry: they need nothing an entry holds.
+- `rgb_color` accepts an explicit `None`, since a caller templating it
+  from a missing attribute renders a literal null.
 
 ### Override protection
 
@@ -425,27 +386,21 @@ it gets an `observed` claim of its current context and values, and joins
 the room. Otherwise a Clear in a lit room left most lights unclaimed, and a
 hand change to one went unnoticed.
 
-**Each room light has a status sensor** (`_LightStatusSensor`,
-`sensor.<light>_flare_status`, translation key `status`): what
-`classify_state` says of it, unmapped (so `untracked` stays `untracked`,
-unlike the counts), unavailable while the light is, with `claimed` and
-`asked` (what FLARE last asked for; unrecorded, it changes with every
-write) beside `rooms`. At the user's direction, so tracked state is visible
-in HA's own UI without storing it on anything per room. It's how FLARE's
-state is shown, as the Store is where it's kept: it reads the registry,
-holding none itself. The dashboard reads these, not the registry.
+**Each room light has a status sensor** (`sensor.<light>_flare_status`),
+at the user's direction, so tracked state is visible in HA's own UI
+without storing it on anything per room. It's how FLARE's state is shown,
+as the Store is where it's kept: it reads the registry and holds nothing.
+The dashboard reads these, not the registry. It shows the raw status (so
+`untracked` stays `untracked`, unlike the counts), outlives its claims so
+its history carries on, and is keyed by the light's registry id so a
+rename keeps it.
 
 - **It sits on the light's own device** through `device_entry`, as HA's
   own helpers link to a source device. `DeviceInfo` with the device's
   identifiers doesn't: since HA 2026.9 identifiers are unique per config
   entry, so it registers a second device of FLARE's own.
-- `_LightStatuses` adds one the first time any room names a light (claims
-  or `rooms`) and on setup for every one already registered, so a sensor
-  outlives its claims and keeps its history. Keyed by the light's registry
-  id, so a rename keeps it; removed when the light's registry entry is.
-  A light with no device gets one named after it.
-- It updates on `SIGNAL_CLAIMS_UPDATED` and on its light's own state
-  changes: an unclaimed light changes status without any claim changing.
+- It follows its light's own state changes as well as the claims: an
+  unclaimed light changes status without any claim changing.
 
 **Known limitation, partly mitigated:** an `overridden` light is excluded
 from every group, so it never gets a fresher claim, and on a ramping
@@ -464,14 +419,12 @@ Settings entry's diagnostics), and an entity holding it broke FLARE when
 disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
 dropped for being hidden; the status sensors are what make this one not.
 
-**The claim events aren't an entity** (`sensor.ClaimEvents`): they
-refresh statuses when they start and on each claim change, fire the
-overridden, controlled and released events, and recheck after the grace.
-There's no poll: a claimed light's change that moves its count goes
-through the registry's listener (a drop, going off, arriving, or a
-mismatch starting or ending), and the grace is the only timed change. A room restored dark is released and
-stale claims pruned only once they're listening, after the platforms, so
-the release is announced.
+**The claim events aren't an entity** (`sensor.ClaimEvents`). There's no
+poll: every change that moves a count reaches the registry's listener,
+and the grace is the only timed change, with its own recheck. They seed
+the statuses when they start, and a room restored dark is released and
+stale claims pruned only after that, so the release is announced. The
+wiring is in `architecture/event-loop.md`.
 
 Persistence was tried once and reverted: a restart gives every entity a
 fresh context, and with context-only matching every light read
@@ -551,17 +504,15 @@ removed zones; its entities (the totals and
   on its next update. Old automations' stored `zone` input is ignored
   (blueprint validation only checks for missing inputs), and a flare's
   stored `zone_input` is dropped on its next Reconfigure.
-- Schedules and Settings both use the sensor platform; each platform module
-  branches on `entry.data[CONF_ENTRY_TYPE]`. **`async_setup_entry` treats
-  anything that isn't Settings or Flares as Schedules**, so a new entry type
-  must branch before that fallthrough.
+- **`async_setup_entry` treats anything that isn't Settings or Flares as
+  Schedules**, and each platform module branches on
+  `entry.data[CONF_ENTRY_TYPE]`, so a new entry type must branch before
+  that fallthrough.
 
 **One "Add Integration" sets FLARE up ready to use, rooms included** -
-the goal, at the user's direction, is a painless first install. The main
-flow asks for schedules, then whether to set up room automations, then
-which areas to set up, creates each missing entry through `SOURCE_IMPORT`,
-and hands the areas to `area_setup.async_set_up_areas`. Each entry can
-still be added alone, so deleting one and adding it back works.
+the goal, at the user's direction, is a painless first install. The flow
+itself is drawn in `architecture/setup.md`. Each entry can still be added
+alone, so deleting one and adding it back works.
 
 - **It opens straight on the schedules, always** (user's call). An
   opening "set up or **Skip setup**" menu that created the entries empty
@@ -606,12 +557,10 @@ the rooms just set up in Add flare's all-ticked list, each flare named
 after its area. Set up area can just be run again.
 
 - **The automation is written to automations.yaml as HA's automation
-  editor does** (`components/config/automation.py`): load, append, dump,
-  `write_utf8_file_atomic`, reload. There's no public API. Each is
-  validated with `async_validate_config_item` first. If the reload
-  doesn't produce the entities, configuration.yaml doesn't include the
-  file, and the original text is restored byte for byte. An unreadable
-  file (not YAML, or not a list) is left alone with its own message. A
+  editor does** (`components/config/automation.py`), since there's no
+  public API. If the reload doesn't produce the entities, configuration.yaml
+  doesn't include the file, and the original text is restored byte for
+  byte. An unreadable file is left alone with its own message. A
   successful write drops comments in the file, as the editor does.
 - **Each automation gets the "FLARE" label** (created the first time, in
   amber), at the user's request, so they're easy to find and manage.
@@ -653,18 +602,13 @@ the only way in was unwrapping a websocket handler. Don't bring it back.
 
 - **It needs a page reload after first setup, sometimes two.** The
   frontend (2026.10) reads `add_extra_js_url` modules only from the page
-  HTML at load, never from `frontend/subscribe_extra_js`, so a page open
-  during setup never gets them. HA's service worker serves pages
-  stale-while-revalidate, so on HTTPS or `localhost` the first reload is
-  the pre-FLARE copy. Nothing server-side can reload a page, so
-  `dashboard_reload.py` links to one, in the setup summary and a repair
-  raised by first setup: `target="_self"` makes it a real load rather
-  than in-app navigation, and a one-off query token makes it a URL the
-  service worker has never cached. The repair clears when any page
-  requests the beacon, an empty module served as a view that the loader
-  imports last. It's at `/flare_static/frontend_loaded.js`, not under
-  `/api/`, where HA's CORS check rejects the `Origin` a module import
-  always sends; no auth, since module scripts are fetched without it.
+  HTML at load, never from `frontend/subscribe_extra_js`, and HA's service
+  worker serves the first reload stale on HTTPS or `localhost`. Nothing
+  server-side can reload a page, so `dashboard_reload.py` links to one
+  that bypasses both, and a beacon clears the repair (mechanics in
+  `architecture/frontend.md`). The beacon isn't under `/api/`, where HA's
+  CORS check rejects the `Origin` a module import always sends, and it has
+  no auth, since module scripts are fetched without credentials.
 
 ### Flares
 
@@ -727,27 +671,18 @@ leaves the room wherever the bulbs restored to.
   filter drops other flares (or it recurses forever). Blueprint tests need
   a real `MockEntityPlatform` entity for `integration_entities`
   (`add_flare_light`).
-- **The light platform is only forwarded when the entry has flares**, or
-  an empty entry sets up `light` early and breaks the behaviour tests'
-  fake bulbs.
+- **The light platform is only forwarded when the entry has flares**
+  (`entry.runtime_data` says whether, for the unload); an empty entry has
+  nothing to put on it. `test_a_flares_entry_with_no_flares_loads_no_light_platform_and_unloads`
+  pins it.
 
 ### Schedules
 
 Each schedule is a "sensor" subentry of the Schedules entry, with its own
-device. `schedule_instances(entry)` is the one place enumerating them.
-Every entity has `has_entity_name=True`, so renaming the device renames
-them all.
-
-- `sensor.<slug>_flare` - the phase as state; `brightness`/`color_temp`/
-  `rgb_color`, today's boundaries and `points` (289 samples, what the
-  chart reads) as attributes. `points` is too big for the recorder:
-  `_unrecorded_attributes`.
-- `select.<slug>_flare_phase` - a manual phase override, clearing itself
-  at the next natural boundary unless `switch.<slug>_sticky_phase_override`
-  is on (compared against the phase computed at override time, not a
-  timer).
-- Five `time.*` boundaries and sixteen `number.*` curve values, all
-  `entity_category: config`.
+device; its entities and how they become a phase and a colour are in
+`architecture/schedules.md`. `schedule_instances(entry)` is the one place
+enumerating them. The phase override clears at the next natural boundary
+(compared against the phase computed when it was set), not on a timer.
 
 **Config lives in entity state, not `subentry.data`**: a subentry data
 change reloads the whole entry. A missing entity falls back to the
@@ -757,7 +692,7 @@ its wrappers), never by the ID they were created with, so a user renaming
 one doesn't silently fall back to defaults.
 
 **Every FLARE entity's translation key is its role** (its unique ID's
-suffix: `schedule`, `morning_time`, `night_kelvin`, `claims`, `clear`
+suffix: `schedule`, `morning_time`, `night_kelvin`, `status`, `clear`
 ...). The dashboard finds entities by device and role through it
 (`flare-entities.js`), so renamed entities still show.
 `tests/functional/component/test_entity_roles.py` ties the keys to the
@@ -843,11 +778,8 @@ sensor is dead counts as sensorless, not empty: only `on` is occupied,
 so a dead sensor would otherwise read as clear forever and self-heal
 would switch off every light turned on there.
 
-**Triggers:** `phase_change` (`event.received` on the schedule's Phase
-entity, fired only on a real phase change, and once after setup so a
-restart repaints rooms), `tick` (an `event` trigger on `flare_tick` with
-the room's `tick_area`), `extra`, `motion_on` / `motion_off`, and
-`recovered`.
+**Triggers** are listed, with the action drawn as a flowchart, in
+`architecture/room-automation.md`. The decisions behind them:
 
 - **Area ticks stop every room writing in the same second.** All rooms'
   `time_pattern`s fired within 0.2s of :00, and Zigbee route failures
@@ -1252,14 +1184,11 @@ Until the first release, the beta is also the root.
 
 ### The front end (`custom_components/flare/www/`)
 
-**Served from the integration.** `async_setup` registers one static path
-for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
-which imports each module that registers something; modules that
-register nothing (`flare-entities.js`, `flare-section.js`,
-`flare-lights-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
-`flare-activity-card.js`) are pulled in by the imports of those that do.
-`test_every_module_that_registers_something_is_loaded` follows the
-imports from the loader.
+**Served from the integration** through one module, `flare-loader.js`,
+which imports each module that registers something; the rest come in
+through their imports (`test_every_module_that_registers_something_is_loaded`).
+How it gets into the page, and what registers what, is in
+`architecture/frontend.md`.
 
 - **The loader waits for `<home-assistant>` to be defined before
   importing anything.** HA's frontend (2026.10) installs a scoped custom
@@ -1295,17 +1224,13 @@ an update is the whole migration and a new schedule or room just appears.
 "Take control" is the one-way escape hatch. (It replaced a docs-site YAML
 generator whose layout changed five times in a session.)
 
-- `custom:flare` (`ll-strategy-dashboard-flare`) is the dashboard: a view
-  per schedule, then Overrides once the Settings entry exists. The views are
-  `custom:flare-schedule` and `custom:flare-lights` (`custom:flare-zone`
-  still answers, for dashboards someone took control of).
+- `custom:flare-zone` still answers, as `custom:flare-lights`, for
+  dashboards someone took control of.
 - **Entities are found by device and role** (`flare-entities.js`:
   `flareDevices()` from `hass.entities`, using each entry's platform and
   translation key), never by building entity IDs, so renamed entities
   still show. The cards' `sensor:` option takes the short name
   (`sensor: home` for `sensor.home_flare`) or any entity ID.
-- `flare-section.js` is a schedule's section and `flare-lights-section.js`
-  the Overrides layout: plain config objects, no DOM.
 - The sidebar icon `flare:logo` is registered on `window.customIcons` by
   `flare-icon.js`, a glyph generated from the logo by
   `brand/generate_icon.py`.
@@ -1405,17 +1330,14 @@ strategy type and files kept the name `lights`.
     look like HA's logbook** (user's call): if HA restyles
     `ha-logbook-renderer`'s day headings or container, follow them.
 
-**Claim events** (`flare_lights_controlled`, `flare_lights_released`,
-`flare_light_overridden`) carry one of FLARE's entities as `entity_id` -
-the Controlled total, the Overridden total, or Clear for a release
-(`_filed_under`) - and FLARE's `device_id`, with the lights in
-`light`/`lights` and the automation in `room` (`rooms` for an override,
-every room the light is in), so they show in FLARE's Activity and the
-Activity card can tell the three apart. A logbook row shows the
-`entity_id`'s name ("Controlled lights"), not the describer's name, so
-each message starts with the room's name ("Kitchen Lighting is now
-controlling 7 lights"). The logbook matches events to entities only
-through `entity_id`, so they can't also be on each light's timeline.
+**Claim events** (listed in `architecture/claims.md`) carry one of
+FLARE's entities as `entity_id` (`_filed_under`) and FLARE's `device_id`,
+so they show in FLARE's Activity and the Activity card can tell the three
+apart. A logbook row shows the `entity_id`'s name ("Controlled lights"),
+not the describer's, so each message starts with the room's name
+("Kitchen Lighting is now controlling 7 lights"). The logbook matches
+events to entities only through `entity_id`, so they can't also be on
+each light's timeline.
 
 - The room speaks for itself (user's call): "is now controlling 7
   lights", "cleared 7 lights" (the room going dark or Clear; not the blueprint's
@@ -1479,14 +1401,14 @@ test module never imports another.
   `--reset` gives a brand-new house. `mise run sandbox:hacs` is a second
   house (`.sandbox-hacs/`) with HACS and no FLARE, for installing from the
   store as a user does; it never links this checkout, since HACS would
-  write through the link into it. `mise run sandbox:record`
-  (`scripts/sandbox_record.py`, Playwright) records walkthrough videos
-  of it, and writes the published copies once every scene has recorded:
-  the docs' videos (`docs/assets/video/`) and the README's GIF
-  (`docs/assets/img/setup.gif`, by raw `main` URL like the README's other
-  images, since GitHub and HACS show a README's images but not video).
-  Each release's docs on `docs-site` carry their own copy of the videos;
-  git stores an unchanged one once.
+  write through the link into it. `mise run sandbox:record` records the
+  docs' walkthrough videos and the README's GIF (see CONTRIBUTING.md); the
+  GIF is linked by raw `main` URL, since GitHub and HACS show a README's
+  images but not video.
+- **Use the sandbox by default** whenever a change can be checked there
+  cheaply. Each bulb's **Power** switch and each room's **Wall switch**
+  make bulbs drop out and come back booting at their default, for anything
+  touching reconnects.
 
 **Practices worth keeping:**
 
