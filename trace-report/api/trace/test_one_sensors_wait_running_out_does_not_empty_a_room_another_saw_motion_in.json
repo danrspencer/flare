@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/3/then/1/then/0",
-      "run_id": "86bfcc8bb06291ecb1a4b6369e409b17",
+      "run_id": "06973867243f802d1977e604d319b6b3",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GH1D6VVYN9HVCE7R8",
+                  "id": "01M658J56G85E76QKC042KZQWV",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GF58D06WZ40JVF91K",
+                    "id": "01M658J56GEVHDTX3Y2V1S68BX",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GW2SM2JXGEKKB7QD7",
+                    "id": "01M658J56G3X4QGGZFEM615SX4",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -93,7 +93,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -138,8 +138,8 @@
             "timestamp": "2026-10-30T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658J56GPQ8HM9NKX9XSGWTT",
-                "parent_id": "01M658J56GW2SM2JXGEKKB7QD7",
+                "id": "01M658J56GK1FCXZQNS41DVS4F",
+                "parent_id": "01M658J56G3X4QGGZFEM615SX4",
                 "user_id": null
               },
               "room": {
@@ -309,10 +309,10 @@
             "result": {
               "result": false,
               "entities": [
-                "light.hall_spot_2",
+                "light.hall_spot_3",
                 "light.hall_spot_4",
                 "light.hall_lamp",
-                "light.hall_spot_3",
+                "light.hall_spot_2",
                 "light.hall_spot_1",
                 "light.hall_pendant"
               ]
@@ -594,7 +594,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -618,7 +618,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -726,7 +726,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -1071,7 +1074,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1089,14 +1092,14 @@
         }
       },
       "context": {
-        "id": "01M658J56GPQ8HM9NKX9XSGWTT",
-        "parent_id": "01M658J56GW2SM2JXGEKKB7QD7",
+        "id": "01M658J56GK1FCXZQNS41DVS4F",
+        "parent_id": "01M658J56G3X4QGGZFEM615SX4",
         "user_id": null
       }
     },
     {
       "last_step": "action/2/then/0",
-      "run_id": "399ae90dbaffe0b53d0fb0bf0ca367e5",
+      "run_id": "1c22278bdcec51873e66a5cbc4b3dee7",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1126,8 +1129,8 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GPQ8HM9NKX9XSGWTT",
-                  "parent_id": "01M658J56GW2SM2JXGEKKB7QD7",
+                  "id": "01M658J56GK1FCXZQNS41DVS4F",
+                  "parent_id": "01M658J56G3X4QGGZFEM615SX4",
                   "user_id": null
                 }
               },
@@ -1148,7 +1151,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GJ41A93AGKRT35Z8N",
+                    "id": "01M658J56G2D9X6M45PJBJ4WFF",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1163,7 +1166,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56G3YQN9NXAFSKX1167",
+                    "id": "01M658J56GKZCV7AXNJY81TZCA",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1185,7 +1188,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -1230,8 +1233,8 @@
             "timestamp": "2026-10-30T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658J56GBRZY6DMK07T0B5P8",
-                "parent_id": "01M658J56G3YQN9NXAFSKX1167",
+                "id": "01M658J56GQTBJJY52QBNCKZVD",
+                "parent_id": "01M658J56GKZCV7AXNJY81TZCA",
                 "user_id": null
               },
               "room": {
@@ -1411,10 +1414,10 @@
             "result": {
               "result": true,
               "entities": [
-                "light.hall_spot_2",
+                "light.hall_spot_3",
                 "light.hall_spot_4",
                 "light.hall_lamp",
-                "light.hall_spot_3",
+                "light.hall_spot_2",
                 "light.hall_spot_1",
                 "light.hall_pendant"
               ]
@@ -1456,7 +1459,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -1480,7 +1483,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -1588,7 +1591,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -1933,7 +1939,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1951,14 +1957,14 @@
         }
       },
       "context": {
-        "id": "01M658J56GBRZY6DMK07T0B5P8",
-        "parent_id": "01M658J56G3YQN9NXAFSKX1167",
+        "id": "01M658J56GQTBJJY52QBNCKZVD",
+        "parent_id": "01M658J56GKZCV7AXNJY81TZCA",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "d503bb8210d86ea42cda9b3a5dde881c",
+      "run_id": "44c1108055fc79652bb9aa18d51673eb",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1988,8 +1994,8 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GBRZY6DMK07T0B5P8",
-                  "parent_id": "01M658J56G3YQN9NXAFSKX1167",
+                  "id": "01M658J56GQTBJJY52QBNCKZVD",
+                  "parent_id": "01M658J56GKZCV7AXNJY81TZCA",
                   "user_id": null
                 }
               },
@@ -2016,7 +2022,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -2061,7 +2067,7 @@
             "timestamp": "2026-10-30T02:01:42+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658N6VGR1A0Q2GT2980MKEY",
+                "id": "01M658N6VGASC0BVVXVX87QGAN",
                 "parent_id": null,
                 "user_id": null
               },
@@ -2552,7 +2558,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -2576,7 +2582,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -2684,7 +2690,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -3029,7 +3038,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -3047,14 +3056,14 @@
         }
       },
       "context": {
-        "id": "01M658N6VGR1A0Q2GT2980MKEY",
+        "id": "01M658N6VGASC0BVVXVX87QGAN",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "8d122c61b4d962fae6c0b06ce9bce753",
+      "run_id": "aff18dc3ae1356a95a0cc37c46afccb7",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -3084,7 +3093,7 @@
                 "last_reported": "2026-10-30T02:01:42+00:00",
                 "last_updated": "2026-10-30T02:01:42+00:00",
                 "context": {
-                  "id": "01M658N6VGR1A0Q2GT2980MKEY",
+                  "id": "01M658N6VGASC0BVVXVX87QGAN",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -3112,7 +3121,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -3157,7 +3166,7 @@
             "timestamp": "2026-10-30T02:05:03+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658VB4RA7E9MH30R0WJZEAS",
+                "id": "01M658VB4RGFP8ZDGNX4ZW757Q",
                 "parent_id": null,
                 "user_id": null
               },
@@ -3648,7 +3657,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -3672,7 +3681,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -3780,7 +3789,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -4125,7 +4137,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -4143,14 +4155,14 @@
         }
       },
       "context": {
-        "id": "01M658VB4RA7E9MH30R0WJZEAS",
+        "id": "01M658VB4RGFP8ZDGNX4ZW757Q",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "8b38fc69c9c8ae2ad73e43b0bdded426",
+      "run_id": "290d3b0d97deb7db097e896f0166e243",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -4180,7 +4192,7 @@
                 "last_reported": "2026-10-30T02:05:03+00:00",
                 "last_updated": "2026-10-30T02:05:03+00:00",
                 "context": {
-                  "id": "01M658VB4RA7E9MH30R0WJZEAS",
+                  "id": "01M658VB4RGFP8ZDGNX4ZW757Q",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -4202,7 +4214,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GW2SM2JXGEKKB7QD7",
+                    "id": "01M658J56G3X4QGGZFEM615SX4",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -4217,7 +4229,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GNG9C3HMHPM7ES2WR",
+                    "id": "01M658J56GAAARA5T39WRGBXYQ",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -4242,7 +4254,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -4287,8 +4299,8 @@
             "timestamp": "2026-10-30T02:05:03+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658VB4RRKFWPM71DMTXDMCR",
-                "parent_id": "01M658J56GNG9C3HMHPM7ES2WR",
+                "id": "01M658VB4RWQ3C4PKW32E1F6EJ",
+                "parent_id": "01M658J56GAAARA5T39WRGBXYQ",
                 "user_id": null
               },
               "room": {
@@ -4768,7 +4780,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -4792,7 +4804,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -4900,7 +4912,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -5245,7 +5260,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -5263,14 +5278,14 @@
         }
       },
       "context": {
-        "id": "01M658VB4RRKFWPM71DMTXDMCR",
-        "parent_id": "01M658J56GNG9C3HMHPM7ES2WR",
+        "id": "01M658VB4RWQ3C4PKW32E1F6EJ",
+        "parent_id": "01M658J56GAAARA5T39WRGBXYQ",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/1/sequence/0",
-      "run_id": "930789c06e20b3cda8472c81ec998b8b",
+      "run_id": "18d96317ea463009d64705d569715535",
       "state": "stopped",
       "script_execution": null,
       "timestamp": {
@@ -5300,8 +5315,8 @@
                 "last_reported": "2026-10-30T02:05:03+00:00",
                 "last_updated": "2026-10-30T02:05:03+00:00",
                 "context": {
-                  "id": "01M658VB4RRKFWPM71DMTXDMCR",
-                  "parent_id": "01M658J56GNG9C3HMHPM7ES2WR",
+                  "id": "01M658VB4RWQ3C4PKW32E1F6EJ",
+                  "parent_id": "01M658J56GAAARA5T39WRGBXYQ",
                   "user_id": null
                 }
               },
@@ -5328,7 +5343,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -5373,7 +5388,7 @@
             "timestamp": "2026-10-30T02:06:43+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658YCSR51Y4HCGMTKE5AT3Z",
+                "id": "01M658YCSRF2Z6WT2P87HPRJXZ",
                 "parent_id": null,
                 "user_id": null
               },
@@ -5678,7 +5693,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -5702,7 +5717,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -5810,7 +5825,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -6155,7 +6173,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -6173,14 +6191,14 @@
         }
       },
       "context": {
-        "id": "01M658YCSR51Y4HCGMTKE5AT3Z",
+        "id": "01M658YCSRF2Z6WT2P87HPRJXZ",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/0/sequence/1/if/condition/0",
-      "run_id": "f1dbf07213886f0ffef1d9fd2c926b04",
+      "run_id": "291dd87a8e4392c60d2c5369f2d1b174",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -6210,7 +6228,7 @@
                 "last_reported": "2026-10-30T02:06:43+00:00",
                 "last_updated": "2026-10-30T02:06:43+00:00",
                 "context": {
-                  "id": "01M658YCSR51Y4HCGMTKE5AT3Z",
+                  "id": "01M658YCSRF2Z6WT2P87HPRJXZ",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -6232,7 +6250,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56G3YQN9NXAFSKX1167",
+                    "id": "01M658J56GKZCV7AXNJY81TZCA",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -6247,7 +6265,7 @@
                   "last_reported": "2026-10-30T02:01:42+00:00",
                   "last_updated": "2026-10-30T02:01:42+00:00",
                   "context": {
-                    "id": "01M658N6VGW5G7HN5M6F47DP31",
+                    "id": "01M658N6VG232CB2SHJZ7PV6VE",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -6272,7 +6290,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+              "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -6317,8 +6335,8 @@
             "timestamp": "2026-10-30T02:06:43+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658YCSRFK91336PD0NKJW0X",
-                "parent_id": "01M658N6VGW5G7HN5M6F47DP31",
+                "id": "01M658YCSR36FFGH3HP871QH5W",
+                "parent_id": "01M658N6VG232CB2SHJZ7PV6VE",
                 "user_id": null
               },
               "room": {
@@ -6602,7 +6620,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+          "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -6626,7 +6644,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "fc7421bd9dd298b8f4e81f13006f1cc3"
+              "device_id": "6e9f0abfe8550ffa30165649c1f9dcd1"
             },
             "options": {
               "event_type": [
@@ -6734,7 +6752,10 @@
           {
             "id": "recovered",
             "platform": "template",
-            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+            "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here. Held for a few seconds, so a bulb that has\n  just powered up has booted before it's sent anything.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n",
+            "for": {
+              "seconds": 5
+            }
           },
           {
             "id": "lux_dark",
@@ -7079,7 +7100,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "fc7421bd9dd298b8f4e81f13006f1cc3",
+            "schedule": "6e9f0abfe8550ffa30165649c1f9dcd1",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -7097,8 +7118,8 @@
         }
       },
       "context": {
-        "id": "01M658YCSRFK91336PD0NKJW0X",
-        "parent_id": "01M658N6VGW5G7HN5M6F47DP31",
+        "id": "01M658YCSR36FFGH3HP871QH5W",
+        "parent_id": "01M658N6VG232CB2SHJZ7PV6VE",
         "user_id": null
       }
     }
