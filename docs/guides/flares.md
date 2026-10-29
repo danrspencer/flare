@@ -25,8 +25,9 @@ and colour, rather than at whatever the bulbs last had.
 
 ## Adding flares for your rooms
 
-An area set up with **Set up area**, including when you first add FLARE, has a flare named
-after it if you chose **An automation and a flare** for it.
+After setting up areas with **Set up area**, including when you first add FLARE, choose **Pick
+rooms for flares**. Every room you just set up is listed and ticked, and each one you keep gets a
+flare named after its area.
 
 For a room automation you made yourself, go to **Settings → Devices & Services → FLARE → Add
 flare** and choose **Rooms from the FLARE blueprint**. Every room automation that doesn't have

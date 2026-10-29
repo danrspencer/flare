@@ -15,7 +15,7 @@ custom_components/flare/
                    adding and reconfiguring schedules and flares; the
                    Settings entry's options
     area_setup.py  setting up an area: a room automation written to
-                   automations.yaml, and a flare
+                   automations.yaml, and flares for the rooms picked
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
     event.py, light.py
                    the entities. Home Assistant requires platform

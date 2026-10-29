@@ -44,23 +44,25 @@ It asks:
 - **Whether to set up room automations now.** Already have automations controlling your
   lights? Choose **Skip for now**: FLARE sets up just your schedules, and you can move your rooms
   over one at a time with **Set up area** (see [Adding a room later](#adding-a-room-later)).
-- **What to set up for each area**, and **which schedule each area follows**. Every area with
-  lights is listed, grouped by floor, and starts on the schedule with the same name as its floor,
-  or on your first schedule if none matches. To leave an area out, clear its schedule.
+- **Which schedule each area follows.** Every area with lights is listed, grouped by floor, and
+  starts on the schedule with the same name as its floor, or on your first schedule if none
+  matches. To leave an area out, clear its schedule.
+- **Whether to add flares.** A [flare]({{ site.baseurl }}/guides/flares/) is a light for the
+  whole room, for voice assistants and HomeKit. Choose **Pick rooms for flares** to add them
+  (every room you just set up is ticked), or **Skip**.
 
 None of this is final. You can add or remove schedules later from FLARE's integration page, set
 up more areas with **Set up area** (see [Adding a room later](#adding-a-room-later)), and change
 which schedule a room follows in its automation.
 
-Each area you set up gets a room automation, and a flare if you ask for one, named after it:
+Each area you set up gets a room automation, and a flare if you pick it, named after it:
 
 | | What it does |
 |---|---|
 | A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, its occupancy and motion sensors turn them on and off, and a light you change yourself is [left alone]({{ site.baseurl }}/reference/override-protection/). Called "*Area* Lighting", with a **FLARE** label so you can find them. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
-Choose **An automation and a flare** under **What to set up in each area** if you want a light
-for the whole room. You can add flares later too, with **Add flare**.
+You can add flares later too, with **Add flare**.
 
 The room is ready to use. The automation is an ordinary one in **Settings →
 Automations & Scenes**, so you can change its inputs there.

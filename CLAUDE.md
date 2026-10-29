@@ -597,11 +597,11 @@ up area, Add schedule, Add flare. The main flow is the only one
 not tied to an entry, and area setup touches all three.
 
 **Area setup** (`area_setup.py`), per area: an automation from the
-blueprint, and, if asked, a flare named after the area. **For each area,
-set up** is one dropdown for the whole run: automation (the default) /
-+ flare (radios took rows,
-and HA can't lay them side by side or disable one checkbox from another,
-so a dropdown it is). Set up area can just be run again.
+blueprint. **Flares are a page of their own after it** (user's call,
+replacing a per-run automation / + flare dropdown on the areas form): a
+`flares` menu saying what a flare is, with **Skip**, then `flare_rooms`,
+the rooms just set up in Add flare's all-ticked list, each flare named
+after its area. Set up area can just be run again.
 
 - **The automation is written to automations.yaml as HA's automation
   editor does** (`components/config/automation.py`): load, append, dump,
@@ -637,9 +637,9 @@ so a dropdown it is). Set up area can just be run again.
   floors' sections can't carry translated text. Tried and dropped: radios (three rows per area), HA's area
   picker (closes after every pick), and a checkbox list per schedule
   (always expanded, and an area could be ticked under two schedules).
-- **The flare is an option, not the default** (user's call, from the same
-  feedback), and the one exception to "nothing creates flares
-  automatically": the user picks it.
+- **Flares are offered, not made** (user's call, from the same feedback),
+  and the one exception to "nothing creates flares automatically": the
+  user picks the rooms.
 
 **The dashboard is offered, not created**: `custom:flare` is listed in
 **Settings → Dashboards → Add dashboard** through the frontend's public

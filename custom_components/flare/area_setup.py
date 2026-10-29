@@ -1,5 +1,5 @@
 """Sets up rooms in one go: for each area, an automation from the
-blueprint and, optionally, a flare over that automation.
+blueprint, and then flares over whichever of them are picked.
 
 The automation is written to automations.yaml the way HA's automation
 editor writes it (`components/config/automation.py`): read the file, add
@@ -53,12 +53,6 @@ LABEL_ICON = "flare:logo"
 # One of the frontend's named label colours: warm, like the curve.
 LABEL_COLOR = "amber"
 
-# How much each area gets; each includes the ones before it.
-AUTOMATION = "automation"
-FLARE = "flare"
-LEVELS = (AUTOMATION, FLARE)
-
-
 class AutomationsNotLoaded(Exception):
     """configuration.yaml doesn't load automations.yaml."""
 
@@ -71,12 +65,6 @@ class AutomationsFileInvalid(Exception):
 class Area:
     area_id: str
     name: str
-
-
-@dataclass(frozen=True)
-class SetupResult:
-    automations: int
-    flares: int
 
 
 def areas_with_lights(hass: HomeAssistant) -> list[Area]:
@@ -112,14 +100,11 @@ def areas_set_up(hass: HomeAssistant) -> set[str]:
     }
 
 
-async def async_set_up_areas(
-    hass: HomeAssistant, schedule_for_area: dict[Area, str], level: str = AUTOMATION
-) -> SetupResult:
+async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, str]) -> dict[str, str]:
     """For each area an automation following the schedule subentry given
-    for it and, depending on `level`, a flare over that. Raises
-    AutomationsNotLoaded, leaving automations.yaml as it was, if the
+    for it. Returns each automation's entity_id with its area's name.
+    Raises AutomationsNotLoaded, leaving automations.yaml as it was, if the
     automations don't load."""
-    flares_entry = _entry(hass, ENTRY_TYPE_FLARES)
     path = await async_blueprint_path(hass)
     configs = {
         area: {
@@ -144,12 +129,14 @@ async def async_set_up_areas(
         entry = registry.async_get(entity_id)
         labels = (entry.labels if entry else set()) | {label}
         registry.async_update_entity(entity_id, area_id=area.area_id, labels=labels)
-    if level == AUTOMATION:
-        return SetupResult(automations=len(entity_ids), flares=0)
-    for area, entity_id in zip(configs, entity_ids):
-        hass.config_entries.async_add_subentry(flares_entry, room_flare(hass, flares_entry, entity_id, area.name))
+    return {entity_id: area.name for area, entity_id in zip(configs, entity_ids)}
 
-    return SetupResult(automations=len(entity_ids), flares=len(entity_ids))
+
+def add_room_flares(hass: HomeAssistant, rooms: dict[str, str]) -> None:
+    """A flare over each room automation, named as given."""
+    entry = _entry(hass, ENTRY_TYPE_FLARES)
+    for entity_id, name in rooms.items():
+        hass.config_entries.async_add_subentry(entry, room_flare(hass, entry, entity_id, name))
 
 
 def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: str) -> ConfigSubentry:

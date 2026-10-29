@@ -21,17 +21,16 @@ from homeassistant.helpers import selector
 from homeassistant.util import slugify
 
 from .area_setup import (
-    AUTOMATION,
-    LEVELS,
     Area,
     AutomationsFileInvalid,
     AutomationsNotLoaded,
-    SetupResult,
+    add_room_flares,
     areas_set_up,
     areas_with_lights,
     async_set_up_areas,
 )
 from .const import (
+    CONF_AUTOMATION,
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_FLARES,
@@ -56,7 +55,6 @@ PER_FLOOR = "per_floor"
 HOME = "home"
 CUSTOM = "custom"
 NAMES = "names"
-SET_UP = "set_up"
 # The areas' section when no area has a floor, else the floorless areas'
 # after a section per floor.
 AREAS = "areas"
@@ -69,7 +67,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """The integration page's main button. The first time, it creates every
     entry and the schedules, then asks whether to set up areas; after
     that it sets up areas. Each area gets an automation from the blueprint,
-    and a flare if asked for.
+    and then flares are offered for those rooms.
 
     The entries are created through SOURCE_IMPORT and the flow ends on an
     abort carrying a summary. Completing on an entry instead would show
@@ -82,6 +80,9 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         self._new_schedules: list[str] = []
+        self._first_setup = False
+        # The automations this run created: entity_id -> its area's name.
+        self._rooms: dict[str, str] = {}
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if ENTRY_TYPE_SCHEDULES not in self._configured():
@@ -163,12 +164,12 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Which areas to set up and, with more than one schedule, which
         schedule each follows. Every area with lights is listed; those
         not set up yet are picked."""
-        first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_SETTINGS, ENTRY_TYPE_FLARES}
+        self._first_setup = self._configured() != {ENTRY_TYPE_SCHEDULES, ENTRY_TYPE_SETTINGS, ENTRY_TYPE_FLARES}
         schedules = self._schedule_choices()
         if not schedules:
             return self.async_abort(reason="no_schedules")
         areas = areas_with_lights(self.hass)
-        if not areas and not first_setup:
+        if not areas and not self._first_setup:
             return self.async_abort(reason="no_areas")
 
         if user_input is None and areas:
@@ -184,8 +185,7 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schedule_ids = self._schedule_ids()
         plan = {area: schedule_ids[key] for area, key in chosen.items()}
         try:
-            level = (user_input or {}).get(SET_UP, AUTOMATION)
-            result = await async_set_up_areas(self.hass, plan, level) if plan else SetupResult(0, 0)
+            self._rooms = await async_set_up_areas(self.hass, plan) if plan else {}
         except AutomationsNotLoaded:
             return self.async_abort(reason="automations_not_loaded")
         except AutomationsFileInvalid:
@@ -194,14 +194,45 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Could not set up %s", ", ".join(area.name for area in plan))
             return self.async_abort(reason="setup_failed")
 
-        counts = {"automations": result.automations, "flares": result.flares}
-        placeholders = {key: str(count) for key, count in counts.items()}
-        if first_setup:
+        if not self._rooms:
+            return self._summary(flares=0)
+        return await self.async_step_flares()
+
+    async def async_step_flares(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """What flares are, and whether to add any for the rooms just set up."""
+        return self.async_show_menu(step_id="flares", menu_options=["flare_rooms", "skip_flares"])
+
+    async def async_step_flare_rooms(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """The rooms just set up, all ticked, as Add flare lists them. Each
+        one picked gets a flare named after its area."""
+        if user_input is not None:
+            picked = {e: name for e, name in self._rooms.items() if e in user_input[CONF_AUTOMATION]}
+            add_room_flares(self.hass, picked)
+            return self._summary(flares=len(picked))
+        options = [selector.SelectOptionDict(value=e, label=name) for e, name in self._rooms.items()]
+        return self.async_show_form(
+            step_id="flare_rooms",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_AUTOMATION, default=list(self._rooms)): selector.SelectSelector(
+                        selector.SelectSelectorConfig(options=options, multiple=True, mode=selector.SelectSelectorMode.LIST)
+                    )
+                }
+            ),
+        )
+
+    async def async_step_skip_flares(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        return self._summary(flares=0)
+
+    def _summary(self, *, flares: int) -> FlowResult:
+        """The flow's end: what was set up."""
+        placeholders = {"automations": str(len(self._rooms)), "flares": str(flares)}
+        if self._first_setup:
             placeholders["schedules"] = ", ".join(self._new_schedules)
             placeholders["reload"] = reload_link()
             async_raise_reload(self.hass, placeholders["reload"])
         return self.async_abort(
-            reason="setup_complete" if first_setup else "areas_set_up", description_placeholders=placeholders
+            reason="setup_complete" if self._first_setup else "areas_set_up", description_placeholders=placeholders
         )
 
     def _configured(self) -> set[str]:
@@ -293,19 +324,13 @@ class FlareConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 def _areas_schema(
     hass: HomeAssistant, areas: list[Area], schedules: list[tuple[str, str]], set_up: set[str]
 ) -> vol.Schema:
-    """What to set up, then the areas, a section per floor (lowest first,
-    each named after its floor, which the dialog shows as its heading)
-    with the floorless areas last. Each area is a dropdown of schedules,
+    """The areas, a section per floor (lowest first, each named after its
+    floor, which the dialog shows as its heading) with the floorless areas
+    last. Each area is a dropdown of schedules,
     named after the area; an empty one isn't set up. An area already set up
     starts empty; the others start on the schedule named like their floor,
     else the first."""
-    fields: dict = {
-        vol.Required(SET_UP, default=AUTOMATION): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=list(LEVELS), translation_key="set_up", mode=selector.SelectSelectorMode.DROPDOWN
-            )
-        )
-    }
+    fields: dict = {}
     options = [selector.SelectOptionDict(value=key, label=name) for key, name in schedules]
     by_floor = {slugify(name): key for key, name in schedules}
     dropdown = selector.SelectSelector(
