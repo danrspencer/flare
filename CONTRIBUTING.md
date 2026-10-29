@@ -1,7 +1,7 @@
 # Contributing
 
 Not needed just to install and use this — see [README.md](README.md) for that. This is for working on the
-code itself.
+code itself. For how the code works inside, with diagrams, start at [architecture/](architecture/README.md).
 
 ## Repository layout
 
