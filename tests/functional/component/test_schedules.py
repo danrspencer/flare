@@ -133,7 +133,12 @@ class TestPhaseEvent:
         async_track_state_change_event(hass, [PHASE], _fired)
         # The order that loses: the Phase entity hears the refresh before
         # the sensor does. Which comes first otherwise depends on setup order.
-        coordinator = next(v for v in hass.data[DOMAIN].values() if isinstance(v, ScheduleCoordinator))
+        coordinator = next(
+            c
+            for e in hass.config_entries.async_entries(DOMAIN)
+            if isinstance(getattr(e, "runtime_data", None), dict)
+            for c in e.runtime_data.values()
+        )
         coordinator._listeners = dict(
             sorted(coordinator._listeners.items(), key=lambda item: getattr(item[1][0], "__self__", None) is None
                    or item[1][0].__self__.entity_id != PHASE)

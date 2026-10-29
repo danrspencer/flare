@@ -64,7 +64,7 @@ CURVE_KEYS = (
 class ScheduleInstance:
     """One schedule sensor, from a "sensor" subentry."""
 
-    subentry_id: str  # hass.data storage key; also passed to async_add_entities(config_subentry_id=...)
+    subentry_id: str  # its coordinator's key in entry.runtime_data; also passed to async_add_entities(config_subentry_id=...)
     # "<slug>_", or empty if the name slugifies to nothing.
     prefix: str
     override_entity_id: str  # select.<prefix>flare_phase

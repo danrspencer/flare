@@ -155,7 +155,7 @@ async def test_a_renamed_entity_is_still_the_schedules(entry, hass: HomeAssistan
     device = _device(hass, entry, "Downstairs")
 
     await _import(hass, device, {"morning": {"time": "05:30"}, "night": {"kelvin": 2100}})
-    await hass.data[DOMAIN][_subentry(entry, "Downstairs")].async_refresh()
+    await entry.runtime_data[_subentry(entry, "Downstairs")].async_refresh()
 
     assert hass.states.get("time.wake_up").state == "05:30:00"
     assert 'morning:\n  time: "05:30"' in await _export(hass, device)

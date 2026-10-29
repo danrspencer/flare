@@ -51,7 +51,7 @@ async def _setup(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, version=3, minor_version=2)
     entry.add_to_hass(hass)
     registry = ClaimRegistry(hass)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
+    entry.runtime_data = registry
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
@@ -517,7 +517,7 @@ async def test_each_entry_type_owns_only_its_own_sensors(hass: HomeAssistant):
         coordinator = ScheduleCoordinator(hass, instance)
         # Plain refresh: first_refresh needs a real entry setup.
         await coordinator.async_refresh()
-        hass.data.setdefault(DOMAIN, {})[instance.subentry_id] = coordinator
+        entry.runtime_data = {**getattr(entry, "runtime_data", {}), instance.subentry_id: coordinator}
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))

@@ -42,11 +42,11 @@ from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_SETTINGS:
         for instance in schedule_instances(entry):
-            coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
+            coordinator: ScheduleCoordinator = entry.runtime_data[instance.subentry_id]
             async_add_entities([_ScheduleSensor(coordinator, instance)], config_subentry_id=instance.subentry_id)
         return
 
-    registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
+    registry: ClaimRegistry = entry.runtime_data
     entry.async_on_unload(ClaimEvents(hass, registry, entry).start())
     async_add_entities([_CountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")])
     _LightStatuses(hass, registry, entry, async_add_entities).start()

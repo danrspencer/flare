@@ -9,7 +9,6 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .schedule.coordinator import CURVE_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .schedule.curve import DEFAULT_CURVE_VALUES, value_range
 
@@ -37,7 +36,7 @@ _LABELS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     for instance in schedule_instances(entry):
-        coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
+        coordinator: ScheduleCoordinator = entry.runtime_data[instance.subentry_id]
         entities = [_CurveNumber(coordinator, instance, key) for key in CURVE_KEYS]
         async_add_entities(entities, config_subentry_id=instance.subentry_id)
 

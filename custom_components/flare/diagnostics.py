@@ -8,11 +8,11 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
+from .const import CONF_ENTRY_TYPE, ENTRY_TYPE_SETTINGS
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_SETTINGS:
         return {"options": dict(entry.options)}
-    registry = hass.data[DOMAIN][entry.entry_id]
+    registry = entry.runtime_data
     return {"options": dict(entry.options), "claims": registry.all_records(), "rooms": dict(registry.rooms)}

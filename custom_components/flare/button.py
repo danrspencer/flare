@@ -12,13 +12,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .sensor import settings_device_info
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    registry: ClaimRegistry = hass.data[DOMAIN][entry.entry_id]
+    registry: ClaimRegistry = entry.runtime_data
     async_add_entities([_ClearButton(hass, registry, entry)])
 
 

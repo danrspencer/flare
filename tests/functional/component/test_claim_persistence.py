@@ -57,7 +57,7 @@ async def _start(
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    return hass.data[DOMAIN][entry.entry_id]
+    return entry.runtime_data
 
 
 def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
