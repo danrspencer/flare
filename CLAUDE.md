@@ -973,6 +973,13 @@ Other blueprint facts:
   be `unknown`, and indexing would crash the tick.
 - The schedule sensor's values are guarded on the one action step that
   needs them, not in `condition:`, since turn-offs need nothing from it.
+- **The Lux Threshold drops off lights from the call, not from `allow_turn_on`.**
+  The `apply_lighting` step carries lights that are already on, so gating
+  `allow_turn_on` would freeze a lit room. `lux_blocked_entities` is subtracted
+  from `target_entities` and from `idle_entities` instead, and `scene_active` is
+  forced false while it's too bright, so a scene can't set its covered lights and
+  the ones already on stay on FLARE's curve. A manual run bypasses the check by
+  definition.
 - **`device_class: occupancy` doesn't mean presence.** Most sensors here
   are PIR: clear the moment motion stops, flapping by design. Wait time
   turns that into "the room is empty", and is sized for PIR everywhere.

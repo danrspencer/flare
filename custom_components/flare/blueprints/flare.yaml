@@ -42,6 +42,8 @@ blueprint:
               device_class: occupancy
             - domain: binary_sensor
               device_class: motion
+            - domain: sensor
+              device_class: illuminance
     no_motion_wait:
       name: Wait time
       description: >
@@ -55,6 +57,20 @@ blueprint:
           min: 0
           max: 3600
           unit_of_measurement: seconds
+    lux_threshold:
+      name: Lux Threshold
+      description: >
+        When every illuminance sensor in Lights & Occupancy reads above this
+        many lux, the room leaves its lights off: a sensor, a tick or a scene
+        won't switch one on until it is darker. Switching the room on by hand
+        still works. 0 turns this off.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 100000
+          unit_of_measurement: lx
     extra_triggers:
       name: Additional Triggers (Optional)
       description: >
@@ -278,7 +294,8 @@ blueprint:
           name: Sensors From Areas
           description: >
             When disabled, occupancy and motion sensors won't be inferred
-            from the areas, floors, devices or labels in Lights & Occupancy.
+            from the areas, floors, devices or labels in Lights & Occupancy,
+            and neither will the illuminance sensors Lux Threshold reads.
             Only explicitly selected sensors will be used.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
           default: true
@@ -429,6 +446,7 @@ variables:
   background_transition: !input background_transition
   motion_on_transition: !input motion_on_transition
   no_motion_wait: !input no_motion_wait
+  lux_threshold: !input lux_threshold
   rgb_phases: !input rgb_phases
   phase: "{{ states(adaptive_sensor) }}"
   prefer_rgb_color: "{{ phase in rgb_phases }}"
@@ -474,6 +492,31 @@ action:
       resolved_entities: >
         {{ room_entities | select('match', '^light\\.')
            | reject('in', integration_entities('flare')) | list }}
+      # The room's illuminance sensors, picked the same way as its occupancy
+      # ones: inferred from the target, or only those named with Sensors From
+      # Areas off. A sensor that isn't available or isn't numeric can't say
+      # how bright the room is, so it doesn't count.
+      room_lux_entities: >
+        {% set sensors = room_entities | select('match', '^sensor\\.')
+             | select('is_state_attr', 'device_class', 'illuminance')
+             | reject('is_state', ['unavailable', 'unknown']) | list %}
+        {{ sensors if use_area_sensors
+           else sensors | select('in', named_entities) | list }}
+      # Every illuminance sensor reading above the Lux Threshold: bright
+      # enough without the room's lights. 0 turns the check off, no sensor
+      # means nothing to go on, and a manual run (the Run button, the flare,
+      # a voice assistant) overrides it - this stops the automation lighting
+      # a bright room by itself, not someone asking for the lights.
+      too_bright: >
+        {% set threshold = lux_threshold | float(0) %}
+        {{ threshold > 0 and not manual_run
+           and room_lux_entities | length > 0
+           and room_lux_entities | map('states') | map('float', 0)
+               | select('le', threshold) | list | count == 0 }}
+      # Off lights stay off while it's too bright; ones already on are left
+      # in the call, so the curve keeps driving them.
+      lux_blocked_entities: >
+        {{ resolved_entities | reject('is_state', 'on') | list if too_bright else [] }}
       # Up here because variables: render top to bottom and the turn-off lists
       # below need it.
       template_brightness_levels: !input brightness_template
@@ -559,7 +602,8 @@ action:
       idle_entities: >
         {% set ns = namespace(items=[]) %}
         {% for e, level in idle_brightness.items() %}
-          {% if level and e in resolved_entities and e not in hands_off_entities %}
+          {% if level and e in resolved_entities and e not in hands_off_entities
+                and e not in lux_blocked_entities %}
             {% set ns.items = ns.items + [e] %}
           {% endif %}
         {% endfor %}
@@ -768,7 +812,11 @@ action:
       # The scene counts only if it exists and everything it covers is in
       # scope; otherwise FLARE drives every light.
       - variables:
-          scene_active: "{{ scene_coverage.scene_active }}"
+          # The scene is ignored while the room is too bright: activating it
+          # would set every light it covers, off ones included. Treating it as
+          # inactive keeps its lights on FLARE's curve instead of handing them
+          # to a scene that isn't applied.
+          scene_active: "{{ scene_coverage.scene_active and not too_bright }}"
           # Lights handed off this run - to an active scene, or via a
           # null/false level. They're never written, so their claims are
           # released instead of going stale into "overridden". Lights only: a
@@ -777,9 +825,12 @@ action:
             {{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)
                | select('match', 'light[.]') | unique | list }}
           # No off-light filter: the step using it is already behind
-          # allow_turn_on.
+          # allow_turn_on. Off lights are dropped while the room is too
+          # bright, so the call updates the ones already on and leaves the
+          # rest dark.
           target_entities: >
-            {{ scene_coverage.uncovered_entities if scene_active else resolved_entities }}
+            {{ (scene_coverage.uncovered_entities if scene_active else resolved_entities)
+               | reject('in', lux_blocked_entities) | list }}
       # Everything that can switch a light on is under this gate (see
       # allow_turn_on). An empty room settles to its idle brightness, outside
       # the gate. room_occupancy_entities is checked because a room with no
