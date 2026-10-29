@@ -45,6 +45,7 @@ from typing import Optional, Protocol
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
@@ -96,6 +97,11 @@ class ClaimRegistry:
         self.rooms: dict[str, dict] = {}
         self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._listener: ClaimListener | None = None
+        # The state listener, while listening, and the lights it follows:
+        # exactly the claimed ones (_retrack).
+        self._on_change = None
+        self._tracked: frozenset[str] = frozenset()
+        self._untrack: CALLBACK_TYPE | None = None
 
     async def async_load(self) -> None:
         """The claims and rooms from before the restart."""
@@ -181,9 +187,23 @@ class ClaimRegistry:
     @callback
     def _notify(self) -> None:
         self._save()
+        self._retrack()
         if self._listener is not None:
             self._listener.async_claims_changed()
         async_dispatcher_send(self._hass, SIGNAL_CLAIMS_UPDATED)
+
+    @callback
+    def _retrack(self) -> None:
+        """Follows exactly the claimed lights, once the set has changed."""
+        lights = frozenset(self.claims)
+        if self._on_change is None or lights == self._tracked:
+            return
+        if self._untrack is not None:
+            self._untrack()
+        self._tracked = lights
+        self._untrack = (
+            async_track_state_change_event(self._hass, sorted(lights), self._on_change) if lights else None
+        )
 
     @callback
     def _join(self, key: str | None, written: list[str], room_entities: list[str] | None) -> None:
@@ -401,7 +421,7 @@ class ClaimRegistry:
             self._notify()
 
     def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
-        """One listener for every tracked light:
+        """One listener for the claimed lights, re-subscribed as they change:
 
         - Any change to a tracked light: its `mismatch_since` kept.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
@@ -411,9 +431,6 @@ class ClaimRegistry:
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
             entity_id = event.data["entity_id"]
-            # Claims hold lights only (the services' schemas see to it).
-            if not entity_id.startswith("light."):
-                return
             # MQTT marks its lights unavailable as its connection closes at
             # shutdown, which would drop every claim just before the final save.
             if hass.is_stopping:
@@ -443,4 +460,14 @@ class ClaimRegistry:
             if dropped or went_off or arrived or changed:
                 self._notify()
 
-        return hass.bus.async_listen("state_changed", _on_state_changed)
+        self._on_change = _on_state_changed
+        self._retrack()
+
+        @callback
+        def _stop() -> None:
+            self._on_change = None
+            if self._untrack is not None:
+                self._untrack()
+            self._untrack, self._tracked = None, frozenset()
+
+        return _stop
