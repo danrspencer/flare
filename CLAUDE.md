@@ -88,10 +88,14 @@ HA's trace UI.
 Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
-  name for `!input`, so regrouping isn't breaking. The top level is what a
-  room needs (Schedule, Lights & Occupancy, Wait time, Additional
-  Triggers); a collapsed **Settings** section holds the switches most rooms
-  never touch (Override Protection, Sensors From Areas, Prefer RGB During).
+  name for `!input`, so regrouping isn't breaking. Only what's required is
+  at the top level (Schedule, Lights & Occupancy); everything optional is
+  collapsed, so input names carry no "(Optional)" (user's call). Sections
+  hold what a room may want tweaked (**Sensors & Triggers**: Wait time,
+  Lux Threshold, Additional Triggers; then Brightness, Idle Brightness, Scenes,
+  Transitions); **Settings**, last, holds what most rooms never touch
+  (Override Protection, Sensors From Areas, Prefer RGB During, Stored
+  Traces).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,

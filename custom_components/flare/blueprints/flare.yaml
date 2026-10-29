@@ -44,53 +44,58 @@ blueprint:
               device_class: motion
             - domain: sensor
               device_class: illuminance
-    no_motion_wait:
-      name: Wait time
-      description: >
-        Only used when the room has occupancy or motion sensors: how long
-        every one must be clear before the room counts as empty and its
-        lights turn off.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
-      default: 120
-      selector:
-        number:
-          min: 0
-          max: 3600
-          unit_of_measurement: seconds
-    lux_threshold:
-      name: Lux Threshold
-      description: >
-        When every illuminance sensor in Lights & Occupancy reads above this
-        many lux, the room leaves its lights off: a sensor, a tick or a scene
-        won't switch one on until it is darker. If someone is still there
-        when it gets darker, the lights come on then. Switching the room on
-        by hand still works. 0 turns this off.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
-      default: 0
-      selector:
-        number:
-          min: 0
-          max: 2000
-          step: 10
-          unit_of_measurement: lx
-    extra_triggers:
-      name: Additional Triggers (Optional)
-      description: >
-        Entities that make the room update as soon as they change, such as
-        an entity Scene Template or Brightness Template depends on. They
-        only adjust lights that are already on, and never switch one on.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-      default: []
-      selector:
-        entity:
-          multiple: true
+    sensors_triggers:
+      name: Sensors & Triggers
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        no_motion_wait:
+          name: Wait time
+          description: >
+            Only used when the room has occupancy or motion sensors: how long
+            every one must be clear before the room counts as empty and its
+            lights turn off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-and-triggers).
+          default: 120
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+        lux_threshold:
+          name: Lux Threshold
+          description: >
+            When every illuminance sensor in Lights & Occupancy reads above this
+            many lux, the room leaves its lights off: a sensor, a tick or a scene
+            won't switch one on until it is darker. If someone is still there
+            when it gets darker, the lights come on then. Switching the room on
+            by hand still works. 0 turns this off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 2000
+              step: 10
+              unit_of_measurement: lx
+        extra_triggers:
+          name: Additional Triggers
+          description: >
+            Entities that make the room update as soon as they change, such as
+            an entity Scene Template or Brightness Template depends on. They
+            only adjust lights that are already on, and never switch one on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            entity:
+              multiple: true
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
       collapsed: true
       input:
         brightness_template:
-          name: Brightness Template (Optional)
+          name: Brightness Template
           description: >
             Template returning entity_id → brightness, 0-255, replacing
             the curve's brightness for the lights it names (0 = off, null
@@ -106,28 +111,28 @@ blueprint:
           selector:
             template: {}
         morning_exclude_lights:
-          name: Lights Off During Morning (Optional)
+          name: Lights Off During Morning
           selector:
             entity:
               domain: light
               multiple: true
           default: []
         day_exclude_lights:
-          name: Lights Off During Day (Optional)
+          name: Lights Off During Day
           selector:
             entity:
               domain: light
               multiple: true
           default: []
         evening_exclude_lights:
-          name: Lights Off During Evening (Optional)
+          name: Lights Off During Evening
           selector:
             entity:
               domain: light
               multiple: true
           default: []
         night_exclude_lights:
-          name: Lights Off During Night (Optional)
+          name: Lights Off During Night
           selector:
             entity:
               domain: light
@@ -139,7 +144,7 @@ blueprint:
       collapsed: true
       input:
         idle_brightness_template:
-          name: Idle Brightness Template (Optional)
+          name: Idle Brightness Template
           description: >
             Template returning entity_id → brightness, 1-255, for
             lights that should stay dimly lit when the room is empty,
@@ -154,7 +159,7 @@ blueprint:
           selector:
             template: {}
         morning_idle_brightness:
-          name: Morning Idle Brightness (Optional)
+          name: Morning Idle Brightness
           description: >
             What this phase dims to when the room is empty, instead of
             switching off, on the same 0-255 scale as the phase
@@ -166,7 +171,7 @@ blueprint:
               max: 255
               mode: box
         day_idle_brightness:
-          name: Day Idle Brightness (Optional)
+          name: Day Idle Brightness
           description: >
             What this phase dims to when the room is empty, instead of
             switching off, on the same 0-255 scale as the phase
@@ -178,7 +183,7 @@ blueprint:
               max: 255
               mode: box
         evening_idle_brightness:
-          name: Evening Idle Brightness (Optional)
+          name: Evening Idle Brightness
           description: >
             What this phase dims to when the room is empty, instead of
             switching off, on the same 0-255 scale as the phase
@@ -190,7 +195,7 @@ blueprint:
               max: 255
               mode: box
         night_idle_brightness:
-          name: Night Idle Brightness (Optional)
+          name: Night Idle Brightness
           description: >
             What this phase dims to when the room is empty, instead of
             switching off, on the same 0-255 scale as the phase
@@ -207,7 +212,7 @@ blueprint:
       collapsed: true
       input:
         scene_template:
-          name: Scene Template (Optional)
+          name: Scene Template
           description: >
             Template returning a scene entity_id to hand the room over
             to instead of the adaptive brightness/colour. Takes
@@ -222,25 +227,25 @@ blueprint:
           selector:
             template: {}
         morning_scene:
-          name: Morning Scene (Optional)
+          name: Morning Scene
           default: null
           selector:
             entity:
               domain: scene
         day_scene:
-          name: Day Scene (Optional)
+          name: Day Scene
           default: null
           selector:
             entity:
               domain: scene
         evening_scene:
-          name: Evening Scene (Optional)
+          name: Evening Scene
           default: null
           selector:
             entity:
               domain: scene
         night_scene:
-          name: Night Scene (Optional)
+          name: Night Scene
           default: null
           selector:
             entity:

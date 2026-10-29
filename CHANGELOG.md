@@ -23,7 +23,7 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   is setting it or something else has taken it over, with history.
 - **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for
   and what the light is showing, and a **Clear** for that light alone.
-- **Lux Threshold**, a new blueprint input beside **Lights & Occupancy**. Above 0, the room
+- **Lux Threshold**, a new blueprint input under **Sensors & Triggers**. Above 0, the room
   leaves its lights off while every illuminance sensor in it reads above that many lux: a
   sensor, a scene and idle brightness won't switch one on. If someone is still there when it gets
   darker, the lights come on then. Lights already on carry on as before, and running the
@@ -37,9 +37,10 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   automations now. Already have automations controlling your lights? Skip it, then move your
   rooms over one at a time with **Set up area**. Setting up an area gives it an automation, and
   then flares are a page of their own: what they are, and the rooms to add them for, or **Skip**. **Skip setup** is gone: setup always sets up your schedules.
-- **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
-  **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
-  back beside **Lights & Occupancy**. Existing rooms keep their values.
+- **The blueprint's inputs are regrouped.** Only **Schedule** and **Lights & Occupancy** are
+  shown to begin with. **Wait time**, **Lux Threshold** and **Additional Triggers** are under a
+  new **Sensors & Triggers** section, and **Override Protection**, **Sensors From Areas** and
+  **Prefer RGB During** under a new **Settings** section. Existing rooms keep their values.
 - **Zones are gone.** FLARE keeps one record of the lights it controls, across every room, and
   lets a room's lights go once they're all off. Updating removes your zones and their devices,
   and FLARE takes every room back on its next update.
