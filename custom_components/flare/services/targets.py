@@ -18,12 +18,17 @@ from ..const import DOMAIN
 RESOLVE_TARGET_SCHEMA = vol.Schema(cv.TARGET_FIELDS)
 
 
+def target_entities(hass: HomeAssistant, target: dict) -> list[str]:
+    """Every entity `target` reaches, sorted. expand_group=False, as a
+    flare's tracker resolves its room."""
+    selected = async_extract_referenced_entity_ids(hass, TargetSelection(target), expand_group=False)
+    return sorted(selected.referenced | selected.indirectly_referenced)
+
+
 def async_setup_target_services(hass: HomeAssistant) -> None:
     async def resolve_target(call: ServiceCall) -> ServiceResponse:
         """flare.resolve_target - see services.yaml."""
-        # expand_group=False, as a flare's tracker resolves its room.
-        selected = async_extract_referenced_entity_ids(hass, TargetSelection(call.data), expand_group=False)
-        return {"entities": sorted(selected.referenced | selected.indirectly_referenced)}
+        return {"entities": target_entities(hass, dict(call.data))}
 
     hass.services.async_register(
         DOMAIN,

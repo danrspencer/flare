@@ -139,6 +139,10 @@ class ClaimRegistry:
         """This light's claims, or None if it has none."""
         return self.claims.get(entity_id)
 
+    def status(self, entity_id: str, **tolerances: int) -> tuple[str, str | None]:
+        """classify_state for one light: its live state against its claims."""
+        return classify_state(self._hass.states.get(entity_id), self.record(entity_id), **tolerances)
+
     def all_records(self) -> dict[str, _WriteRecord]:
         return dict(self.claims)
 
@@ -161,7 +165,7 @@ class ClaimRegistry:
         record = self.record(entity_id)
         if record is None:
             return False
-        status, _via = classify_state(self._hass.states.get(entity_id), record)
+        status, _via = self.status(entity_id)
         if disagrees(status) and not record.get("mismatch_since"):
             record["mismatch_since"] = dt_util.utcnow().isoformat()
         elif disagrees(status) or record.pop("mismatch_since", None) is None:
@@ -269,7 +273,6 @@ class ClaimRegistry:
         self,
         room_id: str | None,
         entity_ids: list[str],
-        live_context_before_write: dict[str, str | None],
         context_id: str,
         targets: dict[str, dict] | None = None,
         secondary_context_ids: dict[str, str] | None = None,
@@ -278,10 +281,9 @@ class ClaimRegistry:
     ) -> None:
         """Records a write for entity_ids, before it's dispatched. Promotes
         `latest` to `observed` if it landed (see the module docstring). A None
-        room records nothing.
+        room records nothing. Each light's live context is read here, before
+        the write it's recording is dispatched.
 
-        live_context_before_write: each light's context before this call's
-        writes, so it can't reflect the write being recorded.
         targets: what each write asked for.
         secondary_context_ids / context_id_overrides: two-step lights only -
         the brightness and colour steps' contexts.
@@ -294,16 +296,18 @@ class ClaimRegistry:
         secondary_context_ids = secondary_context_ids or {}
         context_id_overrides = context_id_overrides or {}
         for entity_id in entity_ids:
+            state = self._hass.states.get(entity_id)
+            live_context = state.context.id if state is not None else None
             old = claims.get(entity_id)
             observed: Optional[_ContextClaim]
             if old is not None:
                 old_latest = old.get("latest")
-                if _context_matches(old_latest, live_context_before_write.get(entity_id)):
+                if _context_matches(old_latest, live_context):
                     observed = old_latest
                 else:
                     observed = old.get("observed")
             else:
-                baseline_context = live_context_before_write.get(entity_id)
+                baseline_context = live_context
                 observed = (
                     {
                         "context_id": baseline_context,

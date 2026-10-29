@@ -56,9 +56,10 @@ async def _setup(hass: HomeAssistant):
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
     await button_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    # The tests refresh the statuses themselves.
+    # The tests refresh the statuses themselves, the first pass seeding them.
     tracker = registry._listener
     tracker.async_claims_changed = lambda: None
+    tracker._last_statuses = None
     added.append(tracker)
     _TRACKERS.append(tracker)
     return entry, registry, added
@@ -80,7 +81,6 @@ async def _record(registry: ClaimRegistry, room: str | None, entity_id: str, con
     await registry.async_record(
         room,
         [entity_id],
-        {entity_id: f"before-{entity_id}"},
         context_id,
         targets={entity_id: target} if target else None,
         room_entities=room_lights,
@@ -492,11 +492,12 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     refreshed: list = []
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
+    unsub = registry.async_start_listening(hass)
     hass.states.async_set("light.a", "unavailable", {})
-    tracker._poll(None)
     await hass.async_block_till_done()
+    unsub()
 
-    assert refreshed, "the poll must tell the counters to recompute"
+    assert refreshed, "the light's change must tell the counters to recompute"
     assert overridden.native_value == 0
 
 
@@ -559,6 +560,8 @@ async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant
     hass.bus.async_listen("flare_light_overridden", events.append)
     _light(hass, "light.a", **ASKED)
     await _record(registry, KITCHEN, "light.a", "ctx-first", ASKED)
+    # The first write echoed back under another context, as a slow device does.
+    _light(hass, "light.a", **{**ASKED, "brightness": ASKED["brightness"] + 1})
     tracker._refresh_statuses()
     unsub = registry.async_start_listening(hass)
 

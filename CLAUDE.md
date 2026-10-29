@@ -299,8 +299,8 @@ and `latest` (the most recent attempt). The model and why it needs two
 are in `claims.py`'s docstring; the decision table is
 `override_protection.classify()`; the user-facing contract is
 `docs/reference/override-protection.md`. **Everything judges a light through
-`classify_state()`** - `grouping.py`'s `externally_set()`, the sensors'
-`_classify_tracked()` and `claims_check` - because they drifted apart
+`classify_state()`** - `grouping.py`'s `externally_set()`, and through
+`ClaimRegistry.status()` the sensors and `claims_check` - because they drifted apart
 twice when each did its own. `tests/checks/test_one_classifier_adapter.py`
 fails if anything else calls `classify()`.
 
@@ -461,9 +461,11 @@ disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
 dropped for being hidden; the status sensors are what make this one not.
 
 **The claim events aren't an entity** (`sensor.ClaimEvents`): they
-refresh statuses on each claim change and a 30 s poll (live state changes
-without any claim changing), fire the overridden, controlled and released
-events, and recheck after the grace. A room restored dark is released and
+refresh statuses when they start and on each claim change, fire the
+overridden, controlled and released events, and recheck after the grace.
+There's no poll: a claimed light's change that moves its count goes
+through the registry's listener (a drop, going off, arriving, or a
+mismatch starting or ending), and the grace is the only timed change. A room restored dark is released and
 stale claims pruned only once they're listening, after the platforms, so
 the release is announced.
 
@@ -616,7 +618,9 @@ after its area. Set up area can just be run again.
   the area** (`areas_set_up`; setup puts its automations there), which
   only unticks the area; every area with lights is listed (user's call,
   after reading automations' targets proved unreliable). Re-running an
-  area adds another automation and flare.
+  area adds another automation and flare. An area "has lights" by HA's
+  rule (`services/targets.target_entities`, as `resolve_target`), so an
+  area holding only hidden or categorised lights isn't listed.
 - **Each area is an optional dropdown of schedules named after it** (the
   dialog falls back to a field's name when it has no translation, the
   only way to label fields made at runtime), and an empty one isn't set

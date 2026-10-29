@@ -30,9 +30,9 @@ from ..const import (
 )
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
-from .grouping import EntityLookup, Group, build_groups, target_brightness
+from .grouping import EntityLookup, Group, build_groups
 from ..tracking.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
-from ..tracking.override_protection import classify_state, is_blocked
+from ..tracking.override_protection import is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from ..flares.identity import without_flares
@@ -451,11 +451,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                     )
                 )
 
-        # Before dispatch, so it can't include this call's own writes.
-        live_context_before_write = {
-            e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in written_entities
-        }
-
         # Recorded BEFORE dispatch, so a run that fails or is cancelled part-way
         # (e.g. by `mode: restart` between two-step steps) still leaves claims for
         # lights that changed. A claim for a write that never lands is harmless:
@@ -465,7 +460,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             await registry.async_record(
                 room_id,
                 written_entities,
-                live_context_before_write,
                 call.context.id,
                 targets=write_targets,
                 secondary_context_ids=secondary_context_ids,
@@ -475,17 +469,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         # Lights already showing what this call would send get no write, so
         # an unclaimed one is claimed as it is.
-        registry.adopt(
-            room_id,
-            [
-                e
-                for e in without_flares(hass, call.data["entities"])
-                if e not in written_entities
-                and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
-                and lookup.claims(e) is None
-            ],
-            room_entities,
-        )
+        registry.adopt(room_id, [e for g in groups for e in g.already_set], room_entities)
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -501,13 +485,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         if not entities:
             return
         transition = call.data["transition"]
-        live_context_before_write = {
-            e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
-        }
         await registry.async_record(
             call.data.get("room_id"),
             entities,
-            live_context_before_write,
             call.context.id,
             targets={e: {"state": "off"} for e in entities},
             room_entities=call.data.get("room_entities"),
@@ -529,12 +509,11 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         rgb_color_tolerance = call.data["rgb_color_tolerance"]
         results: dict[str, Any] = {}
         for entity_id in call.data["entities"]:
-            status, matched_via = classify_state(
-                hass.states.get(entity_id),
-                registry.record(entity_id),
-                brightness_tolerance,
-                color_temp_tolerance,
-                rgb_color_tolerance,
+            status, matched_via = registry.status(
+                entity_id,
+                brightness_tolerance=brightness_tolerance,
+                color_temp_tolerance=color_temp_tolerance,
+                rgb_color_tolerance=rgb_color_tolerance,
             )
             results[entity_id] = {
                 "blocked": is_blocked(status),
@@ -549,13 +528,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         entities recorded."""
         entities = call.data["entities"]
         targets = call.data.get("targets", {})
-        live_context_before_write = {
-            e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
-        }
         await registry.async_record(
             call.data["room_id"],
             entities,
-            live_context_before_write,
             call.context.id,
             targets=targets,
             room_entities=call.data.get("room_entities"),

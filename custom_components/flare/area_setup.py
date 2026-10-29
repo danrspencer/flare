@@ -43,7 +43,8 @@ from .const import (
     SUBENTRY_TYPE_FLARE,
 )
 from .flares.automation import TARGET, automation_ref
-from .flares.identity import is_flare_entry
+from .flares.identity import without_flares
+from .services.targets import target_entities
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 
@@ -68,22 +69,13 @@ class Area:
 
 
 def areas_with_lights(hass: HomeAssistant) -> list[Area]:
-    """Every area holding a light, by the entity's own area or its
-    device's, sorted by name."""
-    entity_registry = er.async_get(hass)
-    device_registry = dr.async_get(hass)
-    area_ids = set()
-    for entry in entity_registry.entities.values():
-        if entry.domain != "light" or is_flare_entry(entry):
-            continue
-        area_id = entry.area_id
-        if area_id is None and entry.device_id:
-            device = device_registry.async_get(entry.device_id)
-            area_id = device.area_id if device else None
-        if area_id:
-            area_ids.add(area_id)
-    area_registry = ar.async_get(hass)
-    areas = [Area(a, area.name) for a in area_ids if (area := area_registry.async_get_area(a)) is not None]
+    """Every area holding a light by Home Assistant's rule, as its room
+    automation would find them (flare.resolve_target), sorted by name."""
+    areas = [
+        Area(area.id, area.name)
+        for area in ar.async_get(hass).async_list_areas()
+        if without_flares(hass, [e for e in target_entities(hass, {"area_id": [area.id]}) if e.startswith("light.")])
+    ]
     return sorted(areas, key=lambda area: area.name)
 
 

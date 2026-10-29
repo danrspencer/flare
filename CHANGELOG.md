@@ -76,6 +76,8 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
 
 ### Fixed
 
+- **Setting up areas no longer offers an area whose only lights are hidden** or configuration
+  entities. Its automation wouldn't control them, so it set up a room with no lights.
 - **The dashboard loads after an update even when your browser shows a saved copy of the page.**
   That copy could ask for files from an earlier version, so neither the dashboard nor its views
   loaded ("Timeout waiting for strategy element"), and FLARE wasn't offered under **Add
