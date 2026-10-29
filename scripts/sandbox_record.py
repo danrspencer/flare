@@ -365,7 +365,7 @@ def customise(d: Director) -> None:
 
     d.click(page.get_by_text("Bedroom Lighting"), pause=1.5)
     d.click(page.get_by_text("Idle Brightness", exact=True), pause=1)
-    night = field("Night Idle Brightness (Optional)").locator("input")
+    night = field("Night Idle Brightness").locator("input")
     night.fill("")
     d.type(night, "20")
     d.click(page.get_by_role("button", name="Save"), pause=1.5)
@@ -381,12 +381,13 @@ def customise(d: Director) -> None:
 
     d.click(page.get_by_text("Living Room Lighting"), pause=1.5)
     search = page.get_by_placeholder("Search", exact=True)
-    d.open(field("Additional Triggers (Optional)").locator("ha-entity-picker").last, search)
+    d.click(page.get_by_text("Sensors & Triggers", exact=True), pause=0.8)
+    d.open(field("Additional Triggers").locator("ha-entity-picker").last, search)
     d.type(search, "TV")
     d.click(page.get_by_text("TV", exact=True).last, pause=1)
 
     d.click(page.get_by_text("Scene Handoff", exact=True), pause=0.8)
-    template = field("Scene Template (Optional)")
+    template = field("Scene Template")
     # Up the screen, leaving room under the editor for its result.
     d.scroll(page.get_by_text("Scene Handoff", exact=True), 500)
     d.click(template.locator(".cm-content"), pause=0.3)
