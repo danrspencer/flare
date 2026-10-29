@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/3/then/1/then/0",
-      "run_id": "92b0b095f3b9bf9cb7bf9e74102744dd",
+      "run_id": "72a4cc476b06718600709510972ccd7b",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GA9AE2EDP5243Z960",
+                  "id": "01M658J56GS490A1CZ0ZZSAVYB",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GEGEENZD07EZ54PR7",
+                    "id": "01M658J56GXVB2Z5YSMEASG7XV",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GY2269E6K17TAPD4W",
+                    "id": "01M658J56GV39PPE16XYGRFXJH",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -93,7 +93,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -138,8 +138,8 @@
             "timestamp": "2026-10-30T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658J56GAQF5JWFSMJVPK4F0",
-                "parent_id": "01M658J56GY2269E6K17TAPD4W",
+                "id": "01M658J56G9H71T4SDEHYJYMCS",
+                "parent_id": "01M658J56GV39PPE16XYGRFXJH",
                 "user_id": null
               },
               "room": {
@@ -309,11 +309,11 @@
             "result": {
               "result": false,
               "entities": [
-                "light.hall_lamp",
-                "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_pendant",
+                "light.hall_lamp",
                 "light.hall_spot_3",
+                "light.hall_spot_1",
                 "light.hall_spot_4"
               ]
             }
@@ -594,7 +594,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -618,7 +618,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -1071,7 +1071,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1089,14 +1089,14 @@
         }
       },
       "context": {
-        "id": "01M658J56GAQF5JWFSMJVPK4F0",
-        "parent_id": "01M658J56GY2269E6K17TAPD4W",
+        "id": "01M658J56G9H71T4SDEHYJYMCS",
+        "parent_id": "01M658J56GV39PPE16XYGRFXJH",
         "user_id": null
       }
     },
     {
       "last_step": "action/2/then/0",
-      "run_id": "991d9ec33ed266a23660316d5339f8e6",
+      "run_id": "7ef93246d67b96c9a29a19c71c52763d",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1126,8 +1126,8 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GAQF5JWFSMJVPK4F0",
-                  "parent_id": "01M658J56GY2269E6K17TAPD4W",
+                  "id": "01M658J56G9H71T4SDEHYJYMCS",
+                  "parent_id": "01M658J56GV39PPE16XYGRFXJH",
                   "user_id": null
                 }
               },
@@ -1148,7 +1148,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GQCBA4QXZD1X8YEZ1",
+                    "id": "01M658J56GB9C1VY300V1P7739",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1163,7 +1163,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GR1THYGBSA4D5V8MA",
+                    "id": "01M658J56G8T02E1VPMRMEGFSH",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1185,7 +1185,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -1230,8 +1230,8 @@
             "timestamp": "2026-10-30T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658J56GNA113BSX4E86T3HY",
-                "parent_id": "01M658J56GR1THYGBSA4D5V8MA",
+                "id": "01M658J56GYPRCBH691738H94G",
+                "parent_id": "01M658J56G8T02E1VPMRMEGFSH",
                 "user_id": null
               },
               "room": {
@@ -1411,11 +1411,11 @@
             "result": {
               "result": true,
               "entities": [
-                "light.hall_lamp",
-                "light.hall_spot_1",
                 "light.hall_spot_2",
                 "light.hall_pendant",
+                "light.hall_lamp",
                 "light.hall_spot_3",
+                "light.hall_spot_1",
                 "light.hall_spot_4"
               ]
             }
@@ -1456,7 +1456,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -1480,7 +1480,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -1933,7 +1933,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1951,14 +1951,14 @@
         }
       },
       "context": {
-        "id": "01M658J56GNA113BSX4E86T3HY",
-        "parent_id": "01M658J56GR1THYGBSA4D5V8MA",
+        "id": "01M658J56GYPRCBH691738H94G",
+        "parent_id": "01M658J56G8T02E1VPMRMEGFSH",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "6819e572b3d0905a4fbad504234cf990",
+      "run_id": "9c6fc58a8426e7530fdd56ba7ee5caf6",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1988,8 +1988,8 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GNA113BSX4E86T3HY",
-                  "parent_id": "01M658J56GR1THYGBSA4D5V8MA",
+                  "id": "01M658J56GYPRCBH691738H94G",
+                  "parent_id": "01M658J56G8T02E1VPMRMEGFSH",
                   "user_id": null
                 }
               },
@@ -2016,7 +2016,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -2061,7 +2061,7 @@
             "timestamp": "2026-10-30T02:01:42+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658N6VG9C6E7E3XF5RYC547",
+                "id": "01M658N6VGZQA8WW5K0J187T1S",
                 "parent_id": null,
                 "user_id": null
               },
@@ -2552,7 +2552,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -2576,7 +2576,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -3029,7 +3029,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -3047,14 +3047,14 @@
         }
       },
       "context": {
-        "id": "01M658N6VG9C6E7E3XF5RYC547",
+        "id": "01M658N6VGZQA8WW5K0J187T1S",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "21b6111aec9eb688108a53a7d6c8b436",
+      "run_id": "2a1d81d160db60f91f22bab22e6f9bda",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -3084,7 +3084,7 @@
                 "last_reported": "2026-10-30T02:01:42+00:00",
                 "last_updated": "2026-10-30T02:01:42+00:00",
                 "context": {
-                  "id": "01M658N6VG9C6E7E3XF5RYC547",
+                  "id": "01M658N6VGZQA8WW5K0J187T1S",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -3112,7 +3112,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -3157,7 +3157,7 @@
             "timestamp": "2026-10-30T02:05:03+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658VB4R590QS43DFJAMG7C3",
+                "id": "01M658VB4RQP9K4BSWACR9TVRE",
                 "parent_id": null,
                 "user_id": null
               },
@@ -3648,7 +3648,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -3672,7 +3672,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -4125,7 +4125,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -4143,14 +4143,14 @@
         }
       },
       "context": {
-        "id": "01M658VB4R590QS43DFJAMG7C3",
+        "id": "01M658VB4RQP9K4BSWACR9TVRE",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "0eb52dd0fac87fc64f9bc277d893fb55",
+      "run_id": "df6f9b3fe2c024eec588aaa7d1fb5d2a",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -4180,7 +4180,7 @@
                 "last_reported": "2026-10-30T02:05:03+00:00",
                 "last_updated": "2026-10-30T02:05:03+00:00",
                 "context": {
-                  "id": "01M658VB4R590QS43DFJAMG7C3",
+                  "id": "01M658VB4RQP9K4BSWACR9TVRE",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -4202,7 +4202,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GY2269E6K17TAPD4W",
+                    "id": "01M658J56GV39PPE16XYGRFXJH",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -4217,7 +4217,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GD0BAY7NG6RB0367D",
+                    "id": "01M658J56GQQ0XWYJ0T8C5WB3F",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -4242,7 +4242,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -4287,8 +4287,8 @@
             "timestamp": "2026-10-30T02:05:03+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658VB4RY4G7VZ7CGC0EW9MK",
-                "parent_id": "01M658J56GD0BAY7NG6RB0367D",
+                "id": "01M658VB4R839JGDPMGA7VNMGF",
+                "parent_id": "01M658J56GQQ0XWYJ0T8C5WB3F",
                 "user_id": null
               },
               "room": {
@@ -4768,7 +4768,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -4792,7 +4792,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -5245,7 +5245,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -5263,14 +5263,14 @@
         }
       },
       "context": {
-        "id": "01M658VB4RY4G7VZ7CGC0EW9MK",
-        "parent_id": "01M658J56GD0BAY7NG6RB0367D",
+        "id": "01M658VB4R839JGDPMGA7VNMGF",
+        "parent_id": "01M658J56GQQ0XWYJ0T8C5WB3F",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/1/sequence/0",
-      "run_id": "8f6186cd1b6ff49991d38c93642a6341",
+      "run_id": "6add09521a7b85dcf68837b9f0a6dce9",
       "state": "stopped",
       "script_execution": null,
       "timestamp": {
@@ -5300,8 +5300,8 @@
                 "last_reported": "2026-10-30T02:05:03+00:00",
                 "last_updated": "2026-10-30T02:05:03+00:00",
                 "context": {
-                  "id": "01M658VB4RY4G7VZ7CGC0EW9MK",
-                  "parent_id": "01M658J56GD0BAY7NG6RB0367D",
+                  "id": "01M658VB4R839JGDPMGA7VNMGF",
+                  "parent_id": "01M658J56GQQ0XWYJ0T8C5WB3F",
                   "user_id": null
                 }
               },
@@ -5328,7 +5328,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -5373,7 +5373,7 @@
             "timestamp": "2026-10-30T02:06:43+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658YCSRN8NFRHRS4EV9RNP6",
+                "id": "01M658YCSR9SHAX5YZ7Y0X1DRQ",
                 "parent_id": null,
                 "user_id": null
               },
@@ -5678,7 +5678,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -5702,7 +5702,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -6155,7 +6155,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -6173,14 +6173,14 @@
         }
       },
       "context": {
-        "id": "01M658YCSRN8NFRHRS4EV9RNP6",
+        "id": "01M658YCSR9SHAX5YZ7Y0X1DRQ",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/choose/0/sequence/1/if/condition/0",
-      "run_id": "54725b6729013d30203d04aaa9fba4f0",
+      "run_id": "9b1d228c907440a088cc069ed46b248d",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -6210,7 +6210,7 @@
                 "last_reported": "2026-10-30T02:06:43+00:00",
                 "last_updated": "2026-10-30T02:06:43+00:00",
                 "context": {
-                  "id": "01M658YCSRN8NFRHRS4EV9RNP6",
+                  "id": "01M658YCSR9SHAX5YZ7Y0X1DRQ",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -6232,7 +6232,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GR1THYGBSA4D5V8MA",
+                    "id": "01M658J56G8T02E1VPMRMEGFSH",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -6247,7 +6247,7 @@
                   "last_reported": "2026-10-30T02:01:42+00:00",
                   "last_updated": "2026-10-30T02:01:42+00:00",
                   "context": {
-                    "id": "01M658N6VGCX859Z5A9KTZD520",
+                    "id": "01M658N6VG08TG0T54QQ7H7ZSM",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -6272,7 +6272,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+              "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -6317,8 +6317,8 @@
             "timestamp": "2026-10-30T02:06:43+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658YCSRBQYGVB61E8SR13AS",
-                "parent_id": "01M658N6VGCX859Z5A9KTZD520",
+                "id": "01M658YCSRA0DKY01PH0JCW5A4",
+                "parent_id": "01M658N6VG08TG0T54QQ7H7ZSM",
                 "user_id": null
               },
               "room": {
@@ -6602,7 +6602,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+          "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -6626,7 +6626,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "ec7b199c2be38c895a0bf9d476427ccf"
+              "device_id": "cc2e599fe3e0e1d9dae3110659e3d2d5"
             },
             "options": {
               "event_type": [
@@ -7079,7 +7079,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "ec7b199c2be38c895a0bf9d476427ccf",
+            "schedule": "cc2e599fe3e0e1d9dae3110659e3d2d5",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -7097,8 +7097,8 @@
         }
       },
       "context": {
-        "id": "01M658YCSRBQYGVB61E8SR13AS",
-        "parent_id": "01M658N6VGCX859Z5A9KTZD520",
+        "id": "01M658YCSRA0DKY01PH0JCW5A4",
+        "parent_id": "01M658N6VG08TG0T54QQ7H7ZSM",
         "user_id": null
       }
     }
