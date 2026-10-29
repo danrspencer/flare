@@ -192,7 +192,6 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, room_id: str | No
         labels=labels,
         manufacturer_model=manufacturer_model,
         claims=lambda eid: tracker.record(eid) if room_id else None,
-        reconnected_at=tracker.reconnected_at,
     )
 
 
@@ -536,7 +535,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
-                registry.reconnected_at(entity_id),
             )
             results[entity_id] = {
                 "blocked": is_blocked(status),

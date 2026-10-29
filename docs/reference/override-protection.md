@@ -144,8 +144,8 @@ A light also loses its claim when it goes unavailable, and you can discard claim
 [`flare.claims_clear`](../services/#flareclaims_clear).
 
 A light that has just come back online, say switched on at the wall, starts at whatever it
-powers up as, and may miss a command sent while it boots. That isn't counted as someone
-changing it: FLARE sends it again until it takes. Something changing it afterwards is.
+powers up as, and misses a command sent while it boots. So when a room's lights come back
+online together, FLARE waits a few seconds before setting them.
 
 ## FLARE's events
 

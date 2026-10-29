@@ -252,61 +252,6 @@ async def _groups(hass: HomeAssistant) -> list[str]:
     return [e for group in result["groups"] for e in group["combined"]]
 
 
-async def _light_back_online_and_a_lost_write(hass: HomeAssistant) -> None:
-    """A bulb switched back on at the wall boots at its own default; FLARE
-    writes to it straight away and the bulb never acts on it."""
-    async_mock_service(hass, "light", "turn_on")
-    set_light(hass, "light.a", "unavailable", supported_color_modes=CT)
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=255, color_temp_kelvin=2702)
-    await hass.async_block_till_done()
-    await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200, context=Context())
-    # The bulb reporting its boot state again, as Zigbee2MQTT does seconds later.
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=255, color_temp_kelvin=2701)
-    await hass.async_block_till_done()
-
-
-async def test_a_command_lost_as_a_light_comes_back_online_is_sent_again(setup_integration: HomeAssistant):
-    """Nobody changed the light, so it isn't overridden."""
-    hass = setup_integration
-    await _light_back_online_and_a_lost_write(hass)
-
-    assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "untracked"
-    assert await _groups(hass) == ["light.a"]
-
-
-async def test_a_change_after_the_light_has_settled_still_counts_as_an_override(setup_integration: HomeAssistant):
-    hass = setup_integration
-    await _light_back_online_and_a_lost_write(hass)
-
-    with freeze_time(dt_util.utcnow() + timedelta(seconds=31), real_asyncio=True) as frozen:
-        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=90, color_temp_kelvin=2702)
-        await hass.async_block_till_done()
-        assert await _groups(hass) == []
-        frozen.tick(timedelta(seconds=31))
-
-        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
-
-
-async def test_a_change_soon_after_flares_write_landed_still_counts_as_an_override(setup_integration: HomeAssistant):
-    """Once FLARE's write is seen to land, the light is FLARE's, however
-    recently it came back."""
-    hass = setup_integration
-    async_mock_service(hass, "light", "turn_on")
-    set_light(hass, "light.a", "unavailable", supported_color_modes=CT)
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=255, color_temp_kelvin=2702)
-    await hass.async_block_till_done()
-    ours = Context()
-    await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200, context=ours)
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=180, color_temp_kelvin=3200, context=ours)
-    await hass.async_block_till_done()
-
-    set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=90, color_temp_kelvin=3200)
-    await hass.async_block_till_done()
-
-    with after_the_grace():
-        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "overridden"
-
-
 async def _back_online_at_a_stale_level(hass: HomeAssistant) -> None:
     """A claim kept across a restart, and the light back online reporting
     something else before FLARE has written to it."""

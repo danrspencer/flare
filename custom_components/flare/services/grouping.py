@@ -3,7 +3,6 @@ light.turn_on/turn_off calls. Pure: HA access is injected through an
 EntityLookup."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
 from ..const import is_reachable
@@ -38,8 +37,6 @@ class EntityLookup:
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
     # The light's claims, or None if it has none or the caller tracks nothing - see claims.py.
     claims: Callable[[str], Optional[dict]]
-    # When the light last came back online, or None - see claims.py.
-    reconnected_at: Callable[[str], Optional[datetime]] = lambda _eid: None
 
     def is_state(self, entity_id: str, value: str) -> bool:
         s = self.state(entity_id)
@@ -79,7 +76,6 @@ class EntityLookup:
             brightness_tolerance,
             color_temp_tolerance,
             rgb_color_tolerance,
-            self.reconnected_at(entity_id),
         )
         return is_blocked(status, force)
 

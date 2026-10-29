@@ -506,23 +506,15 @@ while HA was down, and a write that dropped just before a restart on a
 light with no confirmed write. A crash loses the last `SAVE_DELAY`
 seconds of claims, failing open.
 
-**Reconnects** (`classify_state`'s `reconnected_at`; the `ClaimRegistry`
-notes when any light goes unavailable/unknown -> on/off, and forgets it
-once a FLARE write is seen landing. It's kept on the registry, not the
-claim, because a light's claim is dropped when it goes offline):
-
-- **A command lost as a light comes back is resent, not an override.**
-  Found live: a Hue bulb on a wall switch booted at its default, the
-  `recovered` trigger's write 26ms later never took, and it read
-  `overridden` every evening. A light that would read `overridden` is
-  `untracked` while it came back, was last updated within
-  `RECONNECT_SETTLE` (30s) of that, and FLARE's latest write was recorded
-  after it came back. That last condition keeps a real override real: a
-  light someone changed before it dropped out has its last FLARE write
-  from before. Note `latest` can't stand in for "landed": it's promoted
-  only at the next write.
-- Still parked: the same loss when FLARE wrote *before* the reconnect
-  (needed three restarts in fifteen minutes, which ordinary use doesn't).
+**A light coming back online isn't written to until it has booted.**
+Found live: a Hue bulb on a wall switch booted at its default, the
+`recovered` trigger's write 26ms later never took, and it read
+`overridden` every evening. The fix is upstream, the `recovered`
+trigger's `for:` (5s), not override protection: a 30s "reconnect settle"
+rule in `classify_state` that forgave a lost write was built and removed
+for it. Still parked: the same loss when FLARE wrote *before* the
+reconnect (needed three restarts in fifteen minutes, which ordinary use
+doesn't).
 
 **Testing restore needs a real setup.** The component harness forwards
 platforms without the frontend, so they fail and the claim events never
@@ -883,7 +875,9 @@ the room's `tick_area`), `extra`, `motion_on` / `motion_off`, and
   inverse lets one dead light disable recovery for the room forever. A
   flaky bulb beside healthy ones waits for the tick. Its template **can't
   reference `trigger.*`** (only `trigger_variables` are in scope), or it
-  never fires.
+  never fires. Its `for:` gives a bulb powered up at the wall time to boot
+  before it's sent anything; a trigger's hold isn't an action delay, since
+  `variables:` render after it.
 
 **There is no delay anywhere in `action:`, and there must not be.**
 `variables:` render once, at trigger time, so anything after a delay acts

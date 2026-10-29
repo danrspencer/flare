@@ -112,10 +112,6 @@ def classify(
     return "overridden", None
 
 
-# How long after a light comes back online its reports are still the bulb
-# settling (Zigbee2MQTT sends the attributes some seconds after the state).
-RECONNECT_SETTLE = timedelta(seconds=30)
-
 # How long a light can disagree with its claims before it counts as
 # overridden: long enough for FLARE's own write to land, a bulb back online
 # to report properly, or a room switched off light by light to go dark.
@@ -128,23 +124,13 @@ def classify_state(
     brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
     color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
-    reconnected_at: Optional[datetime] = None,
     now: Optional[datetime] = None,
 ) -> tuple[str, Optional[str]]:
     """classify() for a live HA state and its claim record (None if
     untracked). "unavailable" for a light HA can't reach or doesn't know,
     before any claim is consulted.
 
-    A light still showing what it came back online as (last updated within
-    RECONNECT_SETTLE of `reconnected_at`) that FLARE wrote to after it came
-    back is "untracked" rather than "overridden": the command was lost as
-    the bulb booted, nobody changed the light, so FLARE sends it again.
-    Without this it stays overridden at its power-on default. Only writes
-    after the reconnect count, so a light someone changed before it dropped
-    out stays theirs; and claims.py forgets the reconnect once a write from
-    FLARE lands, so a change after that is an override as usual.
-
-    Otherwise a light that doesn't match is "mismatched" until its record's
+    A light that doesn't match is "mismatched" until its record's
     `mismatch_since` (kept by claims.py) is MISMATCH_GRACE old, and only
     then "overridden": most mismatches are FLARE's own write still landing
     or a bulb reporting late. A mismatched light is blocked like an
@@ -161,12 +147,6 @@ def classify_state(
     )
     if status != "overridden":
         return status, matched_via
-    if (
-        reconnected_at is not None
-        and state.last_updated <= reconnected_at + RECONNECT_SETTLE
-        and _written_since(record or {}, reconnected_at)
-    ):
-        return "untracked", None
     since = _parse((record or {}).get("mismatch_since"))
     if since is None or (now or dt_util.utcnow()) < since + MISMATCH_GRACE:
         return "mismatched", None
@@ -183,17 +163,6 @@ def _parse(value: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(value) if value else None
     except (TypeError, ValueError):
         return None
-
-
-def _written_since(record: _WriteRecord, when: datetime) -> bool:
-    """Whether FLARE's latest write was recorded at or after `when`."""
-    recorded = (record.get("latest") or {}).get("recorded_at")
-    if not recorded:
-        return False
-    try:
-        return datetime.fromisoformat(recorded) >= when
-    except (TypeError, ValueError):
-        return False
 
 
 def is_blocked(status: str, force: bool = False) -> bool:

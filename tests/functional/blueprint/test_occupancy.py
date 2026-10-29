@@ -158,7 +158,7 @@ class TestAllowTurnOn:
         ["phase_change", "tick", "extra", "recovered", "lux_dark"],
     )
     async def test_no_trigger_reaching_default_can_light_a_dark_empty_room(
-        self, hass, apply_lighting_calls, scene_turn_on_calls, trigger_name
+        self, hass, apply_lighting_calls, scene_turn_on_calls, trigger_name, frozen_time
     ):
         """Swept across every trigger reaching default:, with a scene configured,
         so either turn-on path (or a new one) missing the gate is caught."""
@@ -190,6 +190,10 @@ class TestAllowTurnOn:
             light(hass, "light.a", "unavailable")
             await hass.async_block_till_done()
             light(hass, "light.a", "off")
+            await hass.async_block_till_done()
+            # Past the trigger's hold.
+            frozen_time.tick(timedelta(seconds=6))
+            async_fire_time_changed(hass, dt_util.utcnow())
         elif trigger_name == "lux_dark":
             illuminance(hass, "sensor.lux", 20)
         await hass.async_block_till_done()
