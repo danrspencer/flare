@@ -299,9 +299,24 @@ blueprint:
             select:
               options: [Morning, Day, Evening, Night]
               multiple: true
+        stored_traces:
+          name: Stored Traces
+          description: >
+            How many of the automation's recent runs to keep traces of. The
+            room updates every minute, so this is roughly how many minutes
+            back you can look.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#stored-traces).
+          default: 20
+          selector:
+            number:
+              min: 1
+              max: 200
+              mode: box
 
 mode: restart
 max_exceeded: silent
+trace:
+  stored_traces: !input stored_traces
 
 # Available to triggers and conditions, unlike variables:.
 trigger_variables:

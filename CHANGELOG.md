@@ -26,6 +26,8 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
 
 ### Changed
 
+- **Room automations keep their last 20 traces**, up from Home Assistant's 5, which a room ticking
+  every minute used up in five minutes. Change it with the blueprint's new **Stored Traces** setting.
 - **Setup is simpler.** It starts with your schedules, then asks whether to set up room
   automations now. Already have automations controlling your lights? Skip it, then move your
   rooms over one at a time with **Set up area**. Setting up an area gives it an automation, and
