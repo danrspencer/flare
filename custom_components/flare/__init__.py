@@ -63,9 +63,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     the schedule and target services, which belong to neither entry.
 
     The URL carries a fingerprint of the files and is cached hard, so any
-    change to them is a new URL; an old one redirects to it. A path segment, not `?v=`: the modules
-    import each other relatively, and a query isn't inherited by relative
-    imports."""
+    change to them is a new URL; an old one redirects to it. A path
+    segment, not `?v=`: the modules import each other relatively, and a
+    query isn't inherited by relative imports."""
     www = Path(__file__).parent / "www"
     base = f"{CARD_URL_BASE}/{await hass.async_add_executor_job(www_fingerprint, www)}"
     await hass.http.async_register_static_paths([StaticPathConfig(base, str(www), cache_headers=True)])
