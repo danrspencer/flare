@@ -1248,7 +1248,7 @@ Until the first release, the beta is also the root.
 for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
 which imports each module that registers something; modules that
 register nothing (`flare-entities.js`, `flare-section.js`,
-`flare-lights-section.js`, `flare-value-slider.js`, `flare-slider-colour.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
+`flare-lights-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
 `flare-activity-card.js`) are pulled in by the imports of those that do.
 `test_every_module_that_registers_something_is_loaded` follows the
 imports from the loader.
@@ -1314,6 +1314,11 @@ internal, is an accepted risk; if it breaks, follow
 `window.customCardFeatures` (not `customCards`, nor the older
 `customTileFeatures`). The kelvin feature imports `kelvinToRgb` from the
 curve card, so a slider's colour and the chart agree by construction.
+
+- **A slider's colour has 15% of `--primary-text-color` mixed in**
+  (`color-mix`), so a near-white shows on a light card and the theme
+  decides which way it moves. Measuring the card's background in JS and
+  darkening to a contrast ratio shipped once and was replaced by it.
 
 - **The drag handle can't be recoloured**: it's hardcoded white with no
   custom property or `part`. Injecting a rule into its shadow root
