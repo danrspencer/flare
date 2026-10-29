@@ -6,13 +6,13 @@ from datetime import datetime, time, timedelta
 import pytest
 from freezegun import freeze_time
 from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_capture_events, async_fire_time_changed
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SCHEDULES, SUBENTRY_TYPE_SENSOR
-from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS, ScheduleCoordinator
+from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS
 
 SENSOR = "sensor.ground_floor_flare"
 SELECT = "select.ground_floor_flare_phase"
@@ -122,15 +122,19 @@ class TestPhaseEvent:
 
         assert hass.states.get(PHASE).attributes["event_type"] == "Morning"
 
-    async def test_the_sensor_already_shows_the_phase_when_it_fires(self, schedule, hass: HomeAssistant):
-        """An automation it triggers reads the sensor straight away."""
-        seen: list[tuple[str, str]] = []
-
-        @callback
-        def _fired(event) -> None:
-            seen.append((event.data["new_state"].attributes["event_type"], hass.states.get(SENSOR).state))
-
-        async_track_state_change_event(hass, [PHASE], _fired)
+    async def test_an_automation_it_triggers_reads_the_new_phase(self, schedule, hass: HomeAssistant):
+        """HA starts an automation's run eagerly, inside the event's own state
+        write, so the sensor has to have updated first."""
+        assert await async_setup_component(hass, "automation", {"automation": [{
+            "id": "reads_the_phase",
+            "triggers": [{"trigger": "event.received", "target": {"entity_id": PHASE},
+                          "options": {"event_type": ["Morning", "Day", "Evening", "Night"]}}],
+            "variables": {"phase": "{{ states('" + SENSOR + "') }}"},
+            "actions": [{"event": "phase_read", "event_data": {
+                "in_variables": "{{ phase }}", "in_action": "{{ states('" + SENSOR + "') }}"}}],
+        }]})
+        await hass.async_block_till_done()
+        read = async_capture_events(hass, "phase_read")
         # The order that loses: the Phase entity hears the refresh before
         # the sensor does. Which comes first otherwise depends on setup order.
         coordinator = next(
@@ -146,7 +150,7 @@ class TestPhaseEvent:
         await hass.services.async_call("select", "select_option", {"entity_id": SELECT, "option": "Night"}, blocking=True)
         await hass.async_block_till_done()
 
-        assert seen == [("Night", "Night")]
+        assert [dict(e.data) for e in read] == [{"in_variables": "Night", "in_action": "Night"}]
 
     async def test_an_override_fires_it(self, schedule, hass: HomeAssistant):
         await hass.services.async_call("select", "select_option", {"entity_id": SELECT, "option": "Night"}, blocking=True)
