@@ -434,15 +434,14 @@ That skips the seven days but not the `release-blocker` check.
 
 A fix for the current release, say `v1.2.0`, can ship as `v1.2.1` straight away, with no beta
 and without whatever is in beta on `main`. It goes through a release branch cut from the
-commit the release was built from (the `Source:` line of its release commit):
+release's tag:
 
 ```bash
-git log -1 --format=%B v1.2.0
+git switch -c release/1.2.x v1.2.0
 ```
 
-```bash
-git switch -c release/1.2.x <that Source: commit>
-```
+Releases made before the zip (below) are a commit of their own on top of their source: cut
+those branches from the commit named on the `Source:` line of `git log -1 --format=%B v1.2.0`.
 
 ```bash
 git push origin release/1.2.x
@@ -470,25 +469,23 @@ version ships without it.
 
 ### How a release is built
 
-The manifest's version in source is a placeholder (`0.0.0-dev`). HACS reads the version out of the `manifest.json` inside
-the tag it downloads, so `scripts/release.py` builds each release **on the side**: a commit
-on top of the source commit with the real version written into those three places,
-tagged, and reachable from no branch. Nothing is committed to `dev` or `main`, so they
-never drift apart over version bumps. A release is the same source commit as the beta it
-came from, with different numbers written in - which is what "promote" means.
+Source never holds a real version. The manifest, `BLUEPRINT_VERSION` and the blueprint's
+description stamp all say `0.0.0-dev`. `scripts/release.py` tags the source commit and
+builds `flare.zip` from it, the integration's folder with the real version written into
+those three places, and the workflow attaches it to the GitHub release. HACS installs that
+zip (`zip_release` in `hacs.json`), never the tagged files. Nothing is committed to `dev` or
+`main`, so they never drift apart over version bumps. A beta and the release it becomes are
+the same commit, tagged twice, which is what "promote" means.
 
 The blueprint is versioned with FLARE: its stamp (and `BLUEPRINT_VERSION`) is always the
 release's own version, written by the same script. So every release, betas included, raises
 the out-of-date-blueprint repair for anyone using it, even if the blueprint itself did not
 change.
 
-GitHub shows a "does not belong to any branch" banner on these commits. That is expected.
-The release commit's message records its `Source:` commit.
-
 Shipped code has no special handling for a development build, on purpose. One thing follows:
-the blueprint's stamp in source is whatever it last held, so a changed blueprint raises no
-repair. Copy the
-changed file over your installed `blueprints/automation/flare/flare.yaml` yourself.
+a dev build's blueprint stamp is `0.0.0-dev`, which never matches a release's, so the repair
+appears until you copy the changed file over your installed
+`blueprints/automation/flare/flare.yaml` yourself.
 
 ### Two channels
 
@@ -496,8 +493,8 @@ The tag decides, and nothing else does:
 
 | Tag | Published as | Who sees it |
 |---|---|---|
-| `v0.16.0` | a normal release | everyone |
-| `v0.16.0-beta.1` | a GitHub **pre-release** | only people who opted in |
+| `v2.1.0` | a normal release | everyone |
+| `v2.1.0-beta.1` | a GitHub **pre-release** | only people who opted in |
 
 HACS filters on GitHub's own pre-release flag rather than on the tag text - see
 `custom_components/hacs/repositories/base.py`, which skips a release when
@@ -515,22 +512,17 @@ still describe offering the default branch as well, but that was removed in 2.0
 planned), and a repository's default branch is only tracked by commit when it publishes no
 releases at all. So changing the default branch or `hide_default_branch` does nothing here.
 
-What exists: HACS's `hacs/repository/download` websocket call takes any string as its
-`version`, and the download code falls back from `refs/tags/<name>.zip` to
-`refs/heads/<name>.zip`, so naming `dev` should install that branch. It is not offered in the
-UI and no update is ever reported for it, so it is a manual step each time. That has not been
-tried against this integration; until it has, treat it as unverified and follow the beta
-channel for anything you want to see through HACS.
+HACS can't install a branch or commit either: with `zip_release` it fetches `flare.zip` from
+a release for any version but the default branch, and the default branch is hidden. To run
+unreleased code, copy `custom_components/flare/` into your Home Assistant config and restart.
 
 ### Tagging by hand
 
-Still possible, when a workflow is unavailable. For a hotfix, see "Patching the current release" above. Set the three versions
-yourself in a checkout, tag it, and push the tag: `.github/workflows/release.yml` checks
-the tag against the manifest, that both blueprint stamps equal the tag, and that the
-changelog has a section for it, then publishes. (A tag pushed by
-the workflows above does not trigger it - GitHub does not let a workflow's own events start
-another - and needs no such check, since `scripts/release.py` wrote the version and the tag
-together.)
+Still possible, when a workflow is unavailable. For a hotfix, see "Patching the current release" above. Tag the
+commit and push the tag: `.github/workflows/release.yml` checks the changelog has a section
+for it, builds its `flare.zip` with `scripts/release.py package`, and publishes. (A tag
+pushed by the workflows above does not trigger it - GitHub does not let a workflow's own
+events start another - and needs none of this, since those workflows attach their own zip.)
 
 **Merge, then verify, then tag - as separate steps.** Chaining them means a failed merge
 still tags, which has happened: a `wip` commit went out as a release because the tag was

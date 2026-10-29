@@ -1,6 +1,6 @@
-"""Versions: the manifest's placeholder, the changelog heading the release
-script reads, the blueprint stamp, and release.yml (which checks tags
-pushed by hand) agreeing with all three."""
+"""Versions: the placeholders source carries for the release script to
+write over, the changelog heading it reads, and release.yml (which
+packages tags pushed by hand)."""
 
 import json
 import re
@@ -17,8 +17,12 @@ VERSION = re.compile(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?")
 
 
 def test_the_manifest_carries_the_dev_placeholder():
-    """scripts/release.py writes the real version into each release."""
+    """scripts/release.py writes the real version into each release's zip."""
     assert json.loads(MANIFEST.read_text())["version"] == "0.0.0-dev"
+
+
+def test_the_blueprint_carries_the_dev_placeholder():
+    assert BLUEPRINT_VERSION == "0.0.0-dev"
 
 
 def test_the_changelog_names_the_version_being_worked_toward():
@@ -33,13 +37,9 @@ def test_the_blueprint_stamp_matches_the_integrations_constant():
     assert VERSION.fullmatch(BLUEPRINT_VERSION)
 
 
-def test_release_yml_checks_the_real_manifest():
-    assert str(MANIFEST.relative_to(REPO_ROOT)) in RELEASE_WORKFLOW
-
-
-def test_release_yml_checks_the_stamp_against_the_tag():
-    assert '[ "$constant" != "$tag" ] || [ "$description" != "$tag" ]' in RELEASE_WORKFLOW
-    assert "blueprint_version.BLUEPRINT_VERSION" in RELEASE_WORKFLOW
+def test_release_yml_attaches_the_tag_s_own_zip():
+    assert 'scripts/release.py package --tag "$GITHUB_REF_NAME"' in RELEASE_WORKFLOW
+    assert f"{release.DIST}/{release.ZIP}" in RELEASE_WORKFLOW
 
 
 def test_release_yml_publishes_a_beta_as_a_prerelease():

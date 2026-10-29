@@ -1104,13 +1104,13 @@ real dispatch - keep patterns narrow.
   version as confusing). So every release, betas included, raises the
   outdated repair even when the blueprint didn't change. Accepted; don't
   reintroduce the decoupling.
-- **Nobody bumps it.** `scripts/release.py` writes the release's version
-  into the constant, the blueprint's description stamp and the manifest
-  (only the manifest holds a placeholder in source). What source holds for
-  the other two just has to agree.
-- **The repair code knows nothing about dev builds** (user's call). On a
-  dev install the constant and stamp agree, so it stays quiet even when
-  the blueprint changed; update the blueprint there by hand.
+- **Nobody bumps it.** All three hold `0.0.0-dev` in source, and
+  `scripts/release.py` writes the release's version into each release's
+  zip (see Releases).
+- **The repair code knows nothing about dev builds** (user's call). A dev
+  blueprint's `0.0.0-dev` stamp never matches a release's constant, so the
+  outdated repair shows on a house running dev files; update the blueprint
+  there by hand and ignore it.
 - **The stamp lives in the blueprint's `description`**: the `blueprint:`
   block is a closed schema (`blueprint/schemas.py`), and description
   survives every import route and shows in the editor.
@@ -1136,8 +1136,6 @@ real dispatch - keep patterns narrow.
 - **Don't reintroduce an import badge** in the quickstart: it went
   through `my.home-assistant.io` to a `main` raw URL - lessons 9 and 10 in
   one link.
-- `release.yml` checks a hand-pushed tag's constant and stamp equal the
-  tag, since disagreeing ones would raise a repair Fix can never clear.
 
 **The functional tests install the blueprint as a COPY**
 (`tests/functional/conftest.py`), never a symlink: tests write blueprint
@@ -1163,16 +1161,24 @@ files, and a symlink once wrote junk blueprints into the repo.
   `release-preview.yml` treat as patches (`--patch`) by their `release/*` base; merging one
   cuts the patch. Each branch runs its own copy of the workflows and script; a manual run
   using main's tooling against a branch was tried first and dropped as unconventional.
-- **Nothing is committed to a branch for a release.** The manifest's
-  source version is `0.0.0-dev`; `scripts/release.py` builds each release
-  as a commit on top of its source commit with the real version written
-  in, tagged and on no branch (`Source:` in its message is how a
-  promotion finds what to rebuild). A bot committing bumps to `main`
-  would leave `dev` behind and need back-merges under linear history.
-  GitHub shows "not on any branch" on release commits, and `main`'s
-  changelog headings are never re-dated.
+- **No version is ever committed; HACS installs a zip** (user's call,
+  2026-10-29, replacing release commits built on the side). Source holds
+  `0.0.0-dev` in the manifest, `BLUEPRINT_VERSION` and the blueprint's
+  stamp. `scripts/release.py` tags the source commit (annotated, so the
+  soak counts from the tag) and builds `flare.zip` from it with the
+  version written into all three; the workflow attaches it, and
+  `hacs.json`'s `zip_release` makes HACS install it. A beta and its
+  release are one commit, tagged twice. Releases before the zip were a
+  commit on top of their source, named by `Source:` in its message, which
+  `source_of()` still reads.
+- **HACS reads `hacs.json` at the version being installed**, so releases
+  from before the zip still install from their files. Any version that
+  isn't a release with a zip, a commit SHA included, fails to install
+  (`download_zip_files` in HACS's `repositories/base.py`).
+- **HACS's download count** is the current release's first asset's count,
+  not a total, so it restarts with every beta.
 - **A tag pushed with `GITHUB_TOKEN` starts no other workflow**, so
-  `release.yml` (which polices hand-pushed tags) never runs for automated
+  `release.yml` (which packages hand-pushed tags) never runs for automated
   releases. That's deliberate; don't "fix" it with a PAT.
 - **`git push origin dev:main` must be a fast-forward**: `main` requires
   linear history.
@@ -1181,7 +1187,7 @@ files, and a symlink once wrote junk blueprints into the repo.
   first, a frontend bug that would read as ours, and the Activity card
   needs 2026.10's `ha-logbook-entry`. The blueprint's own floor stays at
   what it needs.
-- `tests/checks/test_versions.py` pins the placeholder and a parseable
+- `tests/checks/test_versions.py` pins the placeholders and a parseable
   changelog heading. Full flow in CONTRIBUTING.md.
 
 ### Versioned docs
@@ -1214,30 +1220,29 @@ Until the first release, the beta is also the root.
 
 ### Getting a build onto the live instance
 
-- **HACS has no dev channel, and the default branch isn't one.** HACS 2.x
-  offers only GitHub releases in its version list (hacs/integration#4009);
-  `hide_default_branch` and the default branch do nothing. Don't propose
-  them again. What does work: `hacs/repository/download` accepts any
-  `version`, including a 40-character commit SHA, and nothing reports it
-  as an update afterwards.
-- **While developing, install the working commit; never publish a
+- **HACS can't install unreleased code.** HACS 2.x offers only GitHub
+  releases (hacs/integration#4009), `hide_default_branch` and the default
+  branch do nothing, and with `zip_release` a commit SHA has no zip to
+  fetch. Don't propose them again.
+- **While developing, write the files over a release; never publish a
   version to test it** (user's direction). A beta is what testers are
-  offered, not a scratch build.
-  1. Push the branch - HACS downloads from GitHub.
-  2. `ha_manage_hacs(action="download", repository_id="danrspencer/flare",
-     version="<full commit SHA>")`. The full SHA: a short one is refused.
-  3. Confirm with `ha_read_file` that the installed files match, then
-     restart. (`www/` can't be read that way; check a `.py` file that
-     changed with it.)
-  4. If the blueprint changed, save
-     `custom_components/flare/blueprints/flare.yaml` at that SHA with
+  offered, not a scratch build. ha-mcp writes to `custom_components/flare`
+  only once it's added as a custom write directory in ha-mcp's settings
+  (the user's to do).
+  1. Install the newest release through HACS, so every file is there,
+     the brand PNGs included (`ha_write_file` writes text only).
+  2. Write each file `git diff --name-only <that tag> -- custom_components/flare`
+     names with `ha_write_file(overwrite=True)`; delete removed ones with
+     `ha_delete_file`. Leave `manifest.json` and `blueprint_version.py`
+     as the zip wrote them unless they really changed.
+  3. Confirm with `ha_read_file`, then restart.
+  4. If the blueprint changed, save it with
      `ha_manage_blueprints(action="save", path="flare/flare.yaml",
-     overwrite=True)` (lesson 10). The repair can't tell, since the stamps
-     agree. If the branch changed how rooms tick, the old blueprint stops
-     them ticking until this is done.
-  - **A dev build doesn't stay put**: applying a HACS update installs the
-    release over it, and the blueprint repair then appears. Re-install
-    the SHA rather than pressing Fix.
+     overwrite=True)` (lesson 10). If the branch changed how rooms tick,
+     the old blueprint stops them ticking until this is done. Its
+     `0.0.0-dev` stamp raises the outdated repair; ignore it.
+  - **A dev build doesn't stay put**: a HACS update installs the release
+    over it. Write the files again rather than pressing Fix.
   - To get back onto a release, download that tag.
 - A merged change, or a release: HACS `update_information` then
   `download`, check the installed files, restart. The blueprint updates

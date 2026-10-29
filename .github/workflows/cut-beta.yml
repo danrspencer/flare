@@ -9,10 +9,10 @@ name: cut-beta
 # squash or rebase merge from a pull request would give main new SHAs
 # that dev never sees.
 #
-# Nothing is committed anywhere. scripts/release.py builds the release on
-# the side (a commit carrying the real version numbers, reachable from no
-# branch), and this workflow only pushes the tag it made. See that
-# script's docstring for why the source carries a placeholder instead.
+# Nothing is committed anywhere. scripts/release.py tags the pushed commit
+# and builds flare.zip from it with the real version written in, which is
+# what HACS installs; this workflow pushes the tag and attaches the zip.
+# See that script's docstring for why the source carries a placeholder.
 #
 # Tests run first, on the exact commit being released. tests.yml
 # deliberately does not run on pushes to main itself, so this call is the
@@ -55,20 +55,18 @@ jobs:
 
       # A tag pushed with GITHUB_TOKEN does not trigger release.yml (GitHub
       # does not let a workflow's own events start other workflows), which
-      # is what we want: its checks exist to police a tag typed by hand,
-      # and a tag the script built agrees with its own manifest by
-      # construction.
+      # is what we want: that one packages a tag typed by hand, and this
+      # one has its zip already.
       - name: Publish it
         if: steps.cut.outputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.cut.outputs.tag }}
-          # Named explicitly: release commits are on no branch, so GitHub
-          # would find no earlier tag to count from (release.py notes_start).
+          # Named explicitly (release.py notes_start).
           PREVIOUS: ${{ steps.cut.outputs.previous }}
         run: |
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" --title "$TAG" --generate-notes --prerelease ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes --prerelease ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
 
   # The beta's docs. Also when nothing shipped changed and no beta was
   # cut: a docs-only push still updates them, under the newest beta's

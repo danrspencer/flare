@@ -1,21 +1,19 @@
 name: release
 
 # THIS IS FOR A TAG PUSHED BY HAND. Betas and releases are normally built
-# by cut-beta.yml and promote.yml, which push their own tags - and a tag
-# pushed by a workflow does not trigger this one, so nothing here runs
-# for them. Their tags agree with their manifests by construction
-# (scripts/release.py wrote both), which is the thing these checks exist
-# to establish for a person typing `git tag`.
+# by cut-beta.yml and promote.yml, which push their own tags and attach
+# their own zips - and a tag pushed by a workflow does not trigger this
+# one, so nothing here runs for them.
 #
-# Cutting a release by hand is pushing a tag. The workflow's job is to
-# make sure the tag and the manifest can't disagree: HACS reads the
-# version out of manifest.json, not out of the tag, so a mismatch means
-# the version people see installed isn't the version they downloaded.
+# Cutting a release by hand is pushing a tag. HACS installs the release's
+# flare.zip, never the tagged files (whose versions are 0.0.0-dev), so this
+# builds that zip with the tag's version written in, as scripts/release.py
+# does for every release.
 #
 # TWO CHANNELS, decided by the tag alone:
 #
-#   v0.16.0          -> a normal release
-#   v0.16.0-beta.1   -> a GitHub PRE-release
+#   v2.1.0          -> a normal release
+#   v2.1.0-beta.1   -> a GitHub PRE-release
 #
 # HACS filters on GitHub's own prerelease flag, not on the tag text
 # (custom_components/hacs/repositories/base.py: `if release.draft or
@@ -37,15 +35,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: The tag and manifest.json must agree
-        run: |
-          tag="${GITHUB_REF_NAME#v}"
-          manifest=$(python -c "import json; print(json.load(open('custom_components/flare/manifest.json'))['version'])")
-          if [ "$tag" != "$manifest" ]; then
-            echo "::error::tag is v$tag but manifest.json says $manifest - bump the manifest and re-tag"
-            exit 1
-          fi
-
       # A hyphen is the whole rule, so it isn't shared with
       # tests/checks/test_versions.py as code; that file checks the
       # wiring below.
@@ -58,28 +47,10 @@ jobs:
             *)   echo "prerelease=false" >> "$GITHUB_OUTPUT"; echo "base=$tag"       >> "$GITHUB_OUTPUT" ;;
           esac
 
-      # The blueprint is versioned WITH FLARE: its stamp is the release's
-      # own version. scripts/release.py satisfies this by construction. It
-      # is checked here for a tag pushed by hand, where a constant and
-      # stamp that disagree would raise the outdated repair on every
-      # install, and Fix could never clear it.
-      - name: The blueprint stamp must be this release's version
-        run: |
-          read -r constant description < <(python - <<'PY'
-          import sys
-          sys.path.insert(0, "custom_components/flare")
-          import blueprint_version
-          text = open("custom_components/flare/blueprints/flare.yaml").read()
-          print(blueprint_version.BLUEPRINT_VERSION, blueprint_version.version_from_description(text))
-          PY
-          )
-          tag="${GITHUB_REF_NAME#v}"
-          echo "release $tag, BLUEPRINT_VERSION $constant, blueprint description $description"
-
-          if [ "$constant" != "$tag" ] || [ "$description" != "$tag" ]; then
-            echo "::error::the blueprint must be stamped $tag in both blueprint_version.py and its own description, but they say $constant and $description."
-            exit 1
-          fi
+      # The manifest, the blueprint's stamp and BLUEPRINT_VERSION, all
+      # written with the tag's version.
+      - name: Build the zip
+        run: python scripts/release.py package --tag "$GITHUB_REF_NAME"
 
       # The BASE version, so a run of betas can share the one section
       # that describes what they are building toward. Requiring a section
@@ -109,4 +80,4 @@ jobs:
           else
             flags=""
           fi
-          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes $flags
+          gh release create "$GITHUB_REF_NAME" dist/flare.zip --title "$GITHUB_REF_NAME" --generate-notes $flags

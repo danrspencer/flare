@@ -82,7 +82,7 @@ jobs:
           PREVIOUS: ${{ steps.cut.outputs.previous }}
         run: |
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
 
   # The release's docs become the site's default. In this run, because a
   # tag pushed with GITHUB_TOKEN starts no other workflow.
