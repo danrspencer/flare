@@ -4,7 +4,7 @@ name: patch-release
 # stable with no beta, leaving whatever is in beta on main behind - as a
 # push to main cuts a beta:
 #
-#     git switch -c release/1.2.x <v1.2.0's Source: commit>
+#     git switch -c release/1.2.x v1.2.0   # older releases: their Source: commit
 #     git cherry-pick -x <the fix>   # and a '## [1.2.1]' changelog section
 #     git push origin release/1.2.x
 #
@@ -54,7 +54,7 @@ jobs:
           PREVIOUS: ${{ steps.cut.outputs.previous }}
         run: |
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
 
   # The patch is the newest release, so its docs become the site's default.
   docs:

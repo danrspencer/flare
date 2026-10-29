@@ -1,9 +1,10 @@
 """scripts/release.py: when a beta is cut or promoted, and what version
-lands in the files. The decisions are tested on plain values; building
-the release commit is tested against a real throwaway git repository."""
+lands in the zip. The decisions are tested on plain values; tagging and
+packaging are tested against a real throwaway git repository."""
 
 import json
 import re
+import zipfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -278,7 +279,10 @@ class Project:
         (self.root / release.CHANGELOG).write_text(f"# Changelog\n\n## [{version}]\n")
 
     def at(self, tag: str, path: str) -> str:
-        return self.repo.out("show", f"{tag}:{path}")
+        """A file as the tag's zip carries it."""
+        zipped = self.repo.package(Tag.parse(tag), self.root / ".git" / "dist")
+        with zipfile.ZipFile(zipped) as files:
+            return files.read(Path(path).relative_to(release.COMPONENT).as_posix()).decode()
 
 
 @pytest.fixture
@@ -286,19 +290,45 @@ def project(tmp_path):
     return Project(tmp_path)
 
 
-def test_the_release_commit_is_on_no_branch_and_leaves_the_checkout_alone(project):
-    source = project.repo.out("rev-parse", "HEAD")
+def test_a_beta_tags_its_source_and_leaves_the_checkout_alone(project):
     project.target("0.17.0")
     source = project.commit("target 0.17.0")
 
     beta = release.cut_beta(project.repo, source)
 
-    sha = project.repo.out("rev-parse", beta.name)
-    assert project.repo.out("branch", "--contains", sha) == "", "a branch now holds it"
+    assert project.repo.out("rev-parse", f"{beta.name}^{{commit}}") == source
+    assert project.repo.out("cat-file", "-t", beta.name) == "tag", "not annotated, so not dated"
     assert project.repo.out("rev-parse", "HEAD") == source, "the checkout moved"
     assert project.repo.out("status", "--porcelain") == "", "the checkout was dirtied"
-    assert project.repo.out("rev-parse", f"{beta.name}^") == source
     assert json.loads(project.at(beta.name, release.MANIFEST))["version"] == "0.17.0-beta.1"
+
+
+def test_the_zip_is_the_integration_s_folder_with_its_files_at_the_root(project):
+    project.edit("custom_components/flare/www/card.js", "card", "a card")
+    project.edit("docs/page.md", "hello", "docs")
+    project.target("0.17.0")
+    beta = release.cut_beta(project.repo, project.commit("target 0.17.0"))
+
+    with zipfile.ZipFile(project.repo.package(beta, project.root / ".git" / "dist")) as files:
+        names = sorted(files.namelist())
+
+    assert names == ["blueprint_version.py", "blueprints/flare.yaml", "manifest.json", "www/card.js"]
+
+
+def test_source_keeps_its_placeholders(project):
+    project.target("0.17.0")
+    beta = release.cut_beta(project.repo, project.commit("target 0.17.0"))
+
+    assert json.loads(project.repo.out("show", f"{beta.name}:{release.MANIFEST}"))["version"] == "0.0.0-dev"
+
+
+def test_an_older_release_commit_is_read_back_to_its_source(project):
+    """Releases from before the zip are a commit on their source."""
+    source = project.repo.out("rev-parse", "HEAD")
+    project.repo.git("commit", "-q", "--allow-empty", "-m", f"Release v0.16.0\n\nSource: {source}\n")
+    project.repo.git("tag", "v0.16.0")
+
+    assert project.repo.source_of(Tag.parse("v0.16.0")) == source
 
 
 def test_a_beta_records_what_it_was_built_from(project):
@@ -454,13 +484,13 @@ def test_a_release_stamps_the_blueprint_even_if_it_never_changed(project):
     assert version_from_description(project.at(stable.name, release.BLUEPRINT)) == "0.17.0"
 
 
-def test_a_hand_made_beta_cannot_be_promoted(project):
-    """A tag with no recorded source can't be rebuilt."""
+def test_a_hand_made_beta_is_promoted_from_its_own_commit(project):
     sha = project.repo.out("rev-parse", "HEAD")
     project.repo.git("tag", "v0.17.0-beta.1", sha)
 
-    with pytest.raises(Refuse):
-        release.promote(project.repo, NOW + timedelta(days=400))
+    stable = release.promote(project.repo, datetime.now(timezone.utc) + timedelta(days=8))
+
+    assert project.repo.source_of(stable) == sha
 
 
 def test_a_preview_names_the_beta_and_where_its_notes_start(project):
@@ -504,6 +534,7 @@ def test_the_command_line_hands_the_workflow_a_tag_or_nothing(project, monkeypat
 
     assert release.main(["cut-beta", "--source", source]) == 0
     assert output.read_text().splitlines() == ["tag=v0.17.0-beta.1", "previous=", "prerelease=true"]
+    assert (project.root / release.DIST / release.ZIP).exists(), "nothing for the workflow to attach"
 
     output.write_text("")
     assert release.main(["cut-beta", "--source", source]) == 0  # nothing new: a skip
@@ -645,6 +676,16 @@ def test_the_command_line_hands_the_workflow_a_patch_and_its_previous_release(
 
     assert release.main(["patch", "--source", source]) == 0
     assert output.read_text().splitlines() == ["tag=v0.17.1", "previous=v0.17.0", "prerelease=false"]
+    assert (project.root / release.DIST / release.ZIP).exists()
+
+
+def test_a_tag_pushed_by_hand_is_packaged_with_its_own_version(project, monkeypatch):
+    monkeypatch.setattr(release, "REPO_ROOT", project.root)
+    project.repo.git("tag", "v0.16.0")
+
+    assert release.main(["package", "--tag", "v0.16.0"]) == 0
+    with zipfile.ZipFile(project.root / release.DIST / release.ZIP) as files:
+        assert json.loads(files.read("manifest.json"))["version"] == "0.16.0"
 
 
 # --- The wiring --------------------------------------------------------
@@ -667,3 +708,11 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
     assert "release/*) python scripts/release.py preview --source HEAD --patch" in preview
     for workflow in (cut, promote, patch):
         assert "steps.cut.outputs.previous" in workflow
+        assert f"{release.DIST}/{release.ZIP}" in workflow, "the release has no zip for HACS"
+
+
+def test_hacs_installs_the_zip_the_script_builds():
+    hacs = json.loads((REPO_ROOT / "hacs.json").read_text())
+
+    assert hacs["zip_release"] is True
+    assert hacs["filename"] == release.ZIP

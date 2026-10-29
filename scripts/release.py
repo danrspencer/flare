@@ -1,34 +1,28 @@
 """Cut betas and promote them to stable releases, without ever committing
-a version number to a branch.
+a version number.
 
-WHY NO VERSION IN THE SOURCE. HACS reads a release's version out of the
-`manifest.json` inside the tag it downloads, so every release needs a
-commit whose files say the right thing. Putting that commit on a branch
-means either a person bumps it by hand (which is how the blueprint stamp
-got forgotten) or a bot pushes it and the branch it came from never
-contains it, so dev and main drift apart on every release.
+Source carries a placeholder (0.0.0-dev) in the three places a version
+lives: the manifest, the constant in blueprint_version.py and the
+blueprint's description stamp. A release tags its source commit and
+builds flare.zip from it with the real version written into all three;
+HACS installs that zip (`zip_release` in hacs.json), never the tagged
+files. The blueprint is versioned with FLARE, so all three get the same
+number. A beta and the release it becomes are the same commit, tagged
+twice.
 
-So the manifest carries a placeholder (0.0.0-dev) and a release is
-built on the side: a commit on top of the source commit with the real
-version written into the three places it lives, tagged, and left
-unreachable from any branch. Nothing moves. The other two (the constant
-in blueprint_version.py and the blueprint's description stamp) hold
-whatever they last held in source and are overwritten the same way, with
-the same number: the blueprint is versioned with FLARE, not separately.
-A beta and the release it becomes are the same source commit with
-different numbers written in.
+Releases from before the zip were a commit on top of their source with
+the version written in, and name that source in their message
+(`Source: <sha>`); source_of() still reads it.
 
-The commit message records that source (`Source: <sha>`), which is how a
-promotion finds what to rebuild.
-
-Six subcommands. The first three build and tag locally and print what they
-did; the others only answer a question. Pushing the tag and
-publishing the GitHub release is the workflow's job, because that is the
-part that needs credentials:
+Seven subcommands. The first three tag and package locally and print what
+they did; `package` only packages; the others only answer a question.
+Pushing the tag and publishing the GitHub release with its zip is the
+workflow's job, because that is the part that needs credentials:
 
     release.py cut-beta --source SHA     what .github/workflows/cut-beta.yml runs
     release.py promote [--force]         what .github/workflows/promote.yml runs
     release.py patch --source SHA        what .github/workflows/patch-release.yml runs
+    release.py package --tag TAG         what .github/workflows/release.yml runs for a tag pushed by hand
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
     release.py preview --source SHA      what .github/workflows/release-preview.yml comments with
 
@@ -42,11 +36,14 @@ workflows need no install step.
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -57,6 +54,11 @@ MANIFEST = "custom_components/flare/manifest.json"
 BLUEPRINT_VERSION_PY = "custom_components/flare/blueprint_version.py"
 BLUEPRINT = "custom_components/flare/blueprints/flare.yaml"
 CHANGELOG = "CHANGELOG.md"
+COMPONENT = "custom_components/flare"
+# hacs.json's `filename`: the asset HACS downloads from each release.
+ZIP = "flare.zip"
+# Where the zip is written, for the workflow to attach.
+DIST = "dist"
 
 # How long a version's newest beta must sit before it is promoted.
 SOAK = timedelta(days=7)
@@ -173,8 +175,8 @@ def notes_start(tag: Tag, tags: list[Tag]) -> Tag | None:
     it; a release's, the newest release below it, since its own betas are
     nearly the same code.
 
-    Named explicitly because release commits are on no branch, so GitHub
-    finds no earlier tag among a release's ancestors.
+    Named explicitly because GitHub would count a release's notes from
+    its own beta, the same commit, and older releases are on no branch.
     """
     earlier = [t for t in tags if t < tag and (t.stable or not tag.stable)]
     return max(earlier, default=None)
@@ -274,8 +276,8 @@ class Repo:
         return self.git(*args, cwd=cwd).stdout.strip()
 
     def tags(self) -> tuple[list[Tag], dict[str, datetime]]:
-        """Every tag of ours, and when it was made. Lightweight tags, so
-        creatordate is the release commit's own date."""
+        """Every tag of ours, and when it was made: an annotated tag's own
+        date, or an older release commit's."""
         listing = self.out(
             "for-each-ref", "--format=%(refname:strip=2)|%(creatordate:iso-strict)", "refs/tags"
         )
@@ -293,15 +295,11 @@ class Repo:
         return result.stdout if result.returncode == 0 else None
 
     def source_of(self, tag: Tag) -> str:
-        """The commit a release was built from, per its own message."""
+        """The commit a release was built from: the tagged commit, or for an
+        older release, the one its message names."""
         body = self.out("log", "-1", "--format=%B", tag.name)
         m = re.search(r"^Source: ([0-9a-f]{40})$", body, re.MULTILINE)
-        if not m:
-            raise Refuse(
-                f"{tag.name} has no 'Source:' line, so it was not built by this script "
-                "and there is nothing to rebuild it from."
-            )
-        return m.group(1)
+        return m.group(1) if m else self.out("rev-parse", f"{tag.name}^{{commit}}")
 
     def is_ancestor(self, old: str, new: str) -> bool:
         return self.git("merge-base", "--is-ancestor", old, new, check=False).returncode == 0
@@ -309,31 +307,32 @@ class Repo:
     def shipped_changed(self, old: str, new: str) -> bool:
         return self.git("diff", "--quiet", old, new, "--", *SHIPPED, check=False).returncode != 0
 
-    def build(self, tag: Tag, source: str) -> str:
-        """Commit `source` with `tag`'s version written in, and tag it.
+    def build(self, tag: Tag, source: str) -> None:
+        """Tag `source`. Annotated, so the tag's date is when it was cut,
+        which the soak period counts from."""
+        self.git(
+            "-c", f"user.name={_BOT[0]}", "-c", f"user.email={_BOT[1]}", "-c", "tag.gpgsign=false",
+            "tag", "-a", tag.name, source, "-m", f"Release {tag.name}",
+        )
 
-        Done in a throwaway worktree so the caller's checkout is never
-        touched, and the result is reachable from no branch - which is
-        the point.
-        """
+    def package(self, tag: Tag, out: Path) -> Path:
+        """The zip HACS installs for `tag`: the integration's folder at the
+        tag with the version written in, its files at the zip's root."""
+        archive = subprocess.run(
+            ["git", "archive", tag.name, COMPONENT], cwd=self.root, capture_output=True, check=True
+        ).stdout
         with tempfile.TemporaryDirectory() as tmp:
-            tree = Path(tmp) / "release"
-            self.git("worktree", "add", "--detach", str(tree), source)
-            try:
-                stamp_tree(tree, tag.version)
-
-                self.git("add", "-A", cwd=tree)
-                self.git(
-                    "-c", f"user.name={_BOT[0]}", "-c", f"user.email={_BOT[1]}",
-                    "-c", "commit.gpgsign=false",
-                    "commit", "--allow-empty", "-m", f"Release {tag.name}\n\nSource: {source}\n",
-                    cwd=tree,
-                )
-                sha = self.out("rev-parse", "HEAD", cwd=tree)
-            finally:
-                self.git("worktree", "remove", "--force", str(tree), check=False)
-        self.git("tag", tag.name, sha)
-        return sha
+            tree = Path(tmp)
+            with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+                tar.extractall(tree, filter="data")
+            stamp_tree(tree, tag.version)
+            out.mkdir(parents=True, exist_ok=True)
+            path = out / ZIP
+            component = tree / COMPONENT
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zipped:
+                for file in sorted(p for p in component.rglob("*") if p.is_file()):
+                    zipped.write(file, file.relative_to(component).as_posix())
+        return path
 
 
 # --- Subcommands -------------------------------------------------------
@@ -345,9 +344,8 @@ def check(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
     Refuses a change to what ships while the changelog's top section names
     a version that is already out: the change belongs in a new section.
     """
-    # Whatever the caller passed (HEAD, a branch, a short SHA), record the
-    # full SHA: it is written into the release commit and read back at
-    # promotion time, when HEAD would mean something else entirely.
+    # Whatever the caller passed (HEAD, a branch, a short SHA), tag the
+    # full SHA: HEAD means something else by the time anything reads it.
     source = repo.out("rev-parse", "--verify", f"{source}^{{commit}}")
     tags, _ = repo.tags()
 
@@ -359,11 +357,7 @@ def check(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
     stable = highest_stable(tags)
     if stable is not None and parse_base(base) <= stable:
         released = Tag(stable, True, 0)
-        try:
-            changed = repo.shipped_changed(repo.source_of(released), source)
-        except Refuse:
-            changed = True  # a hand-made release: no recorded source to compare
-        if changed:
+        if repo.shipped_changed(repo.source_of(released), source):
             raise Refuse(
                 f"the changelog's top section is [{base}], which is already released "
                 f"({released.name}), but {', '.join(SHIPPED)} has changed since. Add a "
@@ -384,11 +378,8 @@ def planned_beta(repo: Repo, source: str) -> tuple[str, list[Tag], Tag]:
     earlier = [t for t in tags if t.base == beta.base and not t.stable]
     if earlier:
         last = max(earlier)
-        try:
-            if not repo.shipped_changed(repo.source_of(last), source):
-                raise Skip(f"nothing under {', '.join(SHIPPED)} has changed since {last.name}")
-        except Refuse:
-            pass  # a hand-made beta: no recorded source, so cut a fresh one
+        if not repo.shipped_changed(repo.source_of(last), source):
+            raise Skip(f"nothing under {', '.join(SHIPPED)} has changed since {last.name}")
     return source, tags, beta
 
 
@@ -415,10 +406,7 @@ def docs_source(repo: Repo, head: str, tag_name: str | None = None) -> tuple[Tag
         tag = Tag.parse(tag_name)
         if tag is None or not tag.stable:
             raise Refuse(f"{tag_name} is not a release tag")
-    try:
-        changed = repo.shipped_changed(repo.source_of(tag), head)
-    except Refuse:
-        changed = True  # a hand-made release: build its docs from the tag
+    changed = repo.shipped_changed(repo.source_of(tag), head)
     return tag, tag.name if changed else head
 
 
@@ -515,6 +503,9 @@ def main(argv: list[str] | None = None) -> int:
     pat = sub.add_parser("patch", help="build the current release's next patch, with no beta")
     pat.add_argument("--source", required=True, help="the commit to release, built on the current release")
 
+    pkg = sub.add_parser("package", help="build an existing tag's zip")
+    pkg.add_argument("--tag", required=True, help="the release tag")
+
     pre = sub.add_parser("preview", help="the beta a commit would ship as, for a pull request comment")
     pre.add_argument("--source", required=True, help="the commit to preview")
     pre.add_argument("--patch", action="store_true", help="preview it as a patch, for a release branch")
@@ -538,15 +529,20 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "docs-source":
             tag, ref = docs_source(repo, args.head, args.tag)
             _emit(tag=tag.name, ref=ref, follows_head=str(ref != tag.name).lower())
-        elif args.command == "cut-beta":
-            tag = cut_beta(repo, args.source)
-            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="true")
-        elif args.command == "patch":
-            tag = patch(repo, args.source)
-            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="false")
+        elif args.command == "package":
+            tag = Tag.parse(args.tag)
+            if tag is None:
+                raise Refuse(f"{args.tag} is not a release tag")
+            print(repo.package(tag, REPO_ROOT / DIST).relative_to(REPO_ROOT))
         else:
-            tag = promote(repo, datetime.now(timezone.utc), force=args.force)
-            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease="false")
+            if args.command == "cut-beta":
+                tag = cut_beta(repo, args.source)
+            elif args.command == "patch":
+                tag = patch(repo, args.source)
+            else:
+                tag = promote(repo, datetime.now(timezone.utc), force=args.force)
+            repo.package(tag, REPO_ROOT / DIST)
+            _emit(tag=tag.name, previous=_notes_start_name(repo, tag), prerelease=str(not tag.stable).lower())
     except Skip as skip:
         done = "Nothing to follow" if args.command == "docs-source" else "Nothing released"
         print(f"::notice::{done}: {skip}")
