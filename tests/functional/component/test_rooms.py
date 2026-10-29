@@ -56,9 +56,10 @@ async def _setup(hass: HomeAssistant):
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
     await button_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    # The tests refresh the statuses themselves.
+    # The tests refresh the statuses themselves, the first pass seeding them.
     tracker = registry._listener
     tracker.async_claims_changed = lambda: None
+    tracker._last_statuses = None
     added.append(tracker)
     _TRACKERS.append(tracker)
     return entry, registry, added
@@ -491,11 +492,12 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     refreshed: list = []
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
+    unsub = registry.async_start_listening(hass)
     hass.states.async_set("light.a", "unavailable", {})
-    tracker._poll(None)
     await hass.async_block_till_done()
+    unsub()
 
-    assert refreshed, "the poll must tell the counters to recompute"
+    assert refreshed, "the light's change must tell the counters to recompute"
     assert overridden.native_value == 0
 
 

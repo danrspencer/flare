@@ -461,9 +461,11 @@ disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
 dropped for being hidden; the status sensors are what make this one not.
 
 **The claim events aren't an entity** (`sensor.ClaimEvents`): they
-refresh statuses on each claim change and a 30 s poll (live state changes
-without any claim changing), fire the overridden, controlled and released
-events, and recheck after the grace. A room restored dark is released and
+refresh statuses when they start and on each claim change, fire the
+overridden, controlled and released events, and recheck after the grace.
+There's no poll: a claimed light's change that moves its count goes
+through the registry's listener (a drop, going off, arriving, or a
+mismatch starting or ending), and the grace is the only timed change. A room restored dark is released and
 stale claims pruned only once they're listening, after the platforms, so
 the release is announced.
 

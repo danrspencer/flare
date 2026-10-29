@@ -11,7 +11,6 @@ an entity but are filed under these."""
 from __future__ import annotations
 
 import copy
-from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
@@ -22,7 +21,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
-from homeassistant.helpers.event import async_call_later, async_track_state_change_event, async_track_time_interval
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -85,11 +84,6 @@ def _filed_under(hass: HomeAssistant, entry: ConfigEntry, role: str) -> dict[str
     return {"entity_id": entity_id, **({"device_id": device.id} if device else {})}
 
 
-# How often statuses are rechecked: claims are judged against live state,
-# which changes without any claim changing.
-POLL_INTERVAL = timedelta(seconds=30)
-
-
 class ClaimEvents:
     """Announces what the claims mean as they change: fires
     EVENT_LIGHT_OVERRIDDEN when a light becomes overridden, with the claims
@@ -110,14 +104,14 @@ class ClaimEvents:
     @callback
     def start(self) -> CALLBACK_TYPE:
         self._registry.register(self)
-        cancel_poll = async_track_time_interval(self.hass, self._poll, POLL_INTERVAL, cancel_on_shutdown=True)
+        # Seeds the statuses, noting any restored claim's mismatch.
+        self._refresh_statuses()
         # Nothing unloads the entry at shutdown, so the timers go then too.
         cancel_on_stop = self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._cancel_timers)
 
         @callback
         def stop() -> None:
             self._registry.unregister()
-            cancel_poll()
             if not self.hass.is_stopping:
                 cancel_on_stop()
             self._cancel_timers()
@@ -134,11 +128,6 @@ class ClaimEvents:
     @callback
     def async_claims_changed(self) -> None:
         self._refresh_statuses()
-
-    @callback
-    def _poll(self, _now) -> None:
-        self._refresh_statuses()
-        async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
     def _refresh_statuses(self) -> None:

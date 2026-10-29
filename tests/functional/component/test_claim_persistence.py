@@ -87,9 +87,8 @@ async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant
 async def test_a_mismatch_noticed_after_the_restart_is_saved(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """So the grace isn't started afresh by the next restart."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
-    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
+    await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
-    registry._listener._poll(None)
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
     await hass.async_block_till_done()
 
@@ -122,13 +121,12 @@ async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant, h
 
 async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """We asked for 200; it shows 90. Left alone at once, and an override
-    once the poll has noted it and the grace has passed."""
+    once the grace has passed."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
 
     registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
     assert _status(hass, registry, "light.a") == "mismatched"
-    registry._listener._poll(None)
     with after_the_grace():
         assert _status(hass, registry, "light.a") == "overridden"
 
