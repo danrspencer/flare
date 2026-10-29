@@ -381,7 +381,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         # the light still matches its previous claim. No awaits in between, so
         # planning and recording are one step.
         if written_entities:
-            await registry.async_record(
+            registry.async_record(
                 room_id,
                 written_entities,
                 call.context.id,
@@ -409,7 +409,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         if not entities:
             return
         transition = call.data["transition"]
-        await registry.async_record(
+        registry.async_record(
             call.data.get("room_id"),
             entities,
             call.context.id,
@@ -452,7 +452,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         entities recorded."""
         entities = call.data["entities"]
         targets = call.data.get("targets", {})
-        await registry.async_record(
+        registry.async_record(
             call.data["room_id"],
             entities,
             call.context.id,
@@ -466,14 +466,14 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         """flare.claims_override - marks lights as changed by someone else, so
         FLARE leaves them alone. The opposite of claims_clear."""
         entities = call.data["entities"]
-        await registry.async_override(call.data["room_id"], entities, call.data.get("room_entities"))
+        registry.async_override(call.data["room_id"], entities, call.data.get("room_entities"))
         return {"overridden": entities}
 
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
         stuck "overridden"."""
         entities = call.data["entities"]
-        await registry.async_clear(entities)
+        registry.async_clear(entities)
         return {"cleared": entities}
 
     async def compute_scene_coverage_service(call: ServiceCall) -> ServiceResponse:

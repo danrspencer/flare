@@ -160,8 +160,9 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
 
     # Pruning catches entities deleted outright, which the listener never
     # sees go unavailable.
-    async def _periodic_prune(now) -> None:
-        await registry.async_prune_stale()
+    @callback
+    def _periodic_prune(now) -> None:
+        registry.async_prune_stale()
 
     entry.async_on_unload(
         async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
@@ -193,7 +194,7 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
     # lights went dark while HA wasn't watching won't change again to be
     # released, and claims from long ago are stale.
     registry.release_settled_dark_rooms()
-    await registry.async_prune_stale()
+    registry.async_prune_stale()
     entry.async_on_unload(_tick_areas(hass, scheduler))
 
 

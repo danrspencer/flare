@@ -74,7 +74,7 @@ async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant
     after the change."""
     registry = await _start(hass, hass_storage)
     _light(hass, "light.a", "on", **ASKED)
-    await registry.async_record(ROOM, ["light.a"], "ctx-ours", targets={"light.a": ASKED})
+    registry.async_record(ROOM, ["light.a"], "ctx-ours", targets={"light.a": ASKED})
 
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
     await hass.async_block_till_done()

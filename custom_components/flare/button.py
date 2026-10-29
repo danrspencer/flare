@@ -49,7 +49,7 @@ class _ClearButton(ButtonEntity):
         self.async_write_ha_state()
 
     async def async_press(self) -> None:
-        await self._registry.async_clear(sorted(self._registry.all_records()), announce=True)
+        self._registry.async_clear(sorted(self._registry.all_records()), announce=True)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
