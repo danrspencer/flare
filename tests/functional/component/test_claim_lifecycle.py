@@ -200,7 +200,7 @@ async def test_prune_stale_removes_a_record_untouched_past_the_cutoff(setup_inte
         assert "light.a" in tracker.all_records()
 
         frozen.move_to(dt_util.utcnow() + timedelta(days=STALE_RECORD_MAX_AGE_DAYS, hours=1))
-        await tracker.async_prune_stale()
+        tracker.async_prune_stale()
 
     assert "light.a" not in tracker.all_records()
 
@@ -221,7 +221,7 @@ async def test_prune_stale_leaves_a_recent_record_alone(setup_integration: HomeA
         tracker = claim_registry(hass)
 
         frozen.move_to(dt_util.utcnow() + timedelta(hours=1))
-        await tracker.async_prune_stale()
+        tracker.async_prune_stale()
 
     assert "light.a" in tracker.all_records()
 
@@ -236,7 +236,7 @@ async def test_prune_stale_leaves_a_record_with_no_last_seen_alone(setup_integra
         "last_seen": None,
     }
 
-    await tracker.async_prune_stale()
+    tracker.async_prune_stale()
 
     assert "light.a" in tracker.all_records()
 

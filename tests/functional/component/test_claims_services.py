@@ -150,13 +150,15 @@ async def test_claims_clear_frees_every_entity_in_one_call(setup_integration: Ho
     assert "light.a" in claim_registry(hass).all_records()
     assert "light.b" in claim_registry(hass).all_records()
 
-    await hass.services.async_call(
+    result = await hass.services.async_call(
         DOMAIN,
         "claims_clear",
-        {"entities": ["light.a", "light.b"]},
+        {"entities": ["light.a", "light.b", "light.never_tracked"]},
         blocking=True,
+        return_response=True,
     )
 
+    assert result == {"cleared": ["light.a", "light.b"]}
     records = claim_registry(hass).all_records()
     assert "light.a" not in records
     assert "light.b" not in records
@@ -171,7 +173,7 @@ async def test_claims_clear_is_a_noop_for_an_untracked_entity(setup_integration:
         blocking=True,
         return_response=True,
     )
-    assert result == {"cleared": ["light.never_tracked"]}
+    assert result == {"cleared": []}
     assert claim_registry(hass).all_records() == {}
 
 

@@ -50,7 +50,9 @@ async def setup_settings_entry(hass: HomeAssistant, options: dict | None = None)
 
 
 def claim_registry(hass: HomeAssistant) -> ClaimRegistry:
-    return next(v for v in hass.data[DOMAIN].values() if isinstance(v, ClaimRegistry))
+    return next(
+        e.runtime_data for e in hass.config_entries.async_entries(DOMAIN) if isinstance(getattr(e, "runtime_data", None), ClaimRegistry)
+    )
 
 
 def claims_store(hass: HomeAssistant):

@@ -51,7 +51,7 @@ async def _setup(hass: HomeAssistant):
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, version=3, minor_version=2)
     entry.add_to_hass(hass)
     registry = ClaimRegistry(hass)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
+    entry.runtime_data = registry
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
@@ -78,7 +78,7 @@ def _light(hass: HomeAssistant, entity_id: str, *, state="on", **attrs):
 
 
 async def _record(registry: ClaimRegistry, room: str | None, entity_id: str, context_id: str, target=None, room_lights=None):
-    await registry.async_record(
+    registry.async_record(
         room,
         [entity_id],
         context_id,
@@ -380,7 +380,7 @@ async def test_clear_says_it_cleared_once_per_room_but_claims_clear_is_silent(ha
         _light(hass, light)
         await _record(registry, room, light, f"ctx-{light}", ASKED)
 
-    await registry.async_clear(["light.a"])
+    registry.async_clear(["light.a"])
     await hass.async_block_till_done()
     assert events == []
 
@@ -517,7 +517,7 @@ async def test_each_entry_type_owns_only_its_own_sensors(hass: HomeAssistant):
         coordinator = ScheduleCoordinator(hass, instance)
         # Plain refresh: first_refresh needs a real entry setup.
         await coordinator.async_refresh()
-        hass.data.setdefault(DOMAIN, {})[instance.subentry_id] = coordinator
+        entry.runtime_data = {**getattr(entry, "runtime_data", {}), instance.subentry_id: coordinator}
 
     added: list = []
     await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
@@ -587,7 +587,7 @@ async def test_claims_override_is_an_override_at_once(hass: HomeAssistant):
     overridden = _entity(added, "sensor.flare_overridden_lights")
     _light(hass, "light.a", **ASKED)
 
-    await registry.async_override(KITCHEN, ["light.a"])
+    registry.async_override(KITCHEN, ["light.a"])
     tracker._refresh_statuses()
 
     assert overridden.native_value == 1

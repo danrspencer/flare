@@ -164,17 +164,32 @@ def build_groups(
     close_enough = Tolerance(
         brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
     )
+
+    def writable(lights: list) -> list:
+        return [
+            e
+            for e in lights
+            if lookup.reachable(e)
+            and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
+        ]
+
+    def route(lights: list, target: Optional[dict]) -> tuple[list, list, list]:
+        """(already set, two-step, combined) for lights sent `target`."""
+        candidates = writable(lights)
+        already = [e for e in candidates if _already_set(e, target, lookup, close_enough)]
+        needing = [e for e in candidates if e not in already]
+        two_step = [
+            e
+            for e in needing
+            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
+        ]
+        return already, two_step, [e for e in needing if e not in two_step]
+
     groups = []
     for brightness, group_entities in _bucket_by_brightness(entities, brightness_levels, sensor_brightness).items():
         if brightness <= 0:
             group = Group(brightness=brightness, target={"state": "off"})
-            group.needing_off = [
-                e
-                for e in group_entities
-                if lookup.reachable(e)
-                and not lookup.is_state(e, "off")
-                and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-            ]
+            group.needing_off = [e for e in writable(group_entities) if not lookup.is_state(e, "off")]
             groups.append(group)
             continue
 
@@ -189,37 +204,9 @@ def build_groups(
         else:
             rgb_entities, temp_entities = [], group_entities
 
-        writable = [
-            e
-            for e in temp_entities
-            if lookup.reachable(e)
-            and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-        ]
-        set_already = [e for e in writable if _already_set(e, group.target, lookup, close_enough)]
-        needing_update = [e for e in writable if e not in set_already]
-        group.two_step = [
-            e
-            for e in needing_update
-            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
-        ]
-        group.combined = [e for e in needing_update if e not in group.two_step]
-
-        writable_rgb = [
-            e
-            for e in rgb_entities
-            if lookup.reachable(e)
-            and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
-        ]
-        set_already_rgb = [e for e in writable_rgb if _already_set(e, group.target_rgb, lookup, close_enough)]
-        needing_update_rgb = [e for e in writable_rgb if e not in set_already_rgb]
-        group.two_step_rgb = [
-            e
-            for e in needing_update_rgb
-            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
-        ]
-        group.combined_rgb = [e for e in needing_update_rgb if e not in group.two_step_rgb]
-        group.already_set = set_already + set_already_rgb
-
+        already, group.two_step, group.combined = route(temp_entities, group.target)
+        already_rgb, group.two_step_rgb, group.combined_rgb = route(rgb_entities, group.target_rgb)
+        group.already_set = already + already_rgb
         groups.append(group)
 
     return groups

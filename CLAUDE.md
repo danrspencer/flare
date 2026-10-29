@@ -377,8 +377,8 @@ lost the claim whenever a run didn't finish - a group's call raising, or
 steps (a real `Script` does cancel a running blocking call) - and the
 light then silently read `overridden`. It's safe because a write that
 never lands leaves the light matching its previous `observed` claim. So
-the two-step contexts are created up front, and `async_record` has no
-awaits inside. **"Seen landing" means a context match only.** Pinned by
+the two-step contexts are created up front, and `async_record` is a
+`@callback`, like the registry's other writers, so it can't await. **"Seen landing" means a context match only.** Pinned by
 `tests/functional/component/test_interrupted_writes.py`.
 `flare.claims_record` is documented as call-before-your-write for the same
 reason.

@@ -108,8 +108,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
         entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
         # Only with flares, so an empty entry doesn't load the light platform.
-        if flare_instances(entry):
-            hass.data.setdefault(DOMAIN, {})[_lights_key(entry)] = True
+        # runtime_data says whether it did, for the unload.
+        entry.runtime_data = bool(flare_instances(entry))
+        if entry.runtime_data:
             await hass.config_entries.async_forward_entry_setups(entry, FLARE_PLATFORMS)
         return True
 
@@ -121,19 +122,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_setup_settings(hass, entry)
         return True
 
+    # Each schedule's coordinator, by subentry id.
+    entry.runtime_data = coordinators = {}
     instances = schedule_instances(entry)
     if instances:
         for instance in instances:
             coordinator = ScheduleCoordinator(hass, instance)
             await coordinator.async_config_entry_first_refresh()
-            hass.data.setdefault(DOMAIN, {})[instance.subentry_id] = coordinator
+            coordinators[instance.subentry_id] = coordinator
 
         @callback
         def _refresh_all(event) -> None:
             # Must stay @callback: otherwise it runs in the executor, where
             # async_create_task raises.
-            for instance in instances:
-                hass.async_create_task(hass.data[DOMAIN][instance.subentry_id].async_request_refresh())
+            for coordinator in coordinators.values():
+                hass.async_create_task(coordinator.async_request_refresh())
 
         # Evening tracks sunset. Config entities refresh their own coordinator.
         entry.async_on_unload(async_track_state_change_event(hass, ["sun.sun"], _refresh_all))
@@ -143,8 +146,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if instances:
         # The first refresh ran before the config entities existed, so it
         # used defaults. Recompute now they've restored their values.
-        for instance in instances:
-            await hass.data[DOMAIN][instance.subentry_id].async_refresh()
+        for coordinator in coordinators.values():
+            await coordinator.async_refresh()
 
     return True
 
@@ -153,12 +156,13 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
     """The claims, the services and the area ticks."""
     registry = ClaimRegistry(hass)
     await registry.async_load()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
+    entry.runtime_data = registry
 
     # Pruning catches entities deleted outright, which the listener never
     # sees go unavailable.
-    async def _periodic_prune(now) -> None:
-        await registry.async_prune_stale()
+    @callback
+    def _periodic_prune(now) -> None:
+        registry.async_prune_stale()
 
     entry.async_on_unload(
         async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
@@ -190,7 +194,7 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
     # lights went dark while HA wasn't watching won't change again to be
     # released, and claims from long ago are stale.
     registry.release_settled_dark_rooms()
-    await registry.async_prune_stale()
+    registry.async_prune_stale()
     entry.async_on_unload(_tick_areas(hass, scheduler))
 
 
@@ -198,7 +202,6 @@ def _tick_areas(hass: HomeAssistant, scheduler: TickScheduler) -> Callable[[], N
     """Ticks every area, kept in step with the area registry. Each tick is a
     plain event naming the area, so it never shows in Activity, history or
     the logbook. Returns the cleanup."""
-    registered: dict[str, Callable[[], None]] = {}
 
     def _fire(area_id: str) -> Callable[[], None]:
         @callback
@@ -209,33 +212,13 @@ def _tick_areas(hass: HomeAssistant, scheduler: TickScheduler) -> Callable[[], N
 
     @callback
     def _sync(_event: Event | None = None) -> None:
-        areas = {area.id: area.name for area in ar.async_get(hass).async_list_areas()}
-        for area_id in [a for a in registered if a not in areas]:
-            registered.pop(area_id)()
-        for area_id, name in areas.items():
-            if area_id in registered:
-                # Re-registered so a renamed area keeps its place in name order.
-                registered.pop(area_id)()
-            registered[area_id] = scheduler.register(area_id, name, _fire(area_id))
+        scheduler.set_areas({area.id: (area.name, _fire(area.id)) for area in ar.async_get(hass).async_list_areas()})
 
     _sync()
-    unlisten = hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, _sync)
-
-    @callback
-    def _cleanup() -> None:
-        unlisten()
-        for unregister in registered.values():
-            unregister()
-        registered.clear()
-
-    return _cleanup
+    return hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, _sync)
 
 
 _RELOADS_QUEUED = "reloads_queued"
-
-
-def _lights_key(entry: ConfigEntry) -> str:
-    return f"{entry.entry_id}_lights"
 
 
 async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -253,18 +236,12 @@ async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
-        if not hass.data.get(DOMAIN, {}).pop(_lights_key(entry), False):
+        if not entry.runtime_data:
             return True
         return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
 
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
         async_unload_services(hass)
-        unloaded = await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
-        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-        return unloaded
+        return await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
 
-    instances = schedule_instances(entry)
-    unloaded = await hass.config_entries.async_unload_platforms(entry, SCHEDULE_PLATFORMS)
-    for instance in instances:
-        hass.data.get(DOMAIN, {}).pop(instance.subentry_id, None)
-    return unloaded
+    return await hass.config_entries.async_unload_platforms(entry, SCHEDULE_PLATFORMS)

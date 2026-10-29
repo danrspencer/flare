@@ -196,7 +196,8 @@ class ClaimRegistry:
         lights = set(room_entities or ()) | set(written) | set(held)
         self.rooms[key] = {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}
 
-    async def async_clear(self, entity_ids: list[str], *, announce: bool = False) -> list[str]:
+    @callback
+    def async_clear(self, entity_ids: list[str], *, announce: bool = False) -> list[str]:
         """Discards claims - behind claims_clear, the escape hatch for a light
         stuck "overridden", and the Clear button, which announces it, once per
         room. Returns what was cleared."""
@@ -214,7 +215,8 @@ class ClaimRegistry:
             self._notify()
         return cleared
 
-    async def async_override(self, room_id: str | None, entity_ids: list[str], room_entities: list[str] | None = None) -> None:
+    @callback
+    def async_override(self, room_id: str | None, entity_ids: list[str], room_entities: list[str] | None = None) -> None:
         """Marks lights as someone else's - behind claims_override. The claim
         is an `observed` nothing will ever match, by context or by value, so
         the light reads "overridden" until its room goes dark, its claim is
@@ -269,7 +271,8 @@ class ClaimRegistry:
             self._join(key, adopted, room_entities)
             self._notify()
 
-    async def async_record(
+    @callback
+    def async_record(
         self,
         room_id: str | None,
         entity_ids: list[str],
@@ -333,7 +336,8 @@ class ClaimRegistry:
         self._join(key, entity_ids, room_entities)
         self._notify()
 
-    async def async_prune_stale(self) -> None:
+    @callback
+    def async_prune_stale(self) -> None:
         """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
         cleanup an entity deleted from HA, or a room no longer used, ever
         gets. A record with no parseable `last_seen` is kept."""

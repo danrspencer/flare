@@ -64,6 +64,8 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
     `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
     `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
     returns `rooms` instead of `zone`.
+  - `flare.claims_clear`'s `cleared` lists only the entities that had a claim, not every one
+    passed in.
   - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
   - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
     `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under

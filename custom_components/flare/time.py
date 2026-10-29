@@ -13,7 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.util.dt as dt_util
 
-from .const import DOMAIN
 from .schedule.coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, default_time, schedule_instances
 
 _LABELS = {
@@ -28,7 +27,7 @@ _LABELS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     for instance in schedule_instances(entry):
-        coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
+        coordinator: ScheduleCoordinator = entry.runtime_data[instance.subentry_id]
         entities = [_BoundaryTime(coordinator, instance, key) for key in TIME_KEYS]
         async_add_entities(entities, config_subentry_id=instance.subentry_id)
 

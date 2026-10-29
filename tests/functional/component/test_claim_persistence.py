@@ -57,7 +57,7 @@ async def _start(
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    return hass.data[DOMAIN][entry.entry_id]
+    return entry.runtime_data
 
 
 def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
@@ -74,7 +74,7 @@ async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant
     after the change."""
     registry = await _start(hass, hass_storage)
     _light(hass, "light.a", "on", **ASKED)
-    await registry.async_record(ROOM, ["light.a"], "ctx-ours", targets={"light.a": ASKED})
+    registry.async_record(ROOM, ["light.a"], "ctx-ours", targets={"light.a": ASKED})
 
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
     await hass.async_block_till_done()

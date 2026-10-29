@@ -11,13 +11,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, PHASE_OPTIONS
+from .const import PHASE_OPTIONS
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     for instance in schedule_instances(entry):
-        coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]
+        coordinator: ScheduleCoordinator = entry.runtime_data[instance.subentry_id]
         async_add_entities([_PhaseOverrideSelect(coordinator, instance)], config_subentry_id=instance.subentry_id)
 
 
