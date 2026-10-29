@@ -166,32 +166,38 @@ actions:
       entity_id: light.hallway_lights_flare
 ```
 
-## A lamp that goes off with the wall switch
+## Lamps that follow a wall switch
 
-The study's pendant is a smart bulb on an ordinary wall switch, so switching it off at the
-wall cuts its power and Home Assistant sees it go unavailable rather than off. This turns
-the floor lamp off with it.
+The living room has smart bulbs in its pendants, on an ordinary wall switch, and smart lamps
+around the room. Switching the pendants off at the wall cuts their power, so Home Assistant
+sees them go unavailable rather than off.
+
+Switching on needs nothing extra. When you switch the pendants on at the wall, they come
+back online lit, so the room counts as in use and FLARE sets the pendants to the curve and
+turns the lamps on with them.
+
+Switching off needs an automation of its own, because FLARE doesn't turn the lamps off when
+the pendants lose power:
 
 ```yaml
-alias: Study lamp off with the pendant
+alias: Living room lamps off with the pendants
 triggers:
   - trigger: state
-    entity_id: light.study_pendant
+    entity_id:
+      - light.living_room_pendant_1
+      - light.living_room_pendant_2
     to: unavailable
 actions:
   - action: flare.turn_off
     data:
       entities:
-        - light.study_floor_lamp
+        - light.living_room_lamp_1
+        - light.living_room_lamp_2
 ```
 
-You don't need anything to turn the lamp back on. When you switch the pendant on at the wall,
-it comes back online lit, so the room counts as in use and FLARE sets both lights to the
-curve, turning the lamp on with the pendant.
-
-`flare.turn_off` turns the lamp off even if you've dimmed it yourself. If you want the lamp
-left to another automation or a voice assistant instead, so FLARE never switches it on or
-off, hand it over with a `null` level, as in
+`flare.turn_off` turns the lamps off even if you've dimmed one yourself. If you'd rather leave
+the lamps to another automation or a voice assistant, so FLARE never switches them on or
+off, hand them over with a `null` level, as in
 [Leaving a light to another automation](../templates/#leaving-a-light-to-another-automation).
 
 ## Something else at a phase change
