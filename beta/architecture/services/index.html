@@ -1,0 +1,579 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(5)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(5) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(7) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(5) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list > li.nav-list-item:nth-child(5) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>Services and grouping | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Services and grouping" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/architecture/services/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/architecture/services/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="Services and grouping" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"Services and grouping","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/architecture/services/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/architecture/">Architecture</a></li>
+    <li class="breadcrumb-nav-list-item"><span>Services and grouping</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="services-and-grouping">
+  
+  
+    <a href="#services-and-grouping" class="anchor-heading" aria-labelledby="services-and-grouping"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Services and grouping
+  
+  
+</h1>
+    
+
+<blockquote class="internals">
+  <p>Part of <a href="/flare/beta/architecture/">Architecture</a>, for contributors and the curious.
+Nothing here is needed to use FLARE.</p>
+</blockquote>
+
+<p>Everything FLARE does is a service anyone can call. The blueprint is one
+caller, not the only one, so each service is written as a standalone tool.
+The field contracts live in <code class="language-plaintext highlighter-rouge">services.yaml</code> and
+<a href="/flare/beta/reference/services/">the services reference</a>. This page is about what happens inside them.</p>
+<h2 id="the-twelve-services">
+  
+  
+    <a href="#the-twelve-services" class="anchor-heading" aria-labelledby="the-twelve-services"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The twelve services
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>Kind</th>
+      <th>Registered by</th>
+      <th>Module</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">compute_curve</code></td>
+      <td>pure planner</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">compute_lighting_groups</code></td>
+      <td>pure planner</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">compute_scene_coverage</code></td>
+      <td>pure planner</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">apply_lighting</code></td>
+      <td>writes</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">turn_off</code></td>
+      <td>writes</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claims_check</code></td>
+      <td>claims</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claims_record</code></td>
+      <td>claims</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claims_clear</code></td>
+      <td>claims</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">claims_override</code></td>
+      <td>claims</td>
+      <td>Settings entry</td>
+      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">resolve_target</code></td>
+      <td>lookup</td>
+      <td><code class="language-plaintext highlighter-rouge">async_setup</code> (always)</td>
+      <td><code class="language-plaintext highlighter-rouge">services/targets.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">export_schedule</code></td>
+      <td>schedules</td>
+      <td><code class="language-plaintext highlighter-rouge">async_setup</code> (always)</td>
+      <td><code class="language-plaintext highlighter-rouge">services/schedules.py</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">import_schedule</code></td>
+      <td>schedules</td>
+      <td><code class="language-plaintext highlighter-rouge">async_setup</code> (always)</td>
+      <td><code class="language-plaintext highlighter-rouge">services/schedules.py</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>The handlers are thin adapters. They read HA state into the pure planners
+(<code class="language-plaintext highlighter-rouge">grouping.py</code>, <code class="language-plaintext highlighter-rouge">scenes.py</code>, <code class="language-plaintext highlighter-rouge">curve.py</code>, <code class="language-plaintext highlighter-rouge">override_protection.py</code>) and
+send the result. The last three need nothing of an entry, so they exist as
+soon as the integration loads.</p>
+<h2 id="apply_lighting-from-call-to-bulb">
+  
+  
+    <a href="#apply_lighting-from-call-to-bulb" class="anchor-heading" aria-labelledby="apply_lighting-from-call-to-bulb"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">apply_lighting</code>, from call to bulb
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant C as Caller (room automation)
+    participant H as apply_lighting
+    participant G as build_groups (pure)
+    participant L as EntityLookup
+    participant R as ClaimRegistry
+    participant B as light.turn_on / turn_off
+    C-&gt;&gt;H: entities, brightness, kelvin,&lt;br/&gt;levels, transition, room_id
+    H-&gt;&gt;H: without_flares(entities)
+    H-&gt;&gt;G: plan(call)
+    G-&gt;&gt;L: reachable? overridden? already set?&lt;br/&gt;two-step model or label?
+    L-&gt;&gt;R: record(entity) (only with a room_id)
+    G--&gt;&gt;H: groups
+    H-&gt;&gt;H: one send per non-empty list:&lt;br/&gt;off, combined, combined RGB,&lt;br/&gt;two-step, two-step RGB
+    H-&gt;&gt;R: async_record(written lights, context, targets)
+    H-&gt;&gt;R: adopt(already_set lights)
+    H-&gt;&gt;B: asyncio.gather(all sends)
+    H--&gt;&gt;C: groups (optional response)
+</code></pre>
+
+<p>Steps 3 to 9 contain no <code class="language-plaintext highlighter-rouge">await</code>. The registry’s writers are callbacks, so
+the plan and the claims are one atomic step: no state change can arrive
+between deciding to write a light and recording that FLARE did.</p>
+<h2 id="build_groups-lights-to-service-calls">
+  
+  
+    <a href="#build_groups-lights-to-service-calls" class="anchor-heading" aria-labelledby="build_groups-lights-to-service-calls"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">build_groups</code>: lights to service calls
+  
+  
+</h2>
+    
+
+<p>The goal is the fewest calls that move every light that needs it, and
+nothing that doesn’t.</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    E["entities"] --&gt; BK["bucket by the brightness each is sent:&lt;br/&gt;its level, else brightness;&lt;br/&gt;0 is off, null/false is hands-off (dropped)"]
+    BK --&gt; OFFQ{"bucket brightness 0?"}
+    OFFQ --&gt;|"yes"| OFF["needing_off:&lt;br/&gt;reachable, not already off,&lt;br/&gt;not overridden"]
+    OFFQ --&gt;|"no"| RGBQ{"prefer RGB and&lt;br/&gt;bulb supports it?"}
+    RGBQ --&gt;|"yes"| RGB["target_rgb:&lt;br/&gt;{brightness, rgb_color}"]
+    RGBQ --&gt;|"no"| CT["target:&lt;br/&gt;{brightness, color_temp_kelvin}"]
+    RGB --&gt; ROUTE
+    CT --&gt; ROUTE
+    ROUTE["route(lights, target)"] --&gt; W["writable:&lt;br/&gt;reachable and not overridden"]
+    W --&gt; AS{"on and already&lt;br/&gt;close enough?"}
+    AS --&gt;|"yes"| ALR["already_set&lt;br/&gt;(adopted, not sent)"]
+    AS --&gt;|"no"| TSQ{"two-step model&lt;br/&gt;or label?"}
+    TSQ --&gt;|"yes"| TS["two_step / two_step_rgb"]
+    TSQ --&gt;|"no"| CB["combined / combined_rgb"]
+</code></pre>
+
+<p><strong>Two kinds of closeness</strong>, and they’re deliberately different:</p>
+
+<ul>
+  <li><em>Override matching</em> (is this still what FLARE set?) uses the tight
+tolerances: 2 brightness, 10 K, 10 per RGB channel, or the same mired.</li>
+  <li><em>Worth sending</em> (should FLARE bother?) widens that by the <strong>minimum
+change</strong>: 5 % of the target brightness and 5 mireds by default, from the
+Settings entry’s options. Only grouping uses it. Widening override
+matching the same way would let a hand-set light near the curve pass as
+FLARE’s.</li>
+</ul>
+
+<p>Both go through <code class="language-plaintext highlighter-rouge">tracking/matching.shows()</code>, the one place a light’s
+reported values are compared with a target (see <a href="/flare/beta/architecture/claims/">Claims and override protection</a>).</p>
+
+<p><strong>Brightness is clamped to 255</strong> (<code class="language-plaintext highlighter-rouge">MAX_BRIGHTNESS</code>) before it’s compared.
+<code class="language-plaintext highlighter-rouge">light.turn_on</code> silently clamps, so an unclamped target would never read
+as reached, and FLARE would resend it every tick.</p>
+<h3 id="two-step-bulbs">
+  
+  
+    <a href="#two-step-bulbs" class="anchor-heading" aria-labelledby="two-step-bulbs"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Two-step bulbs
+  
+  
+</h3>
+    
+
+<p>Some bulbs (IKEA TRADFRI) drop the colour if brightness and colour change
+in one transition. A light goes two-step if its device’s
+<code class="language-plaintext highlighter-rouge">"&lt;manufacturer&gt; &lt;model&gt;"</code> matches a glob in the Settings entry’s
+<strong>Two-step bulb models</strong>, or it carries the <code class="language-plaintext highlighter-rouge">no_combined_transition</code>
+label.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant H as apply_lighting
+    participant B as Bulb
+    Note over H: contexts made up front:&lt;br/&gt;brightness ctx (secondary),&lt;br/&gt;colour ctx (primary)
+    H-&gt;&gt;B: turn_on(brightness, transition: T/2)&lt;br/&gt;context: brightness ctx
+    Note over H: asyncio.sleep(T/2)
+    H-&gt;&gt;B: turn_on(brightness + colour, transition: T/2)&lt;br/&gt;context: colour ctx
+</code></pre>
+
+<p>Both context ids go into the claim, and a report under either counts as
+FLARE’s. The sleep is why claims are recorded first: a <code class="language-plaintext highlighter-rouge">mode: restart</code>
+can cancel the run mid-sleep.</p>
+<h2 id="turn_off">
+  
+  
+    <a href="#turn_off" class="anchor-heading" aria-labelledby="turn_off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">turn_off</code>
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">flare.turn_off</code> records <code class="language-plaintext highlighter-rouge">{"state": "off"}</code> as each light’s target, then
+calls <code class="language-plaintext highlighter-rouge">light.turn_off</code>, as one operation and with <strong>no</strong> override
+protection: a room emptying takes hand-set lights too. The off target is
+what tells FLARE’s off from anyone else’s once the context has expired.
+Callers mustn’t split it back into a claim and a bare <code class="language-plaintext highlighter-rouge">light.turn_off</code>.</p>
+<h2 id="adoption">
+  
+  
+    <a href="#adoption" class="anchor-heading" aria-labelledby="adoption"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Adoption
+  
+  
+</h2>
+    
+
+<p>A light that’s already on and showing what <code class="language-plaintext highlighter-rouge">apply_lighting</code> would send
+gets no write. If it’s unclaimed, <code class="language-plaintext highlighter-rouge">ClaimRegistry.adopt()</code> claims it as it
+is, with its current context and values, and adds it to the room.
+Otherwise, a Clear in a lit room would leave most lights unclaimed, and a
+hand change to one would go unnoticed.</p>
+<h2 id="resolve_target">
+  
+  
+    <a href="#resolve_target" class="anchor-heading" aria-labelledby="resolve_target"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">resolve_target</code>
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">flare.resolve_target</code> returns the entities a target reaches by HA’s own
+rule (<code class="language-plaintext highlighter-rouge">helpers/target.py</code>, <code class="language-plaintext highlighter-rouge">async_extract_referenced_entity_ids</code>, with
+<code class="language-plaintext highlighter-rouge">expand_group=False</code>). It’s the same rule <code class="language-plaintext highlighter-rouge">light.turn_on area_id:</code> uses and
+a flare’s membership uses. Templates can’t apply it: they can see
+<code class="language-plaintext highlighter-rouge">is_hidden_entity</code>, but not <code class="language-plaintext highlighter-rouge">entity_category</code>, and <code class="language-plaintext highlighter-rouge">device_entities()</code>
+misses child devices. <code class="language-plaintext highlighter-rouge">target_entities()</code> in the same module is what area
+setup calls to decide which areas have lights.</p>
+<h2 id="scene-coverage">
+  
+  
+    <a href="#scene-coverage" class="anchor-heading" aria-labelledby="scene-coverage"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scene coverage
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">compute_scene_coverage</code> works out which of the room’s lights a scene
+covers (<code class="language-plaintext highlighter-rouge">scenes.py</code>, generic, nothing lighting-specific). A scene counts as
+active only if it exists and everything it covers is within scope (the
+room’s entities plus every entity on each light’s device). The blueprint
+then sends the curve to the lights the scene doesn’t cover, and releases
+the claims on the ones it does.</p>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
+
+  
+</body>
+</html>
+

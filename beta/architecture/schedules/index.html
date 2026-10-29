@@ -1,0 +1,610 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(3)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(3) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(7) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(3) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list > li.nav-list-item:nth-child(3) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>Schedules and the curve | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Schedules and the curve" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/architecture/schedules/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/architecture/schedules/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="Schedules and the curve" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"Schedules and the curve","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/architecture/schedules/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/architecture/">Architecture</a></li>
+    <li class="breadcrumb-nav-list-item"><span>Schedules and the curve</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="schedules-and-the-curve">
+  
+  
+    <a href="#schedules-and-the-curve" class="anchor-heading" aria-labelledby="schedules-and-the-curve"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Schedules and the curve
+  
+  
+</h1>
+    
+
+<blockquote class="internals">
+  <p>Part of <a href="/flare/beta/architecture/">Architecture</a>, for contributors and the curious.
+Nothing here is needed to use FLARE.</p>
+</blockquote>
+
+<p>A schedule answers one question: what should a light look like right now?
+It’s a Python object (<code class="language-plaintext highlighter-rouge">ScheduleCoordinator</code>), the entities that hold its
+settings, and the entities that publish its answer.</p>
+<h2 id="where-a-schedules-numbers-live">
+  
+  
+    <a href="#where-a-schedules-numbers-live" class="anchor-heading" aria-labelledby="where-a-schedules-numbers-live"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Where a schedule’s numbers live
+  
+  
+</h2>
+    
+
+<p>A schedule has no stored configuration of its own. Its settings are 21
+entities, each restoring its own value across a restart:</p>
+
+<ul>
+  <li>five <code class="language-plaintext highlighter-rouge">time</code> entities, the boundaries: <code class="language-plaintext highlighter-rouge">morning_time</code>, <code class="language-plaintext highlighter-rouge">day_time</code>,
+<code class="language-plaintext highlighter-rouge">evening_earliest_time</code>, <code class="language-plaintext highlighter-rouge">evening_latest_time</code>, <code class="language-plaintext highlighter-rouge">night_time</code></li>
+  <li>sixteen <code class="language-plaintext highlighter-rouge">number</code> entities: each phase’s brightness and Kelvin, and how
+many minutes before the next phase each starts easing towards it</li>
+</ul>
+
+<p>They live in entity state rather than <code class="language-plaintext highlighter-rouge">subentry.data</code> because changing
+subentry data reloads the whole entry. That also makes them ordinary HA
+entities: an automation can change Evening’s colour with
+<code class="language-plaintext highlighter-rouge">number.set_value</code>, and the dashboard’s sliders are just these numbers.</p>
+
+<p><code class="language-plaintext highlighter-rouge">read_schedule()</code> is the one place that reads them. It finds each entity
+by unique id (<code class="language-plaintext highlighter-rouge">ScheduleInstance.current_id()</code>), so a renamed entity is
+still read. It leaves out anything unreachable, and each caller decides
+what that means: the curve falls back to the default, and an export omits
+the value.</p>
+<h2 id="from-settings-to-targets">
+  
+  
+    <a href="#from-settings-to-targets" class="anchor-heading" aria-labelledby="from-settings-to-targets"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> From settings to targets
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph IN["Inputs, read on every refresh"]
+        T["time.* boundaries"]
+        N["number.* curve values"]
+        SUN["sun.sun next_setting"]
+        OV["select.*_flare_phase&lt;br/&gt;(Auto or a phase)"]
+    end
+    T --&gt; B["_compute_boundaries():&lt;br/&gt;today's timestamps"]
+    SUN --&gt; B
+    B --&gt;|"Evening = sunset,&lt;br/&gt;clamped to earliest..latest"| B
+    B --&gt; P["phase_at(now)&lt;br/&gt;= computed_phase"]
+    OV --&gt; PH{"override?"}
+    P --&gt; PH
+    PH --&gt;|"Auto"| PHASE["phase"]
+    PH --&gt;|"a phase"| PHASE
+    PHASE --&gt; TG["targets_for_phase(phase, now, ...)&lt;br/&gt;brightness, kelvin, rgb_color"]
+    N --&gt; TG
+    B --&gt; PTS["_compute_curve_points():&lt;br/&gt;289 samples, 5 min apart"]
+    N --&gt; PTS
+    TG --&gt; OUT["coordinator.data"]
+    PTS --&gt; OUT
+    P --&gt; OUT
+</code></pre>
+
+<p><code class="language-plaintext highlighter-rouge">coordinator.data</code> feeds every schedule entity:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Entity</th>
+      <th>Shows</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sensor.&lt;slug&gt;_flare</code></td>
+      <td>the phase as state; <code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp</code>, <code class="language-plaintext highlighter-rouge">rgb_color</code>, today’s boundaries, <code class="language-plaintext highlighter-rouge">points</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">event.&lt;slug&gt;_flare_phase</code></td>
+      <td>fires once per phase change, carrying the phase</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">select.&lt;slug&gt;_flare_phase</code></td>
+      <td>the manual override, which clears itself at the next natural boundary</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p><code class="language-plaintext highlighter-rouge">points</code> (289 samples) is too big for the recorder, so it’s in
+<code class="language-plaintext highlighter-rouge">_unrecorded_attributes</code>. The dashboard’s chart reads it live rather than
+recomputing the curve.</p>
+<h3 id="refreshes">
+  
+  
+    <a href="#refreshes" class="anchor-heading" aria-labelledby="refreshes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Refreshes
+  
+  
+</h3>
+    
+
+<p>The coordinator refreshes every 60 seconds, and also:</p>
+
+<ul>
+  <li>when <code class="language-plaintext highlighter-rouge">sun.sun</code> changes, since Evening follows sunset</li>
+  <li>when any of its <code class="language-plaintext highlighter-rouge">time</code>, <code class="language-plaintext highlighter-rouge">number</code> or <code class="language-plaintext highlighter-rouge">select</code> entities is set
+(<code class="language-plaintext highlighter-rouge">async_request_refresh</code>, debounced to at most once per 10 seconds)</li>
+  <li>twice at setup. The first refresh runs before the entities exist, so it
+uses defaults. The second runs once they’ve restored their values.</li>
+</ul>
+<h2 id="the-curve-maths-schedulecurvepy">
+  
+  
+    <a href="#the-curve-maths-schedulecurvepy" class="anchor-heading" aria-labelledby="the-curve-maths-schedulecurvepy"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The curve maths (<code class="language-plaintext highlighter-rouge">schedule/curve.py</code>)
+  
+  
+</h2>
+    
+
+<p>Pure functions, with every literal a named default
+(<code class="language-plaintext highlighter-rouge">DEFAULT_CURVE_VALUES</code>, <code class="language-plaintext highlighter-rouge">DEFAULT_SCHEDULE_HOURS</code>).</p>
+<h3 id="which-phase-is-it">
+  
+  
+    <a href="#which-phase-is-it" class="anchor-heading" aria-labelledby="which-phase-is-it"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Which phase is it?
+  
+  
+</h3>
+    
+
+<p><code class="language-plaintext highlighter-rouge">phase_at()</code> walks the boundaries in order: before Morning is Night, then
+Morning, Day, Evening, and after the Night boundary it’s Night again.</p>
+
+<p><strong>A Night earlier than Morning is after midnight</strong> (<code class="language-plaintext highlighter-rouge">_night_clock</code>). It’s
+tomorrow’s boundary, and Evening runs on through midnight until it. Every
+timestamp is shifted onto a clock where Night comes after Evening before
+comparing.</p>
+
+<pre><code class="language-mermaid">gantt
+    dateFormat HH:mm
+    axisFormat %H:%M
+    title Night at 01:00, after midnight
+    section Phase
+    Evening (from yesterday) :e0, 00:00, 01:00
+    Night    :n, 01:00, 06:00
+    Morning  :m, 06:00, 08:00
+    Day      :d, 08:00, 17:30
+    Evening  :e, 17:30, 23:59
+</code></pre>
+
+<p>Above, Evening runs from sunset to 01:00, and the 00:00 to 01:00 slot is
+still yesterday’s Evening. Without <code class="language-plaintext highlighter-rouge">_night_clock</code> a 01:00 Night would skip
+Evening altogether and start at sunset.</p>
+<h3 id="how-bright-how-warm">
+  
+  
+    <a href="#how-bright-how-warm" class="anchor-heading" aria-labelledby="how-bright-how-warm"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> How bright, how warm?
+  
+  
+</h3>
+    
+
+<p>Each phase holds its own value, then eases linearly to the next phase’s
+value over its last <code class="language-plaintext highlighter-rouge">&lt;phase&gt;_&lt;brightness|kelvin&gt;_transition</code> minutes, so
+the next value arrives exactly at the boundary. The transition is clamped
+to the phase’s length; Day’s Kelvin default (1440 minutes) spans the whole
+of Day.</p>
+
+<p>With the default settings and a 17:30 sunset, brightness runs:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>From</th>
+      <th>To</th>
+      <th>Brightness</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>22:00</td>
+      <td>05:30</td>
+      <td>80 (Night)</td>
+    </tr>
+    <tr>
+      <td>05:30</td>
+      <td>06:00</td>
+      <td>80 → 255, Night’s 30-minute transition</td>
+    </tr>
+    <tr>
+      <td>06:00</td>
+      <td>16:25</td>
+      <td>255 (Morning, then Day)</td>
+    </tr>
+    <tr>
+      <td>16:25</td>
+      <td>17:30</td>
+      <td>255 → 180, Day’s 65-minute transition</td>
+    </tr>
+    <tr>
+      <td>17:30</td>
+      <td>21:00</td>
+      <td>180 (Evening)</td>
+    </tr>
+    <tr>
+      <td>21:00</td>
+      <td>22:00</td>
+      <td>180 → 80, Evening’s 60-minute transition</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p><code class="language-plaintext highlighter-rouge">day_phase</code> is a <strong>parameter</strong>, not worked out from the time, because a
+manual override passes a phase the clock disagrees with. So every ramp
+clamps its factor and can’t extrapolate. Strictly outside its own span, an
+overridden phase returns its own value.</p>
+
+<p>RGB is Kelvin converted, through HA’s <code class="language-plaintext highlighter-rouge">color_temperature_to_rgb</code> with a
+round-half-up wrapper that matches the card’s <code class="language-plaintext highlighter-rouge">Math.round</code>.</p>
+<h3 id="kept-in-step-with-javascript">
+  
+  
+    <a href="#kept-in-step-with-javascript" class="anchor-heading" aria-labelledby="kept-in-step-with-javascript"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Kept in step with JavaScript
+  
+  
+</h3>
+    
+
+<p>The dashboard’s chart and the docs playground draw the same curve in
+JavaScript. <code class="language-plaintext highlighter-rouge">tests/unit/dashboard/test_js_parity.py</code> holds <code class="language-plaintext highlighter-rouge">phase_at</code>,
+<code class="language-plaintext highlighter-rouge">phase_marks</code> and the Night-after-midnight rule in step across the two.</p>
+<h2 id="the-phase-override">
+  
+  
+    <a href="#the-phase-override" class="anchor-heading" aria-labelledby="the-phase-override"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The phase override
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">stateDiagram-v2
+    [*] --&gt; Auto
+    Auto --&gt; Overridden: select a phase&lt;br/&gt;(baseline = computed_phase)
+    Overridden --&gt; Auto: select Auto
+    Overridden --&gt; Auto: computed_phase moves past the baseline&lt;br/&gt;(unless Sticky is on)
+    Overridden --&gt; Overridden: refresh, same computed_phase
+</code></pre>
+
+<p>The select stores the computed phase at the moment it was set (the
+<em>baseline</em>). The override clears once the clock’s phase moves on, so it
+lasts until the next natural boundary rather than for a fixed time.
+<code class="language-plaintext highlighter-rouge">switch.&lt;slug&gt;_sticky_phase_override</code> turns the clearing off. The
+baseline isn’t saved across a restart; a restored override takes the
+phase at startup as its baseline.</p>
+<h2 id="how-a-room-hears-about-it">
+  
+  
+    <a href="#how-a-room-hears-about-it" class="anchor-heading" aria-labelledby="how-a-room-hears-about-it"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> How a room hears about it
+  
+  
+</h2>
+    
+
+<p>The blueprint reads a schedule two ways:</p>
+
+<ul>
+  <li><strong>the Phase <code class="language-plaintext highlighter-rouge">event</code> entity</strong> triggers a room on a real phase change
+(and once after setup, so a restart repaints every room). A trigger
+can’t look up a device’s entities, which is why it’s an event entity on
+the schedule’s device and not a template.</li>
+  <li><strong>the schedule sensor’s attributes</strong>, read in <code class="language-plaintext highlighter-rouge">variables:</code> for
+<code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp</code> and <code class="language-plaintext highlighter-rouge">rgb_color</code>.</li>
+</ul>
+
+<p>Between phase changes, the curve still moves within a phase, so rooms also
+update on their area’s <a href="/flare/beta/architecture/event-loop/#timers">tick</a>.</p>
+<h2 id="export-and-import">
+  
+  
+    <a href="#export-and-import" class="anchor-heading" aria-labelledby="export-and-import"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Export and import
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">schedule/transfer.py</code> writes a schedule as YAML keyed by phase, and reads
+it back. The <code class="language-plaintext highlighter-rouge">flare.export_schedule</code> and <code class="language-plaintext highlighter-rouge">flare.import_schedule</code> services
+use it, as do Reconfigure, the transfer card and the docs playground.</p>
+
+<ul>
+  <li>Parsed with PyYAML’s <code class="language-plaintext highlighter-rouge">BaseLoader</code>, so every scalar is a string. YAML 1.1
+would read an unquoted <code class="language-plaintext highlighter-rouge">06:30</code> as the base-60 number 390.</li>
+  <li>Written by hand so every time is quoted.
+<code class="language-plaintext highlighter-rouge">docs/assets/js/schedule-yaml.js</code> is the playground’s copy, held to it by
+<code class="language-plaintext highlighter-rouge">test_schedule_yaml_parity.py</code>.</li>
+  <li>Import parses the whole document first, then sets each value through
+<code class="language-plaintext highlighter-rouge">time.set_value</code> / <code class="language-plaintext highlighter-rouge">number.set_value</code>, exactly as moving a slider does.</li>
+</ul>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
+
+  
+</body>
+</html>
+

@@ -1,0 +1,492 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(8)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(8) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(7) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(8) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list > li.nav-list-item:nth-child(8) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>Setup and upgrades | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="Setup and upgrades" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/architecture/setup/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/architecture/setup/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="Setup and upgrades" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"Setup and upgrades","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/architecture/setup/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/architecture/">Architecture</a></li>
+    <li class="breadcrumb-nav-list-item"><span>Setup and upgrades</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="setup-and-upgrades">
+  
+  
+    <a href="#setup-and-upgrades" class="anchor-heading" aria-labelledby="setup-and-upgrades"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Setup and upgrades
+  
+  
+</h1>
+    
+
+<blockquote class="internals">
+  <p>Part of <a href="/flare/beta/architecture/">Architecture</a>, for contributors and the curious.
+Nothing here is needed to use FLARE.</p>
+</blockquote>
+
+<p>How FLARE gets from “Add Integration” to rooms that light themselves, and
+how it keeps an installed blueprint current.</p>
+<h2 id="the-main-flow">
+  
+  
+    <a href="#the-main-flow" class="anchor-heading" aria-labelledby="the-main-flow"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The main flow
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">FlareConfigFlow</code> (<code class="language-plaintext highlighter-rouge">config_flow.py</code>) is the integration page’s main
+button. The first time it sets everything up. After that, it’s
+<strong>Set up area</strong>.</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    U(["Add Integration / Set up area"]) --&gt; Q{"Schedules entry exists?"}
+    Q --&gt;|"no: first setup"| S["schedules:&lt;br/&gt;Home, one per floor, or Custom"]
+    S --&gt;|"Custom, or floor names&lt;br/&gt;that fail the checks"| SN["schedule_names"]
+    S --&gt; CE
+    SN --&gt; CE["_create_entries():&lt;br/&gt;Schedules, Settings, Flares&lt;br/&gt;via SOURCE_IMPORT"]
+    CE --&gt; AU{"automations menu&lt;br/&gt;(skipped with no lit areas)"}
+    AU --&gt;|"Skip for now"| SUM
+    AU --&gt;|"set up areas"| AR
+    Q --&gt;|"yes"| AR["areas:&lt;br/&gt;a schedule dropdown per area,&lt;br/&gt;grouped by floor"]
+    AR --&gt; AS["area_setup.async_set_up_areas():&lt;br/&gt;an automation per area"]
+    AS --&gt; FM{"flares menu"}
+    FM --&gt;|"Skip"| SUM
+    FM --&gt;|"pick rooms"| FR["flare_rooms:&lt;br/&gt;room flares, all ticked"]
+    FR --&gt; SUM(["abort: setup_complete / areas_set_up,&lt;br/&gt;with a summary"])
+</code></pre>
+
+<ul>
+  <li><strong>The entries are created through <code class="language-plaintext highlighter-rouge">SOURCE_IMPORT</code></strong>: the flow starts a
+hidden import flow for each missing one. Each entry type has a fixed
+unique id (<code class="language-plaintext highlighter-rouge">flare_schedules</code>, <code class="language-plaintext highlighter-rouge">flare_tracking</code>, <code class="language-plaintext highlighter-rouge">flare_flares</code>), so
+there’s only ever one of each, and deleting one and adding it back works.</li>
+  <li><strong>The flow ends on an abort carrying a summary, never on an entry.</strong> HA’s
+“integration added” dialog would put every device of the entry the flow
+completes on through a rename-and-place form, with no way to suppress it.</li>
+  <li><strong>First setup raises a repair</strong> linking to a page reload, since a page
+open during setup never loads the dashboard’s JavaScript (see
+<a href="/flare/beta/architecture/frontend/#getting-into-the-page">Dashboard internals</a>).</li>
+</ul>
+<h2 id="subentry-and-options-flows">
+  
+  
+    <a href="#subentry-and-options-flows" class="anchor-heading" aria-labelledby="subentry-and-options-flows"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Subentry and options flows
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Flow</th>
+      <th>Where</th>
+      <th>Does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">SensorSubentryFlow</code></td>
+      <td>Schedules entry, <strong>Add schedule</strong></td>
+      <td>a new schedule; Reconfigure shows it as YAML to copy out or replace, and applying sets the entities, leaving the subentry untouched</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FlareSubentryFlow</code></td>
+      <td>Flares entry, <strong>Add flare</strong></td>
+      <td>a flare over a FLARE-blueprint automation, or a custom one by input</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">FlareOptionsFlow</code></td>
+      <td>Settings entry, <strong>Configure</strong></td>
+      <td>tick interval and gap, minimum change, two-step models</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Reconfiguring a subentry ends with <code class="language-plaintext highlighter-rouge">async_update_and_abort</code>. Subentry
+changes don’t reload an entry by themselves, so each entry has an update
+listener (<code class="language-plaintext highlighter-rouge">_async_reload_entry</code>) that does. It yields once
+(<code class="language-plaintext highlighter-rouge">asyncio.sleep(0)</code>), so several subentries added in one go, as area setup
+does, reload the entry once.</p>
+<h2 id="area-setup-area_setuppy">
+  
+  
+    <a href="#area-setup-area_setuppy" class="anchor-heading" aria-labelledby="area-setup-area_setuppy"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Area setup (<code class="language-plaintext highlighter-rouge">area_setup.py</code>)
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant F as config flow
+    participant A as area_setup
+    participant Y as automations.yaml
+    participant HA as automation integration
+    F-&gt;&gt;A: async_set_up_areas({area: schedule})
+    A-&gt;&gt;A: one config per area:&lt;br/&gt;use_blueprint flare/flare.yaml,&lt;br/&gt;schedule device, room_target {area_id}
+    A-&gt;&gt;HA: async_validate_config_item (each)
+    A-&gt;&gt;Y: read, append, write_utf8_file_atomic
+    A-&gt;&gt;HA: automation.reload
+    alt the entities appear
+        A-&gt;&gt;A: put each automation in its area,&lt;br/&gt;label it FLARE
+    else they don't (configuration.yaml&lt;br/&gt;doesn't include the file)
+        A-&gt;&gt;Y: restore the original text, byte for byte
+    end
+</code></pre>
+
+<p>It writes <code class="language-plaintext highlighter-rouge">automations.yaml</code> the way HA’s own automation editor does
+(<code class="language-plaintext highlighter-rouge">components/config/automation.py</code>), because there’s no public API for
+it. A lock in <code class="language-plaintext highlighter-rouge">hass.data</code> keeps two setups from interleaving.</p>
+
+<ul>
+  <li><strong>Which areas are offered</strong>: every area holding a light by HA’s own rule
+(<code class="language-plaintext highlighter-rouge">target_entities({"area_id": ...})</code>), so an area with only hidden or
+categorised lights isn’t offered.</li>
+  <li><strong>“Already set up”</strong> means an automation labelled FLARE sits in the
+area. That only unticks the area: running Set up area again adds another
+automation.</li>
+  <li><strong>Not handled yet</strong>: a failure part-way leaves what was already created.</li>
+</ul>
+<h2 id="keeping-the-blueprint-current">
+  
+  
+    <a href="#keeping-the-blueprint-current" class="anchor-heading" aria-labelledby="keeping-the-blueprint-current"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Keeping the blueprint current
+  
+  
+</h2>
+    
+
+<p>HA never installs a custom integration’s blueprints, so FLARE checks for
+its own once HA has started (<code class="language-plaintext highlighter-rouge">async_at_started</code>), from the Settings entry.</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    start(["HA started"]) --&gt; ours{"any blueprint&lt;br/&gt;named FLARE?"}
+    ours --&gt;|"no"| miss["repair: blueprint_not_installed&lt;br/&gt;Fix installs flare/flare.yaml"]
+    ours --&gt;|"yes"| used{"used by an automation,&lt;br/&gt;and stamped older than&lt;br/&gt;this release?"}
+    used --&gt;|"yes"| old["repair: outdated_blueprint&lt;br/&gt;Fix writes the shipped file&lt;br/&gt;over each stale copy"]
+    used --&gt;|"no"| ok(["clear both repairs"])
+</code></pre>
+
+<ul>
+  <li>Ours is recognised <strong>by name</strong>, “FLARE”. Only copies an automation uses
+count as outdated: HA never removes an unused copy, and a repair about
+one nobody reads couldn’t be silenced.</li>
+  <li>The version stamp is in the blueprint’s <code class="language-plaintext highlighter-rouge">description</code>, since the
+<code class="language-plaintext highlighter-rouge">blueprint:</code> block is a closed schema and the description survives every
+import route. It’s <code class="language-plaintext highlighter-rouge">0.0.0-dev</code> in source. <code class="language-plaintext highlighter-rouge">scripts/release.py</code> writes
+the real version into each release’s zip, along with the manifest and
+<code class="language-plaintext highlighter-rouge">BLUEPRINT_VERSION</code>.</li>
+  <li>A blueprint that fails to load comes back from <code class="language-plaintext highlighter-rouge">async_get_blueprints()</code>
+as the exception itself, hence <code class="language-plaintext highlighter-rouge">isinstance</code> rather than a <code class="language-plaintext highlighter-rouge">None</code> check.</li>
+</ul>
+<h2 id="migrations">
+  
+  
+    <a href="#migrations" class="anchor-heading" aria-labelledby="migrations"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Migrations
+  
+  
+</h2>
+    
+
+<p><code class="language-plaintext highlighter-rouge">async_migrate_entry</code> handles version 3. Minor version 1 to 2 is FLARE
+2.0: it removes the old zone subentries (taking their devices, entities and
+claims with them) and retitles a “Zones” entry “Settings”. Dropping the
+claims fails open, since FLARE takes every room back on its next update.</p>
+<h2 id="getting-a-build-onto-a-real-house">
+  
+  
+    <a href="#getting-a-build-onto-a-real-house" class="anchor-heading" aria-labelledby="getting-a-build-onto-a-real-house"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Getting a build onto a real house
+  
+  
+</h2>
+    
+
+<p>HACS installs only released zips, so a development build is written over
+an installed release file by file. The steps are in <a href="https://github.com/danrspencer/flare/blob/main/CLAUDE.md">CLAUDE.md</a>
+(“Getting a build onto the live instance”). Try it in the sandbox first.</p>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
+
+  
+</body>
+</html>
+

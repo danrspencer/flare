@@ -1,0 +1,593 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(4)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(4) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(7) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(4) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list > li.nav-list-item:nth-child(4) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>The room automation | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="The room automation" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/architecture/room-automation/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/architecture/room-automation/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="The room automation" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"The room automation","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/architecture/room-automation/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/architecture/">Architecture</a></li>
+    <li class="breadcrumb-nav-list-item"><span>The room automation</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="the-room-automation">
+  
+  
+    <a href="#the-room-automation" class="anchor-heading" aria-labelledby="the-room-automation"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The room automation
+  
+  
+</h1>
+    
+
+<blockquote class="internals">
+  <p>Part of <a href="/flare/beta/architecture/">Architecture</a>, for contributors and the curious.
+Nothing here is needed to use FLARE.</p>
+</blockquote>
+
+<p><code class="language-plaintext highlighter-rouge">custom_components/flare/blueprints/flare.yaml</code> is the blueprint each room
+automation is made from. It decides <strong>when</strong> a room updates and <strong>whether</strong>
+a light may come on. The services decide <strong>how</strong>: what to send, to which
+bulbs, and which lights to leave alone.</p>
+<h2 id="why-the-split-falls-where-it-does">
+  
+  
+    <a href="#why-the-split-falls-where-it-does" class="anchor-heading" aria-labelledby="why-the-split-falls-where-it-does"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Why the split falls where it does
+  
+  
+</h2>
+    
+
+<p>A <code class="language-plaintext highlighter-rouge">condition:</code> can’t call a service. So anything a condition needs has to
+be a template or a native condition, and that keeps triggers, conditions
+and occupancy in the blueprint. Anything that needs HA’s registries
+properly (which lights are the room’s), or is fiddly enough to want unit
+tests (grouping, override protection), is a service the blueprint calls in
+its <code class="language-plaintext highlighter-rouge">action:</code>.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph YAML["Blueprint (Jinja/YAML)"]
+        tr["triggers"]
+        co["the one top-level condition"]
+        va["variables: occupancy, levels,&lt;br/&gt;idle, scenes, allow_turn_on"]
+        ch["choose: off / self-heal / default"]
+    end
+    subgraph PY["Integration (Python)"]
+        rt["flare.resolve_target"]
+        sc["flare.compute_scene_coverage"]
+        al["flare.apply_lighting"]
+        to["flare.turn_off"]
+        cc["flare.claims_clear"]
+    end
+    tr --&gt; co --&gt; rt --&gt; va --&gt; ch
+    ch --&gt; sc
+    ch --&gt; al
+    ch --&gt; to
+    ch --&gt; cc
+</code></pre>
+<h2 id="triggers">
+  
+  
+    <a href="#triggers" class="anchor-heading" aria-labelledby="triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Triggers
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>id</th>
+      <th>Fires on</th>
+      <th>Notes</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">phase_change</code></td>
+      <td>the schedule’s Phase <code class="language-plaintext highlighter-rouge">event</code> entity</td>
+      <td>a real phase change, and once after setup</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tick</code></td>
+      <td><code class="language-plaintext highlighter-rouge">flare_tick</code> with this room’s <code class="language-plaintext highlighter-rouge">tick_area</code></td>
+      <td>the curve moves within a phase</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tick</code></td>
+      <td><code class="language-plaintext highlighter-rouge">time_pattern</code> every minute</td>
+      <td>only when the room names no area, chosen by <code class="language-plaintext highlighter-rouge">enabled:</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">extra</code></td>
+      <td>Additional Triggers</td>
+      <td>any state change of entities the user picked</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_on</code></td>
+      <td><code class="language-plaintext highlighter-rouge">occupancy.detected</code>, <code class="language-plaintext highlighter-rouge">motion.detected</code></td>
+      <td>native triggers over <code class="language-plaintext highlighter-rouge">room_target</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_off</code></td>
+      <td><code class="language-plaintext highlighter-rouge">occupancy.cleared</code>, <code class="language-plaintext highlighter-rouge">motion.cleared</code>, held for Wait time</td>
+      <td>per sensor</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">recovered</code></td>
+      <td>template: some room light reachable, held 5 s</td>
+      <td>all the room’s lights were unreachable and one is back</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">lux_dark</code></td>
+      <td>template: the room stops reading too bright (some illuminance sensor at or below Lux Threshold)</td>
+      <td>a wake-up only; the action re-checks</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p><code class="language-plaintext highlighter-rouge">trigger_variables:</code> are the only variables a trigger can see. <code class="language-plaintext highlighter-rouge">tick_area</code>
+is computed there, as the first <code class="language-plaintext highlighter-rouge">area_id</code> in <code class="language-plaintext highlighter-rouge">room_target</code>. Trigger
+templates are <em>limited</em>: they can’t call <code class="language-plaintext highlighter-rouge">area_devices()</code> and friends, so
+<code class="language-plaintext highlighter-rouge">recovered</code> and <code class="language-plaintext highlighter-rouge">lux_dark</code> expand <code class="language-plaintext highlighter-rouge">room_target</code> by hand in Jinja. That’s
+close enough for a wake-up. The action works from the real resolution.</p>
+<h2 id="the-action-step-by-step">
+  
+  
+    <a href="#the-action-step-by-step" class="anchor-heading" aria-labelledby="the-action-step-by-step"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The action, step by step
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">flowchart TB
+    start(["a trigger fires"]) --&gt; cond{"top-level condition:&lt;br/&gt;a sensor Sensors From&lt;br/&gt;Areas leaves out?"}
+    cond --&gt;|"yes"| drop(["no run"])
+    cond --&gt;|"no"| rt["flare.resolve_target(room_target)&lt;br/&gt;→ room.entities"]
+    rt --&gt; vars["variables step:&lt;br/&gt;resolved_entities, levels, idle,&lt;br/&gt;occupancy, allow_turn_on, scenes"]
+    vars --&gt; stop{"motion_on, and nothing&lt;br/&gt;off or idle?"}
+    stop --&gt;|"yes"| s(["stop"])
+    stop --&gt;|"no"| choose{"choose"}
+    choose --&gt;|"motion_off and every sensor&lt;br/&gt;clear for the Wait time"| off["flare.turn_off(turn_off_entities)&lt;br/&gt;then idle lights dimmed"]
+    choose --&gt;|"tick or phase_change, sensors clear&lt;br/&gt;for the Wait time, something still on"| heal["self-heal:&lt;br/&gt;flare.turn_off(entities_still_on)"]
+    choose --&gt;|"default"| cov["scene chosen?&lt;br/&gt;flare.compute_scene_coverage"]
+    cov --&gt; idle{"room_is_idle?"}
+    idle --&gt;|"yes"| idl["flare.apply_lighting(idle_entities,&lt;br/&gt;idle_levels)"]
+    idle --&gt; gate{"allow_turn_on&lt;br/&gt;and not room_is_idle"}
+    idl --&gt; gate
+    gate --&gt;|"yes"| scene["scene.turn_on, if due&lt;br/&gt;(never on a tick)"]
+    scene --&gt; apply["flare.apply_lighting(target_entities,&lt;br/&gt;curve, levels, force: manual_run)"]
+    gate --&gt;|"no"| release
+    apply --&gt; release["claims_clear for lights handed&lt;br/&gt;to a scene or a null level"]
+</code></pre>
+<h3 id="the-variables-chain">
+  
+  
+    <a href="#the-variables-chain" class="anchor-heading" aria-labelledby="the-variables-chain"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The variables chain
+  
+  
+</h3>
+    
+
+<p><code class="language-plaintext highlighter-rouge">variables:</code> render top to bottom, once, when the run starts, and an
+undefined name fails silently (<code class="language-plaintext highlighter-rouge">x | length</code> is 0). So order matters, and
+the chain reads like this:</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    room["room.entities"] --&gt; res["resolved_entities&lt;br/&gt;(lights, minus flares)"]
+    room --&gt; occ["room_occupancy_entities&lt;br/&gt;(working sensors)"]
+    room --&gt; lux["room_lux_entities"] --&gt; tb["too_bright"] --&gt; lb["lux_blocked_entities"]
+    res --&gt; bl["brightness_levels&lt;br/&gt;(exclude lists + template)"] --&gt; ho["hands_off_entities&lt;br/&gt;(null / false)"]
+    res --&gt; ib["idle_brightness"] --&gt; ie["idle_entities"]
+    ho --&gt; ie
+    lb --&gt; ie
+    occ --&gt; ocw["occupancy_clear_for_wait"]
+    ie --&gt; idle["room_is_idle"]
+    occ --&gt; idle
+    ocw --&gt; idle
+    res --&gt; occd["occupied&lt;br/&gt;(any light on)"]
+    occd --&gt; atl["allow_turn_on"]
+    ocw --&gt; atl
+    tb --&gt; atl
+</code></pre>
+<h3 id="the-gate">
+  
+  
+    <a href="#the-gate" class="anchor-heading" aria-labelledby="the-gate"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The gate
+  
+  
+</h3>
+    
+
+<p>Exactly two things can switch a light on, <code class="language-plaintext highlighter-rouge">scene.turn_on</code> and
+<code class="language-plaintext highlighter-rouge">flare.apply_lighting</code>, and both sit inside one <code class="language-plaintext highlighter-rouge">if allow_turn_on</code> block
+in <code class="language-plaintext highlighter-rouge">default:</code>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>allow_turn_on = manual_run
+             or trigger.id == 'motion_on'
+             or occupied                       # a light in the room is already on
+             or (trigger.id == 'lux_dark' and not too_bright
+                 and someone is in the room)
+</code></pre></div></div>
+
+<p>It must never gain a new way to become true without the user asking for
+it explicitly. <code class="language-plaintext highlighter-rouge">test_no_trigger_reaching_default_can_light_a_dark_empty_room</code>
+sweeps every trigger against it.</p>
+
+<p>The one exception is <strong>idle brightness</strong>, the nightlight: an empty room
+settles to its idle levels outside the gate. It’s gated on
+<code class="language-plaintext highlighter-rouge">room_is_idle</code> instead, and the curve’s gate is <code class="language-plaintext highlighter-rouge">allow_turn_on and not
+room_is_idle</code>. Without that, an idle light being on would make <code class="language-plaintext highlighter-rouge">occupied</code>
+true, and the next tick would ramp the nightlight straight back up.</p>
+<h3 id="why-theres-no-delay-anywhere-in-action">
+  
+  
+    <a href="#why-theres-no-delay-anywhere-in-action" class="anchor-heading" aria-labelledby="why-theres-no-delay-anywhere-in-action"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Why there’s no delay anywhere in <code class="language-plaintext highlighter-rouge">action:</code>
+  
+  
+</h3>
+    
+
+<p>Variables are a snapshot taken when the run starts. A delay before acting
+would act on that snapshot. A 0–15 s jitter delay once relit a light
+switched off by hand inside the window, because the run had already
+decided the room was in use. <code class="language-plaintext highlighter-rouge">test_nothing_delays_the_action_before_it_decides</code>
+pins it. A trigger’s own <code class="language-plaintext highlighter-rouge">for:</code> (as <code class="language-plaintext highlighter-rouge">recovered</code> and <code class="language-plaintext highlighter-rouge">motion_off</code> have)
+isn’t a delay in this sense, because the run, and so its variables, starts
+after it.</p>
+<h2 id="what-the-blueprint-passes-the-services">
+  
+  
+    <a href="#what-the-blueprint-passes-the-services" class="anchor-heading" aria-labelledby="what-the-blueprint-passes-the-services"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> What the blueprint passes the services
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Value</th>
+      <th>Why</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">room_id</code></td>
+      <td><code class="language-plaintext highlighter-rouge">this.entity_id</code>, or none with Override Protection off</td>
+      <td>names the room for override protection; none means track nothing</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">room_entities</code></td>
+      <td><code class="language-plaintext highlighter-rouge">resolved_entities</code></td>
+      <td>the room’s lights, released together once all are off</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">brightness_levels</code></td>
+      <td>per-light 0–255, <code class="language-plaintext highlighter-rouge">null</code>/<code class="language-plaintext highlighter-rouge">false</code> for hands-off</td>
+      <td>from the exclude lists and Brightness Template</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">force</code></td>
+      <td><code class="language-plaintext highlighter-rouge">manual_run</code></td>
+      <td>a manual run takes back overridden lights</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">prefer_rgb_color</code></td>
+      <td>the phase is in Prefer RGB During</td>
+      <td>routes RGB-capable bulbs to <code class="language-plaintext highlighter-rouge">rgb_color</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">transition</code></td>
+      <td>slow for background updates, quick for motion or a manual run</td>
+      <td><code class="language-plaintext highlighter-rouge">script_transition</code></td>
+    </tr>
+  </tbody>
+</table></div>
+<h2 id="occupancy-briefly">
+  
+  
+    <a href="#occupancy-briefly" class="anchor-heading" aria-labelledby="occupancy-briefly"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Occupancy, briefly
+  
+  
+</h2>
+    
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">room_occupancy_entities</code> exists only to know whether the room has a
+sensor at all. <code class="language-plaintext highlighter-rouge">occupancy.is_detected</code> over zero entities is vacuously
+false, so a lights-only room would otherwise always read empty.</li>
+  <li>An unavailable sensor is left out, so a room whose only sensor is dead
+counts as sensorless rather than empty.</li>
+  <li><code class="language-plaintext highlighter-rouge">occupancy_clear_for_wait</code> is a hand-written <code class="language-plaintext highlighter-rouge">now() - last_changed</code>
+check. The native <code class="language-plaintext highlighter-rouge">for:</code> needs the recorder to prime it after a restart,
+and that isn’t reliable.</li>
+  <li>With <strong>Sensors From Areas</strong> off, the native triggers still fire for
+every sensor in the target (a trigger’s <code class="language-plaintext highlighter-rouge">target:</code> takes no templates),
+so the top-level <code class="language-plaintext highlighter-rouge">condition:</code> drops the ones not named directly.</li>
+</ul>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
+
+  
+</body>
+</html>
+

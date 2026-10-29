@@ -1,0 +1,663 @@
+
+
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-default.css">
+
+  <link rel="stylesheet" href="/flare/beta/assets/css/just-the-docs-head-nav.css" id="jtd-head-nav-stylesheet">
+
+  <style id="jtd-nav-activation">
+  
+
+    .site-nav > ul.nav-list:first-child > li > a,
+    
+    .site-nav > ul.nav-list:first-child > li > ul > li:not(:nth-child(2)) > a,
+    .site-nav > ul.nav-list:first-child > li > ul > li > ul > li a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:not(:first-child) a,
+    .site-nav li.external a {
+      background-image: none;
+    }
+
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(2) > a {
+      font-weight: 600;
+      text-decoration: none;
+    }.site-nav > ul.nav-list:first-child > li:nth-child(7) > button svg,
+    .site-nav > ul.nav-list:first-child > li:nth-child(7) > ul > li:nth-child(2) > button svg {
+      transform: rotate(-90deg);
+    }.site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list,
+    .site-nav > ul.nav-list:first-child > li.nav-list-item:nth-child(7) > ul.nav-list > li.nav-list-item:nth-child(2) > ul.nav-list {
+      display: block;
+    }
+  </style>
+
+  
+
+  
+    <script src="/flare/beta/assets/js/vendor/lunr.min.js"></script>
+  
+
+  <script src="/flare/beta/assets/js/just-the-docs.js"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+
+
+
+  <!-- Begin Jekyll SEO tag v2.9.0 -->
+<title>The event loop | FLARE</title>
+<meta name="generator" content="Jekyll v4.4.1" />
+<meta property="og:title" content="The event loop" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<meta name="twitter:description" property="og:description" content="Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in." />
+<link rel="canonical" href="https://danrspencer.github.io/flare/beta/architecture/event-loop/" />
+<meta property="og:url" content="https://danrspencer.github.io/flare/beta/architecture/event-loop/" />
+<meta property="og:site_name" content="FLARE" />
+<meta property="og:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png" />
+<meta name="twitter:title" content="The event loop" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebPage","description":"Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in.","headline":"The event loop","image":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://danrspencer.github.io/flare/beta/assets/img/flare-icon.svg"}},"url":"https://danrspencer.github.io/flare/beta/architecture/event-loop/"}</script>
+<!-- End Jekyll SEO tag -->
+
+
+  <link rel="icon" href="/flare/beta/assets/img/flare-icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/flare/beta/assets/img/flare-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="/flare/beta/assets/img/flare-icon.png">
+<link rel="stylesheet" href="/flare/beta/assets/css/brand.css">
+<link rel="stylesheet" href="/flare/beta/assets/css/section-nav.css">
+<script defer src="/flare/beta/assets/js/section-nav.js"></script>
+
+
+<script defer src="/flare/_versions/picker.js"></script></head>
+
+<body>
+  <a class="skip-to-main" href="#main-content">Skip to main content</a>
+  <svg xmlns="http://www.w3.org/2000/svg" class="d-none">
+  <symbol id="svg-link" viewBox="0 0 24 24">
+  <title>Link</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+  </svg>
+</symbol>
+
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+  <title>Menu</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-menu">
+    <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+</symbol>
+
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+  <title>Expand</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right">
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </svg>
+</symbol>
+
+  <!-- Feather. MIT License: https://github.com/feathericons/feather/blob/master/LICENSE -->
+<symbol id="svg-external-link" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link">
+  <title id="svg-external-link-title">(external link)</title>
+  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+</symbol>
+
+  
+    <symbol id="svg-doc" viewBox="0 0 24 24">
+  <title>Document</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-file">
+    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>
+  </svg>
+</symbol>
+
+    <symbol id="svg-search" viewBox="0 0 24 24">
+  <title>Search</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+    <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+</symbol>
+
+  
+  
+    <!-- Bootstrap Icons. MIT License: https://github.com/twbs/icons/blob/main/LICENSE.md -->
+<symbol id="svg-copy" viewBox="0 0 16 16">
+  <title>Copy</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard" viewBox="0 0 16 16">
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/>
+    <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/>
+  </svg>
+</symbol>
+<symbol id="svg-copied" viewBox="0 0 16 16">
+  <title>Copied</title>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clipboard-check-fill" viewBox="0 0 16 16">
+    <path d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3Zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3Z"/>
+    <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5v-1Zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708Z"/>
+  </svg>
+</symbol>
+
+  
+</svg>
+
+  
+    <header class="side-bar">
+  <div class="site-header">
+    <a href="/flare/beta/" class="site-title lh-tight"><img
+  src="/flare/beta/assets/img/flare-icon.svg"
+  alt=""
+  width="26"
+  height="26"
+  class="site-title-icon"
+>FLARE
+</a>
+    <button id="menu-button" class="site-button btn-reset" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" class="icon" aria-hidden="true"><use xlink:href="#svg-menu"></use></svg>
+    </button>
+  </div>
+
+  <nav aria-label="Main" id="site-nav" class="site-nav">
+  
+  
+    <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/beta/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/beta/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
+  
+</nav>
+
+
+<div class="d-md-block d-none site-footer">
+  
+  
+    This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+  
+  </div>
+</header>
+
+  
+  <div class="main" id="top">
+    <div id="main-header" class="main-header">
+  
+    
+
+<div class="search" role="search">
+  <div class="search-input-wrap">
+    <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search FLARE" autocomplete="off">
+    <label for="search-input" class="search-label">
+      <span class="sr-only">Search FLARE</span>
+      <svg viewBox="0 0 24 24" class="search-icon" aria-hidden="true"><use xlink:href="#svg-search"></use></svg>
+    </label>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
+
+  
+  
+  
+    <nav aria-label="Auxiliary" class="aux-nav">
+  <ul class="aux-nav-list">
+    
+      <li class="aux-nav-list-item">
+        <a href="https://github.com/danrspencer/flare" class="site-button"
+          
+          target="_blank" rel="noopener noreferrer"
+          
+        >
+          GitHub
+        </a>
+      </li>
+    
+  </ul>
+</nav>
+
+  
+</div>
+
+    <div class="main-content-wrap">
+      <nav aria-label="Breadcrumb" class="breadcrumb-nav">
+  <ol class="breadcrumb-nav-list">
+    <li class="breadcrumb-nav-list-item"><a href="/flare/beta/architecture/">Architecture</a></li>
+    <li class="breadcrumb-nav-list-item"><span>The event loop</span></li>
+  </ol>
+</nav>
+
+
+      <div id="main-content" class="main-content">
+        <main>
+          
+            <h1 class="no_toc" id="the-event-loop">
+  
+  
+    <a href="#the-event-loop" class="anchor-heading" aria-labelledby="the-event-loop"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The event loop
+  
+  
+</h1>
+    
+
+<blockquote class="internals">
+  <p>Part of <a href="/flare/beta/architecture/">Architecture</a>, for contributors and the curious.
+Nothing here is needed to use FLARE.</p>
+</blockquote>
+
+<p>Home Assistant runs one asyncio event loop, and nearly everything FLARE
+does happens on it, as a reaction to something: a state change, a timer,
+a service call, a registry update. This page lists every hook and explains
+the rules they follow.</p>
+<h2 id="callbacks-and-coroutines">
+  
+  
+    <a href="#callbacks-and-coroutines" class="anchor-heading" aria-labelledby="callbacks-and-coroutines"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Callbacks and coroutines
+  
+  
+</h2>
+    
+
+<p>Home Assistant code comes in three shapes, and getting the shape wrong
+fails silently until a real event loop runs it.</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Shape</th>
+      <th>Marked</th>
+      <th>Runs</th>
+      <th>FLARE uses it for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>callback</td>
+      <td><code class="language-plaintext highlighter-rouge">@callback def</code></td>
+      <td>on the loop, to completion, no awaiting</td>
+      <td>listeners, timers, the claim registry’s writers</td>
+    </tr>
+    <tr>
+      <td>coroutine</td>
+      <td><code class="language-plaintext highlighter-rouge">async def</code></td>
+      <td>on the loop, yielding at each <code class="language-plaintext highlighter-rouge">await</code></td>
+      <td>service handlers, setup, anything that calls a service</td>
+    </tr>
+    <tr>
+      <td>plain function</td>
+      <td>neither</td>
+      <td><strong>in the executor</strong> (a worker thread)</td>
+      <td>only file and hashing work, through <code class="language-plaintext highlighter-rouge">async_add_executor_job</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>A listener or timer handed a plain function that touches <code class="language-plaintext highlighter-rouge">hass</code> runs it
+in a worker thread, where <code class="language-plaintext highlighter-rouge">hass.async_create_task</code> raises. That’s lesson 7
+in <a href="https://github.com/danrspencer/flare/blob/main/CLAUDE.md">CLAUDE.md</a>, and it’s why every listener here carries <code class="language-plaintext highlighter-rouge">@callback</code>.
+Check <code class="language-plaintext highlighter-rouge">core.py</code>’s <code class="language-plaintext highlighter-rouge">get_hassjob_callable_job_type</code> before trusting a fix
+in this area: unit tests don’t catch it.</p>
+
+<p><strong>Atomic by construction.</strong> A callback can’t be interrupted, so anything
+done inside one is one step as far as the rest of HA is concerned. The
+claim registry’s writers (<code class="language-plaintext highlighter-rouge">async_record</code>, <code class="language-plaintext highlighter-rouge">async_override</code>,
+<code class="language-plaintext highlighter-rouge">async_clear</code>, <code class="language-plaintext highlighter-rouge">async_prune_stale</code>) are callbacks for this reason. In
+<code class="language-plaintext highlighter-rouge">apply_lighting</code> there’s no <code class="language-plaintext highlighter-rouge">await</code> between planning the writes and
+recording their claims, so no state change can land in between and be
+misjudged. (The <code class="language-plaintext highlighter-rouge">async_</code> prefix is HA’s convention for “must run on the
+loop”, not “is a coroutine”.)</p>
+<h2 id="startup">
+  
+  
+    <a href="#startup" class="anchor-heading" aria-labelledby="startup"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Startup
+  
+  
+</h2>
+    
+
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant HA as Home Assistant
+    participant I as flare/__init__.py
+    participant SE as Schedules entry
+    participant ST as Settings entry
+    participant FE as Flares entry
+    HA-&gt;&gt;I: async_setup (once per domain)
+    Note over I: static path /flare_static/#lt;hash#gt;/,&lt;br/&gt;add_extra_js_url(loader),&lt;br/&gt;OldFingerprintView, FrontendLoadedView,&lt;br/&gt;export/import_schedule, resolve_target
+    HA-&gt;&gt;SE: async_setup_entry
+    Note over SE: a ScheduleCoordinator per schedule,&lt;br/&gt;first refresh (defaults),&lt;br/&gt;listen to sun.sun,&lt;br/&gt;forward 6 platforms,&lt;br/&gt;refresh again (restored values)
+    HA-&gt;&gt;ST: async_setup_entry
+    Note over ST: ClaimRegistry.async_load (Store),&lt;br/&gt;hourly prune, state listener,&lt;br/&gt;blueprint check at started,&lt;br/&gt;9 services, TickScheduler,&lt;br/&gt;forward sensor + button,&lt;br/&gt;release rooms restored dark,&lt;br/&gt;prune stale, start area ticks
+    HA-&gt;&gt;FE: async_setup_entry
+    Note over FE: forward light only if it has flares
+    HA--&gt;&gt;HA: automations load (after integrations)
+    HA--&gt;&gt;FE: EVENT_HOMEASSISTANT_STARTED:&lt;br/&gt;each flare resolves its members
+    HA--&gt;&gt;ST: async_at_started:&lt;br/&gt;check the blueprint
+</code></pre>
+
+<p>The order inside the Settings entry matters.</p>
+
+<ol>
+  <li><strong>Claims load before the platforms</strong>, so the sensors start with them.</li>
+  <li><strong>The services are registered before any platform</strong>, so nothing can
+call one that isn’t there yet.</li>
+  <li><strong>The claim events start inside the sensor platform</strong> (<code class="language-plaintext highlighter-rouge">ClaimEvents.start()</code>).
+They seed every light’s status on the spot, which also notes the
+mismatch of a claim restored from before a restart.</li>
+  <li><strong>Only after that</strong> are rooms restored dark released and stale claims
+pruned, so the release is announced in Activity.</li>
+  <li><strong>The blueprint check waits for <code class="language-plaintext highlighter-rouge">async_at_started</code></strong>: during setup no
+automation has loaded, so every blueprint looks unused.</li>
+</ol>
+
+<p>Flares wait for <code class="language-plaintext highlighter-rouge">EVENT_HOMEASSISTANT_STARTED</code> for the same reason:
+automations load after integrations, so a flare can’t read its
+automation’s inputs until then.</p>
+<h2 id="every-hook">
+  
+  
+    <a href="#every-hook" class="anchor-heading" aria-labelledby="every-hook"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Every hook
+  
+  
+</h2>
+    
+<h3 id="bus-listeners">
+  
+  
+    <a href="#bus-listeners" class="anchor-heading" aria-labelledby="bus-listeners"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Bus listeners
+  
+  
+</h3>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Listener</th>
+      <th>Where</th>
+      <th>Reacts by</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">state_changed</code> (lights only)</td>
+      <td><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code></td>
+      <td>dropping a claim when its light goes unavailable, releasing a room gone dark, noting mismatches</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">sun.sun</code> state</td>
+      <td>Schedules entry</td>
+      <td>refreshing every schedule (Evening follows sunset)</td>
+    </tr>
+    <tr>
+      <td>a light’s own state</td>
+      <td>each <code class="language-plaintext highlighter-rouge">_LightStatusSensor</code></td>
+      <td>rewriting its status</td>
+    </tr>
+    <tr>
+      <td>a flare’s member lights</td>
+      <td><code class="language-plaintext highlighter-rouge">FlareLight</code>, via <code class="language-plaintext highlighter-rouge">async_track_target_selector_state_change_event</code></td>
+      <td>recomputing the group’s state</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">area_registry_updated</code></td>
+      <td><code class="language-plaintext highlighter-rouge">_tick_areas</code></td>
+      <td>handing the ticker the new set of areas</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">entity_registry_updated</code></td>
+      <td><code class="language-plaintext highlighter-rouge">_LightStatuses</code>, <code class="language-plaintext highlighter-rouge">_LightStatusSensor</code>, <code class="language-plaintext highlighter-rouge">FlareLight</code></td>
+      <td>removing a status sensor with its light; following a rename; retracking a flare</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">automation_reloaded</code></td>
+      <td><code class="language-plaintext highlighter-rouge">FlareLight</code></td>
+      <td>re-reading the automation’s lights</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">homeassistant_started</code></td>
+      <td><code class="language-plaintext highlighter-rouge">FlareLight</code></td>
+      <td>first membership, once automations exist</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">homeassistant_stop</code></td>
+      <td>Settings entry, <code class="language-plaintext highlighter-rouge">ClaimEvents</code></td>
+      <td>stopping the ticker and timers</td>
+    </tr>
+  </tbody>
+</table></div>
+<h3 id="timers">
+  
+  
+    <a href="#timers" class="anchor-heading" aria-labelledby="timers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Timers
+  
+  
+</h3>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Timer</th>
+      <th>Interval</th>
+      <th>Where</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Area tick</td>
+      <td>each area once per <code class="language-plaintext highlighter-rouge">tick_interval</code> minutes (default 1), <code class="language-plaintext highlighter-rouge">tick_gap</code> seconds apart (default 1)</td>
+      <td><code class="language-plaintext highlighter-rouge">TickScheduler</code>, chaining <code class="language-plaintext highlighter-rouge">async_track_point_in_utc_time</code></td>
+    </tr>
+    <tr>
+      <td>Schedule refresh</td>
+      <td>60 s, plus on demand (debounced, at most 10 s)</td>
+      <td><code class="language-plaintext highlighter-rouge">ScheduleCoordinator</code> (<code class="language-plaintext highlighter-rouge">DataUpdateCoordinator</code>)</td>
+    </tr>
+    <tr>
+      <td>Claims save</td>
+      <td>5 s after a change, and at shutdown</td>
+      <td><code class="language-plaintext highlighter-rouge">Store.async_delay_save</code></td>
+    </tr>
+    <tr>
+      <td>Stale-claim prune</td>
+      <td>hourly</td>
+      <td><code class="language-plaintext highlighter-rouge">async_track_time_interval</code></td>
+    </tr>
+    <tr>
+      <td>Mismatch recheck</td>
+      <td>once, 31 s after a light first mismatches</td>
+      <td><code class="language-plaintext highlighter-rouge">ClaimEvents._recheck_after_grace</code></td>
+    </tr>
+    <tr>
+      <td>Controlled announcement</td>
+      <td>3 s after a room’s first light is taken</td>
+      <td><code class="language-plaintext highlighter-rouge">ClaimEvents._controlled_soon</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>There’s no polling of claim statuses. Everything that can move a count
+reaches the state listener: a drop, a light going off, one arriving, a
+mismatch starting or ending. The 30-second grace is the only change that
+time makes by itself, and it gets its own recheck.</p>
+<h3 id="signals">
+  
+  
+    <a href="#signals" class="anchor-heading" aria-labelledby="signals"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Signals
+  
+  
+</h3>
+    
+
+<p><code class="language-plaintext highlighter-rouge">SIGNAL_CLAIMS_UPDATED</code> (dispatcher) is how the registry tells everything
+showing claims to redraw: the count sensors, the status sensors, the Clear
+button’s <code class="language-plaintext highlighter-rouge">tracked</code> count, and <code class="language-plaintext highlighter-rouge">_LightStatuses</code>, which adds a status sensor
+the first time a room names a light.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    W["a write&lt;br/&gt;(async_record, adopt,&lt;br/&gt;override, clear)"] --&gt; N
+    L["state listener:&lt;br/&gt;drop / off / arrive /&lt;br/&gt;mismatch change"] --&gt; N
+    N["ClaimRegistry._notify()"] --&gt; SAVE["Store.async_delay_save (5 s)"]
+    N --&gt; EV["ClaimEvents.async_claims_changed()&lt;br/&gt;→ refresh statuses, fire events"]
+    N --&gt; SIG["dispatcher:&lt;br/&gt;SIGNAL_CLAIMS_UPDATED"]
+    SIG --&gt; CS["count sensors"]
+    SIG --&gt; LS["status sensors"]
+    SIG --&gt; BT["Clear button"]
+    SIG --&gt; NEW["_LightStatuses:&lt;br/&gt;add sensors for new lights"]
+</code></pre>
+
+<p><code class="language-plaintext highlighter-rouge">ClaimEvents</code> is reached directly, through the <code class="language-plaintext highlighter-rouge">ClaimListener</code> protocol,
+rather than by signal, because it must refresh before the sensors redraw.
+<code class="language-plaintext highlighter-rouge">_notify()</code> calls it first. It’s a protocol so <code class="language-plaintext highlighter-rouge">tracking/</code> needn’t import
+<code class="language-plaintext highlighter-rouge">sensor.py</code>.</p>
+<h2 id="contexts-telling-flares-writes-apart">
+  
+  
+    <a href="#contexts-telling-flares-writes-apart" class="anchor-heading" aria-labelledby="contexts-telling-flares-writes-apart"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Contexts: telling FLARE’s writes apart
+  
+  
+</h2>
+    
+
+<p>Every state change in HA carries a <code class="language-plaintext highlighter-rouge">Context</code>. A service call made with a
+context passes it to the entity, and the entity’s next state write carries
+it. Override protection is built on that.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant AU as Room automation run
+    participant SV as flare.apply_lighting
+    participant L as light.turn_on
+    participant B as Bulb entity
+    Note over AU: one Context per run (ctx A)
+    AU-&gt;&gt;SV: call (context: ctx A)
+    SV-&gt;&gt;SV: record claim: latest = ctx A, target
+    SV-&gt;&gt;L: light.turn_on (context: ctx A)
+    L-&gt;&gt;B: async_turn_on
+    B--&gt;&gt;B: async_write_ha_state()&lt;br/&gt;new state's context = ctx A
+    Note over B: within 5 s: context matches → "controlled"&lt;br/&gt;later reports: compare values with the target
+</code></pre>
+
+<p>Four facts shape everything built on contexts:</p>
+
+<ul>
+  <li><strong>One context per automation run.</strong> Every call in a run shares it, so
+<code class="language-plaintext highlighter-rouge">context.user_id</code> can’t tell FLARE’s write from another automation’s,
+but <code class="language-plaintext highlighter-rouge">context.id</code> can.</li>
+  <li><strong>An entity forgets the context 5 seconds after the call.</strong> A slow bulb
+that reports later does so under a fresh context, with the values that
+were asked for. That’s why every claim also records its <code class="language-plaintext highlighter-rouge">target</code>, and a
+light matching the target by value counts as FLARE’s.</li>
+  <li><strong>Two-step writes make child contexts.</strong> Brightness and colour go out
+as separate calls, each with its own <code class="language-plaintext highlighter-rouge">Context(parent_id=...)</code>, created
+before the claims are recorded so both ids are in the claim.</li>
+  <li><strong>A restart gives every light a new context.</strong> Restored claims can only
+ever match by value.</li>
+</ul>
+<h2 id="ordering-subtleties">
+  
+  
+    <a href="#ordering-subtleties" class="anchor-heading" aria-labelledby="ordering-subtleties"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Ordering subtleties
+  
+  
+</h2>
+    
+
+<ul>
+  <li><strong>The Phase event fires after the sensor updates.</strong> One coordinator
+refresh updates the schedule sensor and the Phase <code class="language-plaintext highlighter-rouge">event</code> entity. The
+event entity defers its fire with <code class="language-plaintext highlighter-rouge">loop.call_soon</code>, so an automation
+woken by it reads the sensor’s new phase, not the old one.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">variables:</code> render once, at trigger time.</strong> Nothing in the
+blueprint’s <code class="language-plaintext highlighter-rouge">action:</code> may delay, or later steps would act on a stale
+snapshot (see <a href="/flare/beta/architecture/room-automation/">The room automation</a>).</li>
+  <li><strong>Claims are recorded before the write.</strong> A run cancelled part-way
+(<code class="language-plaintext highlighter-rouge">mode: restart</code>, a two-step bulb mid-sleep) still leaves the claim. A
+claim for a write that never lands does no harm: the light still matches
+its previous claim.</li>
+</ul>
+<h2 id="shutdown">
+  
+  
+    <a href="#shutdown" class="anchor-heading" aria-labelledby="shutdown"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Shutdown
+  
+  
+</h2>
+    
+
+<ul>
+  <li><strong>Nothing a light reports while HA is stopping counts</strong>
+(<code class="language-plaintext highlighter-rouge">hass.is_stopping</code>). MQTT marks its lights unavailable as its
+connection closes, which would otherwise drop every claim just before
+the Store’s final write.</li>
+  <li>The Store writes once more at <code class="language-plaintext highlighter-rouge">EVENT_HOMEASSISTANT_FINAL_WRITE</code>, so a
+clean restart loses nothing. A crash loses at most the last 5 seconds,
+and FLARE fails open: a light without a claim is free to drive.</li>
+  <li>The ticker and <code class="language-plaintext highlighter-rouge">ClaimEvents</code> cancel their own timers on
+<code class="language-plaintext highlighter-rouge">homeassistant_stop</code>. Nothing unloads config entries at shutdown, and
+the tests fail on lingering timers.</li>
+</ul>
+
+          
+
+          
+            
+          
+        </main>
+        
+<hr>
+<footer>
+  
+
+  
+
+  <div class="d-md-none mt-4 fs-2">
+    
+    
+      This site uses <a href="https://github.com/just-the-docs/just-the-docs">Just the Docs</a>, a documentation theme for Jekyll.
+    
+  </div>
+</footer>
+
+      </div>
+    </div>
+    
+      
+
+<div class="search-overlay"></div>
+
+    
+  </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
+
+  
+</body>
+</html>
+
