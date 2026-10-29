@@ -66,7 +66,7 @@ def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
 
 
 def _status(hass: HomeAssistant, registry: ClaimRegistry, entity_id: str) -> str:
-    return _classify_tracked(hass, registry, entity_id, registry.record(entity_id))[0]
+    return _classify_tracked(registry, entity_id)
 
 
 async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant, hass_storage: dict[str, Any]):
@@ -74,7 +74,7 @@ async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant
     after the change."""
     registry = await _start(hass, hass_storage)
     _light(hass, "light.a", "on", **ASKED)
-    await registry.async_record(ROOM, ["light.a"], {"light.a": "ctx-before"}, "ctx-ours", targets={"light.a": ASKED})
+    await registry.async_record(ROOM, ["light.a"], "ctx-ours", targets={"light.a": ASKED})
 
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
     await hass.async_block_till_done()

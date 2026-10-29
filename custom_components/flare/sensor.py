@@ -36,7 +36,7 @@ from .const import (
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .tracking.matching import shown
-from .tracking.override_protection import MISMATCH_GRACE, classify_state
+from .tracking.override_protection import MISMATCH_GRACE
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
@@ -53,16 +53,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     _LightStatuses(hass, registry, entry, async_add_entities).start()
 
 
-def _classify_tracked(
-    hass: HomeAssistant, registry: ClaimRegistry, entity_id: str, record: dict
-) -> tuple[str, Any, Any]:
-    """One light's status, shared by every sensor here so they agree.
-    Returns (status, matched_via, live_context_id)."""
-    state = hass.states.get(entity_id)
-    live_context_id = state.context.id if state is not None else None
-    raw_status, matched_via = classify_state(state, record)
+def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> str:
+    """One claimed light's status, shared by every sensor here so they agree."""
+    status, _via = registry.status(entity_id)
     # "untracked" shows as "controlled": either way, not excluded.
-    return ("controlled" if raw_status == "untracked" else raw_status), matched_via, live_context_id
+    return "controlled" if status == "untracked" else status
 
 
 # How long a room gathers lights it has taken before announcing them.
@@ -152,7 +147,7 @@ class ClaimEvents:
         self._registry.note_mismatches()
         statuses = {}
         for entity_id, record in self._registry.all_records().items():
-            status, _via, live_context_id = _classify_tracked(self.hass, self._registry, entity_id, record)
+            status = _classify_tracked(self._registry, entity_id)
             statuses[entity_id] = status
             if status == "mismatched":
                 self._recheck_after_grace()
@@ -160,7 +155,7 @@ class ClaimEvents:
                 continue
             previous = self._last_statuses.get(entity_id)
             if status == "overridden" and previous != "overridden":
-                self._fire_overridden(entity_id, record, previous, live_context_id)
+                self._fire_overridden(entity_id, record, previous)
             # Not back from overridden (churn), nor from unavailable or
             # mismatched (every light, after a restart), which were already
             # controlled.
@@ -184,9 +179,7 @@ class ClaimEvents:
         async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
-    def _fire_overridden(
-        self, entity_id: str, record: dict, previous: str | None, live_context_id: str | None
-    ) -> None:
+    def _fire_overridden(self, entity_id: str, record: dict, previous: str | None) -> None:
         state = self.hass.states.get(entity_id)
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
@@ -195,7 +188,7 @@ class ClaimEvents:
                 "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
                 **_filed_under(self.hass, self._entry, "overridden"),
                 "previous_status": previous,
-                "live_context_id": live_context_id,
+                "live_context_id": state.context.id if state else None,
                 "live": {"state": state.state, **shown(state.attributes)} if state else {"state": None},
                 "observed": record.get("observed"),
                 "latest": record.get("latest"),
@@ -288,7 +281,7 @@ class _CountSensor(SensorEntity):
         lights: list[str] = []
         records = self._registry.all_records()
         for entity_id, record in records.items():
-            status, _via, _ctx = _classify_tracked(self.hass, self._registry, entity_id, record)
+            status = _classify_tracked(self._registry, entity_id)
             if status == self._status:
                 lights.append(entity_id)
         return sorted(lights), len(records)
@@ -440,10 +433,7 @@ class _LightStatusSensor(SensorEntity):
         self.async_write_ha_state()
 
     def _status(self) -> str:
-        status, _via = classify_state(
-            self.hass.states.get(self.light_entity_id),
-            self._registry.record(self.light_entity_id),
-        )
+        status, _via = self._registry.status(self.light_entity_id)
         return status
 
     @property

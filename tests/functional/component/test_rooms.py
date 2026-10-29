@@ -80,7 +80,6 @@ async def _record(registry: ClaimRegistry, room: str | None, entity_id: str, con
     await registry.async_record(
         room,
         [entity_id],
-        {entity_id: f"before-{entity_id}"},
         context_id,
         targets={entity_id: target} if target else None,
         room_entities=room_lights,
@@ -559,6 +558,8 @@ async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant
     hass.bus.async_listen("flare_light_overridden", events.append)
     _light(hass, "light.a", **ASKED)
     await _record(registry, KITCHEN, "light.a", "ctx-first", ASKED)
+    # The first write echoed back under another context, as a slow device does.
+    _light(hass, "light.a", **{**ASKED, "brightness": ASKED["brightness"] + 1})
     tracker._refresh_statuses()
     unsub = registry.async_start_listening(hass)
 

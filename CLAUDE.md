@@ -299,8 +299,8 @@ and `latest` (the most recent attempt). The model and why it needs two
 are in `claims.py`'s docstring; the decision table is
 `override_protection.classify()`; the user-facing contract is
 `docs/reference/override-protection.md`. **Everything judges a light through
-`classify_state()`** - `grouping.py`'s `externally_set()`, the sensors'
-`_classify_tracked()` and `claims_check` - because they drifted apart
+`classify_state()`** - `grouping.py`'s `externally_set()`, and through
+`ClaimRegistry.status()` the sensors and `claims_check` - because they drifted apart
 twice when each did its own. `tests/checks/test_one_classifier_adapter.py`
 fails if anything else calls `classify()`.
 
