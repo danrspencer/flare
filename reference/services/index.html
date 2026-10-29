@@ -715,7 +715,7 @@ start times and curve settings you give it, without needing a schedule.</p>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">day</code>, <code class="language-plaintext highlighter-rouge">evening</code>, <code class="language-plaintext highlighter-rouge">morning</code>, <code class="language-plaintext highlighter-rouge">night</code><br />Unix timestamp</td>
       <td>yes</td>
-      <td>When each phase starts today.</td>
+      <td>When each phase starts today. If <code class="language-plaintext highlighter-rouge">night</code> is earlier than <code class="language-plaintext highlighter-rouge">morning</code>, Night starts after midnight, and Evening runs until then.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">&lt;phase&gt;_brightness</code><br />0–255; default Morning 255, Day 255, Evening 180, Night 80</td>
@@ -811,9 +811,9 @@ yourself with <a href="../zones/#override-protection">override protection</a>. I
       <td>A light within this many Kelvin of a claimed colour temperature matches it.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of entity IDs</td>
+      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
       <td>yes</td>
-      <td>The entities to check.</td>
+      <td>The lights to check.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">rgb_color_tolerance</code><br />0–100; default <code class="language-plaintext highlighter-rouge">10</code></td>
@@ -893,9 +893,9 @@ the entities, with the values you’re about to send.</p>
   </thead>
   <tbody>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of entity IDs</td>
+      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
       <td>yes</td>
-      <td>The entities you’re about to change.</td>
+      <td>The lights you’re about to change.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">targets</code><br />map of entity ID to values</td>
@@ -972,9 +972,9 @@ does the same for every light in the zone.</p>
   </thead>
   <tbody>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of entity IDs</td>
+      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
       <td>yes</td>
-      <td>The entities to clear.</td>
+      <td>The lights to clear.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">zone_device_id</code><br />zone device ID</td>
@@ -1038,9 +1038,9 @@ Flares call it before turning a room off or setting it to a brightness or colour
   </thead>
   <tbody>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of entity IDs</td>
+      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
       <td>yes</td>
-      <td>The entities to mark.</td>
+      <td>The lights to mark.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">zone_device_id</code><br />zone device ID</td>

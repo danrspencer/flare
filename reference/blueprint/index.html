@@ -251,12 +251,16 @@ behaves.</p>
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
   <li><a href="#room" id="markdown-toc-room">Room</a></li>
-  <li><a href="#colour" id="markdown-toc-colour">Colour</a></li>
-  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
   <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
   <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
-  <li><a href="#timing" id="markdown-toc-timing">Timing</a></li>
-  <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
+  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
+  <li><a href="#triggers" id="markdown-toc-triggers">Triggers</a>    <ul>
+      <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
+      <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
+    </ul>
+  </li>
+  <li><a href="#transitions" id="markdown-toc-transitions">Transitions</a></li>
+  <li><a href="#colour" id="markdown-toc-colour">Colour</a></li>
   <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
       <li><a href="#when-the-room-updates" id="markdown-toc-when-the-room-updates">When the room updates</a></li>
       <li><a href="#when-lights-turn-on-and-off" id="markdown-toc-when-lights-turn-on-and-off">When lights turn on and off</a></li>
@@ -301,87 +305,40 @@ behaves.</p>
       <td>required</td>
       <td>The room’s lights, and the occupancy and motion sensors that turn them on and off.</td>
     </tr>
+    <tr>
+      <td><strong>Wait time</strong></td>
+      <td>120s</td>
+      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+    </tr>
   </tbody>
 </table></div>
 
 <p><strong>Lights &amp; Occupancy</strong> takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.</p>
 
-<p>The room’s lights are the ones an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> would reach on the same target.
-An entity you pick directly is always included. An entity reached through an area, floor,
-device or label is left out if it’s hidden, and also if it’s a configuration or diagnostic entity
-(such as a switch’s indicator light), unless the label is on that entity itself. The room’s
-<a href="../flares/">flare</a> has the same lights.</p>
+<p>FLARE picks the room’s lights the same way Home Assistant does when you call <code class="language-plaintext highlighter-rouge">light.turn_on</code>
+on that target:</p>
+
+<ul>
+  <li>A light you pick by name is always included.</li>
+  <li>A hidden light is left out if it was picked through an area, floor, device or label.</li>
+  <li>A configuration or diagnostic light, such as the indicator light on a wall switch, is left out
+if it was picked through an area, floor or device, or a label on its device or area. If the
+label is on the light itself, it’s included.</li>
+</ul>
+
+<p>The room’s <a href="../flares/">flare</a> controls the same lights.</p>
 
 <p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
+
+<p>To choose the sensors yourself while still picking an area for the lights, turn off
+<a href="#triggers">Sensors From Areas</a>.</p>
 
 <p>A room with no sensor follows the schedule but never turns its lights on or off.</p>
 
 <p>If a room has two automations, for example one for a lamp and one for the ceiling light, give
 both the same <strong>Zone</strong>.</p>
-<h2 id="colour">
-  
-  
-    <a href="#colour" class="anchor-heading" aria-labelledby="colour"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Colour
-  
-  
-</h2>
-    
-
-<div class="table-wrapper"><table>
-  <thead>
-    <tr>
-      <th>Input</th>
-      <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Prefer RGB During</strong></td>
-      <td>Evening, Night</td>
-      <td>Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature.</td>
-    </tr>
-  </tbody>
-</table></div>
-
-<p>Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
-leaves Morning and Day on colour temperature.</p>
-<h2 id="scenes">
-  
-  
-    <a href="#scenes" class="anchor-heading" aria-labelledby="scenes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scenes
-  
-  
-</h2>
-    
-
-<div class="table-wrapper"><table>
-  <thead>
-    <tr>
-      <th>Input</th>
-      <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Morning / Day / Evening / Night Scene</strong></td>
-      <td>none</td>
-      <td>A scene the room uses instead of the schedule during that phase.</td>
-    </tr>
-    <tr>
-      <td><strong>Scene Template</strong></td>
-      <td>none</td>
-      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. Overrides the per-phase scenes when it returns a scene that exists.</td>
-    </tr>
-  </tbody>
-</table></div>
-
-<p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
-the schedule. When a scene is used, any light in the room that the scene doesn’t set still
-follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
 <h2 id="brightness">
   
   
@@ -480,10 +437,10 @@ to:</p>
 <p>An idle brightness is the only way the room’s lights come on while it’s empty. See
 <a href="../../guides/templates/#idle-brightness-template">Templates</a> for one lamp as the nightlight,
 and other variations.</p>
-<h2 id="timing">
+<h2 id="scenes">
   
   
-    <a href="#timing" class="anchor-heading" aria-labelledby="timing"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Timing
+    <a href="#scenes" class="anchor-heading" aria-labelledby="scenes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scenes
   
   
 </h2>
@@ -499,10 +456,94 @@ and other variations.</p>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Wait time</strong></td>
-      <td>120s</td>
-      <td>How long every sensor must be clear before the room is empty.</td>
+      <td><strong>Morning / Day / Evening / Night Scene</strong></td>
+      <td>none</td>
+      <td>A scene the room uses instead of the schedule during that phase.</td>
     </tr>
+    <tr>
+      <td><strong>Scene Template</strong></td>
+      <td>none</td>
+      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. Overrides the per-phase scenes when it returns a scene that exists.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
+the schedule. When a scene is used, any light in the room that the scene doesn’t set still
+follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
+<h2 id="triggers">
+  
+  
+    <a href="#triggers" class="anchor-heading" aria-labelledby="triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Triggers
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Sensors From Areas</strong></td>
+      <td>on</td>
+      <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used.</td>
+    </tr>
+    <tr>
+      <td><strong>Additional Triggers</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change.</td>
+    </tr>
+  </tbody>
+</table></div>
+<h3 id="sensors-from-areas">
+  
+  
+    <a href="#sensors-from-areas" class="anchor-heading" aria-labelledby="sensors-from-areas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors from areas
+  
+  
+</h3>
+    
+
+<p>Turn <strong>Sensors From Areas</strong> off and only the sensors you pick by name in <strong>Lights &amp; Occupancy</strong>
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
+<h3 id="additional-triggers">
+  
+  
+    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+  
+  
+</h3>
+    
+
+<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
+while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
+on from something else, see
+<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+<h2 id="transitions">
+  
+  
+    <a href="#transitions" class="anchor-heading" aria-labelledby="transitions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Transitions
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
     <tr>
       <td><strong>Motion On Transition</strong></td>
       <td>1s</td>
@@ -520,10 +561,10 @@ and other variations.</p>
     </tr>
   </tbody>
 </table></div>
-<h2 id="additional-triggers">
+<h2 id="colour">
   
   
-    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+    <a href="#colour" class="anchor-heading" aria-labelledby="colour"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Colour
   
   
 </h2>
@@ -539,17 +580,15 @@ and other variations.</p>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Additional Triggers</strong></td>
-      <td>none</td>
-      <td>Entities that make the room update as soon as they change.</td>
+      <td><strong>Prefer RGB During</strong></td>
+      <td>Evening, Night</td>
+      <td>Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature.</td>
     </tr>
   </tbody>
 </table></div>
 
-<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
-<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+<p>Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
+leaves Morning and Day on colour temperature.</p>
 <h2 id="how-a-room-behaves">
   
   
