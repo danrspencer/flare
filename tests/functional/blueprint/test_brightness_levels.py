@@ -13,7 +13,6 @@ from tests.functional.blueprint.harness import (
     effective,
     light,
     occupancy,
-    add_zone,
     setup_room_automation,
 )
 
@@ -125,7 +124,6 @@ class TestBrightnessScaling:
     ):
         """And its claim is released, rather than going stale into "overridden"."""
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        add_zone(hass, kitchen.id, "kitchen")
         er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
         er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
         light(hass, "light.a", "on")

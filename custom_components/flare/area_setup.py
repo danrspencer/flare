@@ -1,5 +1,5 @@
-"""Sets up rooms in one go: for each area, a zone, and optionally an
-automation from the blueprint and a flare over that automation.
+"""Sets up rooms in one go: for each area, an automation from the
+blueprint, and then flares over whichever of them are picked.
 
 The automation is written to automations.yaml the way HA's automation
 editor writes it (`components/config/automation.py`): read the file, add
@@ -32,23 +32,18 @@ from homeassistant.util.yaml import dump, load_yaml
 from .blueprint_check import async_blueprint_path
 from .const import (
     BLUEPRINT_LIGHTS_INPUT,
-    BLUEPRINT_ZONE_INPUT,
     CONF_AREA,
     CONF_AUTOMATION,
     CONF_ENTRY_TYPE,
     CONF_LIGHTS_INPUT,
     CONF_LIGHTS_INPUT_KIND,
-    CONF_ZONE_INPUT,
     DOMAIN,
     ENTRY_TYPE_FLARES,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_ZONES,
     SUBENTRY_TYPE_FLARE,
-    SUBENTRY_TYPE_ZONE,
 )
 from .flares.automation import TARGET, automation_ref
 from .flares.identity import is_flare_entry
-from .zone.instance import zone_instances
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 
@@ -57,13 +52,6 @@ LABEL_NAME = "FLARE"
 LABEL_ICON = "flare:logo"
 # One of the frontend's named label colours: warm, like the curve.
 LABEL_COLOR = "amber"
-
-# How much each area gets; each includes the ones before it.
-ZONE = "zone"
-AUTOMATION = "automation"
-FLARE = "flare"
-LEVELS = (ZONE, AUTOMATION, FLARE)
-
 
 class AutomationsNotLoaded(Exception):
     """configuration.yaml doesn't load automations.yaml."""
@@ -77,13 +65,6 @@ class AutomationsFileInvalid(Exception):
 class Area:
     area_id: str
     name: str
-
-
-@dataclass(frozen=True)
-class SetupResult:
-    zones: int
-    automations: int
-    flares: int
 
 
 def areas_with_lights(hass: HomeAssistant) -> list[Area]:
@@ -106,29 +87,24 @@ def areas_with_lights(hass: HomeAssistant) -> list[Area]:
     return sorted(areas, key=lambda area: area.name)
 
 
-def areas_with_zones(hass: HomeAssistant) -> set[str]:
-    """Areas with a zone of the same name, which is how setup names them."""
-    entry = _entry(hass, ENTRY_TYPE_ZONES, required=False)
-    zones = {slugify(z.title) for z in zone_instances(entry)} if entry else set()
-    return {area.area_id for area in areas_with_lights(hass) if slugify(area.name) in zones}
+def areas_set_up(hass: HomeAssistant) -> set[str]:
+    """Areas holding an automation with the FLARE label, which is where setup
+    puts the automations it makes."""
+    label = lr.async_get(hass).async_get_label_by_name(LABEL_NAME)
+    if label is None:
+        return set()
+    return {
+        entry.area_id
+        for entry in er.async_get(hass).entities.values()
+        if entry.domain == "automation" and label.label_id in entry.labels and entry.area_id
+    }
 
 
-async def async_set_up_areas(
-    hass: HomeAssistant, schedule_for_area: dict[Area, str], level: str = FLARE
-) -> SetupResult:
-    """For each area a zone and, depending on `level`, an automation
-    following the schedule subentry given for it, and a flare over that.
-    Zones that already exist by name are reused. Raises
-    AutomationsNotLoaded, leaving automations.yaml as it was, if the
+async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, str]) -> dict[str, str]:
+    """For each area an automation following the schedule subentry given
+    for it. Returns each automation's entity_id with its area's name.
+    Raises AutomationsNotLoaded, leaving automations.yaml as it was, if the
     automations don't load."""
-    zones_entry = _entry(hass, ENTRY_TYPE_ZONES)
-    flares_entry = _entry(hass, ENTRY_TYPE_FLARES)
-    zones_before = len(zone_instances(zones_entry))
-    zone_devices = {area: _zone_device(hass, zones_entry, area.name) for area in schedule_for_area}
-    zones = len(zone_instances(zones_entry)) - zones_before
-    if level == ZONE:
-        return SetupResult(zones=zones, automations=0, flares=0)
-
     path = await async_blueprint_path(hass)
     configs = {
         area: {
@@ -139,7 +115,6 @@ async def async_set_up_areas(
                 "path": path,
                 "input": {
                     "schedule": _schedule_device(hass, schedule_subentry_id),
-                    "zone": zone_devices[area],
                     BLUEPRINT_LIGHTS_INPUT: {"area_id": area.area_id},
                 },
             },
@@ -154,12 +129,14 @@ async def async_set_up_areas(
         entry = registry.async_get(entity_id)
         labels = (entry.labels if entry else set()) | {label}
         registry.async_update_entity(entity_id, area_id=area.area_id, labels=labels)
-    if level == AUTOMATION:
-        return SetupResult(zones=zones, automations=len(entity_ids), flares=0)
-    for area, entity_id in zip(configs, entity_ids):
-        hass.config_entries.async_add_subentry(flares_entry, room_flare(hass, flares_entry, entity_id, area.name))
+    return {entity_id: area.name for area, entity_id in zip(configs, entity_ids)}
 
-    return SetupResult(zones=zones, automations=len(entity_ids), flares=len(entity_ids))
+
+def add_room_flares(hass: HomeAssistant, rooms: dict[str, str]) -> None:
+    """A flare over each room automation, named as given."""
+    entry = _entry(hass, ENTRY_TYPE_FLARES)
+    for entity_id, name in rooms.items():
+        hass.config_entries.async_add_subentry(entry, room_flare(hass, entry, entity_id, name))
 
 
 def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: str) -> ConfigSubentry:
@@ -179,7 +156,6 @@ def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: st
                 CONF_AUTOMATION: automation_ref(hass, entity_id),
                 CONF_LIGHTS_INPUT: BLUEPRINT_LIGHTS_INPUT,
                 CONF_LIGHTS_INPUT_KIND: TARGET,
-                CONF_ZONE_INPUT: BLUEPRINT_ZONE_INPUT,
                 CONF_AREA: registry_entry.area_id if registry_entry else None,
             }
         ),
@@ -249,24 +225,6 @@ def _flare_label(hass: HomeAssistant) -> str:
 def _entry(hass: HomeAssistant, entry_type: str, required: bool = True) -> ConfigEntry | None:
     entries = (e for e in hass.config_entries.async_entries(DOMAIN) if e.data.get(CONF_ENTRY_TYPE) == entry_type)
     return next(entries) if required else next(entries, None)
-
-
-def _zone_device(hass: HomeAssistant, entry: ConfigEntry, name: str) -> str:
-    """The device of the zone called `name`, adding the zone if there isn't
-    one. The device is created here rather than on the entry's reload, so
-    its id is known now; the reload finds it by its identifiers."""
-    slug = slugify(name)
-    zone = next((z for z in zone_instances(entry) if slugify(z.title) == slug), None)
-    if zone is None:
-        subentry = ConfigSubentry(
-            subentry_type=SUBENTRY_TYPE_ZONE, title=name, unique_id=slug or None, data=MappingProxyType({})
-        )
-        hass.config_entries.async_add_subentry(entry, subentry)
-        zone = next(z for z in zone_instances(entry) if z.subentry_id == subentry.subentry_id)
-    device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, config_subentry_id=zone.subentry_id, **zone.device_info
-    )
-    return device.id
 
 
 def _schedule_device(hass: HomeAssistant, subentry_id: str) -> str:

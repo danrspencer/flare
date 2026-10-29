@@ -3,6 +3,10 @@ title: Voice assistants and HomeKit
 parent: Guides
 nav_order: 4
 permalink: /guides/flares/
+render_with_liquid: false
+# Liquid is off for this page: it contains Home Assistant Jinja, which
+# shares Liquid's {{ }} delimiters. With Liquid on, those examples render
+# as empty strings and nothing errors - see tests/checks/test_docs_site.py.
 ---
 
 # Voice assistants and HomeKit
@@ -21,8 +25,9 @@ and colour, rather than at whatever the bulbs last had.
 
 ## Adding flares for your rooms
 
-Every area set up with **Set up area**, including when you first add FLARE, already has a
-flare, named after the area.
+After setting up areas with **Set up area**, including when you first add FLARE, choose **Pick
+rooms for flares**. Every room you just set up is listed and ticked, and each one you keep gets a
+flare named after its area.
 
 For a room automation you made yourself, go to **Settings → Devices & Services → FLARE → Add
 flare** and choose **Rooms from the FLARE blueprint**. Every room automation that doesn't have
@@ -101,9 +106,10 @@ name as an alias on the flare instead, under **Voice assistants** in its setting
 
 Any automation can have a flare. Choose **Another automation** when adding one:
 
-- If the automation is built from a blueprint, pick the input that holds its lights and, if
-  it has one, the input that holds its FLARE zone. Without a zone, a brightness or colour you
-  set from the flare isn't protected: if FLARE wasn't already driving a light, the
+- If the automation is built from a blueprint, pick the input that holds its lights.
+- A brightness or colour you set from the flare is only protected if the automation passes
+  itself as its [room](../../reference/override-protection/#rooms),
+  `room_id: "{{ this.entity_id }}"`. Otherwise, if FLARE wasn't already driving a light, the
   automation's next update can set it back.
 - If it isn't, pick its lights directly.
 

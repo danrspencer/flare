@@ -12,7 +12,6 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from tests.functional.blueprint.harness import (
     light,
     occupancy,
-    add_zone,
     setup_room_automation,
 )
 
@@ -49,7 +48,6 @@ class TestSceneHandoff:
         """A scene-owned light isn't written, so its claim is released rather
         than going stale into "overridden"."""
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        add_zone(hass, kitchen.id, "kitchen")
         er.async_get(hass).async_get_or_create("light", "test", "light_covered", suggested_object_id="covered")
         er.async_get(hass).async_update_entity("light.covered", area_id=kitchen.id)
         light(hass, "light.covered", "on")
@@ -74,8 +72,6 @@ class TestSceneHandoff:
         self, hass, apply_lighting_calls, scene_turn_on_calls, claims_clear_calls
     ):
         """A scene can set other domains too, which hold no claims."""
-        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        add_zone(hass, kitchen.id, "kitchen")
         light(hass, "light.covered", "on")
         light(hass, "light.uncovered", "on")
         hass.states.async_set("switch.fan", "on")
@@ -95,11 +91,11 @@ class TestSceneHandoff:
         assert scene_turn_on_calls
         assert claims_clear_calls[-1].data["entities"] == ["light.covered"]
 
-    async def test_a_scene_reaching_outside_scope_releases_nothing(
-        self, hass, apply_lighting_calls, claims_clear_calls
+    async def test_a_scene_reaching_outside_scope_counts_as_no_scene(
+        self, hass, apply_lighting_calls, scene_turn_on_calls, claims_clear_calls
     ):
-        """A scene reaching outside the room counts as no scene, so nothing is
-        released."""
+        """It isn't activated, nothing is released, and every light gets the
+        curve."""
         light(hass, "light.a", "on")
         light(hass, "light.outside_the_room", "on")
         hass.states.async_set(
@@ -114,6 +110,7 @@ class TestSceneHandoff:
         hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
         await hass.async_block_till_done()
 
+        assert scene_turn_on_calls == []
         assert claims_clear_calls == []
         assert apply_lighting_calls[-1].data["entities"] == ["light.a"]
 
@@ -142,27 +139,6 @@ class TestSceneHandoff:
 
         assert len(apply_lighting_calls) > runs, "precondition: the tick must have run the automation"
         assert len(scene_turn_on_calls) == 1
-
-    async def test_scene_reaching_outside_scope_is_treated_as_invalid(
-        self, hass, apply_lighting_calls, scene_turn_on_calls
-    ):
-        light(hass, "light.a", "on")
-        hass.states.async_set(
-            "scene.bad_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a", "light.not_in_room"]}
-        )
-        await hass.async_block_till_done()
-
-        await setup_room_automation(
-            hass, room_target={"entity_id": "light.a"}, scene_template="scene.bad_scene"
-        )
-
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
-        await hass.async_block_till_done()
-
-        assert scene_turn_on_calls == []
-        calls = apply_lighting_calls
-        assert calls and calls[-1].data["entities"] == ["light.a"]
 
     async def test_a_malformed_scene_template_does_not_crash_the_whole_automation(
         self, hass, apply_lighting_calls, scene_turn_on_calls

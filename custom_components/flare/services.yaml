@@ -67,7 +67,7 @@ compute_lighting_groups:
       description: >-
         Lights or devices with this label are listed under two_step, for bulbs
         that can't change brightness and colour temperature in one command.
-        Lights matching the two-step models under FLARE → Zones → Configure are
+        Lights matching the two-step models under FLARE → Settings → Configure are
         listed there too.
       default: no_combined_transition
       selector:
@@ -103,7 +103,7 @@ compute_lighting_groups:
       description: >-
         A light within this percentage of the target brightness isn't sent
         anything, though the limit is never smaller than Brightness tolerance.
-        Leave unset to use the setting under FLARE → Zones → Configure.
+        Leave unset to use the setting under FLARE → Settings → Configure.
       selector:
         number:
           min: 0
@@ -114,7 +114,7 @@ compute_lighting_groups:
       name: Minimum colour temperature change
       description: >-
         A light within this many mireds of the target colour temperature isn't
-        sent anything. Leave unset to use the setting under FLARE → Zones →
+        sent anything. Leave unset to use the setting under FLARE → Settings →
         Configure.
       selector:
         number:
@@ -130,16 +130,24 @@ compute_lighting_groups:
       default: false
       selector:
         boolean:
-    zone_device_id:
-      name: Zone
+    room_id:
+      name: Room
       description: >-
-        The zone whose claims decide which lights are overridden. Leave unset
-        to treat no light as overridden.
+        Usually the calling automation, `{{ this.entity_id }}`. With a room,
+        lights something else has changed are treated as overridden. Leave
+        unset to treat no light as overridden.
+      example: automation.kitchen_lighting
       selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
+        text:
+    room_entities:
+      name: Room lights
+      description: >-
+        The room's lights. FLARE releases its claims on them once none of them
+        is on. Without it, only the lights this call names.
+      selector:
+        entity:
+          multiple: true
+          domain: light
 
 apply_lighting:
   name: Apply lighting
@@ -221,7 +229,7 @@ apply_lighting:
       description: >-
         Lights or devices with this label are sent brightness and colour
         temperature as two commands, for bulbs that can't change both in one.
-        So are lights matching the two-step models under FLARE → Zones →
+        So are lights matching the two-step models under FLARE → Settings →
         Configure.
       default: no_combined_transition
       selector:
@@ -257,7 +265,7 @@ apply_lighting:
       description: >-
         A light within this percentage of the target brightness isn't sent
         anything, though the limit is never smaller than Brightness tolerance.
-        Leave unset to use the setting under FLARE → Zones → Configure.
+        Leave unset to use the setting under FLARE → Settings → Configure.
       selector:
         number:
           min: 0
@@ -268,7 +276,7 @@ apply_lighting:
       name: Minimum colour temperature change
       description: >-
         A light within this many mireds of the target colour temperature isn't
-        sent anything. Leave unset to use the setting under FLARE → Zones →
+        sent anything. Leave unset to use the setting under FLARE → Settings →
         Configure.
       selector:
         number:
@@ -284,16 +292,24 @@ apply_lighting:
       default: false
       selector:
         boolean:
-    zone_device_id:
-      name: Zone
+    room_id:
+      name: Room
       description: >-
-        The zone to record this change in. Leave unset to set the lights
-        without recording anything, so no light is treated as overridden.
+        Usually the calling automation, `{{ this.entity_id }}`. The change is
+        recorded for this room. Leave unset to set the lights without
+        recording anything, so no light is treated as overridden.
+      example: automation.kitchen_lighting
       selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
+        text:
+    room_entities:
+      name: Room lights
+      description: >-
+        The room's lights. FLARE releases its claims on them once none of them
+        is on. Without it, only the lights this call names.
+      selector:
+        entity:
+          multiple: true
+          domain: light
 
 turn_off:
   name: Turn off lights
@@ -320,16 +336,24 @@ turn_off:
           min: 0
           max: 300
           unit_of_measurement: s
-    zone_device_id:
-      name: Zone
+    room_id:
+      name: Room
       description: >-
-        The zone to record this in. Leave unset to turn the lights off without
+        Usually the calling automation, `{{ this.entity_id }}`. The turn-off
+        is recorded for this room. Leave unset to turn the lights off without
         recording anything.
+      example: automation.kitchen_lighting
       selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
+        text:
+    room_entities:
+      name: Room lights
+      description: >-
+        The room's lights. FLARE releases its claims on them once none of them
+        is on. Without it, only the lights this call names.
+      selector:
+        entity:
+          multiple: true
+          domain: light
 
 compute_curve:
   name: Compute curve
@@ -591,8 +615,8 @@ resolve_target:
 claims_check:
   name: Check claims
   description: >-
-    Reports whether FLARE would leave each entity alone, using the zone's
-    claims. Changes nothing. Call claims_record before you change an entity,
+    Reports whether FLARE would leave each entity alone, using its claims.
+    Changes nothing. Call claims_record before you change an entity,
     so a later check treats the change as FLARE's.
   fields:
     entities:
@@ -604,16 +628,6 @@ claims_check:
         entity:
           multiple: true
           domain: light
-    zone_device_id:
-      name: Zone
-      description: >-
-        The zone whose claims to check.
-      required: true
-      selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
     brightness_tolerance:
       name: Brightness tolerance
       description: >-
@@ -660,16 +674,24 @@ claims_record:
         entity:
           multiple: true
           domain: light
-    zone_device_id:
-      name: Zone
+    room_id:
+      name: Room
       description: >-
-        The zone to record the claim in.
+        The room the claim is recorded for, usually your automation,
+        `{{ this.entity_id }}`.
       required: true
+      example: automation.kitchen_lighting
       selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
+        text:
+    room_entities:
+      name: Room lights
+      description: >-
+        The room's lights. FLARE releases its claims on them once none of them
+        is on. Without it, only the lights this call names.
+      selector:
+        entity:
+          multiple: true
+          domain: light
     targets:
       name: Targets
       description: >-
@@ -696,22 +718,12 @@ claims_clear:
         entity:
           multiple: true
           domain: light
-    zone_device_id:
-      name: Zone
-      description: >-
-        The zone to clear them from.
-      required: true
-      selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
 
 claims_override:
   name: Override claims
   description: >-
     Marks entities as changed by someone else, so FLARE leaves them alone until
-    the zone goes dark, their claims are cleared, or a forced write takes them
+    the room goes dark, their claims are cleared, or a forced write takes them
     back. Usually unnecessary, since FLARE notices changes to lights it's
     driving; it's for lights it isn't driving yet, such as ones your automation
     turns on in a dark room.
@@ -725,16 +737,24 @@ claims_override:
         entity:
           multiple: true
           domain: light
-    zone_device_id:
-      name: Zone
+    room_id:
+      name: Room
       description: >-
-        The zone to mark them in.
+        The room that releases them, usually the automation driving them,
+        `{{ this.entity_id }}`.
       required: true
+      example: automation.kitchen_lighting
       selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
+        text:
+    room_entities:
+      name: Room lights
+      description: >-
+        The room's lights. FLARE releases its claims on them once none of them
+        is on. Without it, only the lights this call names.
+      selector:
+        entity:
+          multiple: true
+          domain: light
 
 export_schedule:
   name: Export schedule

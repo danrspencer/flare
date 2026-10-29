@@ -1,5 +1,5 @@
-"""The dashboard finds a schedule's and a zone's entities by device and
-translation key. These are the keys the real entities register, the same
+"""The dashboard finds a schedule's entities by device and translation key,
+and the Settings entry's by translation key alone. These are the keys the real entities register, the same
 ones the dashboard tests' fixtures (tests/support/registry.py) assume."""
 
 from homeassistant.config_entries import ConfigSubentryData
@@ -12,20 +12,24 @@ from custom_components.flare.const import (
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_SCHEDULES,
-    ENTRY_TYPE_ZONES,
+    ENTRY_TYPE_SETTINGS,
     SUBENTRY_TYPE_SENSOR,
-    SUBENTRY_TYPE_ZONE,
 )
-from tests.support.registry import schedule_entities, zone_entities
+from tests.support.registry import schedule_entities, settings_entities
 
 
-async def _set_up(hass: HomeAssistant, entry_type: str, subentry_type: str) -> MockConfigEntry:
+async def _set_up(hass: HomeAssistant, entry_type: str, subentry_type: str | None = None) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_ENTRY_TYPE: entry_type},
         unique_id=f"{DOMAIN}_{entry_type}",
         version=3,
-        subentries_data=[ConfigSubentryData(subentry_type=subentry_type, title="Hall", unique_id="hall", data={})],
+        minor_version=2,
+        subentries_data=(
+            [ConfigSubentryData(subentry_type=subentry_type, title="Hall", unique_id="hall", data={})]
+            if subentry_type
+            else []
+        ),
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -38,12 +42,12 @@ def _roles(hass: HomeAssistant, entry: MockConfigEntry) -> dict[str, str]:
     return {
         e.translation_key: e.entity_id
         for e in er.async_entries_for_device(er.async_get(hass), device.id)
-        if e.translation_key in _expected_roles(schedule_entities) | _expected_roles(zone_entities)
+        if e.translation_key in _expected_roles(schedule_entities("device", "hall"))
     }
 
 
-def _expected_roles(make) -> set[str]:
-    return {e["translation_key"] for e in make("device", "hall").values()}
+def _expected_roles(entities: dict) -> set[str]:
+    return {e["translation_key"] for e in entities.values()}
 
 
 def _as_roles(entities: dict) -> dict[str, str]:
@@ -56,7 +60,12 @@ async def test_a_schedules_entities_carry_the_roles_the_dashboard_reads(stub_ent
     assert _roles(hass, entry) == _as_roles(schedule_entities("device", "hall"))
 
 
-async def test_a_zones_entities_carry_the_roles_the_dashboard_reads(stub_entry_setup, hass: HomeAssistant):
-    entry = await _set_up(hass, ENTRY_TYPE_ZONES, SUBENTRY_TYPE_ZONE)
+async def test_the_settings_entitys_carry_the_roles_the_dashboard_reads(stub_entry_setup, hass: HomeAssistant):
+    entry = await _set_up(hass, ENTRY_TYPE_SETTINGS)
 
-    assert _roles(hass, entry) == _as_roles(zone_entities("device", "hall"))
+    roles = {
+        e.translation_key: e.entity_id
+        for e in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
+        if e.translation_key in _expected_roles(settings_entities())
+    }
+    assert roles == _as_roles(settings_entities())

@@ -1,23 +1,32 @@
 /**
- * A zone's Clear control, drawn like the "All off" control on Home
- * Assistant's Lights dashboard (hui-toggle-group-card): no card around it,
- * a round icon you press, and a label beside it. That card can't be reused:
- * its icon is always the power symbol and its text always on/off counts.
+ * A Clear control, drawn like the "All off" control on Home Assistant's
+ * Lights dashboard (hui-toggle-group-card): no card around it, a round icon
+ * you press, and a label beside it. That card can't be reused: its icon is
+ * always the power symbol and its text always on/off counts.
  *
  *   type: custom:flare-clear-card
- *   entity: button.kitchen_flare_clear   # or a list, pressed together
+ *   entity: button.flare_clear   # pressed; or a list, pressed together
  */
+
+import { localize } from './flare-i18n.js';
 
 class FlareClearCard extends HTMLElement {
   setConfig(config) {
     const entity = config && config.entity;
-    if (!entity || (Array.isArray(entity) && !entity.length)) throw new Error('entity is required');
+    const hasEntity = entity && !(Array.isArray(entity) && !entity.length);
+    if (!hasEntity) throw new Error('entity is required');
     this._config = config;
     this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
+    this._showName();
+  }
+
+  _showName() {
+    const name = this.shadowRoot && this.shadowRoot.querySelector('.name');
+    if (name) name.textContent = this._config.name || localize(this._hass, 'clear.name');
   }
 
   getGridOptions() {
@@ -50,7 +59,7 @@ class FlareClearCard extends HTMLElement {
         <span class="name"></span>
       </div>
     `;
-    this.shadowRoot.querySelector('.name').textContent = this._config.name || 'Clear';
+    this._showName();
     this.shadowRoot.querySelector('button').addEventListener('click', () => this._press());
   }
 }

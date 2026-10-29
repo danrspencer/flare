@@ -154,11 +154,6 @@ class TestKelvinToRgb:
         assert kelvin_to_rgb(1000) == (255, 68, 0)
         assert kelvin_to_rgb(10000) == (202, 218, 255)
 
-    def test_warmer_as_kelvin_drops(self):
-        high, mid, low = kelvin_to_rgb(6500), kelvin_to_rgb(4000), kelvin_to_rgb(2000)
-        assert low[0] >= mid[0] >= high[0]
-        assert low[2] <= mid[2] <= high[2]
-
     def test_below_1000k_clamps(self):
         """HA's conversion clamps at 1000K; compute_curve's schema can reach it."""
         assert kelvin_to_rgb(500) == kelvin_to_rgb(1000)

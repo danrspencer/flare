@@ -4,7 +4,7 @@ docstring."""
 
 import pytest
 
-from custom_components.flare.zone.matching import Tolerance, reported_kelvin, shown, shows
+from custom_components.flare.tracking.matching import Tolerance, reported_kelvin, shown, shows
 
 KELVIN = {"brightness": 200, "color_temp_kelvin": 3000}
 RGB = {"brightness": 200, "rgb_color": [255, 120, 10]}

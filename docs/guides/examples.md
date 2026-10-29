@@ -200,10 +200,9 @@ actions:
   - action: notify.notify
     data:
       message: >
-        {{ state_attr(trigger.event.data.light, 'friendly_name') }} in
-        {{ trigger.event.data.zone }} was changed by something else, so FLARE has
-        stopped driving it until the room goes dark.
+        {{ state_attr(trigger.event.data.light, 'friendly_name') }} was changed by
+        something else, so FLARE has stopped driving it until the room goes dark.
 ```
 
 The event also carries what FLARE last asked for and what the light was actually showing —
-see [the zone's events](../../reference/zones/#the-zones-events).
+see [FLARE's events](../../reference/override-protection/#flares-events).

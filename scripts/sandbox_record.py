@@ -287,10 +287,9 @@ def setup(d: Director) -> None:
     d.open(page.locator("ha-button", has_text="Add integration"), search)
     d.type(search, "FLARE")
     d.click(page.get_by_role("listitem").filter(has_text="FLARE").first, pause=1.5)
-    d.click(page.get_by_text("Set up schedules and rooms"), pause=1.5)
-
     d.click(page.get_by_text("One per floor:"), pause=0.8)
     d.click(page.get_by_role("button", name="Submit"), pause=1.5)
+    d.click(page.get_by_text("Set up room automations"), pause=1.5)
 
     d.pause(0.8)
     d.scroll(page.get_by_text("Pick the schedule each area follows"), 1200)

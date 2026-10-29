@@ -11,13 +11,11 @@ from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     HALL_BULBS,
     HALL_SENSOR,
-    ZONE,
     add_flare,
     flares_entry,
     let_time_pass,
     occupancy,
     room_brightness,
-    zone_device,
 )
 
 HAND_SET = 40
@@ -33,8 +31,8 @@ async def _turn_off(hass: HomeAssistant, flare: str) -> None:
     await hass.async_block_till_done()
 
 
-async def _room(hass, add_bulbs, setup_room, zone, *, occupied: bool):
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+async def _room(hass, add_bulbs, setup_room, area, *, occupied: bool):
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
     if occupied:
@@ -44,10 +42,10 @@ async def _room(hass, add_bulbs, setup_room, zone, *, occupied: bool):
 
 
 async def test_turning_a_flare_on_lights_the_room_the_way_its_automation_would(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
     """No motion, so only the automation's manual run can light it."""
-    bulbs = await _room(hass, add_bulbs, setup_room, zone, occupied=False)
+    bulbs = await _room(hass, add_bulbs, setup_room, area, occupied=False)
     flare = await add_flare(hass)
     assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}
 
@@ -58,9 +56,9 @@ async def test_turning_a_flare_on_lights_the_room_the_way_its_automation_would(
 
 
 async def test_a_transition_alone_still_runs_the_automation(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone, **{name: {"supports_transition": True} for name in HALL_BULBS})
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area, **{name: {"supports_transition": True} for name in HALL_BULBS})
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
     flare = await add_flare(hass)
@@ -71,9 +69,9 @@ async def test_a_transition_alone_still_runs_the_automation(
 
 
 async def test_a_flare_turned_on_with_a_brightness_sets_every_light_and_the_room_leaves_it(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    bulbs = await _room(hass, add_bulbs, setup_room, zone, occupied=True)
+    bulbs = await _room(hass, add_bulbs, setup_room, area, occupied=True)
     flare = await add_flare(hass)
 
     await _turn_on(hass, flare, brightness=HAND_SET)
@@ -83,9 +81,9 @@ async def test_a_flare_turned_on_with_a_brightness_sets_every_light_and_the_room
 
 
 async def test_turning_a_flare_on_again_hands_the_room_back(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    bulbs = await _room(hass, add_bulbs, setup_room, zone, occupied=True)
+    bulbs = await _room(hass, add_bulbs, setup_room, area, occupied=True)
     flare = await add_flare(hass)
     await _turn_on(hass, flare, brightness=HAND_SET)
     await let_time_pass(hass, frozen_time, 61)
@@ -97,9 +95,9 @@ async def test_turning_a_flare_on_again_hands_the_room_back(
 
 
 async def test_a_flare_turned_off_turns_the_room_off_and_motion_lights_it_again(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
-    bulbs = await _room(hass, add_bulbs, setup_room, zone, occupied=True)
+    bulbs = await _room(hass, add_bulbs, setup_room, area, occupied=True)
     flare = await add_flare(hass)
 
     await _turn_off(hass, flare)
@@ -117,17 +115,17 @@ async def _statuses(hass: HomeAssistant, entities: list[str]) -> dict[str, str]:
     response = await hass.services.async_call(
         DOMAIN,
         "claims_check",
-        {"entities": entities, "zone_device_id": zone_device(hass, ZONE)},
+        {"entities": entities},
         blocking=True,
         return_response=True,
     )
     return {e: r["status"] for e, r in response["results"].items()}
 
 
-async def _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone):
-    """A room whose zone also drives a lamp the automation doesn't, so the
-    zone isn't dark when the flare turns off and its claims stay."""
-    bulbs = await add_bulbs(*HALL_BULBS, "hall_extra", area_id=zone)
+async def _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, area):
+    """A room that also holds a lamp the automation doesn't drive, so the
+    room isn't dark when the flare turns off and its claims stay."""
+    bulbs = await add_bulbs(*HALL_BULBS, "hall_extra", area_id=area)
     *room, extra = bulbs
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=room, occupancy_sensors=[HALL_SENSOR])
@@ -141,7 +139,8 @@ async def _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone):
             "brightness": CURVE_BRIGHTNESS,
             "color_temp_kelvin": 3200,
             "transition": 0,
-            "zone_device_id": zone_device(hass, ZONE),
+            # The room's own automation, so its lamp holds the room open.
+            "room_id": "automation.room",
         },
         blocking=True,
     )
@@ -150,11 +149,11 @@ async def _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone):
 
 
 async def test_a_room_turned_off_from_its_flare_counts_as_turned_off_by_hand(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
-    """The zone still has a lit lamp, so it keeps its claims, and the flare's
+    """The area still has a lit lamp, so it keeps its claims, and the flare's
     lights read as someone else's - the user's - until the room goes dark."""
-    room = await _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, zone)
+    room = await _room_with_a_light_of_its_own(hass, add_bulbs, setup_room, area)
     flare = await add_flare(hass)
 
     await _turn_off(hass, flare)
@@ -163,27 +162,27 @@ async def test_a_room_turned_off_from_its_flare_counts_as_turned_off_by_hand(
     assert set((await _statuses(hass, [b.entity_id for b in room])).values()) == {"overridden"}
 
 
-async def _area_room(hass, add_bulbs, setup_room, zone):
+async def _area_room(hass, add_bulbs, setup_room, area):
     """The room's lights named by area, with the automation in that area too."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
-    await setup_room(lights=[], room_target={"area_id": zone, "entity_id": [HALL_SENSOR]})
-    er.async_get(hass).async_update_entity("automation.room", area_id=zone)
+    await setup_room(lights=[], room_target={"area_id": area, "entity_id": [HALL_SENSOR]})
+    er.async_get(hass).async_update_entity("automation.room", area_id=area)
     return bulbs
 
 
-async def test_a_new_flare_starts_in_its_automations_area(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
-    await _area_room(hass, add_bulbs, setup_room, zone)
+async def test_a_new_flare_starts_in_its_automations_area(hass: HomeAssistant, add_bulbs, setup_room, area) -> None:
+    await _area_room(hass, add_bulbs, setup_room, area)
 
     flare = await add_flare(hass)
 
     device_id = er.async_get(hass).async_get(flare).device_id
-    assert dr.async_get(hass).async_get(device_id).area_id == zone
+    assert dr.async_get(hass).async_get(device_id).area_id == area
 
 
-async def test_a_flare_taken_out_of_its_area_stays_out(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
+async def test_a_flare_taken_out_of_its_area_stays_out(hass: HomeAssistant, add_bulbs, setup_room, area) -> None:
     """The area is only set when the flare is created; after that it's the user's."""
-    await _area_room(hass, add_bulbs, setup_room, zone)
+    await _area_room(hass, add_bulbs, setup_room, area)
     flare = await add_flare(hass)
     devices = dr.async_get(hass)
     device_id = er.async_get(hass).async_get(flare).device_id
@@ -197,11 +196,11 @@ async def test_a_flare_taken_out_of_its_area_stays_out(hass: HomeAssistant, add_
 
 
 async def test_a_flare_in_its_rooms_area_is_not_one_of_the_rooms_lights(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Were it, the room's own tick would send it the curve, and it would
     pass that on to every light as a hand-set override."""
-    bulbs = await _area_room(hass, add_bulbs, setup_room, zone)
+    bulbs = await _area_room(hass, add_bulbs, setup_room, area)
     flare = await add_flare(hass)
     assert flare not in hass.states.get(flare).attributes["entity_id"]
     occupancy(hass, HALL_SENSOR, "on")
@@ -214,8 +213,8 @@ async def test_a_flare_in_its_rooms_area_is_not_one_of_the_rooms_lights(
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
 
 
-async def test_flares_services_never_drive_a_flare(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
-    bulbs = await _room(hass, add_bulbs, setup_room, zone, occupied=False)
+async def test_flares_services_never_drive_a_flare(hass: HomeAssistant, add_bulbs, setup_room, area) -> None:
+    bulbs = await _room(hass, add_bulbs, setup_room, area, occupied=False)
     flare = await add_flare(hass)
 
     await hass.services.async_call(
@@ -229,24 +228,24 @@ async def test_flares_services_never_drive_a_flare(hass: HomeAssistant, add_bulb
     assert room_brightness(hass, bulbs) == {b.entity_id: "off" for b in bulbs}
 
 
-async def test_a_light_added_to_the_room_joins_its_flare(hass: HomeAssistant, add_bulbs, setup_room, zone) -> None:
-    bulbs = await _area_room(hass, add_bulbs, setup_room, zone)
+async def test_a_light_added_to_the_room_joins_its_flare(hass: HomeAssistant, add_bulbs, setup_room, area) -> None:
+    bulbs = await _area_room(hass, add_bulbs, setup_room, area)
     flare = await add_flare(hass)
     newcomer, *_ = bulbs
     er.async_get(hass).async_update_entity(newcomer.entity_id, area_id=None)
     await hass.async_block_till_done()
     assert newcomer.entity_id not in hass.states.get(flare).attributes["entity_id"]
 
-    er.async_get(hass).async_update_entity(newcomer.entity_id, area_id=zone)
+    er.async_get(hass).async_update_entity(newcomer.entity_id, area_id=area)
     await hass.async_block_till_done()
 
     assert newcomer.entity_id in hass.states.get(flare).attributes["entity_id"]
 
 
 async def test_a_flare_whose_automation_is_gone_is_unavailable(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
-    await _room(hass, add_bulbs, setup_room, zone, occupied=False)
+    await _room(hass, add_bulbs, setup_room, area, occupied=False)
     flare = await add_flare(hass)
     assert hass.states.get(flare).state != "unavailable"
 
@@ -257,12 +256,12 @@ async def test_a_flare_whose_automation_is_gone_is_unavailable(
 
 
 async def test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_runs_the_automation(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
     """An Additional Trigger on one of the room's own lights runs the
     automation as the first light reports off, while the rest are still on."""
     first, *rest = HALL_BULBS
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone, **{name: {"reports_off_late": True} for name in rest})
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area, **{name: {"reports_off_late": True} for name in rest})
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], extra_triggers=[bulbs[0].entity_id])
     occupancy(hass, HALL_SENSOR, "on")
@@ -279,12 +278,12 @@ async def test_a_room_turned_off_from_its_flare_stays_off_when_a_light_change_ru
 
 
 async def test_a_brightness_from_the_flare_holds_in_a_room_flare_had_let_go_of(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    """The room went dark, so its zone let go of every light. Without the
+    """The room went dark, so its area let go of every light. Without the
     flare marking them overridden, the run its own change triggers would take
     them over and set the curve."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], extra_triggers=[bulbs[0].entity_id])
     occupancy(hass, HALL_SENSOR, "on")
@@ -300,13 +299,13 @@ async def test_a_brightness_from_the_flare_holds_in_a_room_flare_had_let_go_of(
 
 
 async def test_a_room_flare_had_never_driven_stays_off_when_an_update_lands_mid_turn_off(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Lights switched on by hand into a dark room have no claim. Turned off
     from the flare while an update lands between bulbs reporting off, an
     unclaimed one that's off would read as free to switch back on."""
     first, *rest = HALL_BULBS
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone, **{name: {"reports_off_late": True} for name in rest})
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area, **{name: {"reports_off_late": True} for name in rest})
     occupancy(hass, HALL_SENSOR, "on")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
     flare = await add_flare(hass)
@@ -326,14 +325,14 @@ async def test_a_room_flare_had_never_driven_stays_off_when_an_update_lands_mid_
 
 
 async def test_a_flare_and_its_room_leave_out_the_same_hidden_and_categorised_lights(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
     """Room Target names an area, so Home Assistant's rule decides both."""
-    lamp, hidden, indicator = await add_bulbs("hall_lamp", "hall_hidden", "hall_indicator", area_id=zone)
+    lamp, hidden, indicator = await add_bulbs("hall_lamp", "hall_hidden", "hall_indicator", area_id=area)
     registry = er.async_get(hass)
     registry.async_update_entity(hidden.entity_id, hidden_by=er.RegistryEntryHider.USER)
     registry.async_update_entity(indicator.entity_id, entity_category=EntityCategory.CONFIG)
-    await setup_room(lights=[], room_target={"area_id": zone})
+    await setup_room(lights=[], room_target={"area_id": area})
     flare = await add_flare(hass)
 
     await _turn_on(hass, flare)

@@ -12,10 +12,10 @@ custom_components/flare/
                    entries, the blueprint repairs, the logbook
                    descriptions, the dashboard front-end files
     subentry_flows.py, options_flow.py
-                   adding and reconfiguring schedules, zones and
-                   flares; the Zones entry's options
-    area_setup.py  setting up an area: a zone, a room automation written
-                   to automations.yaml, and a flare
+                   adding and reconfiguring schedules and flares; the
+                   Settings entry's options
+    area_setup.py  setting up an area: a room automation written to
+                   automations.yaml, and flares for the rooms picked
     sensor.py, select.py, number.py, time.py, switch.py, button.py,
     event.py, light.py
                    the entities. Home Assistant requires platform
@@ -27,26 +27,26 @@ custom_components/flare/
         coordinator.py   the schedule computation behind the schedule
                          entities - one per sensor added via "Add Sensor"
         transfer.py      a schedule as YAML, for export and import
-    zone/          zones: who owns a light, and when each zone ticks
+    tracking/      who owns a light, and when each area ticks
         override_protection.py
                          classify_state(): controlled / overridden /
                          mismatched / untracked / off / unavailable
         claims.py
                          the claims: what context.id and target this
-                         integration last wrote each light with. They live
-                         on each zone's entity and are restored across a
-                         restart
-        instance.py      the zone device itself (one per room, usually)
-        ticker.py        fires each zone's tick in turn, a gap apart
+                         integration last wrote each light with, and each
+                         room's lights, saved in HA's storage
+                         (.storage/flare.claims) across a restart
+        matching.py      what a light shows, against what was asked for
+        ticker.py        fires each area's tick in turn, a gap apart
     flares/        flares: a light over each room's automation (the entity
                    itself is light.py)
-        automation.py    reads an automation's lights and zone from its
-                         blueprint inputs
+        automation.py    reads an automation's lights from its blueprint
+                         inputs
         bare.py          what counts as a bare turn-on, which runs the
                          automation
         instance.py      the flare device itself
     services/      the services, and the planning behind them
-        handlers.py      the zone services (lighting and claims), registered
+        handlers.py      the lighting and claims services, registered
                          against real HA state
         schedules.py     export_schedule / import_schedule, registered for the
                          domain rather than by either entry
@@ -80,12 +80,12 @@ custom_components/flare/
 
 The four folders are grouped by concept rather than by how something is exposed, because the
 schedule and the claims are each exposed through both entities and services - so neither could
-live with either. Imports run one way: `schedule/`, `zone/` and `flares/` import nothing but
-`const.py`, `services/` may use `schedule/` and `zone/`, and everything at the package root may
+live with either. Imports run one way: `schedule/`, `tracking/` and `flares/` import nothing but
+`const.py`, `services/` may use `schedule/` and `tracking/`, and everything at the package root may
 use all of them.
 `tests/checks/test_layering.py` enforces it.
 
-`schedule/`, `zone/` and most of `services/` are never handed a `hass` - testable with plain
+`schedule/`, `tracking/` and most of `services/` are never handed a `hass` - testable with plain
 values or fakes. (`curve.py` and `override_protection.py` each import one colour helper from
 `homeassistant.util.color`.) `services/handlers.py`, the entity platforms and the rest of the
 package root are the Home Assistant side: they take `hass` or an entry, and read or write real state.
@@ -119,7 +119,8 @@ docs/
                       inputs, scenes, voice assistants and HomeKit,
                       building without the blueprint
     reference/        the technical docs: the blueprint's inputs,
-                      schedules, zones, flares and services
+                      schedules, override protection, flares and
+                      services
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call
@@ -211,6 +212,19 @@ Re-record whenever setup or the dashboard changes, and commit the new files. If 
 and a screenshot of the failed step is left in `sandbox/recordings/` with the working files. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
 Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
+## Translations
+
+FLARE has two sets of text, and a language needs both:
+
+- **The integration's** (setup, options, repairs): `custom_components/flare/strings.json` is the English, copied to
+  `translations/en.json`; a language is `translations/<code>.json` with the same keys.
+- **The dashboard's**: `custom_components/flare/www/translations/en.js`; a language is `<code>.js` beside it, added
+  to `LANGUAGES` in `www/flare-i18n.js`.
+
+`tests/checks/test_translations.py` and `tests/unit/dashboard/test_i18n.py` fail if a language is missing a key, has
+one English no longer uses, or fills in different placeholders, so change a translation whenever its English
+changes. German came from @stefanr09 in [#301](https://github.com/danrspencer/flare/issues/301).
+
 ## Previewing the dashboard card
 
 The [curve playground](https://danrspencer.github.io/flare/playground/) on this site renders the real card against synthetic data, with no
@@ -261,7 +275,9 @@ Two things about it are less obvious than they look:
   paths — which need no baseurl to be correct.
 
 - **The playground runs the real dashboard card.** `docs/playground.html` loads the actual
-  `flare-curve-card.js`, copied in by the workflow rather than committed twice. The schedule maths
+  `flare-curve-card.js`, copied in by the workflow rather than committed twice, with `flare-i18n.js` and
+  `translations/`, which it imports its text from. Copy those three into `docs/assets/js/` to preview the
+  playground locally. The schedule maths
   behind the sliders is `docs/assets/js/curve.js`, a port of `curve.py`; `tests/test_curve_js_parity.py` runs
   both it and the card itself under node against a grid of inputs and fails if either drifts from `curve.py`.
 
@@ -308,7 +324,7 @@ Three layers under `tests/`:
   static imports and the package layering.
 - `functional/` - a real Home Assistant, via
   [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
-  `component/` covers the integration (services, claims, zones, schedules, config flows, repairs);
+  `component/` covers the integration (services, claims, rooms, schedules, config flows, repairs);
   `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
   `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
   faked, and asserts on the state the bulbs end up in.

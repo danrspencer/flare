@@ -6,12 +6,12 @@ import pytest
 
 from tests.support import WWW
 from tests.support.node import js_path, requires_node, run_js
-from tests.support.registry import flare_entities, schedule_entities, zone_entities
+from tests.support.registry import flare_entities, schedule_entities, settings_entities
 
 # The registry says which are schedule sensors, renamed or not.
 ENTITIES = {
     **schedule_entities("downstairs", "downstairs"),
-    **zone_entities("downstairs_zone", "downstairs"),
+    **settings_entities(),
     **flare_entities("garden", {"schedule": "sensor.outside"}),
     "sensor.solar_flare": {"entity_id": "sensor.solar_flare", "platform": "solar"},
     "light.kitchen": {"entity_id": "light.kitchen", "platform": "hue"},

@@ -23,13 +23,12 @@ from tests.functional.behaviour.harness import (
     START,
     SUNSET,
     TRACE_DIR,
-    ZONE,
+    ROOM_AREA,
     FakeBulb,
     dump_traces,
     setup_schedule,
     schedule_device,
-    setup_zones,
-    zone_device,
+    setup_settings,
     today_at,
 )
 from tests.support import BLUEPRINT_PATH
@@ -64,11 +63,11 @@ def expected_lingering_timers():
 
 
 @pytest.fixture
-async def zone(hass: HomeAssistant) -> str:
-    """The real Zones entry with one zone, placed in the area
-    "behaviour_test_room". Returns that area's id, for add_bulbs."""
-    areas = await setup_zones(hass, [ZONE])
-    return areas[ZONE]
+async def area(hass: HomeAssistant) -> str:
+    """The real Settings entry, and the area "behaviour_test_room". Returns
+    that area's id, for add_bulbs."""
+    areas = await setup_settings(hass, [ROOM_AREA])
+    return areas[ROOM_AREA]
 
 
 @pytest.fixture(autouse=True)
@@ -134,9 +133,9 @@ def add_bulbs(hass: HomeAssistant):
 
 
 @pytest.fixture
-def setup_room(hass: HomeAssistant, zone: str):
+def setup_room(hass: HomeAssistant, area: str):
     """setup_room(lights=..., occupancy_sensors=..., **inputs): a real
-    automation from the blueprint, in the `zone` fixture's zone. Unset
+    automation from the blueprint, its bulbs in the `area` fixture's area. Unset
     inputs take their defaults."""
 
     async def _setup(*, lights: list[FakeBulb | str], occupancy_sensors: list[str] | None = None, **inputs: Any) -> None:
@@ -145,7 +144,6 @@ def setup_room(hass: HomeAssistant, zone: str):
         input_ = {
             "schedule": schedule_device(hass),
             "room_target": {"entity_id": target},
-            "zone": zone_device(hass, ZONE),
             **inputs,
         }
         assert await async_setup_component(

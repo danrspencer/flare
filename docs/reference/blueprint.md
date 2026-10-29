@@ -30,9 +30,9 @@ behaves.
 | Input | Default | Description |
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
-| **Zone** | none | The FLARE zone the room belongs to. Leave it empty to [turn override protection off](#turning-override-protection-off) for the room. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. |
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
+| **Additional Triggers** | none | Entities that make the room update as soon as they change. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -52,12 +52,20 @@ Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_c
 other binary sensors in the target are ignored. A room can mix both kinds.
 
 To choose the sensors yourself while still picking an area for the lights, turn off
-[Sensors From Areas](#triggers).
+[Sensors From Areas](#sensors-from-areas).
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
-If a room has two automations, for example one for a lamp and one for the ceiling light, give
-both the same **Zone**.
+A room can have two automations, for example one for a lamp and one for the ceiling light.
+Each releases the lights it drives once they're all off; a light in both is released when
+either room goes dark.
+
+### Additional triggers
+
+Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
+while it's playing. An additional trigger only adjusts lights that are already on. To turn a room
+on from something else, see
+[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
 
 ## Brightness
 
@@ -106,26 +114,6 @@ A scene is only used if every entity it sets is in the room; otherwise the whole
 the schedule. When a scene is used, any light in the room that the scene doesn't set still
 follows the schedule. See [Scenes](../../guides/scenes/).
 
-## Triggers
-
-| Input | Default | Description |
-|---|---|---|
-| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. |
-| **Additional Triggers** | none | Entities that make the room update as soon as they change. |
-
-### Sensors from areas
-
-Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
-count, so you can pick an area for its lights and choose the sensors yourself, such as the
-hallway's for a landing. Pick none for a room that only follows the schedule.
-
-### Additional triggers
-
-Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it's playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
-[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
-
 ## Transitions
 
 | Input | Default | Description |
@@ -134,11 +122,25 @@ on from something else, see
 | **Motion Off Transition** | 15s | Transition when the room empties. |
 | **Background Transition** | 5s | Transition for every other update. |
 
-## Colour
+## Settings
 
 | Input | Default | Description |
 |---|---|---|
+| **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
+| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
+
+### Override protection
+
+Turn it off for a room [whose bulbs misreport](#turning-override-protection-off).
+
+### Sensors from areas
+
+Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway's for a landing. Pick none for a room that only follows the schedule.
+
+### Prefer RGB during
 
 Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
 leaves Morning and Day on colour temperature.
@@ -148,9 +150,10 @@ leaves Morning and Day on colour temperature.
 ### When the room updates
 
 A room updates straight away when the phase changes, a sensor detects someone, an Additional
-Trigger changes, or one of its lights comes back online. Between those, it updates on its zone's
-[tick](../zones/#when-zones-tick), which is every minute by default. A room without a **Zone**
-updates every minute, on the minute.
+Trigger changes, or one of its lights comes back online. Between those, it updates on the
+[tick](../override-protection/#when-rooms-update) of the first area in **Lights & Occupancy**,
+which is every minute by default. A room whose **Lights & Occupancy** names no area updates every
+minute, on the minute.
 
 ### When lights turn on and off
 
@@ -173,11 +176,11 @@ changed.
 
 - **Someone else changed it.** A light changed from a wall switch, an app, a voice assistant or
   another automation, including being turned off, is left alone until every light in the room is
-  off. See [override protection](../zones/#override-protection).
+  off. See [override protection](../override-protection/).
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour
-  temperature aren't sent. You can change both limits under **FLARE → Zones → Configure**.
+  temperature aren't sent. You can change both limits under **FLARE → Settings → Configure**.
 - **It's unavailable.** FLARE sets it once it comes back online.
 - **A scene has it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).
@@ -194,8 +197,8 @@ were sent, and some settle on a colour outside the range they say they support. 
 reports something FLARE didn't send, it reads as overridden even though nobody touched it, and
 FLARE leaves it alone until every light in the room is off.
 
-If a room's lights keep getting stuck like this, you can leave **Zone** empty in the room's
-automation. FLARE then sets the room's lights on every update without checking what they report,
+If a room's lights keep getting stuck like this, you can turn off **Override Protection** in the
+room's automation. FLARE then sets the room's lights on every update without checking what they report,
 which also means:
 
 - A light someone else changes, from a wall switch, an app or another automation, goes back to
@@ -205,8 +208,7 @@ which also means:
   voice assistant for 100%, the room goes back to the curve at the next update. Turning the flare
   on and off works as usual.
 
-A room without a zone updates every minute, on the minute, and doesn't appear in the
-[Zones view](../../dashboard/).
+A room with override protection off isn't counted in the [Overrides view](../../dashboard/).
 
 If you turn override protection off because of your bulbs, please
 [open an issue](https://github.com/danrspencer/flare/issues) with their make and model, so FLARE

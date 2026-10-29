@@ -33,10 +33,10 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | [`flare.export_schedule`](#flareexport_schedule) | A schedule's settings as YAML |
 | [`flare.import_schedule`](#flareimport_schedule) | Sets a schedule from YAML |
 
-In the field tables, a zone or schedule is passed as its **device** ID. In a template,
-`device_id()` of any of its entities gives you that, such as
-`device_id('sensor.kitchen_flare_claims')` for the Kitchen zone or
-`device_id('sensor.home_flare')` for the Home schedule.
+In the field tables, a schedule is passed as its **device** ID. In a template, `device_id()` of
+any of its entities gives you that, such as `device_id('sensor.home_flare')` for the Home
+schedule. A room is passed as `room_id`, usually the calling automation's own entity ID,
+`{{ this.entity_id }}`; see [rooms](../override-protection/#rooms).
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -49,7 +49,7 @@ In the field tables, a zone or schedule is passed as its **device** ID. In a tem
 
 Use this action to set lights to a brightness and colour temperature, turning on any that are
 off. It skips lights that are unavailable, already close to the target, or changed by
-something else (see [override protection](../zones/#override-protection)).
+something else (see [override protection](../override-protection/)).
 
 ```yaml
 action: flare.apply_lighting
@@ -59,7 +59,7 @@ data:
   color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
   transition: 2
   brightness_levels: { light.kitchen_2: 60 }
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+  room_id: "{{ this.entity_id }}"
 ```
 
 This sets both kitchen lights to the Home schedule's current colour temperature, with
@@ -76,14 +76,15 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of the target isn't sent anything. Two values that convert to the same mired always count as a match. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
-| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Zones → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
-| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Zones → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
+| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
+| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
+| `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. Without it, the lights this room's calls have set. |
+| `room_id`<br>text | no | The room to record the change for, usually the calling automation: `{{ this.entity_id }}`. Without it, FLARE records nothing and doesn't leave any light alone. See [rooms](../override-protection/#rooms). |
 | `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
 | `two_step_label`<br>label ID; default `no_combined_transition` | no | Lights or devices with this label are sent two commands. See [two-step bulbs](#two-step-bulbs). |
-| `zone_device_id`<br>zone device ID | no | The zone to record the change in. Without it, FLARE records nothing and doesn't leave any light alone. |
 
 ### Brightness levels
 
@@ -108,7 +109,7 @@ action: flare.turn_off
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   transition: 15
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+  room_id: "{{ this.entity_id }}"
 ```
 
 ### Fields
@@ -116,8 +117,9 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to turn off. |
+| `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
+| `room_id`<br>text | no | The room to record the turn-off for. Without it, FLARE records nothing. |
 | `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. |
-| `zone_device_id`<br>zone device ID | no | The zone to record the turn-off in. Without it, FLARE records nothing. |
 
 ### Good to know
 
@@ -221,13 +223,12 @@ rgb_color: [255, 184, 123]
 ## `flare.claims_check`
 
 Use this action to find out whether FLARE would leave each light alone, for lights you set
-yourself with [override protection](../zones/#override-protection). It changes nothing.
+yourself with [override protection](../override-protection/). It changes nothing.
 
 ```yaml
 action: flare.claims_check
 data:
   entities: [light.kitchen_1]
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 response_variable: check
 ```
 
@@ -239,7 +240,6 @@ response_variable: check
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it. |
 | `entities`<br>list of light entity IDs | yes | The lights to check. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of a claimed RGB colour on every channel matches it. |
-| `zone_device_id`<br>zone device ID | yes | The zone whose claims to check against. |
 
 ### Response data
 
@@ -247,10 +247,10 @@ response_variable: check
 
 - `blocked`: `true` if FLARE would leave the entity alone.
 - `status`: `controlled`, `overridden`, `mismatched`, `untracked`, `off` or `unavailable`. See
-  [inspecting tracked state](../zones/#inspecting-tracked-state).
+  [inspecting tracked state](../override-protection/#inspecting-tracked-state).
 - `matched_via`: Which claim the entity matched, and how: `latest-context`, `latest-value`,
   `observed-context` or `observed-value`. `null` if it matched neither.
-- `zone`: The zone's name.
+- `rooms`: The rooms the light is one of, by the `room_id` each named.
 
 ```yaml
 results:
@@ -258,7 +258,7 @@ results:
     blocked: false
     status: controlled
     matched_via: latest-context
-    zone: Kitchen
+    rooms: [automation.kitchen_lighting]
 ```
 
 ## `flare.claims_record`
@@ -271,7 +271,7 @@ the entities, with the values you're about to send.
 action: flare.claims_record
 data:
   entities: [light.kitchen_1]
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+  room_id: "{{ this.entity_id }}"
   targets:
     light.kitchen_1: { brightness: 200, color_temp_kelvin: 3000 }
 ```
@@ -281,8 +281,9 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights you're about to change. |
+| `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
+| `room_id`<br>text | yes | The room to record the claim for, usually your automation: `{{ this.entity_id }}`. |
 | `targets`<br>map of entity ID to values | no | What you're about to send each entity: `brightness` and either `color_temp_kelvin` or `rgb_color`. |
-| `zone_device_id`<br>zone device ID | yes | The zone to record the claim in. |
 
 ### Response data
 
@@ -299,14 +300,13 @@ Optional. `recorded` lists the entities a claim was recorded for.
 ## `flare.claims_clear`
 
 Use this action to discard claims, so FLARE sets the entities again on its next update. It's
-for a light that's overridden in a room that never goes fully dark. A zone's **Clear** button
-does the same for every light in the zone.
+for a light that's overridden in a room that never goes fully dark. FLARE's **Clear** button
+does the same for every light.
 
 ```yaml
 action: flare.claims_clear
 data:
   entities: [light.kitchen_1]
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
 ```
 
 ### Fields
@@ -314,7 +314,6 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to clear. |
-| `zone_device_id`<br>zone device ID | yes | The zone to clear them from. |
 
 ### Response data
 
@@ -331,14 +330,14 @@ leave them as they are. Without it, the room's FLARE automation sets those light
 curve on its next update.
 
 It marks each entity whether it's on or off. A light marked this way stays overridden until its
-zone goes dark, its claims are cleared, or a forced `flare.apply_lighting` takes it back.
+room goes dark, its claims are cleared, or a forced `flare.apply_lighting` takes it back.
 Flares call it before turning a room off or setting it to a brightness or colour.
 
 ```yaml
 action: flare.claims_override
 data:
   entities: [light.kitchen_1]
-  zone_device_id: "{{ device_id('sensor.kitchen_flare_claims') }}"
+  room_id: "{{ this.entity_id }}"
 ```
 
 ### Fields
@@ -346,7 +345,8 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to mark. |
-| `zone_device_id`<br>zone device ID | yes | The zone to mark them in. |
+| `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
+| `room_id`<br>text | yes | The room that releases them once it's dark, usually the automation driving them. |
 
 ### Response data
 
@@ -475,7 +475,7 @@ Some bulbs can't change brightness and colour temperature in one command: they j
 value, or ignore one of the two. FLARE sends these bulbs two commands, brightness first and
 then colour, each taking half the transition. It recognises them in two ways:
 
-- **By make and model**, from the **Two-step bulb models** field under **FLARE → Zones →
+- **By make and model**, from the **Two-step bulb models** field under **FLARE → Settings →
   Configure**. It holds one pattern per line, matched case-insensitively against
   `"<manufacturer> <model>"`, and `*` matches anything, so `*TRADFRI bulb*` and `IKEA*` both
   work. The field is pre-filled with FLARE's default patterns. Your saved list replaces those

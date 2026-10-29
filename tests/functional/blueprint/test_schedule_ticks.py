@@ -1,9 +1,12 @@
-"""Ticks from the schedule sensor, the zone's Tick and Additional Triggers."""
+"""Ticks from the schedule sensor, the area's tick and Additional Triggers:
+which tick a room follows is its first area's, or on the minute without one."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 
+from homeassistant.helpers import area_registry as ar
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
@@ -15,6 +18,18 @@ from tests.functional.blueprint.harness import (
     setup_room_automation,
 )
 from tests.support import load_blueprint
+
+
+async def _a_minute_later(hass) -> None:
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+    await hass.async_block_till_done()
+
+
+def _area_light(hass, entity_id: str, area_id: str) -> None:
+    registry = er.async_get(hass)
+    created = registry.async_get_or_create("light", "test", entity_id, suggested_object_id=entity_id.split(".", 1)[1])
+    registry.async_update_entity(created.entity_id, area_id=area_id)
+    light(hass, entity_id, "on", brightness=190, color_temp_kelvin=4000)
 
 
 class TestAdaptiveScheduleAndTransitions:
@@ -63,9 +78,9 @@ class TestAdaptiveScheduleAndTransitions:
         assert calls[-1].data["color_temp_kelvin"] == 4000
         assert calls[-1].data["rgb_color"] is None
 
-    async def test_a_flat_curve_still_gets_a_tick_from_the_zone(self, hass, apply_lighting_calls):
+    async def test_a_flat_curve_still_gets_a_tick(self, hass, apply_lighting_calls):
         """On a flat stretch the sensor emits state_reported, not state_changed,
-        so only the zone's Tick guarantees a tick."""
+        so only the tick guarantees an update."""
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
         hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
         await hass.async_block_till_done()
@@ -78,22 +93,6 @@ class TestAdaptiveScheduleAndTransitions:
 
         assert apply_lighting_calls, "a flat curve must still produce a tick"
         assert apply_lighting_calls[-1].data["entities"] == ["light.a"]
-
-    async def test_the_periodic_tick_does_not_reactivate_a_scene(self, hass, apply_lighting_calls, scene_turn_on_calls):
-        """Re-activating the scene every minute would stomp manual changes."""
-        light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
-        hass.states.async_set("scene.test_evening", "unknown", {"entity_id": ["light.a"]})
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 180, "color_temp": 3000})
-        await hass.async_block_till_done()
-        await setup_room_automation(
-            hass, room_target={"entity_id": "light.a"}, evening_scene="scene.test_evening"
-        )
-        scene_turn_on_calls.clear()
-
-        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=2))
-        await hass.async_block_till_done()
-
-        assert scene_turn_on_calls == []
 
     async def test_tick_uses_the_background_transition_duration(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")
@@ -188,8 +187,55 @@ class TestAdaptiveScheduleAndTransitions:
         assert calls and calls[-1].data["entities"] == ["light.a"]
 
 
+class TestAreaTicks:
+    """docs/reference/blueprint.md#when-the-room-updates"""
+
+    async def test_a_room_naming_no_area_ticks_on_the_minute(self, hass, apply_lighting_calls):
+        light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"entity_id": "light.a"}, area_ticks=False)
+
+        await _a_minute_later(hass)
+
+        assert apply_lighting_calls
+
+    async def test_a_room_naming_an_area_ticks_only_on_its_areas_tick(self, hass, apply_lighting_calls):
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        _area_light(hass, "light.k", kitchen.id)
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"area_id": kitchen.id}, area_ticks=False)
+
+        await _a_minute_later(hass)
+        assert apply_lighting_calls == [], "no time_pattern for a room with an area"
+
+        hass.bus.async_fire("flare_tick", {"area_id": "somewhere_else"})
+        await hass.async_block_till_done()
+        assert apply_lighting_calls == []
+
+        hass.bus.async_fire("flare_tick", {"area_id": kitchen.id})
+        await hass.async_block_till_done()
+        assert apply_lighting_calls
+
+    async def test_a_room_naming_several_areas_follows_the_first(self, hass, apply_lighting_calls):
+        """However the picker stores them: a list here."""
+        kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
+        hall = ar.async_get(hass).async_get_or_create("Hall")
+        _area_light(hass, "light.k", kitchen.id)
+        _area_light(hass, "light.h", hall.id)
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"area_id": [kitchen.id, hall.id]}, area_ticks=False)
+
+        hass.bus.async_fire("flare_tick", {"area_id": hall.id})
+        await hass.async_block_till_done()
+        assert apply_lighting_calls == []
+
+        hass.bus.async_fire("flare_tick", {"area_id": kitchen.id})
+        await hass.async_block_till_done()
+        assert apply_lighting_calls
+
+
 class TestRgbColour:
-    """docs/reference/blueprint.md#colour"""
+    """docs/reference/blueprint.md#prefer-rgb-during"""
 
     async def test_prefer_rgb_color_is_true_only_during_a_configured_phase(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on")

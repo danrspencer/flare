@@ -1,4 +1,4 @@
-"""FLARE's nine services, registered by the Zones entry: adapters that
+"""FLARE's nine services, registered by the Settings entry: adapters that
 read HA state into the pure planners (grouping.py, scenes.py, curve.py,
 override_protection.py) and dispatch the result. Field contracts are in
 services.yaml."""
@@ -31,15 +31,23 @@ from ..const import (
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups, target_brightness
-from ..zone.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
-from ..zone.override_protection import classify_state, is_blocked
+from ..tracking.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
+from ..tracking.override_protection import classify_state, is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
 from ..flares.identity import without_flares
-from ..zone.claims import ClaimRegistry
+from ..tracking.claims import ClaimRegistry
 
 # FLARE drives and tracks lights only.
 LIGHT_IDS = [cv.entity_domain("light")]
+
+# Who's writing, for override protection: a room, usually the calling
+# automation (`this.entity_id`), and its lights, which it releases together.
+# No room means "write, but track nothing".
+ROOM_FIELDS = {
+    vol.Optional("room_id"): vol.Any(None, cv.string),
+    vol.Optional("room_entities"): vol.Any(None, [cv.entity_id]),
+}
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
@@ -65,8 +73,7 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         # None means "use the integration's setting".
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-        # None means "write, but track nothing".
-        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
+        **ROOM_FIELDS,
     }
 )
 
@@ -108,8 +115,7 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         # None means "use the integration's setting".
         vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
         vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-        # None means "write, but track nothing".
-        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
+        **ROOM_FIELDS,
     }
 )
 
@@ -117,42 +123,43 @@ TURN_OFF_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
         vol.Optional("transition", default=0): vol.Coerce(float),
-        # None turns the lights off untracked.
-        vol.Optional("zone_device_id"): vol.Any(None, cv.string),
+        **ROOM_FIELDS,
     }
 )
 
-# The claims_* services exist only to read or write claims, so a zone is
-# required.
 CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
-        vol.Required("zone_device_id"): cv.string,
         vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
         vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
         vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
     }
 )
 
+# Recording a claim, or an override, needs a room to release it with.
 CLAIMS_RECORD_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
-        vol.Required("zone_device_id"): cv.string,
+        vol.Required("room_id"): cv.string,
+        vol.Optional("room_entities"): [cv.entity_id],
         vol.Optional("targets", default=dict): dict,
     }
 )
 
-CLAIMS_CLEAR_SCHEMA = vol.Schema(
+CLAIMS_OVERRIDE_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
-        vol.Required("zone_device_id"): cv.string,
+        vol.Required("room_id"): cv.string,
+        vol.Optional("room_entities"): [cv.entity_id],
     }
 )
 
+CLAIMS_CLEAR_SCHEMA = vol.Schema({vol.Required("entities"): LIGHT_IDS})
 
-def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str | None) -> EntityLookup:
-    """Adapts HA state/registries to grouping.py's EntityLookup, with the
-    caller's zone bound into the claims lookup."""
+
+def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, room_id: str | None) -> EntityLookup:
+    """Adapts HA state/registries to grouping.py's EntityLookup. Without a
+    room, no claims are read, so nothing is held back."""
 
     def device_id(entity_id: str) -> str | None:
         entry = er.async_get(hass).async_get(entity_id)
@@ -184,7 +191,7 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, subentry_id: str 
         device_id=device_id,
         labels=labels,
         manufacturer_model=manufacturer_model,
-        claims=lambda eid: tracker.record(subentry_id, eid),
+        claims=lambda eid: tracker.record(eid) if room_id else None,
         reconnected_at=tracker.reconnected_at,
     )
 
@@ -281,18 +288,17 @@ async def _two_step_turn_on(
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
-    """Registers the nine services against this Zones entry."""
+    """Registers the nine services against the Settings entry."""
 
     async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
         """flare.compute_lighting_groups - see services.yaml."""
         rgb_color = call.data.get("rgb_color")
-        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         groups = build_groups(
             entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
-            lookup=_build_lookup(hass, registry, zone),
+            lookup=_build_lookup(hass, registry, call.data.get("room_id")),
             brightness_tolerance=call.data["brightness_tolerance"],
             color_temp_tolerance=call.data["color_temp_tolerance"],
             two_step_label=call.data["two_step_label"],
@@ -327,14 +333,15 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
     async def apply_lighting(call: ServiceCall) -> ServiceResponse:
         """flare.apply_lighting - see services.yaml.
 
-        With force, the write still records a claim if a zone is given, so the
+        With force, the write still records a claim if a room is given, so the
         next non-forced call recognises it as ours."""
         force = call.data["force"]
         brightness = _brightness(call)
         rgb_color_raw = call.data.get("rgb_color")
         rgb_color = tuple(rgb_color_raw) if rgb_color_raw else None
-        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
-        lookup = _build_lookup(hass, registry, zone)
+        room_id = call.data.get("room_id")
+        room_entities = call.data.get("room_entities")
+        lookup = _build_lookup(hass, registry, room_id)
         groups = build_groups(
             entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
@@ -457,19 +464,20 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         # planning and recording are one step.
         if written_entities:
             await registry.async_record(
-                zone,
+                room_id,
                 written_entities,
                 live_context_before_write,
                 call.context.id,
                 targets=write_targets,
                 secondary_context_ids=secondary_context_ids,
                 context_id_overrides=context_id_overrides,
+                room_entities=room_entities,
             )
 
         # Lights already showing what this call would send get no write, so
         # an unclaimed one is claimed as it is.
         registry.adopt(
-            zone,
+            room_id,
             [
                 e
                 for e in without_flares(hass, call.data["entities"])
@@ -477,6 +485,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 and (target_brightness(e, call.data["brightness_levels"], brightness) or 0) > 0
                 and lookup.claims(e) is None
             ],
+            room_entities,
         )
 
         if tasks:
@@ -493,16 +502,16 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         if not entities:
             return
         transition = call.data["transition"]
-        zone = registry.resolve_zone_device(call.data.get("zone_device_id"))
         live_context_before_write = {
             e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
         }
         await registry.async_record(
-            zone,
+            call.data.get("room_id"),
             entities,
             live_context_before_write,
             call.context.id,
             targets={e: {"state": "off"} for e in entities},
+            room_entities=call.data.get("room_entities"),
         )
         await hass.services.async_call(
             "light",
@@ -519,13 +528,11 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         brightness_tolerance = call.data["brightness_tolerance"]
         color_temp_tolerance = call.data["color_temp_tolerance"]
         rgb_color_tolerance = call.data["rgb_color_tolerance"]
-        zone = registry.resolve_zone_device(call.data["zone_device_id"])
-        zone_title = registry.zone_title(zone)
         results: dict[str, Any] = {}
         for entity_id in call.data["entities"]:
             status, matched_via = classify_state(
                 hass.states.get(entity_id),
-                registry.record(zone, entity_id),
+                registry.record(entity_id),
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
@@ -535,38 +542,41 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 "blocked": is_blocked(status),
                 "status": status,
                 "matched_via": matched_via,
-                "zone": zone_title,
+                "rooms": [registry.room_entity_id(key) for key in registry.rooms_of(entity_id)],
             }
         return {"results": results}
 
     async def claims_record(call: ServiceCall) -> ServiceResponse:
-        """flare.claims_record - call it before your write. Returns only the
-        entities actually recorded, which may be fewer if the zone's claims
-        entity isn't up yet."""
+        """flare.claims_record - call it before your write. Returns the
+        entities recorded."""
         entities = call.data["entities"]
         targets = call.data.get("targets", {})
-        zone = registry.resolve_zone_device(call.data["zone_device_id"])
         live_context_before_write = {
             e: (state.context.id if (state := hass.states.get(e)) is not None else None) for e in entities
         }
-        await registry.async_record(zone, entities, live_context_before_write, call.context.id, targets=targets)
-        tracked = registry.records_for_zone(zone)
+        await registry.async_record(
+            call.data["room_id"],
+            entities,
+            live_context_before_write,
+            call.context.id,
+            targets=targets,
+            room_entities=call.data.get("room_entities"),
+        )
+        tracked = registry.all_records()
         return {"recorded": [e for e in entities if e in tracked]}
 
     async def claims_override(call: ServiceCall) -> ServiceResponse:
         """flare.claims_override - marks lights as changed by someone else, so
         FLARE leaves them alone. The opposite of claims_clear."""
         entities = call.data["entities"]
-        zone = registry.resolve_zone_device(call.data["zone_device_id"])
-        await registry.async_override(zone, entities)
+        await registry.async_override(call.data["room_id"], entities, call.data.get("room_entities"))
         return {"overridden": entities}
 
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
         stuck "overridden"."""
         entities = call.data["entities"]
-        zone = registry.resolve_zone_device(call.data["zone_device_id"])
-        await registry.async_clear(zone, entities)
+        await registry.async_clear(entities)
         return {"cleared": entities}
 
     async def compute_scene_coverage_service(call: ServiceCall) -> ServiceResponse:
@@ -643,7 +653,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         DOMAIN,
         "claims_override",
         claims_override,
-        schema=CLAIMS_CLEAR_SCHEMA,
+        schema=CLAIMS_OVERRIDE_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 

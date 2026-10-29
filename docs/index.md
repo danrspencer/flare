@@ -36,13 +36,13 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
 - **It can leave a nightlight on.** When a room empties it can
   [dim to a low level]({{ site.baseurl }}/reference/blueprint/#idle-brightness) instead of going dark.
 - **It leaves your changes alone.** If you change a light yourself, from an app, a wall
-  switch or another automation, FLARE [stops setting it]({{ site.baseurl }}/reference/zones/#override-protection)
+  switch or another automation, FLARE [stops setting it]({{ site.baseurl }}/reference/override-protection/)
   until the room next goes dark.
 - **It works with Siri, Alexa and Google.** Each room gets [a single light]({{ site.baseurl }}/guides/flares/)
   to expose to them, so "turn on the kitchen" lights the kitchen the way FLARE would, rather than
   at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
   alone.
-- **It's gentle on your Zigbee network.** Rooms update [one after another]({{ site.baseurl }}/reference/zones/#when-zones-tick)
+- **It's gentle on your Zigbee network.** Rooms update [one after another]({{ site.baseurl }}/reference/override-protection/#when-rooms-update)
   rather than all at once, and [changes too small to see]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
   aren't sent.
 

@@ -31,6 +31,8 @@ async def _set_up_hall(hass: HomeAssistant, add_bulbs):
     hall_field = next(v for k, v in result["data_schema"].schema[areas].schema.schema.items() if str(k) == "Hall")
     schedule = hall_field.config["options"][0]["value"]
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"areas": {"Hall": schedule}})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"next_step_id": "flare_rooms"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"automation": ["automation.hall_lighting"]})
     await hass.async_block_till_done()
     assert result["reason"] == "setup_complete", result
     return bulbs

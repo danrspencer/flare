@@ -19,9 +19,9 @@ PAST_THE_WAIT = 120
 SECOND_SENSOR = "binary_sensor.hall_doorway_occupancy"
 
 
-async def lit_room(hass, add_bulbs, setup_room, zone, **inputs):
+async def lit_room(hass, add_bulbs, setup_room, area, **inputs):
     """An occupied room at the curve."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], **inputs)
     occupancy(hass, HALL_SENSOR, "on")
@@ -31,9 +31,9 @@ async def lit_room(hass, add_bulbs, setup_room, zone, **inputs):
 
 
 async def test_it_turns_the_lights_on_when_a_room_becomes_occupied(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR])
 
@@ -50,10 +50,10 @@ async def test_it_turns_the_lights_on_when_a_room_becomes_occupied(
 
 
 async def test_the_room_ends_up_dark_once_it_is_empty(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """The outcome only: motion_off or self-heal may deliver it."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room, zone, no_motion_wait=0)
+    bulbs = await lit_room(hass, add_bulbs, setup_room, area, no_motion_wait=0)
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
 
     occupancy(hass, HALL_SENSOR, "off")
@@ -66,11 +66,11 @@ async def test_the_room_ends_up_dark_once_it_is_empty(
 
 
 async def test_one_sensors_wait_running_out_does_not_empty_a_room_another_saw_motion_in(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Each sensor's Wait time runs out on its own; the room is only empty
     once they all have."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     occupancy(hass, SECOND_SENSOR, "off")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR, SECOND_SENSOR], no_motion_wait=300)
@@ -97,9 +97,9 @@ async def test_one_sensors_wait_running_out_does_not_empty_a_room_another_saw_mo
 
 
 async def test_a_sensor_left_unavailable_does_not_keep_a_room_lit(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
     occupancy(hass, SECOND_SENSOR, "unavailable")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR, SECOND_SENSOR], no_motion_wait=0)
@@ -117,10 +117,10 @@ async def test_a_sensor_left_unavailable_does_not_keep_a_room_lit(
 
 
 async def test_a_room_whose_only_sensor_is_unavailable_is_not_switched_off(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """A dead sensor isn't an empty room: the room acts as if it has no sensor."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "unavailable")
     await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], no_motion_wait=0)
     await hass.services.async_call(
@@ -137,10 +137,10 @@ async def test_a_room_whose_only_sensor_is_unavailable_is_not_switched_off(
 
 
 async def test_a_phase_change_repaints_a_lit_room(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Evening becomes Night: the room follows, without anyone moving."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room, zone)
+    bulbs = await lit_room(hass, add_bulbs, setup_room, area)
 
     await move_to_phase(hass, frozen_time, "Night")
 
@@ -150,11 +150,11 @@ async def test_a_phase_change_repaints_a_lit_room(
 
 
 async def test_the_periodic_tick_leaves_a_fitting_someone_else_changed(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """A change from outside reads as an override; the rest of the room stays
     on the curve."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room, zone)
+    bulbs = await lit_room(hass, add_bulbs, setup_room, area)
 
     # Something else moves one fitting off the curve.
     await hass.services.async_call(
@@ -175,13 +175,13 @@ async def test_the_periodic_tick_leaves_a_fitting_someone_else_changed(
     )
 
 
-async def test_without_a_zone_the_tick_puts_a_changed_fitting_back(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+async def test_without_override_protection_the_tick_puts_a_changed_fitting_back(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
-    """Zone left empty: nothing is tracked, so the curve wins."""
-    bulbs = await add_bulbs(*HALL_BULBS, area_id=zone)
+    """Override Protection off: nothing is tracked, so the curve wins."""
+    bulbs = await add_bulbs(*HALL_BULBS, area_id=area)
     occupancy(hass, HALL_SENSOR, "off")
-    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], zone=None)
+    await setup_room(lights=bulbs, occupancy_sensors=[HALL_SENSOR], override_protection=False)
     occupancy(hass, HALL_SENSOR, "on")
     await hass.async_block_till_done()
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
@@ -192,16 +192,16 @@ async def test_without_a_zone_the_tick_puts_a_changed_fitting_back(
     await let_time_pass(hass, frozen_time, 60)
 
     assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}, (
-        "a room without a zone should follow the curve whatever else changes it"
+        "a room without override protection should follow the curve whatever else changes it"
     )
 
 
 async def test_a_room_settles_to_its_idle_level_instead_of_going_dark(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Idle Brightness redefines "off" for a room - the nightlight."""
     bulbs = await lit_room(
-        hass, add_bulbs, setup_room, zone, no_motion_wait=0, evening_idle_brightness=25
+        hass, add_bulbs, setup_room, area, no_motion_wait=0, evening_idle_brightness=25
     )
 
     occupancy(hass, HALL_SENSOR, "off")
@@ -214,11 +214,11 @@ async def test_a_room_settles_to_its_idle_level_instead_of_going_dark(
 
 
 async def test_motion_brightens_a_room_sitting_at_its_idle_level(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Everything's already on at the idle level, and must still brighten."""
     bulbs = await lit_room(
-        hass, add_bulbs, setup_room, zone, no_motion_wait=0, evening_idle_brightness=25
+        hass, add_bulbs, setup_room, area, no_motion_wait=0, evening_idle_brightness=25
     )
     occupancy(hass, HALL_SENSOR, "off")
     await hass.async_block_till_done()
@@ -234,7 +234,7 @@ async def test_motion_brightens_a_room_sitting_at_its_idle_level(
 
 
 async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
-    hass: HomeAssistant, add_bulbs, setup_room, zone
+    hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
     """An absolute level; the rest of the room stays on the curve."""
     lamp = "light.hall_lamp"
@@ -242,7 +242,7 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
         hass,
         add_bulbs,
         setup_room,
-        zone,
+        area,
         brightness_template=f"{{{{ {{'{lamp}': 60}} }}}}",
     )
 
@@ -254,14 +254,14 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
 
 
 async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """Lit first, so the exclusion has to turn the spot off. (Can't tell
     needing_off from turn_on at brightness 0, which HA also turns off;
     that's for the unit tests.)"""
     spot = "light.hall_spot_1"
     bulbs = await lit_room(
-        hass, add_bulbs, setup_room, zone, night_exclude_lights=[spot]
+        hass, add_bulbs, setup_room, area, night_exclude_lights=[spot]
     )
 
     assert room_brightness(hass, bulbs)[spot] == CURVE_BRIGHTNESS, (
@@ -278,11 +278,11 @@ async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
 
 
 async def test_a_light_switched_off_by_hand_stays_off(
-    hass: HomeAssistant, add_bulbs, setup_room, zone, frozen_time
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:
     """An off light is judged against its claims like an on one. The rest of
-    the room stays on, so the zone isn't released."""
-    bulbs = await lit_room(hass, add_bulbs, setup_room, zone)
+    the room stays on, so the area isn't released."""
+    bulbs = await lit_room(hass, add_bulbs, setup_room, area)
     target = bulbs[0]
 
     await hass.services.async_call(

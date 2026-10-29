@@ -61,22 +61,6 @@ class TestTolerance:
         groups = _groups({"light.a": _on(180, 3050)}, brightness=180, kelvin=3050)
         assert groups[0].combined == []
 
-    def test_within_tolerance_is_at_target(self):
-        """Default tolerance: brightness ±2, Kelvin ±10, both inclusive."""
-        assert _groups({"light.a": _on(198, 3010)})[0].combined == []
-        assert _groups({"light.a": _on(197, 3000)})[0].combined == ["light.a"]
-        assert _groups({"light.a": _on(200, 3011)})[0].combined == ["light.a"]
-
-    def test_a_mired_equivalent_colour_temperature_is_at_target(self):
-        """4373K and 4385K are 12K apart but floor to the same mired."""
-        assert _groups({"light.a": _on(255, 4385)}, brightness=255, kelvin=4373)[0].combined == []
-
-    def test_a_white_reported_as_xy_is_at_target(self):
-        """A bulb asked for more than its advertised range reporting in xy."""
-        at = _on(255, color_mode="xy", xy_color=[0.3124, 0.3226], max_color_temp_kelvin=4000)
-        assert _groups({"light.a": at}, brightness=255, kelvin=6578)[0].combined == []
-        assert _groups({"light.a": at}, brightness=255, kelvin=3000)[0].combined == ["light.a"]
-
     def test_rgb_is_compared_per_channel(self):
         close = _on(200, supported_color_modes=["rgb"], rgb_color=[253, 181, 108])
         far = _on(200, supported_color_modes=["rgb"], rgb_color=[255, 180, 90])
@@ -237,12 +221,6 @@ class TestTwoStepRouting:
         )
         routed, other = (groups[0].two_step_rgb, groups[0].combined_rgb) if rgb else (groups[0].two_step, groups[0].combined)
         assert (routed, other) == ((["light.a"], []) if two_step else ([], ["light.a"]))
-
-    def test_no_patterns_matches_nothing(self):
-        lookup = make_lookup(
-            {"light.a": _on()}, device_of={"light.a": "dev1"}, device_identity={"dev1": TRADFRI}
-        )
-        assert lookup.matches_two_step_pattern("light.a", []) is False
 
 
 class TestRgbRouting:

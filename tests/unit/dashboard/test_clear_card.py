@@ -1,4 +1,4 @@
-"""The zone's Clear control: pressing it presses the zone's Clear button."""
+"""The Clear control: pressing it presses Clear."""
 
 import pytest
 
@@ -25,7 +25,7 @@ HTMLElement.prototype.attachShadow = function () {{
   return this.shadowRoot;
 }};
 const card = new Card();
-card.setConfig({{ entity: 'button.kitchen_flare_clear' }});
+card.setConfig({{ entity: 'button.flare_clear' }});
 const calls = [];
 card.hass = {{ callService: (...args) => calls.push(args) }};
 card._handlers.click();
@@ -40,11 +40,12 @@ let refusedEmpty = null;
 try {{ new Card().setConfig({{ entity: [] }}); }} catch (err) {{ refusedEmpty = err.message; }}
 return {{ calls, allCalls, html: card.shadowRoot.innerHTML, name: card._name.textContent, grid: card.getGridOptions(), refused, refusedEmpty }};
 """,
+        {},
     )
 
 
-def test_pressing_it_presses_the_zones_clear_button(result):
-    assert result["calls"] == [["button", "press", {"entity_id": "button.kitchen_flare_clear"}]]
+def test_pressing_it_presses_the_clear_button(result):
+    assert result["calls"] == [["button", "press", {"entity_id": "button.flare_clear"}]]
 
 
 def test_it_reads_clear_beside_its_icon(result):
@@ -61,7 +62,6 @@ def test_it_needs_an_entity(result):
 
 
 def test_a_list_of_clear_buttons_is_pressed_together(result):
-    """The Zones view's All zones row."""
     assert result["allCalls"] == [
         ["button", "press", {"entity_id": ["button.kitchen_flare_clear", "button.hall_flare_clear"]}]
     ]

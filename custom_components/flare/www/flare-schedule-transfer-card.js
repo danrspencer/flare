@@ -10,6 +10,7 @@
  * which browsers only allow over HTTPS.
  */
 
+import { localize } from './flare-i18n.js';
 import { scheduleSensorId } from './flare-curve-card.js';
 
 /** The schedule's device, through its sensor's registry entry. */
@@ -93,6 +94,15 @@ class FlareScheduleTransferCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._labels();
+  }
+
+  // Filled in once hass says which language, after _build().
+  _labels() {
+    const t = (key) => localize(this._hass, key);
+    this.shadowRoot.querySelector('.row .label').textContent = t('transfer.prompt');
+    for (const id of ['copy', 'paste', 'cancel', 'apply']) this._$(id).textContent = t(`transfer.${id}`);
+    this._$('text').placeholder = t('transfer.placeholder');
   }
 
   getCardSize() {
@@ -109,16 +119,16 @@ class FlareScheduleTransferCard extends HTMLElement {
       <style>${STYLE}</style>
       <ha-card>
         <div class="row">
-          <span class="label">Copy this schedule to keep or share, or paste one in.</span>
-          <button id="copy">Copy</button>
-          <button id="paste">Paste</button>
+          <span class="label"></span>
+          <button id="copy"></button>
+          <button id="paste"></button>
         </div>
         <div id="editor" hidden>
-          <textarea id="text" spellcheck="false" placeholder="Paste a schedule here"></textarea>
+          <textarea id="text" spellcheck="false"></textarea>
           <div class="row">
             <span class="label"></span>
-            <button id="cancel">Cancel</button>
-            <button id="apply" class="primary">Apply</button>
+            <button id="cancel"></button>
+            <button id="apply" class="primary"></button>
           </div>
         </div>
         <div id="status" class="status" hidden></div>
@@ -133,7 +143,7 @@ class FlareScheduleTransferCard extends HTMLElement {
 
   _deviceId() {
     const id = scheduleDeviceId(this._hass, this._config.sensor);
-    if (!id) this._status(`No FLARE schedule sensor ${scheduleSensorId(this._config.sensor)}.`, true);
+    if (!id) this._status(localize(this._hass, 'transfer.no_schedule', { sensor: scheduleSensorId(this._config.sensor) }), true);
     return id;
   }
 
@@ -144,12 +154,12 @@ class FlareScheduleTransferCard extends HTMLElement {
       const text = await exportSchedule(this._hass, deviceId);
       if (await copyText(text, this.shadowRoot)) {
         this._closeEditor();
-        this._status('Copied.');
+        this._status(localize(this._hass, 'transfer.copied'));
       } else {
         // Nothing would copy: show it to select by hand.
         this._openEditor(text);
         this._$('text').select();
-        this._status('Copy the schedule from the box above.');
+        this._status(localize(this._hass, 'transfer.copy_by_hand'));
       }
     } catch (err) {
       this._status(err.message || String(err), true);
@@ -162,7 +172,7 @@ class FlareScheduleTransferCard extends HTMLElement {
     try {
       await importSchedule(this._hass, deviceId, this._$('text').value);
       this._closeEditor();
-      this._status('Schedule imported.');
+      this._status(localize(this._hass, 'transfer.imported'));
     } catch (err) {
       this._status(err.message || String(err), true);
     }

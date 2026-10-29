@@ -13,12 +13,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, PHASES
+from .const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS, PHASES
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
         return
     for instance in schedule_instances(entry):
         coordinator: ScheduleCoordinator = hass.data[DOMAIN][instance.subentry_id]

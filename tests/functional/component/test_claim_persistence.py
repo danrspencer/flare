@@ -1,42 +1,30 @@
-"""Claims survive a restart, via the claims sensor's restore state. The
-entity is added through a real EntityPlatform, since RestoreEntity only
-saves and restores for an entity that's genuinely added."""
+"""Claims survive a restart, saved to HA's storage. Each test starts the
+Settings entry the way HA does, over whatever storage held before."""
 
 from datetime import timedelta
+from typing import Any
 
 import pytest
 from freezegun import freeze_time
 
-from homeassistant.config_entries import ConfigSubentryData
-from homeassistant.core import Context, HomeAssistant, State
+from homeassistant.const import EVENT_HOMEASSISTANT_FINAL_WRITE
+from homeassistant.core import Context, CoreState, HomeAssistant
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import (
-    MockConfigEntry,
-    MockEntityPlatform,
-    async_mock_restore_state_shutdown_restart,
-    mock_restore_cache_with_extra_data,
-)
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_ZONES, SUBENTRY_TYPE_ZONE
-from custom_components.flare.zone.instance import zone_instances
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.sensor import _classify_tracked
-from custom_components.flare.sensor import async_setup_entry as sensor_setup
-from custom_components.flare.zone.claims import ClaimRegistry
-from custom_components.flare.zone.override_protection import MISMATCH_GRACE
+from custom_components.flare.tracking.claims import SAVE_DELAY, STORAGE_KEY, STORAGE_VERSION, ClaimRegistry
+from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 from tests.support.claims import after_the_grace
 
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
-
-
-_STARTED: list = []
+ROOM = "automation.kitchen"
 
 
 @pytest.fixture(autouse=True)
-async def _remove_claims_sensors(hass: HomeAssistant):
-    """Removing a claims sensor cancels its pending recheck."""
-    yield
-    while _STARTED:
-        await _STARTED.pop().async_remove()
+def _real_setup(stub_entry_setup):
+    """The entry set up as HA does, platforms and all."""
 
 
 def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
@@ -49,39 +37,27 @@ def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
     return {"observed": one(f"{context_id}-before"), "latest": one(context_id), "last_seen": seen}
 
 
-async def _start(hass: HomeAssistant, restored_claims: dict | None = None):
-    """One zone, its claims sensor added for real, with claims in the
-    restore cache if given."""
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        data={CONF_ENTRY_TYPE: ENTRY_TYPE_ZONES},
-        subentries_data=[
-            ConfigSubentryData(
-                subentry_type=SUBENTRY_TYPE_ZONE,
-                title="Kitchen",
-                unique_id="kitchen",
-                data={},
-            )
-        ],
-    )
+def _room(*lights: str) -> dict:
+    return {ROOM: {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}}
+
+
+async def _start(
+    hass: HomeAssistant, hass_storage: dict[str, Any], claims: dict | None = None, rooms: dict | None = None
+) -> ClaimRegistry:
+    """The Settings entry set up over storage holding these claims, all in
+    one room unless rooms are given too."""
+    if claims is not None:
+        hass_storage[STORAGE_KEY] = {
+            "version": STORAGE_VERSION,
+            "minor_version": 1,
+            "key": STORAGE_KEY,
+            "data": {"claims": claims, "rooms": rooms if rooms is not None else _room(*claims)},
+        }
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, version=3, minor_version=2)
     entry.add_to_hass(hass)
-    registry = ClaimRegistry(hass, entry)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
-
-    added: list = []
-    await sensor_setup(hass, entry, lambda entities, **kw: added.extend(entities))
-    tracker = next(e for e in added if hasattr(e, "claims"))
-    if restored_claims is not None:
-        mock_restore_cache_with_extra_data(
-            hass, [(State(tracker.entity_id, str(len(restored_claims))), {"claims": restored_claims})]
-        )
-
-    platform = MockEntityPlatform(hass, domain="sensor", platform_name=DOMAIN)
-    platform.config_entry = entry
-    await platform.async_add_entities([tracker], config_subentry_id=zone_instances(entry)[0].subentry_id)
+    assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    _STARTED.append(tracker)
-    return registry, tracker
+    return hass.data[DOMAIN][entry.entry_id]
 
 
 def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
@@ -89,91 +65,122 @@ def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
     hass.states.async_set(entity_id, state, attrs, context=Context())
 
 
-def _status(hass: HomeAssistant, tracker, entity_id: str) -> str:
-    return _classify_tracked(hass, tracker._registry, entity_id, tracker.claims[entity_id])[0]
+def _status(hass: HomeAssistant, registry: ClaimRegistry, entity_id: str) -> str:
+    return _classify_tracked(hass, registry, entity_id, registry.record(entity_id))[0]
 
 
-async def test_what_is_saved_is_the_claims_themselves(hass: HomeAssistant):
-    """Through a real dump to storage, so through HA's JSON encoder too."""
-    _, tracker = await _start(hass)
-    claim = _claim("ctx-ours")
-    tracker.claims["light.a"] = claim
+async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    """Through a real save, so through HA's JSON encoder too, a few seconds
+    after the change."""
+    registry = await _start(hass, hass_storage)
+    _light(hass, "light.a", "on", **ASKED)
+    await registry.async_record(ROOM, ["light.a"], {"light.a": "ctx-before"}, "ctx-ours", targets={"light.a": ASKED})
 
-    saved = await async_mock_restore_state_shutdown_restart(hass)
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
+    await hass.async_block_till_done()
 
-    assert saved.last_states[tracker.entity_id].extra_data.as_dict() == {"claims": {"light.a": claim}}
+    saved = hass_storage[STORAGE_KEY]["data"]
+    assert saved["claims"]["light.a"]["latest"]["context_id"] == "ctx-ours"
+    assert saved["rooms"][ROOM]["lights"] == ["light.a"]
 
 
-async def test_claims_come_back_after_a_restart(hass: HomeAssistant):
-    registry, _ = await _start(hass, {"light.a": _claim("ctx-ours")})
+async def test_a_mismatch_noticed_after_the_restart_is_saved(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    """So the grace isn't started afresh by the next restart."""
+    _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
+
+    registry._listener._poll(None)
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=SAVE_DELAY + 1))
+    await hass.async_block_till_done()
+
+    assert hass_storage[STORAGE_KEY]["data"]["claims"]["light.a"]["mismatch_since"]
+
+
+async def test_lights_going_unavailable_at_shutdown_keep_their_claims(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+):
+    """MQTT marks its lights unavailable as its connection closes."""
+    _light(hass, "light.a", "on", **ASKED)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
+    registry._save()
+
+    hass.set_state(CoreState.stopping)
+    _light(hass, "light.a", "unavailable")
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_FINAL_WRITE)
+    await hass.async_block_till_done()
+    hass.set_state(CoreState.running)
+
+    assert list(hass_storage[STORAGE_KEY]["data"]["claims"]) == ["light.a"]
+
+
+async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
     assert set(registry.all_records()) == {"light.a"}
+    assert registry.rooms_of("light.a") == [ROOM]
 
 
-async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant):
+async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """We asked for 200; it shows 90. Left alone at once, and an override
-    once the zone's poll has noted it and the grace has passed."""
+    once the poll has noted it and the grace has passed."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
 
-    registry, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
-    assert _status(hass, tracker, "light.a") == "mismatched"
-    await tracker.async_update()
+    assert _status(hass, registry, "light.a") == "mismatched"
+    registry._listener._poll(None)
     with after_the_grace():
-        assert _status(hass, tracker, "light.a") == "overridden"
+        assert _status(hass, registry, "light.a") == "overridden"
 
 
-async def test_a_light_overridden_before_the_restart_is_overridden_at_once(hass: HomeAssistant):
+async def test_a_light_overridden_before_the_restart_is_overridden_at_once(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """Its mismatch_since is restored with its claims."""
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
     claim = {**_claim("ctx-ours"), "mismatch_since": (dt_util.utcnow() - MISMATCH_GRACE).isoformat()}
 
-    _, tracker = await _start(hass, {"light.a": claim})
+    registry = await _start(hass, hass_storage, {"light.a": claim})
 
-    assert _status(hass, tracker, "light.a") == "overridden"
+    assert _status(hass, registry, "light.a") == "overridden"
 
 
-async def test_a_light_unchanged_across_the_restart_is_still_ours(hass: HomeAssistant):
+async def test_a_light_unchanged_across_the_restart_is_still_ours(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """Unchanged across the restart: ours, by value."""
     _light(hass, "light.a", "on", brightness=200, color_temp_kelvin=3000)
 
-    _, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
-    assert _status(hass, tracker, "light.a") == "controlled"
+    assert _status(hass, registry, "light.a") == "controlled"
 
 
-async def test_a_restored_claim_over_a_day_old_is_dropped(hass: HomeAssistant):
-    """The setup-time prune ran before the entity existed. The fresh claim
-    beside it rules out "nothing was restored"."""
-    registry, _ = await _start(
-        hass, {"light.fresh": _claim("ctx-1"), "light.stale": _claim("ctx-2", age=timedelta(days=2))}
+async def test_a_restored_claim_over_a_day_old_is_dropped(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    """Pruned at setup. The fresh claim beside it rules out "nothing was
+    restored"."""
+    registry = await _start(
+        hass, hass_storage, {"light.fresh": _claim("ctx-1"), "light.stale": _claim("ctx-2", age=timedelta(days=2))}
     )
 
     assert set(registry.all_records()) == {"light.fresh"}
 
 
-async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: HomeAssistant):
+async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """A reconnect (unavailable, unknown, on, as MQTT lights do) must not
     re-baseline the light as ours."""
-    registry, tracker = await _start(hass, {"light.a": _claim("ctx-ours")})
-    unsub = registry.async_start_listening(hass)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
 
     _light(hass, "light.a", "unavailable")
     _light(hass, "light.a", "unknown")
     _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
     await hass.async_block_till_done()
 
-    assert _status(hass, tracker, "light.a") == "mismatched"
+    assert _status(hass, registry, "light.a") == "mismatched"
     with freeze_time(dt_util.utcnow() + MISMATCH_GRACE, real_asyncio=True):
-        assert _status(hass, tracker, "light.a") == "overridden"
-    unsub()
+        assert _status(hass, registry, "light.a") == "overridden"
 
 
-async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: HomeAssistant):
+async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """The first light back being off, with siblings still unknown, must not
-    release the zone's restored claims."""
-    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
-    unsub = registry.async_start_listening(hass)
+    release the room's restored claims."""
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
 
     _light(hass, "light.a", "unavailable")
     _light(hass, "light.a", "unknown")
@@ -183,10 +190,9 @@ async def test_a_light_reconnecting_as_off_does_not_release_its_siblings(hass: H
     await hass.async_block_till_done()
 
     assert set(registry.all_records()) == {"light.a", "light.b"}
-    unsub()
 
 
-async def test_a_zone_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
+async def test_a_room_restored_dark_lets_go_of_its_claims(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """Its lights went off while HA wasn't watching (during a restart, a
     shutdown racing FLARE's own turn-off, a restore), so no on -> off ever
     arrives to release it, and every light would read overridden."""
@@ -195,17 +201,16 @@ async def test_a_zone_restored_dark_lets_go_of_its_claims(hass: HomeAssistant):
     released: list = []
     hass.bus.async_listen("flare_lights_released", released.append)
 
-    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     await hass.async_block_till_done()
 
     assert registry.all_records() == {}
     assert [e.data["lights"] for e in released] == [["light.a", "light.b"]]
 
 
-async def test_a_zone_restored_dark_waits_for_every_light_to_report(hass: HomeAssistant):
+async def test_a_room_restored_dark_waits_for_every_light_to_report(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """Lights reporting in after the claims came back, one at a time."""
-    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
-    unsub = registry.async_start_listening(hass)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
 
     _light(hass, "light.a", "unknown")
     _light(hass, "light.b", "off")
@@ -215,14 +220,28 @@ async def test_a_zone_restored_dark_waits_for_every_light_to_report(hass: HomeAs
     _light(hass, "light.a", "off")
     await hass.async_block_till_done()
     assert registry.all_records() == {}
-    unsub()
 
 
-async def test_a_zone_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant):
+async def test_a_room_restored_with_a_light_on_keeps_its_claims(hass: HomeAssistant, hass_storage: dict[str, Any]):
     _light(hass, "light.a", "on", **ASKED)
     _light(hass, "light.b", "off")
 
-    registry, _ = await _start(hass, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")})
     await hass.async_block_till_done()
 
     assert set(registry.all_records()) == {"light.a", "light.b"}
+
+
+async def test_each_room_restored_dark_is_released_on_its_own(hass: HomeAssistant, hass_storage: dict[str, Any]):
+    """A lit room keeps its claims while a dark one lets go of its own."""
+    _light(hass, "light.a", "on", **ASKED)
+    _light(hass, "light.b", "off")
+    rooms = {
+        "automation.lit": {"lights": ["light.a"], "last_seen": dt_util.utcnow().isoformat()},
+        "automation.dark": {"lights": ["light.b"], "last_seen": dt_util.utcnow().isoformat()},
+    }
+
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")}, rooms)
+    await hass.async_block_till_done()
+
+    assert set(registry.all_records()) == {"light.a"}

@@ -6,23 +6,25 @@ permalink: /dashboard/
 
 # Dashboard
 
-FLARE comes with a ready-made dashboard: a view for each schedule, and one for your zones. It
-builds itself from your schedules and zones each time it loads, so one you add later appears on
+FLARE comes with a ready-made dashboard: a view for each schedule, and one for your rooms. It
+builds itself from your schedules and rooms each time it loads, so one you add later appears on
 its own.
 
 Add it from **Settings → Dashboards → Add dashboard**: pick **FLARE Lighting**, then give it a
 name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 
 - **A schedule's view** shows the day's curve and every schedule and curve setting.
-- **Zones** starts with **All zones**: how many lights FLARE is driving across the house, how
-  many something else has taken over, and a **Clear** button for every zone at once. Below that
-  is each zone, by floor and area, laid out like Home Assistant's Lights dashboard: its
-  controlled and overridden counts, which lights are overridden, and a **Clear** button to hand
-  them back. A zone's name opens its device page. Beside the zones, **Activity** lists the last
-  24 hours of what the zones did, coloured by kind - blue when a zone takes its lights, amber
-  when something else overrides one, grey when a zone lets them go - and the buttons at its top
-  show one kind at a time. Selecting an entry opens that zone's device page. On a narrow screen,
-  Activity is a separate tab.
+- **Overrides** starts with **All lights**: how many lights FLARE is driving across the house, how
+  many something else has taken over, and **Clear all** to hand every light back at once. Below
+  that is each area with lights a room automation drives, by floor, laid out like Home
+  Assistant's Lights dashboard: a list of the area's lights, overridden ones first, headed by
+  its controlled and overridden counts and **Clear all** to hand them back. Each light shows its
+  status, what FLARE last asked it for and what it's showing, with its own **Clear**; press its
+  name to open the light. An area's name opens its page. Beside
+  the areas, **Activity** lists the last 24 hours of what the rooms did, coloured by kind - blue
+  when a room takes its lights, amber when something else overrides one, grey when a room lets
+  them go - and the buttons at its top show one kind at a time. On a narrow screen, Activity is
+  a separate tab.
 
 ![A schedule's view: the day's curve, a phase override, the schedule times, and
 the curve and transition values for each phase]({{ '/assets/img/dashboard-section.png' | relative_url }})
@@ -37,9 +39,9 @@ views:
   - title: Lighting
     strategy:
       type: custom:flare-schedule
-  - title: Zones
+  - title: Overrides
     strategy:
-      type: custom:flare-zone
+      type: custom:flare-lights
 ```
 
 Like the ready-made dashboard, both views find their own entities each time they load.
@@ -102,5 +104,5 @@ three-dot menu.
 
 {: .note }
 > Take control is one-way. Once you've taken control, the dashboard no longer rebuilds itself,
-> so it won't pick up changes to FLARE's layout, and schedules or zones you add later won't
+> so it won't pick up changes to FLARE's layout, and schedules or rooms you add later won't
 > appear on their own.

@@ -1,4 +1,4 @@
-"""FLARE: sets up the Schedules, Zones and Flares config entries, their
+"""FLARE: sets up the Schedules, Settings and Flares config entries, their
 platforms, and the dashboard front-end files. Code layout and the
 dependency rule are in CONTRIBUTING.md."""
 
@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from collections.abc import Callable
 from pathlib import Path
 
 from homeassistant.components.frontend import add_extra_js_url
@@ -13,8 +14,8 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -26,8 +27,10 @@ from .const import (
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
     ENTRY_TYPE_FLARES,
-    ENTRY_TYPE_ZONES,
+    ENTRY_TYPE_SETTINGS,
     EVENT_TYPE_TICK,
+    SETTINGS_ENTRY_TITLE,
+    SUBENTRY_TYPE_ZONE,
 )
 from homeassistant.helpers.start import async_at_started
 
@@ -38,14 +41,13 @@ from .services.handlers import async_setup_services, async_unload_services
 from .services.schedules import async_setup_schedule_services
 from .services.targets import async_setup_target_services
 from .flares.instance import flare_instances
-from .zone.instance import ZoneInstance, zone_instances
-from .zone.ticker import TickScheduler
-from .zone.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
+from .tracking.ticker import TickScheduler
+from .tracking.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
 SCHEDULE_PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.NUMBER, Platform.TIME, Platform.SWITCH, Platform.EVENT]
-ZONE_PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
+SETTINGS_PLATFORMS = [Platform.SENSOR, Platform.BUTTON]
 FLARE_PLATFORMS = [Platform.LIGHT]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -84,6 +86,23 @@ def www_fingerprint(directory: Path) -> str:
     return digest.hexdigest()[:12]
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Minor version 1 -> 2 is 2.0: the zones go, with their devices and
+    claims, and the Zones entry, still titled by its old default, becomes
+    Settings."""
+    if entry.version != 3:
+        return False
+    if entry.minor_version < 2:
+        if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
+            for subentry_id, subentry in list(entry.subentries.items()):
+                if subentry.subentry_type == SUBENTRY_TYPE_ZONE:
+                    hass.config_entries.async_remove_subentry(entry, subentry_id)
+            if entry.title == "Zones":
+                hass.config_entries.async_update_entry(entry, title=SETTINGS_ENTRY_TITLE)
+        hass.config_entries.async_update_entry(entry, minor_version=2)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_FLARES:
         entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
@@ -93,54 +112,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await hass.config_entries.async_forward_entry_setups(entry, FLARE_PLATFORMS)
         return True
 
-    is_zones = entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES
-
-    registry = ClaimRegistry(hass, entry)
-    # Pruning catches entities deleted outright, which the listener never
-    # sees go unavailable.
-    if is_zones:
-        await registry.async_prune_stale()
-
-        async def _periodic_prune(now) -> None:
-            await registry.async_prune_stale()
-
-        entry.async_on_unload(
-            async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
-        )
-        entry.async_on_unload(registry.async_start_listening(hass))
-
-    # After startup, since automations (which decide whether a blueprint
-    # is in use) may not have loaded yet during setup.
-    if is_zones:
-        async def _check_blueprint(_event=None) -> None:
-            await async_check_blueprint(hass)
-
-        entry.async_on_unload(async_at_started(hass, _check_blueprint))
-
-    if is_zones:
-        async_setup_services(hass, entry, registry)
-
     # Subentry changes don't reload on their own. This is the only reload,
     # which is why config_flow.py uses async_update_and_abort.
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
-    if is_zones:
-        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
-        scheduler = TickScheduler(
-            hass,
-            int(entry.options.get(CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL)),
-            float(entry.options.get(CONF_TICK_GAP, DEFAULT_TICK_GAP)),
-        )
-        entry.async_on_unload(scheduler.stop)
-
-        @callback
-        def _stop_ticking(_event: Event) -> None:
-            scheduler.stop()
-
-        entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
-        await hass.config_entries.async_forward_entry_setups(entry, ZONE_PLATFORMS)
-        for zone in zone_instances(entry):
-            entry.async_on_unload(scheduler.register(zone.subentry_id, zone.title, _ticker(hass, entry, zone)))
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
+        await _async_setup_settings(hass, entry)
         return True
 
     instances = schedule_instances(entry)
@@ -171,17 +148,86 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def _ticker(hass: HomeAssistant, entry: ConfigEntry, zone: ZoneInstance):
-    """Fires the zone's tick: a plain event naming its device, so it never
-    shows in Activity, history or the logbook."""
+async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """The claims, the services and the area ticks."""
+    registry = ClaimRegistry(hass)
+    await registry.async_load()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = registry
+
+    # Pruning catches entities deleted outright, which the listener never
+    # sees go unavailable.
+    async def _periodic_prune(now) -> None:
+        await registry.async_prune_stale()
+
+    entry.async_on_unload(
+        async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
+    )
+    entry.async_on_unload(registry.async_start_listening(hass))
+
+    # After startup, since automations (which decide whether a blueprint
+    # is in use) may not have loaded yet during setup.
+    async def _check_blueprint(_event=None) -> None:
+        await async_check_blueprint(hass)
+
+    entry.async_on_unload(async_at_started(hass, _check_blueprint))
+    async_setup_services(hass, entry, registry)
+
+    scheduler = TickScheduler(
+        hass,
+        int(entry.options.get(CONF_TICK_INTERVAL, DEFAULT_TICK_INTERVAL)),
+        float(entry.options.get(CONF_TICK_GAP, DEFAULT_TICK_GAP)),
+    )
+    entry.async_on_unload(scheduler.stop)
 
     @callback
-    def _fire() -> None:
-        device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, zone.subentry_id), entry.entry_id)
-        if device is not None:
-            hass.bus.async_fire(EVENT_TYPE_TICK, {"device_id": device.id})
+    def _stop_ticking(_event: Event) -> None:
+        scheduler.stop()
 
-    return _fire
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
+    await hass.config_entries.async_forward_entry_setups(entry, SETTINGS_PLATFORMS)
+    # Once the claim events are listening, so these are announced: rooms whose
+    # lights went dark while HA wasn't watching won't change again to be
+    # released, and claims from long ago are stale.
+    registry.release_settled_dark_rooms()
+    await registry.async_prune_stale()
+    entry.async_on_unload(_tick_areas(hass, scheduler))
+
+
+def _tick_areas(hass: HomeAssistant, scheduler: TickScheduler) -> Callable[[], None]:
+    """Ticks every area, kept in step with the area registry. Each tick is a
+    plain event naming the area, so it never shows in Activity, history or
+    the logbook. Returns the cleanup."""
+    registered: dict[str, Callable[[], None]] = {}
+
+    def _fire(area_id: str) -> Callable[[], None]:
+        @callback
+        def _tick() -> None:
+            hass.bus.async_fire(EVENT_TYPE_TICK, {"area_id": area_id})
+
+        return _tick
+
+    @callback
+    def _sync(_event: Event | None = None) -> None:
+        areas = {area.id: area.name for area in ar.async_get(hass).async_list_areas()}
+        for area_id in [a for a in registered if a not in areas]:
+            registered.pop(area_id)()
+        for area_id, name in areas.items():
+            if area_id in registered:
+                # Re-registered so a renamed area keeps its place in name order.
+                registered.pop(area_id)()
+            registered[area_id] = scheduler.register(area_id, name, _fire(area_id))
+
+    _sync()
+    unlisten = hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, _sync)
+
+    @callback
+    def _cleanup() -> None:
+        unlisten()
+        for unregister in registered.values():
+            unregister()
+        registered.clear()
+
+    return _cleanup
 
 
 _RELOADS_QUEUED = "reloads_queued"
@@ -210,9 +256,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return True
         return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
 
-    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_ZONES:
+    if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
         async_unload_services(hass)
-        unloaded = await hass.config_entries.async_unload_platforms(entry, ZONE_PLATFORMS)
+        unloaded = await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
         hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
         return unloaded
 

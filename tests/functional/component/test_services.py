@@ -1,4 +1,4 @@
-"""The services' contracts through a real HA: schemas, responses, zone
+"""The services' contracts through a real HA: schemas, responses, room
 validation and registration. The planning logic itself is unit tested."""
 
 from __future__ import annotations
@@ -8,8 +8,7 @@ import voluptuous as vol
 import yaml
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import device_registry as dr
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.services.handlers import async_unload_services
@@ -18,7 +17,6 @@ from custom_components.flare.services.targets import async_setup_target_services
 from tests.functional.component.harness import (
     CT,
     apply_lighting,
-    claims_check,
     set_light,
 )
 from tests.support import COMPONENT
@@ -141,10 +139,10 @@ async def test_compute_lighting_groups_accepts_an_explicit_null_rgb_color(setup_
         ("compute_lighting_groups", {"brightness": 200, "color_temp_kelvin": 4000}),
         ("apply_lighting", {"brightness": 200, "color_temp_kelvin": 4000, "transition": 0}),
         ("turn_off", {}),
-        ("claims_check", {"zone_device_id": "zone"}),
-        ("claims_record", {"zone_device_id": "zone"}),
-        ("claims_clear", {"zone_device_id": "zone"}),
-        ("claims_override", {"zone_device_id": "zone"}),
+        ("claims_check", {}),
+        ("claims_record", {"room_id": "automation.room"}),
+        ("claims_clear", {}),
+        ("claims_override", {"room_id": "automation.room"}),
     ],
 )
 async def test_the_lighting_and_claims_services_take_lights_only(setup_integration: HomeAssistant, service, data):
@@ -188,25 +186,6 @@ async def test_compute_scene_coverage_reports_covered_and_uncovered_entities(set
     assert result["scene_active"] is True
     assert result["covered_entities"] == ["light.a"]
     assert result["uncovered_entities"] == ["light.b"]
-
-
-async def test_zone_device_id_rejects_a_nonexistent_device(setup_integration: HomeAssistant):
-    """A bad device_id is a mistake, not "untracked"."""
-    hass = setup_integration
-    with pytest.raises(ServiceValidationError):
-        await claims_check(hass, ["light.a"], device="not_a_real_device_id")
-
-
-async def test_zone_device_id_rejects_a_device_that_isnt_a_zone(setup_integration: HomeAssistant):
-    """Nor any device that isn't a zone."""
-    hass = setup_integration
-    entry = MockConfigEntry(domain="not_flare")
-    entry.add_to_hass(hass)
-    other_device = dr.async_get(hass).async_get_or_create(
-        config_entry_id=entry.entry_id, identifiers={("not_flare", "something_else")}
-    )
-    with pytest.raises(ServiceValidationError):
-        await claims_check(hass, ["light.a"], device=other_device.id)
 
 
 async def test_the_services_registered_are_exactly_the_ones_services_yaml_documents(setup_integration: HomeAssistant):

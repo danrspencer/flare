@@ -1,5 +1,4 @@
-"""A room with Zone left empty: no override protection, and a tick on the
-minute in place of the zone's. docs/reference/blueprint.md#turning-override-protection-off"""
+"""Override Protection. docs/reference/blueprint.md#turning-override-protection-off"""
 
 from __future__ import annotations
 
@@ -8,7 +7,7 @@ from datetime import timedelta
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
-from tests.functional.blueprint.harness import add_zone, light, setup_room_automation
+from tests.functional.blueprint.harness import light, setup_room_automation
 
 
 async def _a_minute_later(hass) -> None:
@@ -16,28 +15,30 @@ async def _a_minute_later(hass) -> None:
     await hass.async_block_till_done()
 
 
-async def test_it_ticks_on_the_minute_and_tracks_nothing(hass, apply_lighting_calls):
+async def test_with_protection_on_writes_name_the_automation_and_its_lights(hass, apply_lighting_calls):
+    light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
+    light(hass, "light.b", "off")
+    await hass.async_block_till_done()
+    await setup_room_automation(hass, room_target={"entity_id": ["light.a", "light.b"]})
+
+    await _a_minute_later(hass)
+
+    assert apply_lighting_calls[-1].data["room_id"] == "automation.room"
+    assert sorted(apply_lighting_calls[-1].data["room_entities"]) == ["light.a", "light.b"]
+
+
+async def test_with_protection_off_it_tracks_nothing(hass, apply_lighting_calls):
     light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
     await hass.async_block_till_done()
-    await setup_room_automation(hass, room_target={"entity_id": "light.a"}, zoned=False)
+    await setup_room_automation(hass, room_target={"entity_id": "light.a"}, override_protection=False)
 
     await _a_minute_later(hass)
 
     assert apply_lighting_calls and apply_lighting_calls[-1].data["entities"] == ["light.a"]
-    assert apply_lighting_calls[-1].data["zone_device_id"] is None
+    assert apply_lighting_calls[-1].data["room_id"] is None
 
 
-async def test_a_room_with_a_zone_ticks_only_on_the_zones_tick(hass, apply_lighting_calls):
-    light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
-    await hass.async_block_till_done()
-    await setup_room_automation(hass, room_target={"entity_id": "light.a"}, zone=add_zone(hass, ticks=False))
-
-    await _a_minute_later(hass)
-
-    assert apply_lighting_calls == []
-
-
-async def test_lights_handed_to_a_scene_have_no_claims_to_release(
+async def test_with_protection_off_lights_handed_to_a_scene_have_no_claims_to_release(
     hass, apply_lighting_calls, scene_turn_on_calls, claims_clear_calls
 ):
     light(hass, "light.covered", "on")
@@ -48,7 +49,7 @@ async def test_lights_handed_to_a_scene_have_no_claims_to_release(
         hass,
         room_target={"entity_id": ["light.covered", "light.uncovered"]},
         evening_scene="scene.evening_scene",
-        zoned=False,
+        override_protection=False,
     )
 
     hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})

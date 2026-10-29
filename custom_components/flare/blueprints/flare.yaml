@@ -27,27 +27,12 @@ blueprint:
           filter:
             - integration: flare
               model: Schedule
-    zone:
-      name: Zone
-      description: >
-        The FLARE zone this room belongs to. It records which lights FLARE
-        is driving, so a light someone else changes is left alone. Leave it
-        empty to turn that off for this room.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
-      # Optional: without a zone the room isn't tracked, and ticks on the
-      # minute instead of the zone's spaced tick.
-      default: null
-      selector:
-        device:
-          filter:
-            - integration: flare
-              model: Zone
     room_target:
       name: Lights & Occupancy
       description: >
         Entity, device, area, floor, or label - lights within it are
         controlled, occupancy and motion sensors within it decide when (see
-        Sensors From Areas, under Triggers).
+        Sensors From Areas, under Settings).
         [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
       selector:
         target:
@@ -70,6 +55,17 @@ blueprint:
           min: 0
           max: 3600
           unit_of_measurement: seconds
+    extra_triggers:
+      name: Additional Triggers (Optional)
+      description: >
+        Entities that make the room update as soon as they change, such as
+        an entity Scene Template or Brightness Template depends on. They
+        only adjust lights that are already on, and never switch one on.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+      default: []
+      selector:
+        entity:
+          multiple: true
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
@@ -85,7 +81,7 @@ blueprint:
             exclusions below - those only fill in entities it doesn't
             already mention.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
           default: "{{ {} }}"
@@ -133,7 +129,7 @@ blueprint:
             win over the per-phase settings below - those only fill in
             entities it doesn't already mention.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
@@ -201,7 +197,7 @@ blueprint:
             returns one - they're the fallback for phases it doesn't
             cover.
             If it reads another entity, add that entity to Additional
-            Triggers, under Triggers, so the room updates as soon as it
+            Triggers, so the room updates as soon as it
             changes.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
@@ -231,32 +227,6 @@ blueprint:
           selector:
             entity:
               domain: scene
-    triggers:
-      name: Triggers
-      icon: mdi:lightning-bolt-outline
-      collapsed: true
-      input:
-        use_area_sensors:
-          name: Sensors From Areas
-          description: >
-            When disabled, occupancy and motion sensors won't be inferred
-            from the areas, floors, devices or labels in Lights & Occupancy.
-            Only explicitly selected sensors will be used.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#triggers).
-          default: true
-          selector:
-            boolean: {}
-        extra_triggers:
-          name: Additional Triggers (Optional)
-          description: >
-            Entities that make the room update as soon as they change, such as
-            an entity Scene Template or Brightness Template depends on. They
-            only adjust lights that are already on, and never switch one on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            entity:
-              multiple: true
     timing:
       name: Transitions
       icon: mdi:timer-outline
@@ -289,11 +259,31 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
-    colour:
-      name: Colour
-      icon: mdi:palette
+    settings:
+      name: Settings
+      icon: mdi:cog-outline
       collapsed: true
       input:
+        override_protection:
+          name: Override Protection
+          description: >
+            Leaves a light alone once something else changes it, until all of
+            the room's lights are off. Turn it off for a room whose bulbs report
+            something other than what they show.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#override-protection).
+          default: true
+          selector:
+            boolean:
+        use_area_sensors:
+          name: Sensors From Areas
+          description: >
+            When disabled, occupancy and motion sensors won't be inferred
+            from the areas, floors, devices or labels in Lights & Occupancy.
+            Only explicitly selected sensors will be used.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+          default: true
+          selector:
+            boolean: {}
         rgb_phases:
           name: Prefer RGB During
           description: >
@@ -303,7 +293,7 @@ blueprint:
             blue-tinted rather than a clean white, so those phases are
             off by default - Evening/Night's warmer values don't have
             that problem.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#colour).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#prefer-rgb-during).
           default: [Evening, Night]
           selector:
             select:
@@ -316,8 +306,14 @@ max_exceeded: silent
 # Available to triggers and conditions, unlike variables:.
 trigger_variables:
   room_target: !input room_target
-  zone: !input zone
   use_area_sensors: !input use_area_sensors
+  # The first area the room names, whose tick it follows; none if it names
+  # no area. Trigger templates can't look anything up, so only an area
+  # named directly counts.
+  tick_area: >-
+    {% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %}
+    {% set areas = [areas] if areas is string else (areas or []) %}
+    {{ areas | first if areas | length > 0 else none }}
 
 trigger:
   # The schedule's Phase, which fires on a real phase change (and once at
@@ -332,20 +328,20 @@ trigger:
         - Day
         - Evening
         - Night
-  # The zone's tick, spaced from every other zone's. The curve is flat in
+  # The area's tick, spaced from every other area's. The curve is flat in
   # Morning/Night, so phase_change goes quiet there. Also runs self-heal.
   - id: tick
     trigger: event
     event_type: flare_tick
     event_data:
-      device_id: !input zone
-    enabled: "{{ zone is not none }}"
-  # Without a zone, the same tick on the minute. Every zone-less room
-  # writes in the same second, which is what zone ticks spread out.
+      area_id: "{{ tick_area }}"
+    enabled: "{{ tick_area is not none }}"
+  # A room naming no area ticks on the minute instead. Every such room
+  # writes in the same second, which is what area ticks spread out.
   - id: tick
     trigger: time_pattern
     minutes: "*"
-    enabled: "{{ zone is none }}"
+    enabled: "{{ tick_area is none }}"
   - id: extra
     platform: state
     entity_id: !input extra_triggers
@@ -407,6 +403,10 @@ trigger:
 
 variables:
   schedule: !input schedule
+  # Who's writing, for override protection: this automation, or no one.
+  # The room's lights, released together, are resolved_entities.
+  override_protection_on: !input override_protection
+  room_id: "{{ this.entity_id if override_protection_on else none }}"
   # The schedule device's one sensor, which carries the curve.
   adaptive_sensor: >
     {{ device_entities(schedule) | select('match', '^sensor\\.') | first | default(none) }}
@@ -687,7 +687,8 @@ action:
             data:
               entities: "{{ turn_off_entities }}"
               transition: !input motion_off_transition
-              zone_device_id: !input zone
+              room_id: "{{ room_id }}"
+              room_entities: "{{ resolved_entities }}"
           # Idle lights are dimmed instead. Does nothing with no idle brightness.
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
@@ -703,7 +704,8 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: !input motion_off_transition
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  zone_device_id: !input zone
+                  room_id: "{{ room_id }}"
+                  room_entities: "{{ resolved_entities }}"
       # Self-heal: on a tick, with the room empty, retry turn-offs that didn't
       # land. Exclusive of default:, which would work from the same stale list.
       - alias: "Self-heal: retry an earlier turn-off that didn't land"
@@ -732,7 +734,8 @@ action:
             data:
               entities: "{{ entities_still_on }}"
               transition: !input motion_off_transition
-              zone_device_id: !input zone
+              room_id: "{{ room_id }}"
+              room_entities: "{{ resolved_entities }}"
     default:
       - alias: "Work out which lights the scene takes, if there is one"
         if:
@@ -781,7 +784,8 @@ action:
               rgb_color: "{{ rgb_color }}"
               transition: "{{ script_transition }}"
               prefer_rgb_color: "{{ prefer_rgb_color }}"
-              zone_device_id: !input zone
+              room_id: "{{ room_id }}"
+              room_entities: "{{ resolved_entities }}"
       - alias: "Only motion, a manual run, or a room already in use may switch a light on"
         if:
           - condition: template
@@ -819,18 +823,18 @@ action:
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"
                   prefer_rgb_color: "{{ prefer_rgb_color }}"
-                  zone_device_id: !input zone
+                  room_id: "{{ room_id }}"
+                  room_entities: "{{ resolved_entities }}"
                   # A manual run forces the tick through override protection.
                   force: "{{ manual_run }}"
       # Bookkeeping only, so outside the gate.
       - alias: "Release lights handed off to a scene or another owner"
         if:
           - condition: template
-            alias: "There are lights to release, in a zone"
+            alias: "There are lights to release, with override protection on"
             value_template: >-
-              {{ zone is not none and handed_off_entities | length > 0 }}
+              {{ room_id is not none and handed_off_entities | length > 0 }}
         then:
           - action: flare.claims_clear
             data:
               entities: "{{ handed_off_entities }}"
-              zone_device_id: !input zone

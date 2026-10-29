@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-from custom_components.flare.zone.ticker import next_tick, slot_offsets
+from custom_components.flare.tracking.ticker import next_tick, slot_offsets
 
 
 def _at(hour, minute, second=0):
@@ -8,14 +8,14 @@ def _at(hour, minute, second=0):
 
 
 class TestSlotOffsets:
-    def test_zones_are_a_gap_apart_starting_on_the_boundary(self):
+    def test_areas_are_a_gap_apart_starting_on_the_boundary(self):
         assert slot_offsets(3, 1, 2) == [timedelta(0), timedelta(seconds=2), timedelta(seconds=4)]
 
-    def test_the_gap_shrinks_so_every_zone_fits_in_the_interval(self):
-        # 60 zones one second apart fill the minute; 120 can't.
+    def test_the_gap_shrinks_so_every_area_fits_in_the_interval(self):
+        # 60 areas one second apart fill the minute; 120 can't.
         assert slot_offsets(120, 1, 1)[-1] == timedelta(seconds=59.5)
 
-    def test_no_zones(self):
+    def test_no_areas(self):
         assert slot_offsets(0, 1, 1) == []
 
 

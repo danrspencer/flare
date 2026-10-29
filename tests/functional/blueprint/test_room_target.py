@@ -1,4 +1,4 @@
-"""Resolving Room Target into lights, occupancy sensors and a zone."""
+"""Resolving Room Target into lights and occupancy sensors."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from tests.functional.blueprint.harness import (
     add_flare_light,
     light,
     occupancy,
-    add_zone,
     setup_room_automation,
 )
 
@@ -212,24 +211,20 @@ class TestRoomTargetResolution:
 class TestOverrideDetection:
     """docs/reference/blueprint.md#why-didnt-my-light-change"""
 
-    async def test_apply_lighting_names_the_picked_zone_whatever_area_the_lights_are_in(
-        self, hass, apply_lighting_calls
-    ):
+    async def test_apply_lighting_names_the_automation_as_the_room(self, hass, apply_lighting_calls):
         kitchen = ar.async_get(hass).async_get_or_create("Kitchen")
-        add_zone(hass, kitchen.id, "kitchen")
-        study = add_zone(hass, slug="study")
         er.async_get(hass).async_get_or_create("light", "test", "light_a", suggested_object_id="a")
         er.async_get(hass).async_update_entity("light.a", area_id=kitchen.id)
         light(hass, "light.a", "on")
         await hass.async_block_till_done()
-        await setup_room_automation(hass, room_target={"area_id": kitchen.id}, zone=study)
+        await setup_room_automation(hass, room_target={"area_id": kitchen.id})
 
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
-        assert calls and calls[-1].data["zone_device_id"] == study
+        assert calls and calls[-1].data["room_id"] == "automation.room"
         assert calls[-1].data["force"] is False
 
 

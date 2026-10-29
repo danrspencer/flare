@@ -7,6 +7,57 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.0.0] - Unreleased
+
+**Zones are gone.** FLARE now keeps track of which lights it controls itself, rather than in a zone
+per room, so there's nothing to set up for each room. Updating removes your zones and their
+devices. This only affects you if you'd built something of your own on FLARE's services using
+zones; rooms from the blueprint carry on as before. The details are under **Changed**.
+
+### Added
+
+- **FLARE speaks German**, in setup and on the dashboard, following your Home Assistant language. Thanks to
+  @stefanr09 for the translation ([#301](https://github.com/danrspencer/flare/issues/301)). The dashboard's cards
+  now translate their own text, so other languages can follow.
+- **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
+  is setting it or something else has taken it over, with history.
+- **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for
+  and what the light is showing, and a **Clear** for that light alone.
+
+### Changed
+
+- **Setup is simpler.** It starts with your schedules, then asks whether to set up room
+  automations now. Already have automations controlling your lights? Skip it, then move your
+  rooms over one at a time with **Set up area**. Setting up an area gives it an automation, and
+  then flares are a page of their own: what they are, and the rooms to add them for, or **Skip**. **Skip setup** is gone: setup always sets up your schedules.
+- **The blueprint's inputs are regrouped.** **Override Protection**, **Sensors From Areas** and
+  **Prefer RGB During** are under a new **Settings** section, and **Additional Triggers** is
+  back beside **Lights & Occupancy**. Existing rooms keep their values.
+- **Zones are gone.** FLARE keeps one record of the lights it controls, across every room, and
+  lets a room's lights go once they're all off. Updating removes your zones and their devices,
+  and FLARE takes every room back on its next update.
+  - The blueprint's **Zone** input is replaced by **Override Protection**, on by default. Turn it
+    off in any room where you'd left **Zone** empty.
+  - A room updates on the tick of the first area in its **Lights & Occupancy**. A room naming no
+    area updates every minute, on the minute.
+  - **FLARE → Zones** is now **FLARE → Settings**, where the options are.
+  - The dashboard's Zones view is now **Overrides**, with each area's lights, counts and **Clear all**.
+  - Two automations driving the same light no longer treat each other's changes as overrides,
+    so there's no more notification about a light in two zones.
+- **If you call FLARE's services or listen for its events yourself**, these changed:
+  - `zone_device_id` is replaced by `room_id`, usually `{{ this.entity_id }}`, and an optional
+    `room_entities`, on `flare.apply_lighting`, `flare.turn_off`,
+    `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
+    `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
+    returns `rooms` instead of `zone`.
+  - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
+  - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
+    `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
+    `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
+  - Each zone's entities are gone. `button.flare_clear` clears every claim, each light's
+    status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
+    all.
+
 ## [1.2.0] - Unreleased
 
 ### Added
