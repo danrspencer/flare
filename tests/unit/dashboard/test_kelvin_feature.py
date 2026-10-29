@@ -1,5 +1,5 @@
 """The Kelvin card feature: which entities it's offered for, and that the
-fill is the colour of the value, via the card's own conversion."""
+fill is the colour of the value as the chart draws it."""
 
 import pytest
 
@@ -26,14 +26,16 @@ def result():
     js = run_js(
         f"""
 const {{ supportsKelvinFeature, sliderColor }} = await import({js_path(WWW / "flare-kelvin-feature.js")});
-const {{ kelvinToRgb }} = await import({js_path(WWW / "flare-curve-card.js")});
+const {{ kelvinToRgb, displayRgb }} = await import({js_path(WWW / "flare-curve-card.js")});
 const hass = {{ states: input.states }};
 const entry = globalThis.window.customCardFeatures.find((f) => f.type === 'flare-kelvin-feature');
 return {{
   supported: Object.keys(input.states).map((id) => supportsKelvinFeature(hass, {{ entity_id: id }})),
   noContext: [supportsKelvinFeature(hass, undefined), supportsKelvinFeature(hass, {{}})],
   colors: input.kelvins.map(sliderColor),
-  rgbs: input.kelvins.map(kelvinToRgb),
+  rgbs: input.kelvins.map((k) => displayRgb(kelvinToRgb(k))),
+  onDark: sliderColor(6500, {{}}, {{}}, hass, [28, 28, 28]),
+  rawDaylight: kelvinToRgb(6500),
   feature: entry && {{ name: entry.name, hasIsSupported: typeof entry.isSupported === 'function' }},
 }};""",
         {"states": states, "kelvins": PAINT_KELVINS},
@@ -55,6 +57,10 @@ def test_not_offered_without_an_entity(result):
 def test_the_fill_is_the_colour_of_the_value(result):
     assert result["colors"] == ["rgb({}, {}, {})".format(*rgb) for rgb in result["rgbs"]]
     assert len(set(result["colors"])) == len(PAINT_KELVINS)
+
+
+def test_a_dark_card_shows_daylight_as_it_is(result):
+    assert result["onDark"] == "rgb({}, {}, {})".format(*result["rawDaylight"])
 
 
 def test_fill_and_track_use_the_same_colour_function():
