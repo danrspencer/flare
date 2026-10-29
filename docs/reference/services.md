@@ -317,7 +317,7 @@ data:
 
 ### Response data
 
-Optional. `cleared` lists the entities passed in.
+Optional. `cleared` lists the entities that had a claim to discard.
 
 ## `flare.claims_override`
 

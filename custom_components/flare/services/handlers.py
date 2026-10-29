@@ -472,9 +472,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
         stuck "overridden"."""
-        entities = call.data["entities"]
-        registry.async_clear(entities)
-        return {"cleared": entities}
+        return {"cleared": registry.async_clear(call.data["entities"])}
 
     async def compute_scene_coverage_service(call: ServiceCall) -> ServiceResponse:
         """flare.compute_scene_coverage - see services.yaml."""
