@@ -1254,7 +1254,7 @@ Until the first release, the beta is also the root.
 for the directory and `add_extra_js_url`s one module, `flare-loader.js`,
 which imports each module that registers something; modules that
 register nothing (`flare-entities.js`, `flare-section.js`,
-`flare-lights-section.js`, `flare-value-slider.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
+`flare-lights-section.js`, `flare-value-slider.js`, `flare-slider-colour.js`, `flare-clear-card.js`, `flare-area-lights-card.js`,
 `flare-activity-card.js`) are pulled in by the imports of those that do.
 `test_every_module_that_registers_something_is_loaded` follows the
 imports from the loader.

@@ -12,7 +12,7 @@
  * stock slider's colour.
  */
 
-import { kelvinCss } from './flare-curve-card.js';
+import { kelvinCss } from './flare-slider-colour.js';
 import { defineValueSlider } from './flare-value-slider.js';
 
 /** The Kelvin to borrow a colour from, or null for the theme colour. */

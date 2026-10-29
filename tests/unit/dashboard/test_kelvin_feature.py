@@ -26,7 +26,8 @@ def result():
     js = run_js(
         f"""
 const {{ supportsKelvinFeature, sliderColor }} = await import({js_path(WWW / "flare-kelvin-feature.js")});
-const {{ kelvinToRgb, displayRgb }} = await import({js_path(WWW / "flare-curve-card.js")});
+const {{ kelvinToRgb }} = await import({js_path(WWW / "flare-curve-card.js")});
+const {{ displayRgb }} = await import({js_path(WWW / "flare-slider-colour.js")});
 const hass = {{ states: input.states }};
 const entry = globalThis.window.customCardFeatures.find((f) => f.type === 'flare-kelvin-feature');
 return {{

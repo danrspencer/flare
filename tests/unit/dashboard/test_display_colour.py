@@ -1,5 +1,5 @@
 """Kelvin colours on the sliders: pale ones are pulled away from the
-card's background so they stay visible. The chart keeps the true colour."""
+card's background so they stay visible."""
 
 import pytest
 
@@ -17,20 +17,19 @@ DARK = [28, 28, 28]
 def result():
     return run_js(
         f"""
-const m = await import({js_path(WWW / "flare-curve-card.js")});
+const m = await import({js_path(WWW / "flare-slider-colour.js")});
+const {{ kelvinToRgb }} = await import({js_path(WWW / "flare-curve-card.js")});
 const shown = (bg) => input.kelvins.map((k) => {{
-  const raw = m.kelvinToRgb(k);
+  const raw = kelvinToRgb(k);
   const out = m.displayRgb(raw, bg);
   return {{ raw, out, before: m.contrastRatio(raw, bg), after: m.contrastRatio(out, bg) }};
 }});
-const day = [{{ t: 0, brightness: 255, kelvin: 6500 }}, {{ t: 60, brightness: 255, kelvin: 6500 }}];
 return {{
   min: m.MIN_CARD_CONTRAST,
   white: shown(input.white),
   dark: shown(input.dark),
-  defaultIsWhite: m.displayRgb(m.kelvinToRgb(6500)),
-  onWhite: m.displayRgb(m.kelvinToRgb(6500), input.white),
-  chart: m.curveFillSvg(day, (t) => t, (b) => b, 0, 60, 'g'),
+  defaultIsWhite: m.displayRgb(kelvinToRgb(6500)),
+  onWhite: m.displayRgb(kelvinToRgb(6500), input.white),
   css: m.kelvinCss(6500, input.white),
   noDom: m.cardBackgroundRgb(null),
 }};""",
@@ -69,10 +68,6 @@ def test_darkening_keeps_the_hue(result):
 
 def test_a_dark_card_needs_no_adjustment(result):
     assert all(c["out"] == c["raw"] for c in result["dark"])
-
-
-def test_the_chart_draws_the_true_colour(result):
-    assert 'stop-color="#fffefa"' in result["chart"]
 
 
 def test_kelvin_css_is_the_adjusted_colour(result):

@@ -8,7 +8,7 @@
  * which this mirrors.
  */
 
-import { cardBackgroundRgb } from './flare-curve-card.js';
+import { cardBackgroundRgb } from './flare-slider-colour.js';
 
 const SLIDER_TAG = 'ha-control-slider';
 
