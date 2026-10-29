@@ -154,7 +154,10 @@ mise run sandbox:reset
   many bulbs each room has. Every room also gets a sensor with an occupancy `binary_sensor` and a **Presence**
   switch to set it, so you walk into the kitchen by turning on `switch.kitchen_sensor_presence`, and an
   illuminance `sensor` with a **Daylight** number to set it (0 lx until you move it). Bulbs (`light.kitchen_bulb_1` ...)
-  take brightness and colour temperature and keep their state across restarts. A room with `tv: true` also
+  take brightness and colour temperature and keep their state across restarts. Each bulb's **Power** switch
+  (`switch.kitchen_bulb_1_power`) and its room's **Wall switch** (`switch.kitchen_wall_switch`) cut its power,
+  making it unavailable; when power comes back it boots on at 255 and 2700K and ignores commands for a second,
+  as a real bulb does. A room with `tv: true` also
   gets a TV that only turns on and off (`media_player.living_room_tv`). The fake devices are
   `sandbox/custom_components/sandbox_house/`.
 - Home Assistant runs from `.sandbox/`, rebuilt from `sandbox/` on every start (FLARE and the fake house are

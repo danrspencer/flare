@@ -77,6 +77,12 @@ def prepare(config: Path, reset: bool, hacs: bool) -> None:
             "key": "http",
             "data": {"stable": stable, "pending": None, "yaml_migration_done": True},
         }))
+    else:
+        # A house made on another SANDBOX_PORT follows the current one.
+        stored = json.loads(http.read_text())
+        if stored["data"]["stable"].get("server_port") != PORT:
+            stored["data"]["stable"]["server_port"] = PORT
+            http.write_text(json.dumps(stored))
     components = config / "custom_components"
     components.mkdir(exist_ok=True)
     links = {"sandbox_house": HOUSE} if hacs else {"flare": FLARE, "sandbox_house": HOUSE}
