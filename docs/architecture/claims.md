@@ -1,6 +1,6 @@
 ---
 title: Claims and override protection
-parent: How it works
+parent: Architecture
 nav_order: 6
 permalink: /architecture/claims/
 ---
@@ -9,7 +9,7 @@ permalink: /architecture/claims/
 {: .no_toc }
 
 {: .internals }
-> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
 > Nothing here is needed to use FLARE.
 
 Override protection is FLARE leaving a light alone once someone else has

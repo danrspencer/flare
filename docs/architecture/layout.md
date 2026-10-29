@@ -1,6 +1,6 @@
 ---
 title: Code layout
-parent: How it works
+parent: Architecture
 nav_order: 1
 permalink: /architecture/layout/
 ---
@@ -9,7 +9,7 @@ permalink: /architecture/layout/
 {: .no_toc }
 
 {: .internals }
-> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
 > Nothing here is needed to use FLARE.
 
 ## The package

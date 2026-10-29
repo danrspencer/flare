@@ -1,7 +1,7 @@
 # Contributing
 
 Not needed just to install and use this — see [README.md](README.md) for that. This is for working on the
-code itself. For how the code works inside, with diagrams, start at [How it works](https://danrspencer.github.io/flare/architecture/) (`docs/architecture/`).
+code itself. For how the code works inside, with diagrams, start at [Architecture](https://danrspencer.github.io/flare/architecture/) (`docs/architecture/`).
 
 ## Repository layout
 

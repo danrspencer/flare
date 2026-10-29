@@ -20,12 +20,12 @@ you're in:
 | `docs/guides/` | someone using it who wants more from it | what do I write to make it do this |
 | `docs/reference/` | someone looking something up | what does this input, entity or service do |
 | `CONTRIBUTING.md`, `CLAUDE.md` | someone changing the code | how it works, and why it's shaped this way |
-| `docs/architecture/` (How it works) | someone about to change the code, or curious | how the pieces fit together and hook into Home Assistant |
+| `docs/architecture/` (Architecture) | someone about to change the code, or curious | how the pieces fit together and hook into Home Assistant |
 
 ## The rules
 
 **1. Site pages are for end users. Design rationale belongs in the code
-comment or CLAUDE.md.** How it works (`docs/architecture/`) is the one
+comment or CLAUDE.md.** Architecture (`docs/architecture/`) is the one
 exception, written for contributors, and the rules below about audience
 and the lexicon don't bind it. Nothing else on the site links into it. Not "we chose X because Y", not "this is what
 makes Z work", not "the trade-off is". A reader wants to know what it

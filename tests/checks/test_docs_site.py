@@ -146,8 +146,8 @@ def test_every_link_between_pages_lands_on_a_heading_that_exists():
     assert dead == [], f"links to headings that don't exist: {dead}"
 
 
-def test_no_user_page_links_into_how_it_works():
-    """The How it works pages are for contributors: they may link out to the
+def test_no_user_page_links_into_architecture():
+    """The Architecture pages are for contributors: they may link out to the
     rest of the site, but nothing written for users links in."""
     internals = DOCS / "architecture"
     offending = []
@@ -158,7 +158,7 @@ def test_no_user_page_links_into_how_it_works():
         # Not [^)\s]: a {{ site.baseurl }} link has spaces in it.
         links = re.findall(r"\]\(([^)]+)\)", text) + re.findall(r'href="([^"]+)"', text)
         offending += [f"{page.relative_to(DOCS)}: {link}" for link in links if "/architecture" in link]
-    assert offending == [], f"user pages linking into How it works: {offending}"
+    assert offending == [], f"user pages linking into Architecture: {offending}"
 
 
 # --- Inbound links to the blueprint reference ---------------------------

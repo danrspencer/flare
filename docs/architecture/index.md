@@ -1,5 +1,5 @@
 ---
-title: How it works
+title: Architecture
 nav_order: 8
 has_children: true
 permalink: /architecture/

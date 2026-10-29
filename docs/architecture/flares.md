@@ -1,6 +1,6 @@
 ---
 title: How flares work
-parent: How it works
+parent: Architecture
 nav_order: 7
 permalink: /architecture/flares/
 ---
@@ -9,7 +9,7 @@ permalink: /architecture/flares/
 {: .no_toc }
 
 {: .internals }
-> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
 > Nothing here is needed to use FLARE.
 
 A flare (`light.<name>_flare`) is a light that fronts a room automation,

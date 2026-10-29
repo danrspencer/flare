@@ -1,6 +1,6 @@
 ---
 title: The event loop
-parent: How it works
+parent: Architecture
 nav_order: 2
 permalink: /architecture/event-loop/
 ---
@@ -9,7 +9,7 @@ permalink: /architecture/event-loop/
 {: .no_toc }
 
 {: .internals }
-> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
 > Nothing here is needed to use FLARE.
 
 Home Assistant runs one asyncio event loop, and nearly everything FLARE

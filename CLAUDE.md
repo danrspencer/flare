@@ -35,18 +35,19 @@ touching `docs/`). Everything else is the site in `docs/`, published to
 <https://danrspencer.github.io/flare/> (see "Versioned docs"): the
 quickstart, playground and dashboard pages, `guides/` (how to do more,
 with worked examples), `reference/` (the contract only) and
-`architecture/` (**How it works**: the internals, with Mermaid diagrams,
-for contributors and the curious). How it works describes the system as
+`architecture/` (**Architecture**: the internals, with Mermaid diagrams,
+for contributors and the curious; called that, not "How it works", so
+casual readers don't click it - user's call). It describes the system as
 it is, links to CLAUDE.md for the why, and changes with the code it
 describes. Each of its pages opens with a banner saying nobody needs it to
 use FLARE. **It may link out to the rest of the site and to code, but
 nothing else on the site links in** (user's call);
-`test_no_user_page_links_into_how_it_works` enforces it.
+`test_no_user_page_links_into_architecture` enforces it.
 `jekyll-redirect-from` keeps old URLs working, so keep the
 `redirect_from` lines. These are **site pages, not GitHub pages**: front
 matter goes straight in the files, with no build-time generation step.
 
-**Design rationale never goes on a user-facing site page** (How it works
+**Design rationale never goes on a user-facing site page** (Architecture
 may say why a mechanism is shaped as it is). It has happened three
 times (`dashboard.html`, the homepage, `blueprint.md` grown to 300 lines
 of rationale ahead of its reference table). A decision worth recording

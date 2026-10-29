@@ -1,6 +1,6 @@
 ---
 title: The room automation
-parent: How it works
+parent: Architecture
 nav_order: 4
 permalink: /architecture/room-automation/
 ---
@@ -9,7 +9,7 @@ permalink: /architecture/room-automation/
 {: .no_toc }
 
 {: .internals }
-> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Part of [Architecture]({{ site.baseurl }}/architecture/), for contributors and the curious.
 > Nothing here is needed to use FLARE.
 
 `custom_components/flare/blueprints/flare.yaml` is the blueprint each room
