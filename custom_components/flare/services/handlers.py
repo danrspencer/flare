@@ -97,27 +97,7 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
     }
 )
 
-APPLY_LIGHTING_SCHEMA = vol.Schema(
-    {
-        vol.Required("entities"): LIGHT_IDS,
-        vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
-        vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
-        vol.Required("color_temp_kelvin"): vol.Coerce(int),
-        vol.Required("transition"): vol.Coerce(float),
-        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
-        vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
-        vol.Optional("prefer_rgb_color", default=False): cv.boolean,
-        # Accepts an explicit None, as above.
-        vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
-        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
-        vol.Optional("force", default=False): cv.boolean,
-        # None means "use the integration's setting".
-        vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-        vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-        **ROOM_FIELDS,
-    }
-)
+APPLY_LIGHTING_SCHEMA = COMPUTE_LIGHTING_GROUPS_SCHEMA.extend({vol.Required("transition"): vol.Coerce(float)})
 
 TURN_OFF_SCHEMA = vol.Schema(
     {
@@ -258,13 +238,11 @@ def _groups_response(groups: list[Group]) -> ServiceResponse:
 async def _two_step_turn_on(
     hass: HomeAssistant,
     entity_ids: list,
-    brightness: int,
+    target: dict,
     half_transition: float,
     *,
     brightness_context: Context,
     color_context: Context,
-    color_temp_kelvin: int | None = None,
-    rgb_color: list | None = None,
 ) -> None:
     """Brightness, wait, then brightness + colour, for bulbs that can't do
     both in one transition. Each step has its own context, so a device
@@ -273,26 +251,27 @@ async def _two_step_turn_on(
     await hass.services.async_call(
         "light",
         "turn_on",
-        {"entity_id": entity_ids, "transition": half_transition, "brightness": brightness},
+        {"entity_id": entity_ids, "transition": half_transition, "brightness": target["brightness"]},
         blocking=True,
         context=brightness_context,
     )
     await asyncio.sleep(half_transition)
-    data = {"entity_id": entity_ids, "transition": half_transition, "brightness": brightness}
-    if color_temp_kelvin is not None:
-        data["color_temp_kelvin"] = color_temp_kelvin
-    else:
-        data["rgb_color"] = rgb_color
-    await hass.services.async_call("light", "turn_on", data, blocking=True, context=color_context)
+    await hass.services.async_call(
+        "light",
+        "turn_on",
+        {"entity_id": entity_ids, "transition": half_transition, **target},
+        blocking=True,
+        context=color_context,
+    )
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
     """Registers the nine services against the Settings entry."""
 
-    async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
-        """flare.compute_lighting_groups - see services.yaml."""
+    def plan(call: ServiceCall) -> list[Group]:
+        """build_groups for a compute_lighting_groups or apply_lighting call."""
         rgb_color = call.data.get("rgb_color")
-        groups = build_groups(
+        return build_groups(
             entities=without_flares(hass, call.data["entities"]),
             brightness_levels=call.data["brightness_levels"],
             sensor_brightness=_brightness(call),
@@ -308,7 +287,10 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             force=call.data["force"],
             **_min_changes(entry, call),
         )
-        return _groups_response(groups)
+
+    async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
+        """flare.compute_lighting_groups - see services.yaml."""
+        return _groups_response(plan(call))
 
     async def compute_curve(call: ServiceCall) -> ServiceResponse:
         """flare.compute_curve - see services.yaml."""
@@ -334,30 +316,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
         With force, the write still records a claim if a room is given, so the
         next non-forced call recognises it as ours."""
-        force = call.data["force"]
-        brightness = _brightness(call)
-        rgb_color_raw = call.data.get("rgb_color")
-        rgb_color = tuple(rgb_color_raw) if rgb_color_raw else None
         room_id = call.data.get("room_id")
         room_entities = call.data.get("room_entities")
-        lookup = _build_lookup(hass, registry, room_id)
-        groups = build_groups(
-            entities=without_flares(hass, call.data["entities"]),
-            brightness_levels=call.data["brightness_levels"],
-            sensor_brightness=brightness,
-            sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
-            lookup=lookup,
-            brightness_tolerance=call.data["brightness_tolerance"],
-            color_temp_tolerance=call.data["color_temp_tolerance"],
-            two_step_label=call.data["two_step_label"],
-            two_step_model_patterns=_two_step_model_patterns(entry),
-            prefer_rgb_color=call.data["prefer_rgb_color"],
-            rgb_color=rgb_color,
-            rgb_color_tolerance=call.data["rgb_color_tolerance"],
-            force=force,
-            **_min_changes(entry, call),
-        )
-
+        groups = plan(call)
         transition = call.data["transition"]
         half_transition = round(transition / 2, 1)
 
@@ -373,81 +334,44 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         secondary_context_ids: dict = {}
         tasks = []
         for g in groups:
-            if g.needing_off:
-                written_entities.extend(g.needing_off)
-                for e in g.needing_off:
-                    write_targets[e] = g.target
-                tasks.append(
-                    hass.services.async_call(
-                        "light",
-                        "turn_off",
-                        {"entity_id": g.needing_off, "transition": transition},
-                        blocking=True,
-                        context=call.context,
+            # Each list, what it's sent, and whether in two steps.
+            sends = [
+                (g.needing_off, g.target, False),
+                (g.combined, g.target, False),
+                (g.combined_rgb, g.target_rgb, False),
+                (g.two_step, g.target, True),
+                (g.two_step_rgb, g.target_rgb, True),
+            ]
+            for lights, target, two_step in sends:
+                if not lights:
+                    continue
+                written_entities.extend(lights)
+                write_targets.update(dict.fromkeys(lights, target))
+                if not two_step:
+                    # An off-group's target is {"state": "off"}.
+                    service, data = ("turn_off", {}) if "state" in target else ("turn_on", target)
+                    tasks.append(
+                        hass.services.async_call(
+                            "light",
+                            service,
+                            {"entity_id": lights, "transition": transition, **data},
+                            blocking=True,
+                            context=call.context,
+                        )
                     )
-                )
-            if g.combined:
-                written_entities.extend(g.combined)
-                for e in g.combined:
-                    write_targets[e] = g.target
-                tasks.append(
-                    hass.services.async_call(
-                        "light",
-                        "turn_on",
-                        {"entity_id": g.combined, "transition": transition, **g.target},
-                        blocking=True,
-                        context=call.context,
-                    )
-                )
-            if g.combined_rgb:
-                written_entities.extend(g.combined_rgb)
-                for e in g.combined_rgb:
-                    write_targets[e] = g.target_rgb
-                tasks.append(
-                    hass.services.async_call(
-                        "light",
-                        "turn_on",
-                        {"entity_id": g.combined_rgb, "transition": transition, **g.target_rgb},
-                        blocking=True,
-                        context=call.context,
-                    )
-                )
-            if g.two_step:
-                written_entities.extend(g.two_step)
+                    continue
                 brightness_context = Context(parent_id=call.context.id)
                 color_context = Context(parent_id=call.context.id)
-                for e in g.two_step:
-                    write_targets[e] = g.target
-                    context_id_overrides[e] = color_context.id
-                    secondary_context_ids[e] = brightness_context.id
+                context_id_overrides.update(dict.fromkeys(lights, color_context.id))
+                secondary_context_ids.update(dict.fromkeys(lights, brightness_context.id))
                 tasks.append(
                     _two_step_turn_on(
                         hass,
-                        g.two_step,
-                        g.brightness,
+                        lights,
+                        target,
                         half_transition,
                         brightness_context=brightness_context,
                         color_context=color_context,
-                        color_temp_kelvin=g.target["color_temp_kelvin"],
-                    )
-                )
-            if g.two_step_rgb:
-                written_entities.extend(g.two_step_rgb)
-                brightness_context = Context(parent_id=call.context.id)
-                color_context = Context(parent_id=call.context.id)
-                for e in g.two_step_rgb:
-                    write_targets[e] = g.target_rgb
-                    context_id_overrides[e] = color_context.id
-                    secondary_context_ids[e] = brightness_context.id
-                tasks.append(
-                    _two_step_turn_on(
-                        hass,
-                        g.two_step_rgb,
-                        g.brightness,
-                        half_transition,
-                        brightness_context=brightness_context,
-                        color_context=color_context,
-                        rgb_color=g.target_rgb["rgb_color"],
                     )
                 )
 
