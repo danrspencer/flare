@@ -9,7 +9,6 @@ every freshly served page loads, clears it."""
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 
 from aiohttp import web
 from homeassistant.components.http import KEY_HASS, HomeAssistantView
@@ -46,24 +45,21 @@ def async_raise(hass: HomeAssistant, link: str) -> None:
     )
 
 
-class StaleFilesView(HomeAssistantView):
-    """www/ under any fingerprint but the current one, which its static
-    path serves first. A page served before an update still asks for the
-    old one, and would otherwise get no dashboard at all. Not cached, so an
-    old URL never keeps today's files."""
+class OldFingerprintView(HomeAssistantView):
+    """Redirects any fingerprint but the current one, which its static path
+    serves first, to the current one. A page served before an update still
+    asks for the old one, and would otherwise get no dashboard at all. The
+    loader's relative imports then resolve against where it landed."""
 
     url = "/flare_static/{fingerprint}/{path:.+}"
-    name = "flare:stale_files"
+    name = "flare:old_fingerprint"
     requires_auth = False
 
-    def __init__(self, www: Path) -> None:
-        self._www = www.resolve()
+    def __init__(self, base: str) -> None:
+        self._base = base
 
-    async def get(self, request: web.Request, fingerprint: str, path: str) -> web.StreamResponse:
-        file = (self._www / path).resolve()
-        if not file.is_relative_to(self._www) or not await request.app[KEY_HASS].async_add_executor_job(file.is_file):
-            raise web.HTTPNotFound
-        return web.FileResponse(file, headers={"Cache-Control": "no-cache"})
+    async def get(self, request: web.Request, fingerprint: str, path: str) -> web.Response:
+        raise web.HTTPFound(f"{self._base}/{path}")
 
 
 class FrontendLoadedView(HomeAssistantView):
