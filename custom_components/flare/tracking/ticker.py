@@ -43,17 +43,10 @@ class TickScheduler:
         self._timers: dict[str, CALLBACK_TYPE] = {}
 
     @callback
-    def register(self, key: str, title: str, fire: Callable[[], None]) -> CALLBACK_TYPE:
-        """Adds an area, respacing every area. Returns its unregister."""
-        self._areas[key] = (title, fire)
+    def set_areas(self, areas: dict[str, tuple[str, Callable[[], None]]]) -> None:
+        """Ticks exactly these areas (key -> (title, fire)), respaced."""
+        self._areas = dict(areas)
         self._reschedule()
-
-        @callback
-        def _unregister() -> None:
-            self._areas.pop(key, None)
-            self._reschedule()
-
-        return _unregister
 
     @callback
     def stop(self) -> None:

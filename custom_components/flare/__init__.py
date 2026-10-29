@@ -202,7 +202,6 @@ def _tick_areas(hass: HomeAssistant, scheduler: TickScheduler) -> Callable[[], N
     """Ticks every area, kept in step with the area registry. Each tick is a
     plain event naming the area, so it never shows in Activity, history or
     the logbook. Returns the cleanup."""
-    registered: dict[str, Callable[[], None]] = {}
 
     def _fire(area_id: str) -> Callable[[], None]:
         @callback
@@ -213,26 +212,10 @@ def _tick_areas(hass: HomeAssistant, scheduler: TickScheduler) -> Callable[[], N
 
     @callback
     def _sync(_event: Event | None = None) -> None:
-        areas = {area.id: area.name for area in ar.async_get(hass).async_list_areas()}
-        for area_id in [a for a in registered if a not in areas]:
-            registered.pop(area_id)()
-        for area_id, name in areas.items():
-            if area_id in registered:
-                # Re-registered so a renamed area keeps its place in name order.
-                registered.pop(area_id)()
-            registered[area_id] = scheduler.register(area_id, name, _fire(area_id))
+        scheduler.set_areas({area.id: (area.name, _fire(area.id)) for area in ar.async_get(hass).async_list_areas()})
 
     _sync()
-    unlisten = hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, _sync)
-
-    @callback
-    def _cleanup() -> None:
-        unlisten()
-        for unregister in registered.values():
-            unregister()
-        registered.clear()
-
-    return _cleanup
+    return hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, _sync)
 
 
 _RELOADS_QUEUED = "reloads_queued"
