@@ -1,4 +1,16 @@
-# The dashboard
+---
+title: Dashboard internals
+parent: How it works
+nav_order: 9
+permalink: /architecture/frontend/
+---
+
+# Dashboard internals
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 The dashboard is plain JavaScript modules in `custom_components/flare/www/`,
 served by the integration itself. There's no build step and no

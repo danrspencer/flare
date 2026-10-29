@@ -132,7 +132,8 @@ def test_every_link_between_pages_lands_on_a_heading_that_exists():
     }
     dead = []
     for url, page in pages.items():
-        for link in re.findall(r"\]\(([^)\s]+)\)", page.read_text()):
+        # Not [^)\s]: a {{ site.baseurl }} link has spaces in it.
+        for link in re.findall(r"\]\(([^)]+)\)", page.read_text()):
             link = link.replace("{{ site.baseurl }}", "")
             if link.startswith(("http", "mailto")):
                 continue
@@ -143,6 +144,21 @@ def test_every_link_between_pages_lands_on_a_heading_that_exists():
             if anchor and anchor not in anchors[target]:
                 dead.append(f"{page.relative_to(DOCS)}: {link}")
     assert dead == [], f"links to headings that don't exist: {dead}"
+
+
+def test_no_user_page_links_into_how_it_works():
+    """The How it works pages are for contributors: they may link out to the
+    rest of the site, but nothing written for users links in."""
+    internals = DOCS / "architecture"
+    offending = []
+    for page in PAGES:
+        if internals in page.parents:
+            continue
+        text = page.read_text()
+        # Not [^)\s]: a {{ site.baseurl }} link has spaces in it.
+        links = re.findall(r"\]\(([^)]+)\)", text) + re.findall(r'href="([^"]+)"', text)
+        offending += [f"{page.relative_to(DOCS)}: {link}" for link in links if "/architecture" in link]
+    assert offending == [], f"user pages linking into How it works: {offending}"
 
 
 # --- Inbound links to the blueprint reference ---------------------------

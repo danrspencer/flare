@@ -1,4 +1,16 @@
+---
+title: The event loop
+parent: How it works
+nav_order: 2
+permalink: /architecture/event-loop/
+---
+
 # The event loop
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 Home Assistant runs one asyncio event loop, and nearly everything FLARE
 does happens on it, as a reaction to something: a state change, a timer,
@@ -18,7 +30,7 @@ fails silently until a real event loop runs it.
 
 A listener or timer handed a plain function that touches `hass` runs it
 in a worker thread, where `hass.async_create_task` raises. That's lesson 7
-in `CLAUDE.md`, and it's why every listener here carries `@callback`.
+in [CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md), and it's why every listener here carries `@callback`.
 Check `core.py`'s `get_hassjob_callable_job_type` before trusting a fix
 in this area: unit tests don't catch it.
 
@@ -172,7 +184,7 @@ Four facts shape everything built on contexts:
   woken by it reads the sensor's new phase, not the old one.
 - **`variables:` render once, at trigger time.** Nothing in the
   blueprint's `action:` may delay, or later steps would act on a stale
-  snapshot (see [room-automation.md](room-automation.md)).
+  snapshot (see [The room automation]({{ site.baseurl }}/architecture/room-automation/)).
 - **Claims are recorded before the write.** A run cancelled part-way
   (`mode: restart`, a two-step bulb mid-sleep) still leaves the claim. A
   claim for a write that never lands does no harm: the light still matches

@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Context for working on this repo. README.md is the user-facing pitch;
-`architecture/` is how the code works; this file is why it's shaped this
+`docs/architecture/` is how the code works; this file is why it's shaped this
 way and what not to do again. It records current decisions, not history -
 git is the changelog. A fact belongs here once it has stayed true.
 
@@ -31,19 +31,23 @@ lesson 3).
 **Documentation**: README.md is the only Markdown at the root besides
 CLAUDE.md, CONTRIBUTING.md (for people working on the code) and
 DOCUMENTATION.md (the docs style guide and lexicon - read it before
-touching `docs/`). `architecture/` is the internals for people working on
-the code: how the pieces fit and hook into Home Assistant, with diagrams
-(Mermaid, which GitHub renders). It describes the system as it is, links
-here for the why, and changes with the code it describes. Everything else
-is the site in `docs/`, published to
+touching `docs/`). Everything else is the site in `docs/`, published to
 <https://danrspencer.github.io/flare/> (see "Versioned docs"): the
 quickstart, playground and dashboard pages, `guides/` (how to do more,
-with worked examples) and `reference/` (the contract only).
+with worked examples), `reference/` (the contract only) and
+`architecture/` (**How it works**: the internals, with Mermaid diagrams,
+for contributors and the curious). How it works describes the system as
+it is, links to CLAUDE.md for the why, and changes with the code it
+describes. Each of its pages opens with a banner saying nobody needs it to
+use FLARE. **It may link out to the rest of the site and to code, but
+nothing else on the site links in** (user's call);
+`test_no_user_page_links_into_how_it_works` enforces it.
 `jekyll-redirect-from` keeps old URLs working, so keep the
 `redirect_from` lines. These are **site pages, not GitHub pages**: front
 matter goes straight in the files, with no build-time generation step.
 
-**Design rationale never goes on a site page.** It has happened three
+**Design rationale never goes on a user-facing site page** (How it works
+may say why a mechanism is shaped as it is). It has happened three
 times (`dashboard.html`, the homepage, `blueprint.md` grown to 300 lines
 of rationale ahead of its reference table). A decision worth recording
 goes in a code comment or here.
@@ -199,7 +203,7 @@ exception: entry-wide plumbing.)
 ### Code layout (`custom_components/flare/`)
 
 The tree, the entries and where each entity sits are in
-`architecture/layout.md`. What has to stay true:
+`docs/architecture/layout.md`. What has to stay true:
 
 - **Grouped by concept, not by how something is exposed.** Grouping by
   exposure (entities / services) tangled, because the schedule and the
@@ -213,7 +217,7 @@ The tree, the entries and where each entity sits are in
   holds no imports.
 - **One definition each, shared rather than copied** (reachability, what a
   light shows, the classifier, which lights are flares, a target's
-  entities, a schedule's values; listed in `architecture/layout.md`).
+  entities, a schedule's values; listed in `docs/architecture/layout.md`).
   Copies drifted before each was pulled together - a light with no state
   was reachable to grouping and unavailable to override protection - and a
   check test fails on a new copy where one is practical.
@@ -232,7 +236,7 @@ placeholders; the same test fails on a missing, stale or mistyped one, so
 a changed English string needs its translations revisited too.
 
 **The dashboard translates itself** (`www/flare-i18n.js`, see
-`architecture/frontend.md`): HA's translations only reach an
+`docs/architecture/frontend.md`): HA's translations only reach an
 integration's backend strings. Phase names stay English as data (they
 match the schedule sensor's states) and are translated only when shown.
 Cards that build before `hass` arrives fill their text in once it does;
@@ -243,7 +247,7 @@ instead - don't go back to that. Not translated: errors a card throws from
 ### Services
 
 Twelve, all tested. Field contracts are in `services.yaml` and
-`docs/reference/services.md`; how they work is `architecture/services.md`.
+`docs/reference/services.md`; how they work is `docs/architecture/services.md`.
 
 - `apply_lighting` takes `brightness`/`color_temp_kelvin`/`rgb_color` as
   **plain values**, not a sensor, so any source works; don't move the
@@ -424,7 +428,7 @@ poll: every change that moves a count reaches the registry's listener,
 and the grace is the only timed change, with its own recheck. They seed
 the statuses when they start, and a room restored dark is released and
 stale claims pruned only after that, so the release is announced. The
-wiring is in `architecture/event-loop.md`.
+wiring is in `docs/architecture/event-loop.md`.
 
 Persistence was tried once and reverted: a restart gives every entity a
 fresh context, and with context-only matching every light read
@@ -511,7 +515,7 @@ removed zones; its entities (the totals and
 
 **One "Add Integration" sets FLARE up ready to use, rooms included** -
 the goal, at the user's direction, is a painless first install. The flow
-itself is drawn in `architecture/setup.md`. Each entry can still be added
+itself is drawn in `docs/architecture/setup.md`. Each entry can still be added
 alone, so deleting one and adding it back works.
 
 - **It opens straight on the schedules, always** (user's call). An
@@ -606,7 +610,7 @@ the only way in was unwrapping a websocket handler. Don't bring it back.
   worker serves the first reload stale on HTTPS or `localhost`. Nothing
   server-side can reload a page, so `dashboard_reload.py` links to one
   that bypasses both, and a beacon clears the repair (mechanics in
-  `architecture/frontend.md`). The beacon isn't under `/api/`, where HA's
+  `docs/architecture/frontend.md`). The beacon isn't under `/api/`, where HA's
   CORS check rejects the `Origin` a module import always sends, and it has
   no auth, since module scripts are fetched without credentials.
 
@@ -680,7 +684,7 @@ leaves the room wherever the bulbs restored to.
 
 Each schedule is a "sensor" subentry of the Schedules entry, with its own
 device; its entities and how they become a phase and a colour are in
-`architecture/schedules.md`. `schedule_instances(entry)` is the one place
+`docs/architecture/schedules.md`. `schedule_instances(entry)` is the one place
 enumerating them. The phase override clears at the next natural boundary
 (compared against the phase computed when it was set), not on a timer.
 
@@ -779,7 +783,7 @@ so a dead sensor would otherwise read as clear forever and self-heal
 would switch off every light turned on there.
 
 **Triggers** are listed, with the action drawn as a flowchart, in
-`architecture/room-automation.md`. The decisions behind them:
+`docs/architecture/room-automation.md`. The decisions behind them:
 
 - **Area ticks stop every room writing in the same second.** All rooms'
   `time_pattern`s fired within 0.2s of :00, and Zigbee route failures
@@ -1188,7 +1192,7 @@ Until the first release, the beta is also the root.
 which imports each module that registers something; the rest come in
 through their imports (`test_every_module_that_registers_something_is_loaded`).
 How it gets into the page, and what registers what, is in
-`architecture/frontend.md`.
+`docs/architecture/frontend.md`.
 
 - **The loader waits for `<home-assistant>` to be defined before
   importing anything.** HA's frontend (2026.10) installs a scoped custom
@@ -1330,7 +1334,7 @@ strategy type and files kept the name `lights`.
     look like HA's logbook** (user's call): if HA restyles
     `ha-logbook-renderer`'s day headings or container, follow them.
 
-**Claim events** (listed in `architecture/claims.md`) carry one of
+**Claim events** (listed in `docs/architecture/claims.md`) carry one of
 FLARE's entities as `entity_id` (`_filed_under`) and FLARE's `device_id`,
 so they show in FLARE's Activity and the Activity card can tell the three
 apart. A logbook row shows the `entity_id`'s name ("Controlled lights"),

@@ -1,4 +1,16 @@
+---
+title: The room automation
+parent: How it works
+nav_order: 4
+permalink: /architecture/room-automation/
+---
+
 # The room automation
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 `custom_components/flare/blueprints/flare.yaml` is the blueprint each room
 automation is made from. It decides **when** a room updates and **whether**

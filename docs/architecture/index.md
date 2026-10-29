@@ -1,25 +1,38 @@
-# FLARE internals
+---
+title: How it works
+nav_order: 8
+has_children: true
+permalink: /architecture/
+---
 
-How FLARE works inside: what runs where, how it hooks into Home
-Assistant, and how the pieces talk to each other. It's for someone about
-to change the code. Users want `docs/`. For the reasons behind a
-decision, see `CLAUDE.md`; these pages describe the system as it is and
-link there when the why matters.
+# How FLARE works inside
+{: .no_toc }
+
+{: .internals }
+> **Nobody needs to read this to use FLARE.** This section is for people who want to change
+> FLARE's code, or who just like to know how things work. Installing, setting up and using FLARE
+> are all covered without it: start at [Installation]({{ site.baseurl }}/installation/).
+
+What runs where, how FLARE hooks into Home Assistant, and how the pieces
+talk to each other. These pages describe the system as it is. The reasons
+behind its decisions are in
+[CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md), in
+the repository.
 
 ## Reading order
 
 | Page | What it covers |
 |---|---|
-| [The big picture](#the-big-picture) (below) | The two halves, and what happens when a room updates |
-| [Code layout](layout.md) | Packages, the dependency rule, config entries, devices and entities |
-| [The event loop](event-loop.md) | Every place FLARE hooks into Home Assistant: setup order, listeners, timers, storage, contexts |
-| [Schedules and the curve](schedules.md) | How a schedule becomes a phase, a brightness and a colour |
-| [The room automation](room-automation.md) | The blueprint: triggers, the variables chain, the one gate that switches lights on |
-| [Services and grouping](services.md) | `flare.apply_lighting` from call to bulb, and the other eleven services |
-| [Claims and override protection](claims.md) | How FLARE tells its own writes from anyone else's |
-| [Flares](flares.md) | The light that fronts a room automation |
-| [Setup and upgrades](setup.md) | Config flows, area setup, the blueprint repairs, migrations |
-| [The dashboard](frontend.md) | How the JavaScript gets into the page, the strategies and the cards |
+| [The big picture]({{ site.baseurl }}/architecture/#the-big-picture) (below) | The two halves, and what happens when a room updates |
+| [Code layout]({{ site.baseurl }}/architecture/layout/) | Packages, the dependency rule, config entries, devices and entities |
+| [The event loop]({{ site.baseurl }}/architecture/event-loop/) | Every place FLARE hooks into Home Assistant: setup order, listeners, timers, storage, contexts |
+| [Schedules and the curve]({{ site.baseurl }}/architecture/schedules/) | How a schedule becomes a phase, a brightness and a colour |
+| [The room automation]({{ site.baseurl }}/architecture/room-automation/) | The blueprint: triggers, the variables chain, the one gate that switches lights on |
+| [Services and grouping]({{ site.baseurl }}/architecture/services/) | `flare.apply_lighting` from call to bulb, and the other eleven services |
+| [Claims and override protection]({{ site.baseurl }}/architecture/claims/) | How FLARE tells its own writes from anyone else's |
+| [Flares]({{ site.baseurl }}/architecture/flares/) | The light that fronts a room automation |
+| [Setup and upgrades]({{ site.baseurl }}/architecture/setup/) | Config flows, area setup, the blueprint repairs, migrations |
+| [The dashboard]({{ site.baseurl }}/architecture/frontend/) | How the JavaScript gets into the page, the strategies and the cards |
 
 ## The big picture
 
@@ -93,8 +106,8 @@ claim, and from then on step 5 leaves that light out.
 
 ## Words used here
 
-These pages use the code's own terms. User-facing pages don't; the
-lexicon in `DOCUMENTATION.md` lists the ones to keep out of `docs/`.
+These pages use the code's own terms. The rest of this site doesn't; the
+lexicon in [DOCUMENTATION.md](https://github.com/danrspencer/flare/blob/main/DOCUMENTATION.md) lists the ones it keeps out.
 
 | Term | Meaning |
 |---|---|

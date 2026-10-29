@@ -1,4 +1,16 @@
+---
+title: Setup and upgrades
+parent: How it works
+nav_order: 8
+permalink: /architecture/setup/
+---
+
 # Setup and upgrades
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 How FLARE gets from "Add Integration" to rooms that light themselves, and
 how it keeps an installed blueprint current.
@@ -36,7 +48,7 @@ flowchart TB
   completes on through a rename-and-place form, with no way to suppress it.
 - **First setup raises a repair** linking to a page reload, since a page
   open during setup never loads the dashboard's JavaScript (see
-  [frontend.md](frontend.md#getting-into-the-page)).
+  [Dashboard internals]({{ site.baseurl }}/architecture/frontend/#getting-into-the-page)).
 
 ## Subentry and options flows
 
@@ -119,5 +131,5 @@ claims fails open, since FLARE takes every room back on its next update.
 ## Getting a build onto a real house
 
 HACS installs only released zips, so a development build is written over
-an installed release file by file. The steps are in `CLAUDE.md`
+an installed release file by file. The steps are in [CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md)
 ("Getting a build onto the live instance"). Try it in the sandbox first.

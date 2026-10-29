@@ -1,9 +1,21 @@
+---
+title: Services and grouping
+parent: How it works
+nav_order: 5
+permalink: /architecture/services/
+---
+
 # Services and grouping
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 Everything FLARE does is a service anyone can call. The blueprint is one
 caller, not the only one, so each service is written as a standalone tool.
 The field contracts live in `services.yaml` and
-`docs/reference/services.md`. This page is about what happens inside them.
+[the services reference]({{ site.baseurl }}/reference/services/). This page is about what happens inside them.
 
 ## The twelve services
 
@@ -89,7 +101,7 @@ flowchart TB
   FLARE's.
 
 Both go through `tracking/matching.shows()`, the one place a light's
-reported values are compared with a target (see [claims.md](claims.md)).
+reported values are compared with a target (see [Claims and override protection]({{ site.baseurl }}/architecture/claims/)).
 
 **Brightness is clamped to 255** (`MAX_BRIGHTNESS`) before it's compared.
 `light.turn_on` silently clamps, so an unclamped target would never read

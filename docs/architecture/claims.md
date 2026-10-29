@@ -1,4 +1,16 @@
+---
+title: Claims and override protection
+parent: How it works
+nav_order: 6
+permalink: /architecture/claims/
+---
+
 # Claims and override protection
+{: .no_toc }
+
+{: .internals }
+> Part of [How it works]({{ site.baseurl }}/architecture/), for contributors and the curious.
+> Nothing here is needed to use FLARE.
 
 Override protection is FLARE leaving a light alone once someone else has
 changed it. It hangs on one question, asked fresh on every write: **is
@@ -7,7 +19,7 @@ from comparing the light's live state with a record of FLARE's own writes,
 its *claims*.
 
 There's no "overridden" flag set once by a trigger. A trigger firing once
-blocks only the run it fires in (lesson 2 in `CLAUDE.md`). Re-asking
+blocks only the run it fires in (lesson 2 in [CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md)). Re-asking
 against live state every time is what makes everything else fall out:
 room-empty, light-off and reconnect releases all just happen.
 
