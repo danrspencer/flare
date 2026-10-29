@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "1817481da9884a7294a10adb92c8506b",
+      "run_id": "1f2bab17d32fdfde6c9e07a52240acb6",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56G9MDNC1Z6ZAMGBDEZ",
+                  "id": "01M658J56GBBYXKKX2NHHAXF61",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GAQ10HAVK3K46AA5J",
+                    "id": "01M658J56GFH1PVYNFSQV1EKNE",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GFXK8D94Q1KSG0F28",
+                    "id": "01M658J56G6X84N1VHYBZRXR2C",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -85,8 +85,9 @@
                 ]
               },
               "use_area_sensors": true,
+              "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+              "schedule": "0597f7aae2d06b34d011cf1c9b646588",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -125,8 +126,8 @@
             "timestamp": "2026-10-30T02:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M658J56GZBG1VKYXXFHXN62W",
-                "parent_id": "01M658J56GFXK8D94Q1KSG0F28",
+                "id": "01M658J56G1S34862NV43G0GRX",
+                "parent_id": "01M658J56G6X84N1VHYBZRXR2C",
                 "user_id": null
               },
               "room": {
@@ -164,6 +165,9 @@
               "resolved_entities": [
                 "light.spot"
               ],
+              "room_lux_entities": [],
+              "too_bright": false,
+              "lux_blocked_entities": [],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -528,10 +532,11 @@
             ]
           },
           "use_area_sensors": true,
+          "lux_threshold": 0,
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+          "schedule": "0597f7aae2d06b34d011cf1c9b646588",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -539,13 +544,14 @@
           "background_transition": 5,
           "motion_on_transition": 1,
           "no_motion_wait": 120,
+          "lux_threshold": 0,
           "rgb_phases": [
             "Evening",
             "Night"
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -554,7 +560,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "8841f0212cbcd0efb448203d9fd3d9be"
+              "device_id": "0597f7aae2d06b34d011cf1c9b646588"
             },
             "options": {
               "event_type": [
@@ -639,6 +645,11 @@
             "id": "recovered",
             "platform": "template",
             "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+          },
+          {
+            "id": "lux_dark",
+            "platform": "template",
+            "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
           }
         ],
         "actions": [
@@ -658,6 +669,9 @@
             "variables": {
               "room_entities": "{{ room.entities }}",
               "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "room_lux_entities": "{% set ns = namespace(sensors=[]) %} {% for e in room_entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') %}\n  {% if states(e) | is_number %}\n    {% set ns.sensors = ns.sensors + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.sensors if use_area_sensors\n   else ns.sensors | select('in', named_entities) | list }}\n",
+              "too_bright": "{% set threshold = lux_threshold | float(0) %} {{ threshold > 0 and not manual_run\n   and room_lux_entities | length > 0\n   and room_lux_entities | map('states') | map('float', 0)\n       | select('le', threshold) | list | count == 0 }}\n",
+              "lux_blocked_entities": "{{ resolved_entities | reject('is_state', 'on') | list if too_bright else [] }}\n",
               "template_brightness_levels": "{{ {} }}",
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -678,7 +692,7 @@
               "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
               "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
@@ -686,7 +700,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -841,7 +855,7 @@
                 "variables": {
                   "scene_active": "{{ scene_coverage.scene_active }}",
                   "handed_off_entities": "{{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)\n   | select('match', 'light[.]') | unique | list }}\n",
-                  "target_entities": "{{ scene_coverage.uncovered_entities if scene_active else resolved_entities }}\n"
+                  "target_entities": "{{ (scene_coverage.uncovered_entities if scene_active else resolved_entities)\n   | reject('in', lux_blocked_entities) | list }}\n"
                 }
               },
               {
@@ -885,8 +899,8 @@
                     "if": [
                       {
                         "condition": "template",
-                        "alias": "A scene applies and is due a recheck",
-                        "value_template": "{{ scene_active and scene_recheck_due }}"
+                        "alias": "A scene applies and is due a recheck, and can't light a bright room",
+                        "value_template": "{{ scene_active and scene_recheck_due\n   and (not too_bright\n        or scene_coverage.covered_entities | select('match', 'light[.]')\n           | reject('is_state', 'on') | list | count == 0) }}\n"
                       }
                     ],
                     "then": [
@@ -969,7 +983,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+            "schedule": "0597f7aae2d06b34d011cf1c9b646588",
             "room_target": {
               "entity_id": [
                 "light.spot",
@@ -980,14 +994,14 @@
         }
       },
       "context": {
-        "id": "01M658J56GZBG1VKYXXFHXN62W",
-        "parent_id": "01M658J56GFXK8D94Q1KSG0F28",
+        "id": "01M658J56G1S34862NV43G0GRX",
+        "parent_id": "01M658J56G6X84N1VHYBZRXR2C",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/3/then/1/then/0",
-      "run_id": "16ad49d193d412e9848e935eb2f0841a",
+      "run_id": "02eec3aed3d0103734afd8330f6ce6a6",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1017,8 +1031,8 @@
                 "last_reported": "2026-10-30T02:00:02+00:00",
                 "last_updated": "2026-10-30T02:00:02+00:00",
                 "context": {
-                  "id": "01M658J56GZBG1VKYXXFHXN62W",
-                  "parent_id": "01M658J56GFXK8D94Q1KSG0F28",
+                  "id": "01M658J56G1S34862NV43G0GRX",
+                  "parent_id": "01M658J56G6X84N1VHYBZRXR2C",
                   "user_id": null
                 }
               },
@@ -1037,8 +1051,9 @@
                 ]
               },
               "use_area_sensors": true,
+              "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+              "schedule": "0597f7aae2d06b34d011cf1c9b646588",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -1077,7 +1092,7 @@
             "timestamp": "2026-10-30T05:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M65JVR2GP83BJSV72PXG9X07",
+                "id": "01M65JVR2G8S4ZRSXXGTKSG6DS",
                 "parent_id": null,
                 "user_id": null
               },
@@ -1116,6 +1131,9 @@
               "resolved_entities": [
                 "light.spot"
               ],
+              "room_lux_entities": [],
+              "too_bright": false,
+              "lux_blocked_entities": [],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -1465,10 +1483,11 @@
             ]
           },
           "use_area_sensors": true,
+          "lux_threshold": 0,
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+          "schedule": "0597f7aae2d06b34d011cf1c9b646588",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -1476,13 +1495,14 @@
           "background_transition": 5,
           "motion_on_transition": 1,
           "no_motion_wait": 120,
+          "lux_threshold": 0,
           "rgb_phases": [
             "Evening",
             "Night"
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -1491,7 +1511,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "8841f0212cbcd0efb448203d9fd3d9be"
+              "device_id": "0597f7aae2d06b34d011cf1c9b646588"
             },
             "options": {
               "event_type": [
@@ -1576,6 +1596,11 @@
             "id": "recovered",
             "platform": "template",
             "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+          },
+          {
+            "id": "lux_dark",
+            "platform": "template",
+            "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
           }
         ],
         "actions": [
@@ -1595,6 +1620,9 @@
             "variables": {
               "room_entities": "{{ room.entities }}",
               "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "room_lux_entities": "{% set ns = namespace(sensors=[]) %} {% for e in room_entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') %}\n  {% if states(e) | is_number %}\n    {% set ns.sensors = ns.sensors + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.sensors if use_area_sensors\n   else ns.sensors | select('in', named_entities) | list }}\n",
+              "too_bright": "{% set threshold = lux_threshold | float(0) %} {{ threshold > 0 and not manual_run\n   and room_lux_entities | length > 0\n   and room_lux_entities | map('states') | map('float', 0)\n       | select('le', threshold) | list | count == 0 }}\n",
+              "lux_blocked_entities": "{{ resolved_entities | reject('is_state', 'on') | list if too_bright else [] }}\n",
               "template_brightness_levels": "{{ {} }}",
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -1615,7 +1643,7 @@
               "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
               "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
@@ -1623,7 +1651,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -1778,7 +1806,7 @@
                 "variables": {
                   "scene_active": "{{ scene_coverage.scene_active }}",
                   "handed_off_entities": "{{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)\n   | select('match', 'light[.]') | unique | list }}\n",
-                  "target_entities": "{{ scene_coverage.uncovered_entities if scene_active else resolved_entities }}\n"
+                  "target_entities": "{{ (scene_coverage.uncovered_entities if scene_active else resolved_entities)\n   | reject('in', lux_blocked_entities) | list }}\n"
                 }
               },
               {
@@ -1822,8 +1850,8 @@
                     "if": [
                       {
                         "condition": "template",
-                        "alias": "A scene applies and is due a recheck",
-                        "value_template": "{{ scene_active and scene_recheck_due }}"
+                        "alias": "A scene applies and is due a recheck, and can't light a bright room",
+                        "value_template": "{{ scene_active and scene_recheck_due\n   and (not too_bright\n        or scene_coverage.covered_entities | select('match', 'light[.]')\n           | reject('is_state', 'on') | list | count == 0) }}\n"
                       }
                     ],
                     "then": [
@@ -1906,7 +1934,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+            "schedule": "0597f7aae2d06b34d011cf1c9b646588",
             "room_target": {
               "entity_id": [
                 "light.spot",
@@ -1917,14 +1945,14 @@
         }
       },
       "context": {
-        "id": "01M65JVR2GP83BJSV72PXG9X07",
+        "id": "01M65JVR2G8S4ZRSXXGTKSG6DS",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "6d35153f99ab0ddf5fe70bd9c638b014",
+      "run_id": "61718e1662570b50d5103026df57799c",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1954,7 +1982,7 @@
                 "last_reported": "2026-10-30T05:00:02+00:00",
                 "last_updated": "2026-10-30T05:00:02+00:00",
                 "context": {
-                  "id": "01M65JVR2GP83BJSV72PXG9X07",
+                  "id": "01M65JVR2G8S4ZRSXXGTKSG6DS",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -1984,7 +2012,7 @@
                   "last_reported": "2026-10-30T02:00:02+00:00",
                   "last_updated": "2026-10-30T02:00:02+00:00",
                   "context": {
-                    "id": "01M658J56GDZV9AWZ5CP85B6RZ",
+                    "id": "01M658J56GEE7BQTPVPR0CN42V",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2007,7 +2035,7 @@
                   "last_reported": "2026-10-30T05:00:02+00:00",
                   "last_updated": "2026-10-30T05:00:02+00:00",
                   "context": {
-                    "id": "01M65JVR2GPG0J69737ATNJYQF",
+                    "id": "01M65JVR2GCB0G20PVAHC21P2X",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2021,8 +2049,9 @@
                 ]
               },
               "use_area_sensors": true,
+              "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+              "schedule": "0597f7aae2d06b34d011cf1c9b646588",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -2061,8 +2090,8 @@
             "timestamp": "2026-10-30T05:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M65JVR2G76BWQ0BJMSQNS276",
-                "parent_id": "01M65JVR2GPG0J69737ATNJYQF",
+                "id": "01M65JVR2G0TCDY3K3ZWGY8VVR",
+                "parent_id": "01M65JVR2GCB0G20PVAHC21P2X",
                 "user_id": null
               },
               "room": {
@@ -2100,6 +2129,9 @@
               "resolved_entities": [
                 "light.spot"
               ],
+              "room_lux_entities": [],
+              "too_bright": false,
+              "lux_blocked_entities": [],
               "template_brightness_levels": {},
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -2474,10 +2506,11 @@
             ]
           },
           "use_area_sensors": true,
+          "lux_threshold": 0,
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+          "schedule": "0597f7aae2d06b34d011cf1c9b646588",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -2485,13 +2518,14 @@
           "background_transition": 5,
           "motion_on_transition": 1,
           "no_motion_wait": 120,
+          "lux_threshold": 0,
           "rgb_phases": [
             "Evening",
             "Night"
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -2500,7 +2534,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "8841f0212cbcd0efb448203d9fd3d9be"
+              "device_id": "0597f7aae2d06b34d011cf1c9b646588"
             },
             "options": {
               "event_type": [
@@ -2585,6 +2619,11 @@
             "id": "recovered",
             "platform": "template",
             "value_template": "{#\n  Runs an ordinary tick as soon as a light becomes reachable, rather\n  than waiting for the next one. \"At least one reachable\", not \"none\n  unavailable\", so a dead entity can't block it; a bulb recovering\n  beside reachable siblings waits for the tick. Can't use `trigger.*`,\n  which isn't in scope here.\n#} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set light_entity_ids = ns.entities | select('match', '^light\\\\.')\n     | reject('in', integration_entities('flare')) | unique | list %}\n{{ light_entity_ids\n   | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | list | length > 0 }}\n"
+          },
+          {
+            "id": "lux_dark",
+            "platform": "template",
+            "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
           }
         ],
         "actions": [
@@ -2604,6 +2643,9 @@
             "variables": {
               "room_entities": "{{ room.entities }}",
               "resolved_entities": "{{ room_entities | select('match', '^light\\\\.')\n   | reject('in', integration_entities('flare')) | list }}\n",
+              "room_lux_entities": "{% set ns = namespace(sensors=[]) %} {% for e in room_entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') %}\n  {% if states(e) | is_number %}\n    {% set ns.sensors = ns.sensors + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.sensors if use_area_sensors\n   else ns.sensors | select('in', named_entities) | list }}\n",
+              "too_bright": "{% set threshold = lux_threshold | float(0) %} {{ threshold > 0 and not manual_run\n   and room_lux_entities | length > 0\n   and room_lux_entities | map('states') | map('float', 0)\n       | select('le', threshold) | list | count == 0 }}\n",
+              "lux_blocked_entities": "{{ resolved_entities | reject('is_state', 'on') | list if too_bright else [] }}\n",
               "template_brightness_levels": "{{ {} }}",
               "morning_exclude_lights": [],
               "day_exclude_lights": [],
@@ -2624,7 +2666,7 @@
               "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
               "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
@@ -2632,7 +2674,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything is already on. #} {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied }}\n",
+              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -2787,7 +2829,7 @@
                 "variables": {
                   "scene_active": "{{ scene_coverage.scene_active }}",
                   "handed_off_entities": "{{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)\n   | select('match', 'light[.]') | unique | list }}\n",
-                  "target_entities": "{{ scene_coverage.uncovered_entities if scene_active else resolved_entities }}\n"
+                  "target_entities": "{{ (scene_coverage.uncovered_entities if scene_active else resolved_entities)\n   | reject('in', lux_blocked_entities) | list }}\n"
                 }
               },
               {
@@ -2831,8 +2873,8 @@
                     "if": [
                       {
                         "condition": "template",
-                        "alias": "A scene applies and is due a recheck",
-                        "value_template": "{{ scene_active and scene_recheck_due }}"
+                        "alias": "A scene applies and is due a recheck, and can't light a bright room",
+                        "value_template": "{{ scene_active and scene_recheck_due\n   and (not too_bright\n        or scene_coverage.covered_entities | select('match', 'light[.]')\n           | reject('is_state', 'on') | list | count == 0) }}\n"
                       }
                     ],
                     "then": [
@@ -2915,7 +2957,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "8841f0212cbcd0efb448203d9fd3d9be",
+            "schedule": "0597f7aae2d06b34d011cf1c9b646588",
             "room_target": {
               "entity_id": [
                 "light.spot",
@@ -2926,8 +2968,8 @@
         }
       },
       "context": {
-        "id": "01M65JVR2G76BWQ0BJMSQNS276",
-        "parent_id": "01M65JVR2GPG0J69737ATNJYQF",
+        "id": "01M65JVR2G0TCDY3K3ZWGY8VVR",
+        "parent_id": "01M65JVR2GCB0G20PVAHC21P2X",
         "user_id": null
       }
     }

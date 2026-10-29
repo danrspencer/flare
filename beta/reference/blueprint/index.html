@@ -251,6 +251,7 @@ behaves.</p>
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
   <li><a href="#room" id="markdown-toc-room">Room</a>    <ul>
+      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
       <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
     </ul>
   </li>
@@ -302,12 +303,17 @@ behaves.</p>
     <tr>
       <td><strong>Lights &amp; Occupancy</strong></td>
       <td>required</td>
-      <td>The room’s lights, and the occupancy and motion sensors that turn them on and off.</td>
+      <td>The room’s lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives <strong>Lux Threshold</strong>.</td>
     </tr>
     <tr>
       <td><strong>Wait time</strong></td>
       <td>120s</td>
       <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+    </tr>
+    <tr>
+      <td><strong>Lux Threshold</strong></td>
+      <td>0 (off)</td>
+      <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. <a href="#lux-threshold">Details</a>.</td>
     </tr>
     <tr>
       <td><strong>Additional Triggers</strong></td>
@@ -344,6 +350,39 @@ other binary sensors in the target are ignored. A room can mix both kinds.</p>
 <p>A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they’re all off; a light in both is released when
 either room goes dark.</p>
+<h3 id="lux-threshold">
+  
+  
+    <a href="#lux-threshold" class="anchor-heading" aria-labelledby="lux-threshold"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lux Threshold
+  
+  
+</h3>
+    
+
+<p>Illuminance sensors are the <code class="language-plaintext highlighter-rouge">sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: illuminance</code> in <strong>Lights &amp;
+Occupancy</strong> — picked by name, or included through its area, floor, device or label. With
+<a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by name count.</p>
+
+<p>Above <code class="language-plaintext highlighter-rouge">0</code>, the room counts as bright enough while every one of those sensors reads above that
+many lux. A bright room isn’t switched on by:</p>
+
+<ul>
+  <li>a sensor detecting someone,</li>
+  <li>a <a href="#scenes">scene</a>, unless every light it covers is already on,</li>
+  <li><a href="#idle-brightness">idle brightness</a>.</li>
+</ul>
+
+<p>If someone is still in the room when it stops being bright enough, because one of those sensors
+drops to the threshold or below, the lights come on then. Someone counts as in the room if one
+of its occupancy or motion sensors is detecting them, or was within the <strong>Wait time</strong>.</p>
+
+<p>Lights already on carry on as before: following the curve, or left to the phase’s scene. Nothing
+is switched off for being bright. Turning the room on by hand — the automation’s
+<strong>Run</strong>, the <a href="../flares/">flare</a>, or a voice assistant — ignores the threshold.</p>
+
+<p>A sensor that is unavailable, unknown or not numeric can’t say how bright the room is, so it
+doesn’t count either way, and a room with no illuminance sensor never blocks. The check is off
+while <strong>Lux Threshold</strong> is <code class="language-plaintext highlighter-rouge">0</code>, which is the default.</p>
 <h3 id="additional-triggers">
   
   
@@ -644,9 +683,9 @@ minute, on the minute.</p>
 been clear for the <strong>Wait time</strong>.</p>
 
 <p>While every light in <strong>Lights &amp; Occupancy</strong> is off, the only things that turn any of them on are
-a sensor detecting someone, running the automation by hand, and
-<a href="#idle-brightness">idle brightness</a>. Once at least one light is on, any update can turn on the
-others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
+a sensor detecting someone, running the automation by hand, the room getting dark while someone
+is in it (with a <a href="#lux-threshold">Lux Threshold</a>), and <a href="#idle-brightness">idle brightness</a>. Once
+at least one light is on, any update can turn on the others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.</p>
 
 <p>If a light is still on after the room has been empty for the <strong>Wait time</strong>, the turn-off is sent
