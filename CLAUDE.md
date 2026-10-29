@@ -1129,6 +1129,10 @@ imports from the loader.
   relatively, and a relative import inherits the path but not a query, so
   `?v=` would load a module twice and the second `customElements.define`
   would throw. `tests/checks/test_static_imports.py` pins relative imports.
+- **Any other fingerprint serves the current files, uncached**
+  (`dashboard_reload.StaleFilesView`). A page served before an update (the
+  service worker's stale copy, the companion app) asks for the old one; a
+  404 there means no strategy registers at all.
 
 **The dashboard is Lovelace strategies**, regenerated on every load, so
 an update is the whole migration and a new schedule or zone just appears.
