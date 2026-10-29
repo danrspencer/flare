@@ -166,6 +166,34 @@ actions:
       entity_id: light.hallway_lights_flare
 ```
 
+## A lamp that goes off with the wall switch
+
+The study's pendant is a smart bulb on an ordinary wall switch, so switching it off at the
+wall cuts its power and Home Assistant sees it go unavailable rather than off. This turns
+the floor lamp off with it.
+
+```yaml
+alias: Study lamp off with the pendant
+triggers:
+  - trigger: state
+    entity_id: light.study_pendant
+    to: unavailable
+actions:
+  - action: flare.turn_off
+    data:
+      entities:
+        - light.study_floor_lamp
+```
+
+You don't need anything to turn the lamp back on. When you switch the pendant on at the wall,
+it comes back online lit, so the room counts as in use and FLARE sets both lights to the
+curve, turning the lamp on with the pendant.
+
+`flare.turn_off` turns the lamp off even if you've dimmed it yourself. If you want the lamp
+left to another automation or a voice assistant instead, so FLARE never switches it on or
+off, hand it over with a `null` level, as in
+[Leaving a light to another automation](../templates/#leaving-a-light-to-another-automation).
+
 ## Something else at a phase change
 
 Close the blinds when Night starts.
