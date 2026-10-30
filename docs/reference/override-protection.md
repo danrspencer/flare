@@ -127,7 +127,7 @@ temperature asked for as 4294 K can come back as 4312 K. You can set the toleran
 | Option | Default | Description |
 |---|---|---|
 | Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. A dim light always gets at least 2 (of 255). |
-| Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. |
+| Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. For a light FLARE sets by RGB, the red, green and blue differences added together can be up to twice this (10 by default). |
 
 The same tolerances decide what's worth sending: a light that close to its target isn't sent
 anything.

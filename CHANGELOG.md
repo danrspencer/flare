@@ -93,7 +93,8 @@ After updating:
   ([#323](https://github.com/danrspencer/flare/issues/323)). The **Minimum brightness change**
   and **Minimum colour temperature change** options under **FLARE → Settings → Configure** now
   set this as well as what's worth sending, and are called **Brightness tolerance** and
-  **Colour temperature tolerance**.
+  **Colour temperature tolerance**. A light FLARE sets by RGB follows the colour temperature
+  tolerance too.
 
 ### If you use FLARE's services or events yourself
 

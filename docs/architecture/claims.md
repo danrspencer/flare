@@ -149,7 +149,7 @@ anything else calls `classify()`.
 | same mired | two Kelvins that floor to the same mired are the same to a Zigbee bulb |
 | near mired | within the Settings entry's tolerance (5 mireds by default), about the smallest change anyone notices |
 | out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
-| RGB | `rgb_color`, only against an RGB target, within 10 per channel |
+| RGB | `rgb_color`, only against an RGB target: the channels' differences summed, within twice the colour tolerance (10 at the default), never less than 4 |
 
 Never Kelvin by way of RGB: HA's Kelvin→RGB and xy→RGB conversions differ
 by about 13 in red at 6500K, so a bulb showing exactly what was asked would

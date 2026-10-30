@@ -122,9 +122,24 @@ class TestAdvertisedRange:
 
 
 class TestRgb:
-    def test_per_channel_within_tolerance(self):
-        assert shows({"brightness": 200, "rgb_color": [255, 121, 9]}, RGB)
-        assert not shows({"brightness": 200, "rgb_color": [10, 10, 10]}, RGB)
+    def test_within_the_rounding_floor(self):
+        """4 in total, however the colour tolerance is set."""
+        assert shows({"brightness": 200, "rgb_color": [255, 121, 8]}, RGB)
+        assert not shows({"brightness": 200, "rgb_color": [255, 122, 7]}, RGB)
+
+    def test_the_difference_is_summed_across_channels(self):
+        """9 in one channel and 12 in all passes nothing that 11 in one fails."""
+        target = {"brightness": 200, "rgb_color": [255, 120, 21]}
+        tolerance = Tolerance(min_color_temp_change=5)
+        assert not shows({"brightness": 200, "rgb_color": [255, 120, 10]}, target, tolerance)
+        assert not shows({"brightness": 200, "rgb_color": [254, 129, 19]}, target, tolerance)
+        assert shows({"brightness": 200, "rgb_color": [254, 126, 18]}, target, tolerance)
+
+    def test_it_follows_the_colour_tolerance(self):
+        """Twice the mireds: 10 at the default 5."""
+        reported = {"brightness": 200, "rgb_color": [255, 126, 14]}
+        assert shows(reported, RGB, Tolerance(min_color_temp_change=5))
+        assert not shows(reported, RGB, Tolerance(min_color_temp_change=4))
 
     def test_a_malformed_rgb_does_not_match(self):
         assert not shows({"brightness": 200, "rgb_color": [255, 120, 10, 0]}, RGB)

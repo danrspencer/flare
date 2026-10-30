@@ -75,7 +75,7 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
 | `min_brightness_change`<br>percent, 0–25; default from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness, or 2 if that's more, isn't sent anything, and still matches its claim. See [tolerances](../override-protection/#how-close-counts-as-a-match). |
-| `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. |
+| `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. For an `rgb_color` target, the channels' differences added together can be up to twice this. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. Without it, the lights this room's calls have set. |
@@ -235,7 +235,7 @@ response_variable: check
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to check. |
 | `min_brightness_change`<br>percent, 0–25; default from **FLARE → Settings → Configure** | no | A light within this percentage of a claimed brightness, or 2 if that's more, matches it. |
-| `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of a claimed colour temperature matches it. |
+| `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of a claimed colour temperature matches it. For a claimed RGB colour, the channels' differences added together can be up to twice this. |
 
 ### Response data
 

@@ -313,10 +313,14 @@ Facts verified against HA core:
   one just-noticeable difference). The per-call `brightness_tolerance`,
   `color_temp_tolerance` and `rgb_color_tolerance` were removed; only
   device rounding stays fixed (`BRIGHTNESS_FLOOR`, the same-mired rule,
-  `RGB_ROUNDING`). RGB isn't derived from the mired tolerance: HA's
-  Kelvin->RGB isn't colorimetric (2700K round-trips to ~1870K), and 5
-  mireds maps to only 1-6 per channel, inside the ~13 a bulb's xy->RGB
-  report is off by anyway.
+  `RGB_FLOOR`). **An RGB target follows the colour tolerance**: its
+  channel differences summed, within `RGB_PER_MIRED` (2) per mired (user's
+  call). Summed, not per channel, so a shift spread across channels isn't
+  let through when one concentrated in a single channel would fail.
+  Measured across the curve's whites, 5 mireds is 4-12 summed; HA's
+  RGB -> xy -> RGB round trip drifts at most 4. Comparing via RGB -> Kelvin
+  doesn't work: HA's Kelvin->RGB isn't colorimetric (2700K round-trips to
+  ~1870K).
   The `ClaimRegistry` holds the options, so the status sensors, events,
   `claims_check` and grouping's `externally_set` agree; a service call's
   own values apply to that call. Colour is in mireds because a flat

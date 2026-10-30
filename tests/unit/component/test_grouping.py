@@ -77,7 +77,7 @@ class TestTolerance:
         )
         assert sorted(groups[0].already_set) == ["light.rgb", "light.there"]
 
-    def test_rgb_is_compared_per_channel(self):
+    def test_rgb_is_compared_by_its_summed_difference(self):
         close = _on(200, supported_color_modes=["rgb"], rgb_color=[253, 181, 108])
         far = _on(200, supported_color_modes=["rgb"], rgb_color=[255, 180, 90])
         assert _groups({"light.a": close}, prefer_rgb_color=True, rgb_color=WARM_RGB)[0].combined_rgb == []

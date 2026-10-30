@@ -93,9 +93,10 @@ flowchart TB
 **One closeness**, for both questions: *is this still what FLARE set?* and
 *should FLARE bother sending?* The **tolerances** are 5 % of the target
 brightness and 5 mireds by default, from the Settings entry's options; a
-call may pass its own. Three device-rounding allowances are fixed: 2
-brightness points as a floor for dim targets, Kelvins that floor to the
-same mired, and 10 per channel for an RGB target. 5 % and 5 mireds are about one just-noticeable
+call may pass its own. An RGB target's channel differences are summed and
+allowed twice the colour tolerance. Device rounding has fixed floors: 2
+brightness points for dim targets, Kelvins that floor to the same mired,
+and 4 summed for RGB. 5 % and 5 mireds are about one just-noticeable
 difference, so a light too close to be worth a write is never someone
 else's change either.
 
