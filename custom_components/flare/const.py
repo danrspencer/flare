@@ -52,21 +52,15 @@ CONF_AREA = "area_id"  # where the flare's device starts out
 # Our blueprint's input naming the room's lights.
 BLUEPRINT_LIGHTS_INPUT = "room_target"
 
-# Options keys: the smallest change apply_lighting sends, as a percentage
-# of the target brightness and in mireds of colour temperature.
+# Options keys: how close a light must be to its target, as a percentage of
+# the target brightness and in mireds of colour temperature, to be left alone:
+# not sent anything, and still FLARE's when it reports back. About one
+# just-noticeable difference, so only a change someone would see is an
+# override.
 CONF_MIN_BRIGHTNESS_CHANGE = "min_brightness_change"
 CONF_MIN_COLOR_TEMP_CHANGE = "min_color_temp_change"
 DEFAULT_MIN_BRIGHTNESS_CHANGE = 5
 DEFAULT_MIN_COLOR_TEMP_CHANGE = 5
-
-# Options keys: how far a light can sit from what FLARE asked for and still
-# count as FLARE's, as a percentage of the target brightness and in mireds of
-# colour temperature. Wide enough that only a change someone would notice
-# reads as an override.
-CONF_OVERRIDE_BRIGHTNESS_TOLERANCE = "override_brightness_tolerance"
-CONF_OVERRIDE_COLOR_TEMP_TOLERANCE = "override_color_temp_tolerance"
-DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE = 5
-DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE = 5
 
 # Options keys: how often each area ticks (minutes) and the spacing between
 # areas (seconds).

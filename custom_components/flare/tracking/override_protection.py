@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Optional, TypedDict
 
 from homeassistant.util import dt as dt_util
 
-from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, is_reachable
+from ..const import DEFAULT_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, is_reachable
 from .matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -122,8 +122,8 @@ def classify_state(
     brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
     color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
-    brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
-    color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
+    min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
     now: Optional[datetime] = None,
 ) -> tuple[str, Optional[str]]:
     """classify() for a live HA state and its claim record (None if
@@ -144,11 +144,7 @@ def classify_state(
         state.context.id,
         state.attributes,
         Tolerance(
-            brightness_tolerance,
-            color_temp_tolerance,
-            rgb_color_tolerance,
-            brightness_percent=brightness_percent,
-            color_temp_mireds=color_temp_mireds,
+            brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
         ),
     )
     if status != "overridden":

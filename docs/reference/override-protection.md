@@ -126,8 +126,11 @@ temperature asked for as 4294 K can come back as 4312 K. You can set both tolera
 
 | Option | Default | Description |
 |---|---|---|
-| Brightness tolerance for overrides | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. |
-| Colour tolerance for overrides | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. |
+| Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. |
+| Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. |
+
+The same tolerances decide what's worth sending: a light that close to its target isn't sent
+anything.
 
 If lights are marked overridden when nobody has changed them, raise the one that matches the
 difference shown on the [dashboard](../../dashboard/). Lower them to catch smaller changes.

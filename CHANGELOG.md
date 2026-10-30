@@ -90,8 +90,10 @@ After updating:
   than 5% in brightness or 5 mireds in colour temperature away from what FLARE asked for. Some
   bulbs report back slightly different values from the ones they were sent, such as 4312 K for
   4294 K, and were marked overridden at random
-  ([#323](https://github.com/danrspencer/flare/issues/323)). Both tolerances are options under
-  **FLARE → Settings → Configure**.
+  ([#323](https://github.com/danrspencer/flare/issues/323)). The **Minimum brightness change**
+  and **Minimum colour temperature change** options under **FLARE → Settings → Configure** now
+  set this as well as what's worth sending, and are called **Brightness tolerance** and
+  **Colour temperature tolerance**.
 
 ### If you use FLARE's services or events yourself
 
@@ -110,9 +112,10 @@ After updating:
   status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
   all.
 - `custom:flare-clear-card` and the `custom:flare-zone` view are gone.
-- `flare.claims_check`, `flare.apply_lighting` and `flare.compute_lighting_groups` match a light
-  to its claim within the override tolerances under **FLARE → Settings → Configure** as well as
-  their own `brightness_tolerance` and `color_temp_tolerance`.
+- `flare.claims_check` matches a light to its claim within the tolerances under **FLARE →
+  Settings → Configure** as well as its own `brightness_tolerance` and `color_temp_tolerance`.
+  On `flare.apply_lighting` and `flare.compute_lighting_groups`, `min_brightness_change` and
+  `min_color_temp_change` now also decide whether a light still matches its claim.
 
 ## [1.2.1] - Unreleased
 

@@ -76,8 +76,8 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of the target isn't sent anything. Two values that convert to the same mired always count as a match. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
-| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness isn't sent anything. It's never smaller than `brightness_tolerance`. |
-| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything. |
+| `min_brightness_change`<br>percent, 0–25; default 5, from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness isn't sent anything, and still matches its claim. It's never smaller than `brightness_tolerance`. |
+| `min_color_temp_change`<br>mireds, 0–50; default 5, from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of `rgb_color` on every channel isn't sent anything. |
@@ -236,8 +236,8 @@ response_variable: check
 
 | Field | Required | Description |
 |---|---|---|
-| `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it, as does one within the **Brightness tolerance for overrides** set under **FLARE → Settings → Configure**. |
-| `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it, as does one within the **Colour tolerance for overrides** set under **FLARE → Settings → Configure**. |
+| `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it, as does one within the **Brightness tolerance** set under **FLARE → Settings → Configure**. |
+| `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it, as does one within the **Colour temperature tolerance** set under **FLARE → Settings → Configure**. |
 | `entities`<br>list of light entity IDs | yes | The lights to check. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of a claimed RGB colour on every channel matches it. |
 

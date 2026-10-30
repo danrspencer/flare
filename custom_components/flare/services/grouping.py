@@ -5,7 +5,7 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
-from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, is_reachable
+from ..const import is_reachable
 from ..tracking.matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -67,8 +67,8 @@ class EntityLookup:
         brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
         color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
         rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
-        brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
-        color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
+        min_brightness_change: float = 0,
+        min_color_temp_change: float = 0,
     ) -> bool:
         """True if something other than the caller's own writes has touched this
         light since. force bypasses it."""
@@ -78,8 +78,8 @@ class EntityLookup:
             brightness_tolerance,
             color_temp_tolerance,
             rgb_color_tolerance,
-            brightness_percent,
-            color_temp_mireds,
+            min_brightness_change,
+            min_color_temp_change,
         )
         return is_blocked(status, force)
 
@@ -151,8 +151,6 @@ def build_groups(
     force: bool = False,
     min_brightness_change: float = 0,
     min_color_temp_change: float = 0,
-    brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
-    color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
 ) -> list:
     """What needs commanding for `entities`, bucketed by the brightness each
     is sent. Each Group is an off-group (brightness 0, `needing_off`) or an
@@ -160,25 +158,15 @@ def build_groups(
 
     Close enough is within tolerance, or within the minimum change worth
     sending: `min_brightness_change` percent of the target brightness, and
-    `min_color_temp_change` mireds. These only decide what's sent; override
-    protection still matches on the tolerances.
+    `min_color_temp_change` mireds. Override protection matches on the same
+    values, so a light that close is never someone else's change either.
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
     lists. A light is two-step if it carries two_step_label or its model
-    matches two_step_model_patterns. force bypasses override protection.
-    brightness_percent and color_temp_mireds are override matching's own
-    tolerances, the Settings entry's options."""
+    matches two_step_model_patterns. force bypasses override protection."""
     use_rgb = prefer_rgb_color and rgb_color is not None
-    # Override matching's own tolerances say whose change it was, not what's
-    # worth sending, so only the minimum change widens this.
     close_enough = Tolerance(
-        brightness_tolerance,
-        color_temp_tolerance,
-        rgb_color_tolerance,
-        min_brightness_change,
-        min_color_temp_change,
-        brightness_percent=0,
-        color_temp_mireds=0,
+        brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
     )
 
     def writable(lights: list) -> list:
@@ -192,8 +180,8 @@ def build_groups(
                 brightness_tolerance,
                 color_temp_tolerance,
                 rgb_color_tolerance,
-                brightness_percent,
-                color_temp_mireds,
+                min_brightness_change,
+                min_color_temp_change,
             )
         ]
 

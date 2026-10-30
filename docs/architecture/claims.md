@@ -144,10 +144,10 @@ anything else calls `classify()`.
 
 | Reading | Rule |
 |---|---|
-| brightness | `brightness`, within 2, or within the Settings entry's percentage (5% by default) |
+| brightness | `brightness`, within 2, or within the Settings entry's minimum change (5% by default) |
 | Kelvin | `color_temp_kelvin`; else a white's `xy_color` read as Kelvin if it's within 0.02 Duv of the Planckian locus; never RGB |
 | same mired | two Kelvins that floor to the same mired are the same to a Zigbee bulb |
-| near mired | within the Settings entry's mired tolerance (5 by default), about the smallest change anyone notices |
+| near mired | within the Settings entry's minimum change (5 mireds by default), about the smallest change anyone notices |
 | out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
 | RGB | `rgb_color`, only against an RGB target |
 

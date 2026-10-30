@@ -57,7 +57,7 @@ class TestClassifyByValue:
             ({"brightness": 50, "color_temp_kelvin": 2700}, ON_TARGET, (40, 6000), ("overridden", None)),
             (None, ON_TARGET, (40, 6000), ("overridden", None)),
             (None, None, (200, 3000), ("overridden", None)),
-            (None, ON_TARGET, (180, 3000), ("overridden", None)),
+            (None, ON_TARGET, (190, 3000), ("overridden", None)),
             (None, {"state": "off"}, (200, 3000), ("overridden", None)),
         ],
         ids=[

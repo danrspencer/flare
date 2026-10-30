@@ -55,7 +55,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, is_reachable
+from ..const import DEFAULT_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, is_reachable
 from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
@@ -92,13 +92,13 @@ class ClaimRegistry:
     def __init__(
         self,
         hass: HomeAssistant,
-        brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
-        color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
+        min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
+        min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
     ) -> None:
         self._hass = hass
         # The Settings entry's options; a change to them reloads the entry.
-        self.brightness_percent = brightness_percent
-        self.color_temp_mireds = color_temp_mireds
+        self.min_brightness_change = min_brightness_change
+        self.min_color_temp_change = min_color_temp_change
         self.claims: dict[str, _WriteRecord] = {}
         # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
@@ -151,8 +151,8 @@ class ClaimRegistry:
         return classify_state(
             self._hass.states.get(entity_id),
             self.record(entity_id),
-            brightness_percent=self.brightness_percent,
-            color_temp_mireds=self.color_temp_mireds,
+            min_brightness_change=self.min_brightness_change,
+            min_color_temp_change=self.min_color_temp_change,
             **tolerances,
         )
 

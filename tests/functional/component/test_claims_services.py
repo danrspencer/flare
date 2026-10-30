@@ -6,11 +6,7 @@ import pytest
 import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 
-from custom_components.flare.const import (
-    CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
-    CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
-    DOMAIN,
-)
+from custom_components.flare.const import CONF_MIN_BRIGHTNESS_CHANGE, CONF_MIN_COLOR_TEMP_CHANGE, DOMAIN
 from pytest_homeassistant_custom_component.common import async_mock_service
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
@@ -234,9 +230,9 @@ async def test_claims_override_needs_a_room(setup_integration: HomeAssistant):
 
 
 class TestOverrideTolerances:
-    """A light reporting within the Settings entry's tolerances of what FLARE
-    asked for is still FLARE's: only a change someone would notice is an
-    override."""
+    """A light reporting within the Settings entry's tolerances (the same
+    minimum change that decides what's sent) of what FLARE asked for is
+    still FLARE's: only a change someone would notice is an override."""
 
     async def _echo(self, hass: HomeAssistant, asked: dict, reported: dict) -> None:
         """Claimed at `asked`, then reported at `reported` under a fresh
@@ -254,12 +250,12 @@ class TestOverrideTolerances:
             (
                 {"brightness": 255, "color_temp_kelvin": 4294},
                 {"brightness": 255, "color_temp_kelvin": 4312},
-                CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
+                CONF_MIN_COLOR_TEMP_CHANGE,
             ),
             (
                 {"brightness": 200, "color_temp_kelvin": 3000},
                 {"brightness": 192, "color_temp_kelvin": 3000},
-                CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
+                CONF_MIN_BRIGHTNESS_CHANGE,
             ),
         ],
         ids=["colour", "brightness"],

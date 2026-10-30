@@ -286,8 +286,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             rgb_color=tuple(rgb_color) if rgb_color else None,
             rgb_color_tolerance=call.data["rgb_color_tolerance"],
             force=call.data["force"],
-            brightness_percent=registry.brightness_percent,
-            color_temp_mireds=registry.color_temp_mireds,
             **_min_changes(entry, call),
         )
 
