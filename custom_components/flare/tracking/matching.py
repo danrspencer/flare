@@ -45,6 +45,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Optional
 
+from homeassistant.components.light import ColorMode
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
@@ -78,9 +79,9 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
     if not _brightness_matches(attributes.get("brightness"), target["brightness"], tolerance):
         return False
     if target.get("rgb_color") is not None:
-        if attributes.get("color_mode") == "color_temp":
-            return False
-        return _rgb_matches(attributes.get("rgb_color"), target["rgb_color"], tolerance)
+        return attributes.get("color_mode") != ColorMode.COLOR_TEMP and _rgb_matches(
+            attributes.get("rgb_color"), target["rgb_color"], tolerance
+        )
     if target.get("color_temp_kelvin") is None:
         return False
     current = reported_kelvin(attributes)
