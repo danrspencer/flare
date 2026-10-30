@@ -74,7 +74,7 @@ from ..const import (
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
     is_reachable,
 )
-from .matching import reported, shown
+from .matching import Tolerance, differs, reported, shown
 from .override_protection import (
     MISMATCH_GRACE,
     _context_matches,
@@ -179,6 +179,19 @@ class ClaimRegistry:
         return classify_state(
             self._hass.states.get(entity_id), self.record(entity_id), **{**self.tolerances, **tolerances}
         )
+
+    def differs(self, entity_id: str, target: dict | None) -> list[str]:
+        """Which of `target`'s values this light doesn't show, within the
+        configured tolerances: "state" when it's on and off was asked for
+        or the other way round, else "brightness" and "color"."""
+        state = self._hass.states.get(entity_id)
+        if not target or not is_reachable(state):
+            return []
+        if (target.get("state") == STATE_OFF) == (state.state == STATE_ON):
+            return ["state"]
+        if state.state != STATE_ON:
+            return []
+        return differs(state.attributes, target, Tolerance(**self.tolerances))
 
     def all_records(self) -> dict[str, _WriteRecord]:
         return dict(self.claims)

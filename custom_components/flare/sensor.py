@@ -385,7 +385,7 @@ class _LightStatusSensor(SensorEntity):
     _attr_translation_key = "status"
     _attr_should_poll = False
     # Changes with every write.
-    _unrecorded_attributes = frozenset({"asked"})
+    _unrecorded_attributes = frozenset({"asked", "differs"})
 
     def __init__(
         self,
@@ -466,15 +466,17 @@ class _LightStatusSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         record = self._registry.record(self.light_entity_id) or {}
+        # What FLARE last asked for: its latest write, else the one seen
+        # landing. None with no claim, or one marking the light as someone
+        # else's.
+        asked = (record.get("latest") or {}).get("target") or (record.get("observed") or {}).get("target")
         return {
             "light": self.light_entity_id,
             "claimed": bool(record),
-            # What FLARE last asked for: its latest write, else the one seen
-            # landing. None with no claim, or one marking the light as
-            # someone else's.
-            "asked": copy.deepcopy(
-                (record.get("latest") or {}).get("target") or (record.get("observed") or {}).get("target")
-            ),
+            "asked": copy.deepcopy(asked),
+            # Which of those the light doesn't show: "state", "brightness",
+            # "color".
+            "differs": self._registry.differs(self.light_entity_id, asked),
             "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(self.light_entity_id)],
         }
 

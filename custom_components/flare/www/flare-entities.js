@@ -73,7 +73,7 @@ export function lightArea(hass, entityId) {
 
 /**
  * Each light's status sensor, by light: light -> {status, claimed, asked,
- * rooms}. Only lights a room names or FLARE claims: a light whose room has
+ * differs, rooms}. Only lights a room names or FLARE claims: a light whose room has
  * let it go keeps its sensor, but isn't a room light any more.
  */
 export function lightStatuses(hass) {
@@ -88,6 +88,7 @@ export function lightStatuses(hass) {
       status: state.state,
       claimed: Boolean(attributes.claimed),
       asked: attributes.asked || null,
+      differs: attributes.differs || [],
       rooms,
     });
   }

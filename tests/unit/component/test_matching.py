@@ -4,7 +4,7 @@ docstring."""
 
 import pytest
 
-from custom_components.flare.tracking.matching import Tolerance, reported_kelvin, shown, shows
+from custom_components.flare.tracking.matching import Tolerance, differs, reported_kelvin, shown, shows
 
 KELVIN = {"brightness": 200, "color_temp_kelvin": 3000}
 RGB = {"brightness": 200, "rgb_color": [255, 120, 10]}
@@ -171,3 +171,23 @@ class TestShown:
     def test_it_shows_itself(self):
         for attributes in (_ct(200, 3000), _xy(0.3124, 0.3226), _xy(0.17, 0.7, rgb_color=[0, 255, 0])):
             assert shows(attributes, shown(attributes))
+
+
+class TestDiffers:
+    """Which values a light doesn't show, by the same rules as shows()."""
+
+    @pytest.mark.parametrize(
+        ("attributes", "target", "expected"),
+        [
+            (_ct(), KELVIN, []),
+            (_ct(brightness=100), KELVIN, ["brightness"]),
+            (_ct(kelvin=4000), KELVIN, ["color"]),
+            (_ct(brightness=100, kelvin=4000), KELVIN, ["brightness", "color"]),
+            (_ct(), RGB, ["color"]),
+        ],
+    )
+    def test_each_value_on_its_own(self, attributes, target, expected):
+        assert differs(attributes, target) == expected
+
+    def test_within_tolerance_nothing_differs(self):
+        assert differs(_ct(brightness=195, kelvin=3040), KELVIN, Tolerance(5, 5)) == []
