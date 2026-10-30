@@ -253,6 +253,34 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
     )
 
 
+async def test_a_fitting_something_else_runs_does_not_keep_an_empty_room_lit(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """A null level is hands off: left on, and not a sign the room is in use."""
+    lamp = "light.hall_lamp"
+    bulbs = await lit_room(
+        hass,
+        add_bulbs,
+        setup_room,
+        area,
+        no_motion_wait=0,
+        brightness_template=f"{{{{ {{'{lamp}': None}} }}}}",
+    )
+    await hass.services.async_call(
+        "light", "turn_on", {"entity_id": lamp, "brightness": 90}, blocking=True
+    )
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+
+    expected = {b.entity_id: "off" for b in bulbs}
+    expected[lamp] = 90
+    for tick in range(4):
+        await let_time_pass(hass, frozen_time, 60)
+        assert room_brightness(hass, bulbs) == expected, (
+            f"tick {tick}: the hands-off lamp relit the empty room"
+        )
+
+
 async def test_a_phase_exclusion_turns_off_a_fitting_that_was_lit(
     hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:

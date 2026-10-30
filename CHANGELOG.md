@@ -104,6 +104,8 @@ After updating:
   set this as well as what's worth sending, and are called **Brightness tolerance** and
   **Colour temperature tolerance**. A light FLARE sets by RGB follows the colour temperature
   tolerance too.
+- **A light Brightness Template leaves alone (`null`) no longer keeps an empty room lit.** While
+  it was on, the rest of the room switched off and back on every minute.
 - **Lights that are on when a phase in Prefer RGB During starts now switch to RGB.** A colour
   bulb that was showing the same colour temperature as a white stayed white, which looks much
   cooler than the same colour sent as RGB, so the room looked stuck on Day.
