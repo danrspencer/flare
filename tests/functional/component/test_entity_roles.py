@@ -69,3 +69,17 @@ async def test_the_settings_entitys_carry_the_roles_the_dashboard_reads(stub_ent
         if e.translation_key in _expected_roles(settings_entities())
     }
     assert roles == _as_roles(settings_entities())
+
+
+async def test_a_schedules_entities_take_their_names_from_the_translations(stub_entry_setup, hass: HomeAssistant):
+    entry = await _set_up(hass, ENTRY_TYPE_SCHEDULES, SUBENTRY_TYPE_SENSOR)
+    roles = _roles(hass, entry)
+
+    names = {role: hass.states.get(roles[role]).name for role in roles}
+
+    assert names["morning_brightness"] == "Hall Morning Brightness"
+    assert names["day_kelvin_transition"] == "Hall Day Colour Transition"
+    assert names["evening_earliest_time"] == "Hall Evening Earliest"
+    assert names["phase_override"] == "Hall Phase"
+    assert names["sticky_phase_override"] == "Hall Sticky Phase Override"
+    assert hass.states.get("event.hall_flare_phase").name == "Hall Phase"

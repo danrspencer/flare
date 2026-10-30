@@ -23,7 +23,6 @@ class _StickyOverrideSwitch(SwitchEntity, RestoreEntity):
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
     _attr_icon = "mdi:pin"
-    _attr_name = "Sticky Phase Override"
 
     def __init__(self, instance: ScheduleInstance) -> None:
         self._attr_unique_id = f"{instance.subentry_id}_sticky_phase_override"

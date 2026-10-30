@@ -15,15 +15,6 @@ import homeassistant.util.dt as dt_util
 
 from .schedule.coordinator import TIME_KEYS, ScheduleCoordinator, ScheduleInstance, default_time, schedule_instances
 
-_LABELS = {
-    "morning_time": "Morning Start",
-    "day_time": "Day Start",
-    "evening_earliest_time": "Evening Earliest",
-    "evening_latest_time": "Evening Latest",
-    "night_time": "Night Start",
-}
-
-
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     for instance in schedule_instances(entry):
@@ -43,7 +34,6 @@ class _BoundaryTime(TimeEntity, RestoreEntity):
         self._attr_translation_key = key
         self.entity_id = instance.time_entity_id(key)
         self._attr_device_info = instance.device_info
-        self._attr_name = _LABELS[key]
         self._attr_native_value = default_time(key)
 
     async def async_added_to_hass(self) -> None:
