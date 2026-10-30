@@ -6,10 +6,6 @@ services.yaml."""
 from __future__ import annotations
 
 import asyncio
-
-# Safe here, but not in the package __init__.py: importing the package's
-# time.py platform rebinds `time` in the package namespace.
-import time
 from typing import Any
 
 import voluptuous as vol
@@ -22,6 +18,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
 from ..const import (
     CONF_MIN_BRIGHTNESS_CHANGE,
@@ -52,14 +49,14 @@ ROOM_FIELDS = {
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
 BRIGHTNESS_LEVELS = vol.Schema(
-    {cv.entity_id: vol.Any(None, False, vol.All(vol.Coerce(float), vol.Range(min=0)))}
+    {cv.entity_id: vol.Any(None, False, cv.positive_float)}
 )
 
 # How close a light must be to match: unset or None takes the Settings
 # entry's option.
 TOLERANCE_FIELDS = {
-    vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-    vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+    vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, cv.positive_float),
+    vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, cv.positive_float),
 }
 
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
@@ -285,7 +282,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
 
     async def compute_curve(call: ServiceCall) -> ServiceResponse:
         """flare.compute_curve - see services.yaml."""
-        at = call.data.get("at", time.time())
+        at = call.data.get("at", dt_util.utcnow().timestamp())
         morning, day, evening, night = (
             call.data["morning"],
             call.data["day"],

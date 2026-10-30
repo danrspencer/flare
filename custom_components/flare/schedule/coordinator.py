@@ -8,7 +8,6 @@ curve (`points`)."""
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass
 from datetime import time as time_of_day
 from datetime import timedelta
@@ -239,7 +238,7 @@ class ScheduleCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         boundaries = _compute_boundaries(self.hass, self._instance)
         values = read_schedule(self.hass, self._instance)
         curve_kwargs = {key: values[key] for key in CURVE_KEYS if key in values}
-        now_ts = time.time()
+        now_ts = dt_util.utcnow().timestamp()
         computed_phase = phase_at(now_ts, boundaries["morning_ts"], boundaries["day_ts"], boundaries["evening_ts"], boundaries["night_ts"])
         phase = _phase_override(self.hass, self._instance) or computed_phase
         targets = targets_for_phase(

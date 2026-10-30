@@ -156,7 +156,7 @@ def disagrees(status: str) -> bool:
 
 def _parse(value: Optional[str]) -> Optional[datetime]:
     try:
-        return datetime.fromisoformat(value) if value else None
+        return dt_util.parse_datetime(value) if value else None
     except (TypeError, ValueError):
         return None
 

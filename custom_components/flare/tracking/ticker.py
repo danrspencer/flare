@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_point_in_utc_time
@@ -29,7 +29,7 @@ def next_tick(now: datetime, interval_minutes: int, offset: timedelta) -> dateti
     period = interval_minutes * 60
     shift = offset.total_seconds()
     previous = math.floor((now.timestamp() - shift) / period) * period + shift
-    return datetime.fromtimestamp(previous + period, tz=UTC)
+    return dt_util.utc_from_timestamp(previous + period)
 
 
 class TickScheduler:
