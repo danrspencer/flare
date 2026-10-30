@@ -77,8 +77,8 @@ After updating:
 ### Deprecated
 
 - **The Sensors From Areas setting is deprecated**, and FLARE 3.0 removes it. From Home
-  Assistant 2026.11, leave it on and use **Exclude target** in **Lights & Occupancy** to leave out the
-  sensors you don't want.
+  Assistant 2026.11, use **Exclude target** in **Lights & Occupancy** instead of turning it off, to
+  leave out the sensors you don't want.
 
 ### Fixed
 

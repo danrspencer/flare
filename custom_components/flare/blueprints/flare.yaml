@@ -297,15 +297,6 @@ blueprint:
           default: true
           selector:
             boolean:
-        use_area_sensors:
-          name: Sensors From Areas (Deprecated)
-          description: >
-            Deprecated and will be removed as an option in FLARE 3.0. From
-            Home Assistant 2026.11 use "Exclude target" instead.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
-          default: true
-          selector:
-            boolean: {}
         rgb_phases:
           name: Prefer RGB During
           description: >
@@ -334,6 +325,16 @@ blueprint:
               min: 1
               max: 200
               mode: box
+        use_area_sensors:
+          name: Sensors From Areas (Deprecated)
+          description: >
+            Deprecated and will be removed as an option in FLARE 3.0. From
+            Home Assistant 2026.11 use "Exclude target" instead of turning
+            this off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+          default: true
+          selector:
+            boolean: {}
 
 mode: restart
 max_exceeded: silent

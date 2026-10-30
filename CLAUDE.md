@@ -103,8 +103,8 @@ Blueprint input mechanics:
   hold what a room may want tweaked (**Sensors & Triggers**: Wait time,
   Lux Threshold, Additional Triggers; then Brightness, Idle Brightness, Scenes,
   Transitions); **Settings**, last, holds what most rooms never touch
-  (Override Protection, Sensors From Areas, Prefer RGB During, Stored
-  Traces).
+  (Override Protection, Prefer RGB During, Stored Traces, then the
+  deprecated Sensors From Areas).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
