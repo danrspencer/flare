@@ -703,8 +703,9 @@ action:
            and room_occupancy_entities | length > 0
            and occupancy_clear_for_wait }}
       occupied: >
-        {# The room is in use if anything is already on. #}
-        {{ resolved_entities | map('states') | select('eq', 'on') | list | count > 0 }}
+        {# The room is in use if anything it runs is already on. #}
+        {{ resolved_entities | reject('in', hands_off_entities)
+           | select('is_state', 'on') | list | count > 0 }}
       # THE gate for switching a light on: motion, a manual run, the room
       # already in use, or the room getting dark enough while someone is in it
       # (Lux Threshold, at the user's request). Only two things may switch a

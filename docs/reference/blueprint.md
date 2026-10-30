@@ -113,7 +113,7 @@ Brightness Template values:
 |---|---|
 | `1`–`255` | Sets the light to this brightness, on the same scale as the phase brightnesses. |
 | `0` | Turns the light off. |
-| `null` | FLARE leaves the light alone, including when the room empties. |
+| `null` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
 
 A single number instead of a mapping applies to every light in the room, and any light the
 template doesn't include follows the schedule. See [Templates](../../guides/templates/#brightness-template).
