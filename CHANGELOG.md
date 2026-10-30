@@ -9,16 +9,39 @@ CI — see `.github/workflows/release.yml`.
 
 ## [2.0.0] - Unreleased
 
-**Zones are gone.** FLARE now keeps track of which lights it controls itself, rather than in a zone
-per room, so there's nothing to set up for each room. Updating removes your zones and their
-devices. This only affects you if you'd built something of your own on FLARE's services using
-zones; rooms from the blueprint carry on as before. The details are under **Changed**.
+FLARE no longer needs zones. It keeps track of the lights it's driving by itself, so there's
+nothing extra to set up for each room, and two automations sharing a light no longer get in each
+other's way. Updating takes one extra step, and after that your rooms carry on as before.
+
+### Updating from 1.x
+
+1. Update FLARE in HACS and restart Home Assistant.
+2. Open **Settings → System → Repairs**, select **FLARE blueprint is out of date**, and submit
+   it. This updates the blueprint your rooms use, and they keep all their settings. Until you
+   do, your rooms' automations stop with an error each time they run, so their lights won't
+   follow the schedule or switch off when a room empties.
+3. If you'd left **Zone** empty in a room's automation, that room now has override protection
+   too. To keep it as it was, turn **Override Protection** off in that automation.
+4. If you've written automations of your own that call FLARE's services or listen for its
+   events, check the last section below.
+
+After updating:
+
+- **Your zones and their devices are removed.** **FLARE → Zones** is now **FLARE → Settings**,
+  where the options are.
+- **Any light you'd changed by hand goes back to the schedule** the next time its room updates.
+  This happens once, because FLARE starts its record of what it's driving afresh. From then on,
+  a light you change is left alone as before.
+- **The dashboard's Zones view is now Overrides.** If you'd taken control of FLARE's dashboard,
+  its Zones view no longer loads. Delete that dashboard and add FLARE's again: under
+  **Settings → Dashboards → Add dashboard**, pick **FLARE Lighting**.
 
 ### Added
 
-- **FLARE speaks German**, in setup and on the dashboard, following your Home Assistant language. Thanks to
-  @stefanr09 for the translation ([#301](https://github.com/danrspencer/flare/issues/301)). The dashboard's cards
-  now translate their own text, so other languages can follow.
+- **FLARE speaks German**, in setup, on the dashboard and in its entities' names, following your
+  Home Assistant language. Thanks to @stefanr09 for the translation
+  ([#301](https://github.com/danrspencer/flare/issues/301)). The dashboard's cards now translate
+  their own text, so other languages can follow.
 - **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
   is setting it or something else has taken it over, with history.
 - **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for
@@ -28,57 +51,59 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   sensor, a scene and idle brightness won't switch one on. If someone is still there when it gets
   darker, the lights come on then. Lights already on carry on as before, and running the
   automation by hand still switches the room on. `0`, the default, turns the check off.
+- **Stored Traces**, a new blueprint setting. Room automations keep their last 20 traces, up
+  from Home Assistant's 5, which a room updating every minute used up in five minutes.
 
 ### Changed
 
-- **Room automations keep their last 20 traces**, up from Home Assistant's 5, which a room ticking
-  every minute used up in five minutes. Change it with the blueprint's new **Stored Traces** setting.
 - **Setup is simpler.** It starts with your schedules, then asks whether to set up room
-  automations now. Already have automations controlling your lights? Skip it, then move your
-  rooms over one at a time with **Set up area**. Setting up an area gives it an automation, and
-  then flares are a page of their own: what they are, and the rooms to add them for, or **Skip**. **Skip setup** is gone: setup always sets up your schedules.
+  automations now. If you already have automations controlling your lights, skip it, then move
+  your rooms over one at a time with **Set up area**. Setting up an area gives it an automation,
+  and then a page of its own offers flares for the rooms you've just set up, which you can skip.
+  **Skip setup** is gone: setup always sets up your schedules.
 - **The blueprint's inputs are regrouped.** Only **Schedule** and **Lights & Occupancy** are
   shown to begin with. **Wait time**, **Lux Threshold** and **Additional Triggers** are under a
   new **Sensors & Triggers** section, and **Override Protection**, **Sensors From Areas** and
   **Prefer RGB During** under a new **Settings** section. Existing rooms keep their values.
+- **Rooms update one area at a time**, a second apart, on the tick of the first area in their
+  **Lights & Occupancy**. A room that names no area updates every minute, on the minute.
 - **A room waits a few seconds for its lights to start up when they come back online together**,
   such as when they're switched on at the wall, before setting them. A command sent while a bulb
-  boots is lost, so FLARE no longer sends it then and resends it after.
-- **A light FLARE has let go of stays let go of**, however long its room stays lit. A light
-  changed by hand used to be taken back after a day. A light's record now follows it when it's
-  renamed, and goes when it's deleted.
-- **The schedule's settings are named in your language**, such as **Morgen-Helligkeit** in German.
+  starts up is lost, so FLARE no longer sends it then.
 - **The dashboard is easier to read on a light theme.** A near-white colour temperature's slider
   is drawn a shade darker so you can see it, Day is amber instead of yellow, and Evening is deep
   orange so the two stay apart.
-- **Zones are gone.** FLARE keeps one record of the lights it controls, across every room, and
-  lets a room's lights go once they're all off. Updating removes your zones and their devices,
-  and FLARE takes every room back on its next update.
-  - The blueprint's **Zone** input is replaced by **Override Protection**, on by default. Turn it
-    off in any room where you'd left **Zone** empty.
-  - A room updates on the tick of the first area in its **Lights & Occupancy**. A room naming no
-    area updates every minute, on the minute.
-  - **FLARE → Zones** is now **FLARE → Settings**, where the options are.
-  - The dashboard's Zones view is now **Overrides**, with each area's lights, counts and **Clear all**.
-  - Two automations driving the same light no longer treat each other's changes as overrides,
-    so there's no more notification about a light in two zones.
-- **If you call FLARE's services or listen for its events yourself**, these changed:
-  - `zone_device_id` is replaced by `room_id`, usually `{{ this.entity_id }}`, and an optional
-    `room_entities`, on `flare.apply_lighting`, `flare.turn_off`,
-    `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
-    `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
-    returns `rooms` instead of `zone`.
-  - `flare.claims_clear`'s `cleared` lists only the entities that had a claim, not every one
-    passed in.
-  - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
-  - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
-    `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
-    `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
-  - `custom:flare-clear-card` and the `custom:flare-zone` view are gone. They only mattered
-    to a dashboard you'd taken control of, and pointed at zone buttons that no longer exist.
-  - Each zone's entities are gone. `button.flare_clear` clears every claim, each light's
-    status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
-    all.
+
+### Fixed
+
+- **Two automations driving the same light no longer treat each other's changes as overrides**,
+  so there's no more notification about a light in two zones.
+- **A light you've changed by hand is left alone however long its room stays lit.** It used to
+  be taken back after a day.
+- **Lights you've changed by hand are still left alone after Home Assistant restarts**, including
+  MQTT lights, which go unavailable as Home Assistant shuts down.
+- **Evening starts at sunset without Home Assistant's Sun integration.** Without it, Evening
+  started at its latest time.
+- **Renaming a light keeps FLARE's record of it**, so a light you'd changed by hand is still left
+  alone after a rename.
+
+### If you use FLARE's services or events yourself
+
+- `zone_device_id` is replaced by `room_id`, usually `{{ this.entity_id }}`, and an optional
+  `room_entities`, on `flare.apply_lighting`, `flare.turn_off`,
+  `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
+  `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
+  returns `rooms` instead of `zone`. A call that still passes `zone_device_id` is rejected.
+- `flare.claims_clear`'s `cleared` lists only the entities that had a claim, not every one
+  passed in.
+- `flare_tick` carries an `area_id` instead of a zone's `device_id`.
+- `flare_lights_controlled` and `flare_lights_released` carry `room`, and
+  `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
+  `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
+- Each zone's entities are gone. `button.flare_clear` clears every claim, each light's
+  status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
+  all.
+- `custom:flare-clear-card` and the `custom:flare-zone` view are gone.
 
 ## [1.2.1] - Unreleased
 
