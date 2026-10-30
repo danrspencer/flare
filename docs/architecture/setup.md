@@ -105,7 +105,7 @@ its own once HA has started (`async_at_started`), from the Settings entry.
 flowchart TB
     start(["HA started"]) --> ours{"any blueprint<br/>named FLARE?"}
     ours -->|"no"| miss["repair: blueprint_not_installed<br/>Fix installs flare/flare.yaml"]
-    ours -->|"yes"| used{"used by an automation,<br/>and stamped older than<br/>this release?"}
+    ours -->|"yes"| used{"used by an automation,<br/>and stamped older than<br/>this release, or in<br/>another language?"}
     used -->|"yes"| old["repair: outdated_blueprint<br/>Fix writes the shipped file<br/>over each stale copy"]
     used -->|"no"| ok(["clear both repairs"])
 ```
@@ -118,6 +118,14 @@ flowchart TB
   import route. It's `0.0.0-dev` in source. `scripts/release.py` writes
   the real version into each release's zip, along with the manifest and
   `BLUEPRINT_VERSION`.
+- **The blueprint is written in HA's language** (`blueprint_translation.py`).
+  HA has no translations for a blueprint, so `_shipped()` swaps in each
+  input's text from `blueprints/translations/<language>.yaml` before saving
+  it; keys, defaults and selectors stay, and select options keep their
+  English values under a translated label. The stamp names the language
+  (`Blueprint version 2.0.0 (de)`), so a copy in another language than
+  HA's counts as outdated and Fix rewrites it. A copy stamped without one
+  reads as English.
 - A blueprint that fails to load comes back from `async_get_blueprints()`
   as the exception itself, hence `isinstance` rather than a `None` check.
 
