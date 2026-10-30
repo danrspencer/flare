@@ -180,8 +180,9 @@ stateDiagram-v2
 
 ## The listener
 
-`ClaimRegistry.async_start_listening` is one `state_changed` listener for
-every light. For a claimed light, on each change:
+`ClaimRegistry.async_start_listening` follows exactly the claimed lights,
+through `async_track_state_change_event`, and re-subscribes whenever the
+set of claimed lights changes. For each change to one:
 
 | Change | Effect |
 |---|---|

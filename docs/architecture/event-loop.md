@@ -56,7 +56,7 @@ sequenceDiagram
     HA->>I: async_setup (once per domain)
     Note over I: static path /flare_static/#lt;hash#gt;/,<br/>add_extra_js_url(loader),<br/>OldFingerprintView, FrontendLoadedView,<br/>export/import_schedule, resolve_target
     HA->>SE: async_setup_entry
-    Note over SE: a ScheduleCoordinator per schedule,<br/>first refresh (defaults),<br/>listen to sun.sun,<br/>forward 6 platforms,<br/>refresh again (restored values)
+    Note over SE: a ScheduleCoordinator per schedule,<br/>first refresh (defaults),<br/>forward 6 platforms,<br/>refresh again (restored values)
     HA->>ST: async_setup_entry
     Note over ST: ClaimRegistry.async_load (Store),<br/>hourly prune, state listener,<br/>blueprint check at started,<br/>9 services, TickScheduler,<br/>forward sensor + button,<br/>release rooms restored dark,<br/>prune stale, start area ticks
     HA->>FE: async_setup_entry
@@ -89,12 +89,12 @@ automation's inputs until then.
 
 | Listener | Where | Reacts by |
 |---|---|---|
-| `state_changed` (lights only) | `ClaimRegistry.async_start_listening` | dropping a claim when its light goes unavailable, releasing a room gone dark, noting mismatches |
-| `sun.sun` state | Schedules entry | refreshing every schedule (Evening follows sunset) |
+| each claimed light's state | `ClaimRegistry.async_start_listening`, re-subscribed as the claimed set changes | dropping a claim when its light goes unavailable, releasing a room gone dark, noting mismatches |
 | a light's own state | each `_LightStatusSensor` | rewriting its status |
 | a flare's member lights | `FlareLight`, via `async_track_target_selector_state_change_event` | recomputing the group's state |
 | `area_registry_updated` | `_tick_areas` | handing the ticker the new set of areas |
-| `entity_registry_updated` | `_LightStatuses`, `_LightStatusSensor`, `FlareLight` | removing a status sensor with its light; following a rename; retracking a flare |
+| a light's registry entry | each `_LightStatusSensor` | following a rename; going with its light when it's removed |
+| an automation's registry entry | each `FlareLight`, for its own automation | retracking when it's renamed or removed |
 | `automation_reloaded` | `FlareLight` | re-reading the automation's lights |
 | `homeassistant_started` | `FlareLight` | first membership, once automations exist |
 | `homeassistant_stop` | Settings entry, `ClaimEvents` | stopping the ticker and timers |
@@ -181,7 +181,9 @@ Four facts shape everything built on contexts:
 - **The Phase event fires after the sensor updates.** One coordinator
   refresh updates the schedule sensor and the Phase `event` entity. The
   event entity defers its fire with `loop.call_soon`, so an automation
-  woken by it reads the sensor's new phase, not the old one.
+  woken by it reads the sensor's new phase, not the old one. That's
+  needed: HA starts the automation's run inside the event entity's own
+  state write, so its `variables:` render before anything after it.
 - **`variables:` render once, at trigger time.** Nothing in the
   blueprint's `action:` may delay, or later steps would act on a stale
   snapshot (see [The room automation]({{ site.baseurl }}/architecture/room-automation/)).

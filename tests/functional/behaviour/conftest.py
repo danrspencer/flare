@@ -43,9 +43,9 @@ def frozen_time(hass: HomeAssistant):
 
 
 @pytest.fixture(autouse=True)
-async def schedule(stub_entry_setup, frozen_time, hass: HomeAssistant):
+async def schedule(stub_entry_setup, frozen_time, sunset, hass: HomeAssistant):
     """The real schedule the room follows, on the pinned day."""
-    hass.states.async_set("sun.sun", "below_horizon", {"next_setting": today_at(SUNSET).isoformat()})
+    sunset(today_at(SUNSET))
     entry = await setup_schedule(hass)
     state = hass.states.get(SCHEDULE_SENSOR)
     assert (state.state, state.attributes["brightness"], state.attributes["color_temp"]) == (

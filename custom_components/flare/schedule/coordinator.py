@@ -18,6 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.sun import get_astral_event_date
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
@@ -179,20 +180,9 @@ def _compute_boundaries(hass: HomeAssistant, instance: ScheduleInstance) -> dict
     earliest_ts = time_ts("evening_earliest_time")
     latest_ts = time_ts("evening_latest_time")
 
-    sun_state = hass.states.get("sun.sun")
-    next_setting = sun_state.attributes.get("next_setting") if sun_state else None
-    sunset_dt = dt_util.parse_datetime(next_setting) if next_setting else None
-    if sunset_dt is not None:
-        # next_setting is tomorrow's once today's sunset has passed, so use its
-        # time of day, projected onto today.
-        sunset_local = dt_util.as_local(sunset_dt)
-        sunset_ts = (
-            dt_util.now()
-            .replace(hour=sunset_local.hour, minute=sunset_local.minute, second=sunset_local.second, microsecond=0)
-            .timestamp()
-        )
-    else:
-        sunset_ts = latest_ts
+    # Today's sunset where the home is; none on a day the sun doesn't set.
+    sunset = get_astral_event_date(hass, "sunset", dt_util.now().date())
+    sunset_ts = sunset.timestamp() if sunset is not None else latest_ts
 
     evening_ts = max(earliest_ts, min(sunset_ts, latest_ts))
 

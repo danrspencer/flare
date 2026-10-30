@@ -167,9 +167,12 @@ exception: entry-wide plumbing.)
    tests can't catch either; check `core.py`'s
    `get_hassjob_callable_job_type` before trusting a fix.
 
-8. **`sun.sun`'s `next_setting` is the *next* sunset**, tomorrow's once
-   today's has passed. `curve.py` projects its local time of day onto
-   today instead of using the timestamp.
+8. **Today's sunset is `helpers.sun.get_astral_event_date(hass,
+   "sunset", today)`, not `sun.sun`.** `sun.sun`'s `next_setting` is
+   tomorrow's once today's has passed, which needed projecting back onto
+   today, and a removed `sun` integration silently put Evening at its
+   latest bound. Prefer HA's helper over reading another integration's
+   entity.
 
 9. **A branch-name `raw.githubusercontent.com` URL can serve a stale
    copy for minutes after a push**, while the fetching tool reports
@@ -437,6 +440,12 @@ fresh context, and with context-only matching every light read
 restored claim can't match on context, but a light still showing what
 FLARE asked for matches on value.
 
+**The registry follows exactly the claimed lights**
+(`async_track_state_change_event`, re-subscribed as the set changes),
+never the whole bus: nothing it does concerns an unclaimed light. Status
+sensors and flares likewise follow their own entity's registry entry
+(`async_track_entity_registry_updated_event`), not every registry change.
+
 Two listener rules, pinned in `test_claim_persistence.py`:
 
 - **No "recovery re-baseline".** Replacing `observed` with the live
@@ -688,6 +697,11 @@ device; its entities and how they become a phase and a colour are in
 `docs/architecture/schedules.md`. `schedule_instances(entry)` is the one place
 enumerating them. The phase override clears at the next natural boundary
 (compared against the phase computed when it was set), not on a timer.
+**The Phase event fires through `loop.call_soon`, after the sensor
+updates, and must.** HA starts a triggered automation's run inside the
+event entity's own state write, so without it the room reads the old
+phase in its variables and actions (verified; pinned by
+`test_an_automation_it_triggers_reads_the_new_phase`).
 
 **Config lives in entity state, not `subentry.data`**: a subentry data
 change reloads the whole entry. A missing entity falls back to the

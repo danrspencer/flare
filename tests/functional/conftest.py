@@ -27,6 +27,27 @@ def hass_config_dir(tmp_path) -> str:
 
 
 @pytest.fixture(autouse=True)
+def sunset(monkeypatch):
+    """Today's sunset as FLARE reads it: none, so Evening starts at its
+    latest bound, until a test calls this with a time. Records the dates
+    asked for."""
+    pinned: dict = {"at": None, "asked": []}
+
+    def _sunset(hass, event, date=None):
+        assert event == "sunset"
+        pinned["asked"].append(date)
+        return pinned["at"]
+
+    monkeypatch.setattr("custom_components.flare.schedule.coordinator.get_astral_event_date", _sunset)
+
+    def pin(when):
+        pinned["at"] = when
+
+    pin.asked = pinned["asked"]
+    return pin
+
+
+@pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 

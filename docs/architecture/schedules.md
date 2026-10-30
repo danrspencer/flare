@@ -44,7 +44,7 @@ flowchart TB
     subgraph IN["Inputs, read on every refresh"]
         T["time.* boundaries"]
         N["number.* curve values"]
-        SUN["sun.sun next_setting"]
+        SUN["today's sunset<br/>(HA's sun helper)"]
         OV["select.*_flare_phase<br/>(Auto or a phase)"]
     end
     T --> B["_compute_boundaries():<br/>today's timestamps"]
@@ -80,7 +80,6 @@ recomputing the curve.
 
 The coordinator refreshes every 60 seconds, and also:
 
-- when `sun.sun` changes, since Evening follows sunset
 - when any of its `time`, `number` or `select` entities is set
   (`async_request_refresh`, debounced to at most once per 10 seconds)
 - twice at setup. The first refresh runs before the entities exist, so it

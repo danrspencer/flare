@@ -49,7 +49,8 @@ class _SchedulePhase(CoordinatorEntity[ScheduleCoordinator], EventEntity):
             return
         self._fired_phase = phase
         # After the rest of this update's listeners, so the schedule sensor
-        # already shows the new phase when a triggered automation reads it.
+        # already shows the new phase: HA starts a triggered automation's run
+        # inside this entity's state write, variables and all.
         self.hass.loop.call_soon(self._fire, phase)
 
     @callback
