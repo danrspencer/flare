@@ -27,6 +27,7 @@ from custom_components.flare.blueprint_version import (
     version_from_description,
 )
 from custom_components.flare.const import DOMAIN
+from tests.functional.component.harness import setup_settings_entry
 from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH
 
 
@@ -298,3 +299,17 @@ async def test_a_language_with_no_translation_gets_english_without_a_repair(hass
 
     assert await outdated_blueprints(hass) == []
     await _switch_off(hass)
+
+
+async def test_switching_home_assistant_to_german_raises_the_repair_straight_away(hass: HomeAssistant):
+    await _automation_using(hass, BLUEPRINT_PATH, "room", **ROOM)
+    entry = await setup_settings_entry(hass)
+    await async_check(hass)
+    assert _issues(hass) == set()
+
+    await hass.config.async_update(language="de")
+    await hass.async_block_till_done()
+
+    assert _issues(hass) == {ISSUE_ID}
+    await _switch_off(hass)
+    await hass.config_entries.async_unload(entry.entry_id)

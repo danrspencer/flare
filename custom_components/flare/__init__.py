@@ -12,7 +12,7 @@ from pathlib import Path
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import config_validation as cv
@@ -161,6 +161,13 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
         await async_check_blueprint(hass)
 
     entry.async_on_unload(async_at_started(hass, _check_blueprint))
+
+    # The blueprint is written in HA's language, so a new one makes ours stale.
+    async def _language_changed(event: Event) -> None:
+        if "language" in event.data:
+            await async_check_blueprint(hass)
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, _language_changed))
     async_setup_services(hass, entry, registry)
 
     scheduler = TickScheduler(

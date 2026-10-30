@@ -1142,7 +1142,8 @@ to keep:
 - **One file, one name.** It's the same `flare/flare.yaml` and `name:
   FLARE` in every language, since ours is recognised by name (lesson 3).
 - **The stamp carries the language**, so changing HA's language raises
-  the outdated repair rather than a new one. A copy stamped without one
+  the outdated repair rather than a new one, straight away
+  (`EVENT_CORE_CONFIG_UPDATE`), not at the next restart. A copy stamped without one
   reads as English, so English houses see no repair from this.
 - **A table must cover every input** (the same rule as `de.json`), and
   each entry's `source` hashes the English it was made from, so rewording
