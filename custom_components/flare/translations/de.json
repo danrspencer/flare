@@ -224,19 +224,19 @@
     "step": {
       "init": {
         "title": "Einstellungen",
-        "description": "**Zweischritt-Lampenmodelle** listet die Lampenmodelle, die Helligkeit und Farbe getrennt benötigen – ein Muster pro Zeile. Jedes Muster wird mit Hersteller und Modell einer Lampe abgeglichen, Groß-/Kleinschreibung wird ignoriert, und * passt auf alles, wie bei *TRADFRI bulb* oder IKEA*.\n\nDas Feld ist mit FLAREs Standardmustern vorausgefüllt. Deine gespeicherte Liste ersetzt diese Standardwerte vollständig – du kannst also ein Muster entfernen oder hinzufügen, erhältst aber Muster aus späteren Versionen nicht automatisch. Wenn du das Feld leer speicherst, verwendet FLARE wieder die Standardwerte.\n\nJeder Bereich tickt einmal pro **Aktualisierungsintervall**, mit Abstand zum nächsten Bereich, damit nicht alle Räume gleichzeitig senden. Eine Änderung kleiner als die **Minimale Helligkeitsänderung** oder **Minimale Farbtemperaturänderung** wird nicht gesendet.",
+        "description": "**Zweischritt-Lampenmodelle** listet die Lampenmodelle, die Helligkeit und Farbe getrennt benötigen – ein Muster pro Zeile. Jedes Muster wird mit Hersteller und Modell einer Lampe abgeglichen, Groß-/Kleinschreibung wird ignoriert, und * passt auf alles, wie bei *TRADFRI bulb* oder IKEA*.\n\nDas Feld ist mit FLAREs Standardmustern vorausgefüllt. Deine gespeicherte Liste ersetzt diese Standardwerte vollständig – du kannst also ein Muster entfernen oder hinzufügen, erhältst aber Muster aus späteren Versionen nicht automatisch. Wenn du das Feld leer speicherst, verwendet FLARE wieder die Standardwerte.\n\nJeder Bereich tickt einmal pro **Aktualisierungsintervall**, mit Abstand zum nächsten Bereich, damit nicht alle Räume gleichzeitig senden. Eine Lampe innerhalb der **Helligkeitstoleranz** und der **Farbtemperaturtoleranz** ihres Ziels wird in Ruhe gelassen: FLARE sendet ihr nichts und betrachtet sie nicht als übersteuert, wenn sie leicht abweichende Werte meldet.",
         "data": {
           "two_step_models": "Zweischritt-Lampenmodelle",
           "tick_interval": "Aktualisierungsintervall",
           "tick_gap": "Abstand zwischen Bereichen",
-          "min_brightness_change": "Minimale Helligkeitsänderung",
-          "min_color_temp_change": "Minimale Farbtemperaturänderung"
+          "min_brightness_change": "Helligkeitstoleranz",
+          "min_color_temp_change": "Farbtemperaturtoleranz"
         },
         "data_description": {
           "tick_interval": "Wie oft jeder Bereich tickt, in Minuten.",
           "tick_gap": "Sekunden zwischen dem Tick eines Bereichs und dem nächsten. Wird automatisch kleiner, wenn die Bereiche sonst nicht in das Intervall passen würden.",
-          "min_brightness_change": "Eine Lampe, deren Helligkeit nahe genug an der Zielhelligkeit liegt, wird in Ruhe gelassen.",
-          "min_color_temp_change": "Eine Lampe, deren Farbtemperatur nahe genug an der Ziel-Farbtemperatur liegt, wird in Ruhe gelassen."
+          "min_brightness_change": "Eine Lampe, deren Helligkeit nahe genug an der Zielhelligkeit liegt, wird in Ruhe gelassen. Erhöhe den Wert, wenn Lampen als übersteuert markiert werden, obwohl niemand sie verändert hat.",
+          "min_color_temp_change": "Eine Lampe, deren Farbtemperatur nahe genug an der Ziel-Farbtemperatur liegt, wird in Ruhe gelassen, und eine per RGB gesetzte innerhalb des Doppelten, summiert über Rot, Grün und Blau. Erhöhe den Wert, wenn Lampen als übersteuert markiert werden, obwohl niemand sie verändert hat."
         }
       }
     }

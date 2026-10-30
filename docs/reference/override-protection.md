@@ -117,6 +117,24 @@ A light matches a claim if it reports the context of that claim's change, or the
 Values are needed because Home Assistant drops a change's context after five seconds, and some
 bulbs take longer than that to report back.
 
+### How close counts as a match
+
+A light matches a claim's values if it's within a tolerance of them, so only a change you'd
+notice counts as someone else's. Bulbs rarely report back exactly what they were sent: a colour
+temperature asked for as 4294 K can come back as 4312 K. You can set the tolerances under
+**FLARE → Settings → Configure**:
+
+| Option | Default | Description |
+|---|---|---|
+| Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. A dim light always gets at least 2 (of 255). |
+| Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. For a light FLARE sets by RGB, the red, green and blue differences added together can be up to twice this (10 by default). |
+
+The same tolerances decide what's worth sending: a light that close to its target isn't sent
+anything.
+
+If lights are marked overridden when nobody has changed them, raise the one that matches the
+difference shown on the [dashboard](../../dashboard/). Lower them to catch smaller changes.
+
 Claims are kept across a restart. After a restart every light has a new context, so restored
 claims are matched by values only: a light still showing what FLARE set is FLARE's, and any
 other light is left alone.

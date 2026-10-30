@@ -26,7 +26,8 @@ class TestTargets:
 
 
 class TestBrightness:
-    def test_within_tolerance(self):
+    def test_within_the_rounding_floor(self):
+        """2 points, whatever the percentage."""
         assert shows(_ct(198), KELVIN) and shows(_ct(202), KELVIN)
         assert not shows(_ct(197), KELVIN)
 
@@ -61,13 +62,20 @@ class TestReadingKelvin:
 
 
 class TestKelvin:
-    def test_within_tolerance(self):
-        assert shows(_ct(kelvin=3010), KELVIN)
-        assert not shows(_ct(kelvin=3050), KELVIN)
+    def test_without_a_tolerance_only_the_same_mired_matches(self):
+        """3000K and 3002K floor to mired 333; 3010K to 332."""
+        assert shows(_ct(kelvin=3002), KELVIN)
+        assert not shows(_ct(kelvin=3010), KELVIN)
 
     def test_the_same_mired_matches_beyond_tolerance(self):
         """4373K floors to mired 228, which reads back as 4385K."""
         assert shows(_ct(255, 4385), {"brightness": 255, "color_temp_kelvin": 4373})
+
+    def test_the_minimum_change_covers_a_bulb_reporting_a_mired_off(self):
+        """Seen live: asked for 4294K (232.9 mireds), reported 4312K (231.9)."""
+        target = {"brightness": 255, "color_temp_kelvin": 4294}
+        assert not shows(_ct(255, 4312), target)
+        assert shows(_ct(255, 4312), target, Tolerance(min_color_temp_change=5))
 
     def test_the_minimum_change_widens_it_in_mireds(self):
         """3000K is 333.3 mireds, 3040K is 328.9."""
@@ -114,9 +122,24 @@ class TestAdvertisedRange:
 
 
 class TestRgb:
-    def test_per_channel_within_tolerance(self):
-        assert shows({"brightness": 200, "rgb_color": [255, 121, 9]}, RGB)
-        assert not shows({"brightness": 200, "rgb_color": [10, 10, 10]}, RGB)
+    def test_within_the_rounding_floor(self):
+        """4 in total, however the colour tolerance is set."""
+        assert shows({"brightness": 200, "rgb_color": [255, 121, 8]}, RGB)
+        assert not shows({"brightness": 200, "rgb_color": [255, 122, 7]}, RGB)
+
+    def test_the_difference_is_summed_across_channels(self):
+        """9 in one channel and 12 in all passes nothing that 11 in one fails."""
+        target = {"brightness": 200, "rgb_color": [255, 120, 21]}
+        tolerance = Tolerance(min_color_temp_change=5)
+        assert not shows({"brightness": 200, "rgb_color": [255, 120, 10]}, target, tolerance)
+        assert not shows({"brightness": 200, "rgb_color": [254, 129, 19]}, target, tolerance)
+        assert shows({"brightness": 200, "rgb_color": [254, 126, 18]}, target, tolerance)
+
+    def test_it_follows_the_colour_tolerance(self):
+        """Twice the mireds: 10 at the default 5."""
+        reported = {"brightness": 200, "rgb_color": [255, 126, 14]}
+        assert shows(reported, RGB, Tolerance(min_color_temp_change=5))
+        assert not shows(reported, RGB, Tolerance(min_color_temp_change=4))
 
     def test_a_malformed_rgb_does_not_match(self):
         assert not shows({"brightness": 200, "rgb_color": [255, 120, 10, 0]}, RGB)

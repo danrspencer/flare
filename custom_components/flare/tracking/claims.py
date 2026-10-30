@@ -55,7 +55,11 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import is_reachable
+from ..const import (
+    DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    is_reachable,
+)
 from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
@@ -89,8 +93,18 @@ class ClaimListener(Protocol):
 class ClaimRegistry:
     """Every claim and room, and the rules for keeping them."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
+        min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    ) -> None:
         self._hass = hass
+        # The Settings entry's options; a change to them reloads the entry.
+        self.tolerances = {
+            "min_brightness_change": min_brightness_change,
+            "min_color_temp_change": min_color_temp_change,
+        }
         self.claims: dict[str, _WriteRecord] = {}
         # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
@@ -138,9 +152,12 @@ class ClaimRegistry:
         """This light's claims, or None if it has none."""
         return self.claims.get(entity_id)
 
-    def status(self, entity_id: str, **tolerances: int) -> tuple[str, str | None]:
-        """classify_state for one light: its live state against its claims."""
-        return classify_state(self._hass.states.get(entity_id), self.record(entity_id), **tolerances)
+    def status(self, entity_id: str, **tolerances: float) -> tuple[str, str | None]:
+        """classify_state for one light: its live state against its claims,
+        within the configured tolerances unless `tolerances` replaces them."""
+        return classify_state(
+            self._hass.states.get(entity_id), self.record(entity_id), **{**self.tolerances, **tolerances}
+        )
 
     def all_records(self) -> dict[str, _WriteRecord]:
         return dict(self.claims)

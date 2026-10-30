@@ -24,14 +24,11 @@ from ..const import (
     CONF_MIN_BRIGHTNESS_CHANGE,
     CONF_MIN_COLOR_TEMP_CHANGE,
     CONF_TWO_STEP_MODELS,
-    DEFAULT_MIN_BRIGHTNESS_CHANGE,
-    DEFAULT_MIN_COLOR_TEMP_CHANGE,
     DOMAIN,
 )
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
-from ..tracking.matching import DEFAULT_BRIGHTNESS_TOLERANCE, DEFAULT_COLOR_TEMP_TOLERANCE, DEFAULT_RGB_COLOR_TOLERANCE
 from ..tracking.override_protection import is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
@@ -55,24 +52,26 @@ BRIGHTNESS_LEVELS = vol.Schema(
     {cv.entity_id: vol.Any(None, False, vol.All(vol.Coerce(float), vol.Range(min=0)))}
 )
 
+# How close a light must be to match: unset or None takes the Settings
+# entry's option.
+TOLERANCE_FIELDS = {
+    vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+    vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+}
+
 COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
         vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
         vol.Required("color_temp_kelvin"): vol.Coerce(int),
-        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
         vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # Accepts an explicit None: a template reading a missing attribute
         # renders None, not an omitted key.
         vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
-        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
         vol.Optional("force", default=False): cv.boolean,
-        # None means "use the integration's setting".
-        vol.Optional(CONF_MIN_BRIGHTNESS_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
-        vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+        **TOLERANCE_FIELDS,
         **ROOM_FIELDS,
     }
 )
@@ -110,9 +109,7 @@ TURN_OFF_SCHEMA = vol.Schema(
 CLAIMS_CHECK_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
-        vol.Optional("brightness_tolerance", default=DEFAULT_BRIGHTNESS_TOLERANCE): vol.Coerce(int),
-        vol.Optional("color_temp_tolerance", default=DEFAULT_COLOR_TEMP_TOLERANCE): vol.Coerce(int),
-        vol.Optional("rgb_color_tolerance", default=DEFAULT_RGB_COLOR_TOLERANCE): vol.Coerce(int),
+        **TOLERANCE_FIELDS,
     }
 )
 
@@ -181,18 +178,11 @@ def _two_step_model_patterns(entry: ConfigEntry) -> list[str]:
     return configured or list(DEFAULT_TWO_STEP_MODEL_PATTERNS)
 
 
-def _min_change(entry: ConfigEntry, call: ServiceCall, key: str, default: float) -> float:
-    """The call's own value, else the integration's setting."""
-    value = call.data.get(key)
-    if value is None:
-        value = entry.options.get(key, default)
-    return float(value)
-
-
-def _min_changes(entry: ConfigEntry, call: ServiceCall) -> dict[str, float]:
+def _tolerances(registry: ClaimRegistry, call: ServiceCall) -> dict[str, float]:
+    """The call's own tolerances, else the integration's settings."""
     return {
-        "min_brightness_change": _min_change(entry, call, CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE),
-        "min_color_temp_change": _min_change(entry, call, CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE),
+        key: registry.tolerances[key] if call.data.get(key) is None else call.data[key]
+        for key in (CONF_MIN_BRIGHTNESS_CHANGE, CONF_MIN_COLOR_TEMP_CHANGE)
     }
 
 
@@ -278,15 +268,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
             lookup=_build_lookup(hass, registry, call.data.get("room_id")),
-            brightness_tolerance=call.data["brightness_tolerance"],
-            color_temp_tolerance=call.data["color_temp_tolerance"],
             two_step_label=call.data["two_step_label"],
             two_step_model_patterns=_two_step_model_patterns(entry),
             prefer_rgb_color=call.data["prefer_rgb_color"],
             rgb_color=tuple(rgb_color) if rgb_color else None,
-            rgb_color_tolerance=call.data["rgb_color_tolerance"],
             force=call.data["force"],
-            **_min_changes(entry, call),
+            **_tolerances(registry, call),
         )
 
     async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
@@ -429,17 +416,10 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         """flare.claims_check - override protection as a standalone question.
         See services.yaml. No `force`, since forcing makes every answer "not
         blocked"."""
-        brightness_tolerance = call.data["brightness_tolerance"]
-        color_temp_tolerance = call.data["color_temp_tolerance"]
-        rgb_color_tolerance = call.data["rgb_color_tolerance"]
+        tolerances = _tolerances(registry, call)
         results: dict[str, Any] = {}
         for entity_id in call.data["entities"]:
-            status, matched_via = registry.status(
-                entity_id,
-                brightness_tolerance=brightness_tolerance,
-                color_temp_tolerance=color_temp_tolerance,
-                rgb_color_tolerance=rgb_color_tolerance,
-            )
+            status, matched_via = registry.status(entity_id, **tolerances)
             results[entity_id] = {
                 "blocked": is_blocked(status),
                 "status": status,

@@ -6,13 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
 from ..const import is_reachable
-from ..tracking.matching import (
-    DEFAULT_BRIGHTNESS_TOLERANCE,
-    DEFAULT_COLOR_TEMP_TOLERANCE,
-    DEFAULT_RGB_COLOR_TOLERANCE,
-    Tolerance,
-    shows,
-)
+from ..tracking.matching import Tolerance, shows
 from ..tracking.override_protection import classify_state, is_blocked
 from .two_step import TWO_STEP_LABEL_ID, model_matches
 
@@ -64,18 +58,16 @@ class EntityLookup:
         self,
         entity_id: str,
         force: bool = False,
-        brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
-        color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
-        rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
+        min_brightness_change: float = 0,
+        min_color_temp_change: float = 0,
     ) -> bool:
         """True if something other than the caller's own writes has touched this
         light since. force bypasses it."""
         status, _matched_via = classify_state(
             self.state(entity_id),
             self.claims(entity_id),
-            brightness_tolerance,
-            color_temp_tolerance,
-            rgb_color_tolerance,
+            min_brightness_change=min_brightness_change,
+            min_color_temp_change=min_color_temp_change,
         )
         return is_blocked(status, force)
 
@@ -137,13 +129,10 @@ def build_groups(
     sensor_brightness: Optional[int],
     sensor_color_temp_kelvin: int,
     lookup: EntityLookup,
-    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
-    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
     two_step_label: str = TWO_STEP_LABEL_ID,
     two_step_model_patterns: Iterable[str] = (),
     prefer_rgb_color: bool = False,
     rgb_color: Optional[tuple] = None,
-    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     force: bool = False,
     min_brightness_change: float = 0,
     min_color_temp_change: float = 0,
@@ -152,25 +141,23 @@ def build_groups(
     is sent. Each Group is an off-group (brightness 0, `needing_off`) or an
     update-group holding whatever isn't already close enough.
 
-    Close enough is within tolerance, or within the minimum change worth
-    sending: `min_brightness_change` percent of the target brightness, and
-    `min_color_temp_change` mireds. These only decide what's sent; override
-    protection still matches on the tolerances.
+    Close enough is within the tolerances: `min_brightness_change` percent
+    of the target brightness and `min_color_temp_change` mireds. Override
+    protection matches on the same values, so a light that close is never
+    someone else's change either.
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
     lists. A light is two-step if it carries two_step_label or its model
     matches two_step_model_patterns. force bypasses override protection."""
     use_rgb = prefer_rgb_color and rgb_color is not None
-    close_enough = Tolerance(
-        brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
-    )
+    close_enough = Tolerance(min_brightness_change, min_color_temp_change)
 
     def writable(lights: list) -> list:
         return [
             e
             for e in lights
             if lookup.reachable(e)
-            and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
+            and not lookup.externally_set(e, force, min_brightness_change, min_color_temp_change)
         ]
 
     def route(lights: list, target: Optional[dict]) -> tuple[list, list, list]:

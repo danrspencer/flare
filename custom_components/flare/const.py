@@ -52,8 +52,11 @@ CONF_AREA = "area_id"  # where the flare's device starts out
 # Our blueprint's input naming the room's lights.
 BLUEPRINT_LIGHTS_INPUT = "room_target"
 
-# Options keys: the smallest change apply_lighting sends, as a percentage
-# of the target brightness and in mireds of colour temperature.
+# Options keys: how close a light must be to its target, as a percentage of
+# the target brightness and in mireds of colour temperature, to be left alone:
+# not sent anything, and still FLARE's when it reports back. About one
+# just-noticeable difference, so only a change someone would see is an
+# override.
 CONF_MIN_BRIGHTNESS_CHANGE = "min_brightness_change"
 CONF_MIN_COLOR_TEMP_CHANGE = "min_color_temp_change"
 DEFAULT_MIN_BRIGHTNESS_CHANGE = 5

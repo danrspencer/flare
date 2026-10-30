@@ -25,9 +25,10 @@ from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 class FlareOptionsFlow(config_entries.OptionsFlow):
     """The Settings entry's options: which bulb models need two-step transitions
-    (see two_step.py), the areas' tick timing, and the smallest change worth
-    sending. The models field is pre-filled with the shipped defaults and is
-    the whole list."""
+    (see two_step.py), the areas' tick timing, and the tolerances: how close a
+    light must be to its target to be left alone, neither sent anything nor
+    overridden. The models field is pre-filled with the shipped defaults and
+    is the whole list."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         if user_input is not None:

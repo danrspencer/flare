@@ -19,7 +19,9 @@ Reading a light:
   disagree by ~13 in red at 6500K, so a bulb showing exactly what was
   asked would read as something else. A Zigbee bulb asked for more than its
   advertised range often reports in xy.
-- RGB is `rgb_color`, compared only against an RGB target.
+- RGB is `rgb_color`, compared only against an RGB target, by its
+  difference summed over the three channels, so a shift spread across them
+  counts as much as one in a single channel.
 
 Comparing, for a Kelvin target:
 
@@ -30,9 +32,10 @@ Comparing, for a Kelvin target:
   6575K), while an honest bulb parks at its ceiling, so either is accepted.
 
 The minimum changes (`Tolerance.min_brightness_change`, percent of the
-target, and `min_color_temp_change`, mireds) widen the match. Only grouping
-sets them: they decide what's worth sending. Override protection never
-does, or a hand-set light near the curve would read as FLARE's."""
+target, and `min_color_temp_change`, mireds) widen the match, for override
+protection and grouping alike: a light that close is neither worth a write
+nor changed by someone else. Bulbs often report back a little off what they
+were sent (4312K for 4294K, from xy or their own Kelvin steps)."""
 
 from __future__ import annotations
 
@@ -43,9 +46,15 @@ from typing import Optional
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
-DEFAULT_BRIGHTNESS_TOLERANCE = 2
-DEFAULT_COLOR_TEMP_TOLERANCE = 10
-DEFAULT_RGB_COLOR_TOLERANCE = 10
+# Brightness points a bulb's report can be off by rounding, whatever the
+# percentage: 5% of a dim target is under one point.
+BRIGHTNESS_FLOOR = 2
+# An RGB target's summed channel difference allowed per mired of colour
+# tolerance: across the curve's whites, 5 mireds moves the channels by 4-12
+# in total. Never below RGB_FLOOR, the most a bulb's report drifts in HA's
+# RGB -> xy -> RGB round trip.
+RGB_PER_MIRED = 2
+RGB_FLOOR = 4
 
 # How far a reported colour can sit from the line of whites (Duv, in CIE
 # 1960 uv) and still count as a colour temperature. Coloured light sits far
@@ -55,9 +64,6 @@ MAX_WHITE_DUV = 0.02
 
 @dataclass(frozen=True)
 class Tolerance:
-    brightness: int = DEFAULT_BRIGHTNESS_TOLERANCE
-    color_temp: int = DEFAULT_COLOR_TEMP_TOLERANCE  # Kelvin
-    rgb_color: int = DEFAULT_RGB_COLOR_TOLERANCE  # per channel
     min_brightness_change: float = 0  # percent of the target
     min_color_temp_change: float = 0  # mireds
 
@@ -70,7 +76,7 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
     if not _brightness_matches(attributes.get("brightness"), target["brightness"], tolerance):
         return False
     if target.get("rgb_color") is not None:
-        return _rgb_matches(attributes.get("rgb_color"), target["rgb_color"], tolerance.rgb_color)
+        return _rgb_matches(attributes.get("rgb_color"), target["rgb_color"], tolerance)
     if target.get("color_temp_kelvin") is None:
         return False
     current = reported_kelvin(attributes)
@@ -116,27 +122,26 @@ def _brightness_matches(current, asked: int, tolerance: Tolerance) -> bool:
     current = _as_int(current)
     if current is None:
         return False
-    allowed = max(tolerance.brightness, asked * tolerance.min_brightness_change / 100)
+    allowed = max(BRIGHTNESS_FLOOR, asked * tolerance.min_brightness_change / 100)
     return abs(current - asked) <= allowed
 
 
 def _kelvin_matches(current: int, asked: int, tolerance: Tolerance) -> bool:
     if current <= 0 or asked <= 0:
         return False
-    if abs(current - asked) <= tolerance.color_temp:
-        return True
     if _kelvin_to_mired(current) == _kelvin_to_mired(asked):
         return True
     return abs(1_000_000 / current - 1_000_000 / asked) <= tolerance.min_color_temp_change
 
 
-def _rgb_matches(current, asked, tolerance: int) -> bool:
+def _rgb_matches(current, asked, tolerance: Tolerance) -> bool:
     if not isinstance(current, (list, tuple)) or len(current) != 3:
         return False
     try:
-        return all(abs(int(c) - int(a)) <= tolerance for c, a in zip(current, asked))
+        difference = sum(abs(int(c) - int(a)) for c, a in zip(current, asked))
     except (TypeError, ValueError):
         return False
+    return difference <= max(RGB_FLOOR, RGB_PER_MIRED * tolerance.min_color_temp_change)
 
 
 def _clamp(kelvin: int, min_kelvin, max_kelvin) -> int:
