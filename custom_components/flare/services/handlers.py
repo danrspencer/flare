@@ -14,7 +14,7 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
@@ -266,7 +266,8 @@ async def _two_step_turn_on(
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
-    """Registers the nine services against the Settings entry."""
+    """Registers the nine services for as long as the Settings entry is
+    loaded."""
 
     def plan(call: ServiceCall) -> list[Group]:
         """build_groups for a compute_lighting_groups or apply_lighting call."""
@@ -489,80 +490,27 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             "uncovered_entities": result.uncovered_entities,
         }
 
-    hass.services.async_register(
-        DOMAIN,
-        "compute_lighting_groups",
-        compute_lighting_groups,
-        schema=COMPUTE_LIGHTING_GROUPS_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "compute_curve",
-        compute_curve,
-        schema=COMPUTE_CURVE_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "compute_scene_coverage",
-        compute_scene_coverage_service,
-        schema=COMPUTE_SCENE_COVERAGE_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "apply_lighting",
-        apply_lighting,
-        schema=APPLY_LIGHTING_SCHEMA,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "turn_off",
-        turn_off,
-        schema=TURN_OFF_SCHEMA,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "claims_check",
-        claims_check,
-        schema=CLAIMS_CHECK_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "claims_record",
-        claims_record,
-        schema=CLAIMS_RECORD_SCHEMA,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "claims_clear",
-        claims_clear,
-        schema=CLAIMS_CLEAR_SCHEMA,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
-    hass.services.async_register(
-        DOMAIN,
-        "claims_override",
-        claims_override,
-        schema=CLAIMS_OVERRIDE_SCHEMA,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
+    services = {
+        "compute_lighting_groups": (compute_lighting_groups, COMPUTE_LIGHTING_GROUPS_SCHEMA, SupportsResponse.ONLY),
+        "compute_curve": (compute_curve, COMPUTE_CURVE_SCHEMA, SupportsResponse.ONLY),
+        "compute_scene_coverage": (
+            compute_scene_coverage_service,
+            COMPUTE_SCENE_COVERAGE_SCHEMA,
+            SupportsResponse.ONLY,
+        ),
+        "apply_lighting": (apply_lighting, APPLY_LIGHTING_SCHEMA, SupportsResponse.OPTIONAL),
+        "turn_off": (turn_off, TURN_OFF_SCHEMA, SupportsResponse.NONE),
+        "claims_check": (claims_check, CLAIMS_CHECK_SCHEMA, SupportsResponse.ONLY),
+        "claims_record": (claims_record, CLAIMS_RECORD_SCHEMA, SupportsResponse.OPTIONAL),
+        "claims_clear": (claims_clear, CLAIMS_CLEAR_SCHEMA, SupportsResponse.OPTIONAL),
+        "claims_override": (claims_override, CLAIMS_OVERRIDE_SCHEMA, SupportsResponse.OPTIONAL),
+    }
+    for name, (handler, schema, response) in services.items():
+        hass.services.async_register(DOMAIN, name, handler, schema=schema, supports_response=response)
 
+    @callback
+    def _unregister() -> None:
+        for name in services:
+            hass.services.async_remove(DOMAIN, name)
 
-def async_unload_services(hass: HomeAssistant) -> None:
-    for service in (
-        "compute_lighting_groups",
-        "compute_curve",
-        "compute_scene_coverage",
-        "apply_lighting",
-        "turn_off",
-        "claims_check",
-        "claims_record",
-        "claims_clear",
-        "claims_override",
-    ):
-        hass.services.async_remove(DOMAIN, service)
+    entry.async_on_unload(_unregister)

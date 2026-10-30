@@ -36,7 +36,7 @@ from homeassistant.helpers.start import async_at_started
 from .blueprint_check import async_check as async_check_blueprint
 from .dashboard_reload import FrontendLoadedView, OldFingerprintView
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
-from .services.handlers import async_setup_services, async_unload_services
+from .services.handlers import async_setup_services
 from .services.schedules import async_setup_schedule_services
 from .services.targets import async_setup_target_services
 from .flares.instance import flare_instances
@@ -218,7 +218,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
 
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
-        async_unload_services(hass)
         return await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
 
     return await hass.config_entries.async_unload_platforms(entry, SCHEDULE_PLATFORMS)
