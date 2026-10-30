@@ -74,6 +74,12 @@ After updating:
   is drawn a shade darker so you can see it, Day is amber instead of yellow, and Evening is deep
   orange so the two stay apart.
 
+### Deprecated
+
+- **The Sensors From Areas setting is deprecated**, and FLARE 3.0 removes it. From Home
+  Assistant 2026.11, use **Exclude target** in **Lights & Occupancy** instead of turning it off, to
+  leave out the sensors you don't want.
+
 ### Fixed
 
 - **Two automations driving the same light no longer treat each other's changes as overrides**,
