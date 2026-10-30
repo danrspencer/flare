@@ -14,8 +14,12 @@ from datetime import time as time_of_day
 from datetime import timedelta
 from typing import Any
 
+from homeassistant.components.number import ENTITY_ID_FORMAT as NUMBER_ENTITY_ID
+from homeassistant.components.select import ENTITY_ID_FORMAT as SELECT_ENTITY_ID
+from homeassistant.components.switch import ENTITY_ID_FORMAT as SWITCH_ENTITY_ID
+from homeassistant.components.time import ENTITY_ID_FORMAT as TIME_ENTITY_ID
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.sun import get_astral_event_date
@@ -85,16 +89,16 @@ class ScheduleInstance:
 
     def time_entity_id(self, key: str) -> str:
         """The ID it's created with; read it through time_entity()."""
-        return f"time.{self.prefix}{key}"
+        return TIME_ENTITY_ID.format(f"{self.prefix}{key}")
 
     def number_entity_id(self, key: str) -> str:
         """The ID it's created with; read it through number_entity()."""
-        return f"number.{self.prefix}{key}"
+        return NUMBER_ENTITY_ID.format(f"{self.prefix}{key}")
 
     def current_id(self, hass: HomeAssistant, entity_id: str, key: str) -> str:
         """The entity's ID now, found by its unique ID so one the user renamed
         is still read. `entity_id` until it's registered."""
-        domain = entity_id.split(".", 1)[0]
+        domain = split_entity_id(entity_id)[0]
         return er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{self.subentry_id}_{key}") or entity_id
 
     def time_entity(self, hass: HomeAssistant, key: str) -> str:
@@ -122,8 +126,8 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
             ScheduleInstance(
                 subentry_id=subentry_id,
                 prefix=prefix,
-                override_entity_id=f"select.{prefix}flare_phase",
-                sticky_entity_id=f"switch.{prefix}sticky_phase_override",
+                override_entity_id=SELECT_ENTITY_ID.format(f"{prefix}flare_phase"),
+                sticky_entity_id=SWITCH_ENTITY_ID.format(f"{prefix}sticky_phase_override"),
                 title=subentry.title,
             )
         )

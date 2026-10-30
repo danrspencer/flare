@@ -23,7 +23,7 @@ from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.config import AUTOMATION_CONFIG_PATH
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import ATTR_AREA_ID, CONF_ALIAS, CONF_DESCRIPTION, CONF_ID, CONF_PATH, SERVICE_RELOAD
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import device_registry as dr
@@ -78,7 +78,7 @@ def areas_with_lights(hass: HomeAssistant) -> list[Area]:
     areas = [
         Area(area.id, area.name)
         for area in ar.async_get(hass).async_list_areas()
-        if without_flares(hass, [e for e in target_entities(hass, {ATTR_AREA_ID: [area.id]}) if e.startswith(f"{LIGHT_DOMAIN}.")])
+        if without_flares(hass, [e for e in target_entities(hass, {ATTR_AREA_ID: [area.id]}) if split_entity_id(e)[0] == LIGHT_DOMAIN])
     ]
     return sorted(areas, key=lambda area: area.name)
 
@@ -91,8 +91,8 @@ def areas_set_up(hass: HomeAssistant) -> set[str]:
         return set()
     return {
         entry.area_id
-        for entry in er.async_get(hass).entities.values()
-        if entry.domain == AUTOMATION_DOMAIN and label.label_id in entry.labels and entry.area_id
+        for entry in er.async_entries_for_label(er.async_get(hass), label.label_id)
+        if entry.domain == AUTOMATION_DOMAIN and entry.area_id
     }
 
 

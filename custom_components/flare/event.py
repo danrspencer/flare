@@ -7,7 +7,7 @@ entities."""
 
 from __future__ import annotations
 
-from homeassistant.components.event import EventEntity
+from homeassistant.components.event import ENTITY_ID_FORMAT, EventEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -37,7 +37,7 @@ class _SchedulePhase(CoordinatorEntity[ScheduleCoordinator], EventEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_phase_event"
         self._attr_translation_key = "phase_event"
-        self.entity_id = f"event.{instance.prefix}flare_phase"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare_phase")
         self._attr_device_info = instance.device_info
         self._fired_phase: str | None = None
 

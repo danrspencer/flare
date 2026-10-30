@@ -5,7 +5,7 @@ unless switch.<prefix>sticky_phase_override is on."""
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.select import SelectEntity
+from homeassistant.components.select import ENTITY_ID_FORMAT, SelectEntity
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -31,7 +31,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_phase_override"
         self._attr_translation_key = "phase_override"
-        self.entity_id = f"select.{instance.prefix}flare_phase"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare_phase")
         self._attr_device_info = instance.device_info
         self._attr_current_option = "Auto"
         self._instance = instance

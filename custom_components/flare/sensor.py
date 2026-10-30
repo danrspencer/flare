@@ -14,10 +14,11 @@ import copy
 from collections.abc import Callable
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.button import ENTITY_ID_FORMAT as BUTTON_ENTITY_ID
+from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory, Platform
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback, split_entity_id
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -83,9 +84,9 @@ def _filed_under(hass: HomeAssistant, entry: ConfigEntry, role: str) -> dict[str
     device isn't registered)."""
     domain = Platform.BUTTON if role == "clear" else Platform.SENSOR
     entity_id = er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{role}") or (
-        "button.flare_clear" if role == "clear" else f"sensor.flare_{role}_lights"
+        BUTTON_ENTITY_ID.format("flare_clear") if role == "clear" else ENTITY_ID_FORMAT.format(f"flare_{role}_lights")
     )
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
     return {ATTR_ENTITY_ID: entity_id, **({ATTR_DEVICE_ID: device.id} if device else {})}
 
 
@@ -258,7 +259,7 @@ class _CountSensor(SensorEntity):
         self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
         self._attr_unique_id = f"{entry.entry_id}_{status}"
         self._attr_translation_key = f"all_{status}"
-        self.entity_id = f"sensor.flare_{status}_lights"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"flare_{status}_lights")
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:
@@ -381,7 +382,7 @@ class _LightStatusSensor(SensorEntity):
             state = hass.states.get(self.light_entity_id)
             self._attr_has_entity_name = False
             self._attr_name = f"{state.name if state else self.light_entity_id} FLARE status"
-        self.entity_id = f"sensor.{self.light_entity_id.split('.', 1)[1]}_flare_status"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{split_entity_id(self.light_entity_id)[1]}_flare_status")
         self._unsubscribe_light: list[CALLBACK_TYPE] = []
 
     async def async_added_to_hass(self) -> None:
@@ -458,7 +459,7 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_flare"
         self._attr_translation_key = "schedule"
-        self.entity_id = f"sensor.{instance.prefix}flare"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare")
         self._attr_device_info = instance.device_info
 
     @property

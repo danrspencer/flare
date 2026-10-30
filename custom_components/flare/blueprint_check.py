@@ -17,7 +17,7 @@ from homeassistant.components.automation import automations_with_blueprint
 from homeassistant.components.automation.helpers import async_get_blueprints
 from homeassistant.components.blueprint.models import Blueprint
 from homeassistant.components.blueprint.schemas import BLUEPRINT_SCHEMA
-from homeassistant.const import CONF_DESCRIPTION, CONF_NAME
+from homeassistant.const import CONF_DESCRIPTION
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import yaml as yaml_util
@@ -58,7 +58,7 @@ class InstalledBlueprint:
 
 
 def _is_ours(blueprint: Blueprint) -> bool:
-    return blueprint.metadata.get(CONF_NAME) == _OUR_NAME
+    return blueprint.name == _OUR_NAME
 
 
 async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:
