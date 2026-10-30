@@ -296,7 +296,7 @@ the value.</p>
     subgraph IN["Inputs, read on every refresh"]
         T["time.* boundaries"]
         N["number.* curve values"]
-        SUN["sun.sun next_setting"]
+        SUN["today's sunset&lt;br/&gt;(HA's sun helper)"]
         OV["select.*_flare_phase&lt;br/&gt;(Auto or a phase)"]
     end
     T --&gt; B["_compute_boundaries():&lt;br/&gt;today's timestamps"]
@@ -356,7 +356,6 @@ recomputing the curve.</p>
 <p>The coordinator refreshes every 60 seconds, and also:</p>
 
 <ul>
-  <li>when <code class="language-plaintext highlighter-rouge">sun.sun</code> changes, since Evening follows sunset</li>
   <li>when any of its <code class="language-plaintext highlighter-rouge">time</code>, <code class="language-plaintext highlighter-rouge">number</code> or <code class="language-plaintext highlighter-rouge">select</code> entities is set
 (<code class="language-plaintext highlighter-rouge">async_request_refresh</code>, debounced to at most once per 10 seconds)</li>
   <li>twice at setup. The first refresh runs before the entities exist, so it

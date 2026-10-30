@@ -502,8 +502,9 @@ read as something else.</p>
 </h2>
     
 
-<p><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code> is one <code class="language-plaintext highlighter-rouge">state_changed</code> listener for
-every light. For a claimed light, on each change:</p>
+<p><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code> follows exactly the claimed lights,
+through <code class="language-plaintext highlighter-rouge">async_track_state_change_event</code>, and re-subscribes whenever the
+set of claimed lights changes. For each change to one:</p>
 
 <div class="table-wrapper"><table>
   <thead>

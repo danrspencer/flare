@@ -331,7 +331,7 @@ loop”, not “is a coroutine”.)</p>
     HA-&gt;&gt;I: async_setup (once per domain)
     Note over I: static path /flare_static/#lt;hash#gt;/,&lt;br/&gt;add_extra_js_url(loader),&lt;br/&gt;OldFingerprintView, FrontendLoadedView,&lt;br/&gt;export/import_schedule, resolve_target
     HA-&gt;&gt;SE: async_setup_entry
-    Note over SE: a ScheduleCoordinator per schedule,&lt;br/&gt;first refresh (defaults),&lt;br/&gt;listen to sun.sun,&lt;br/&gt;forward 6 platforms,&lt;br/&gt;refresh again (restored values)
+    Note over SE: a ScheduleCoordinator per schedule,&lt;br/&gt;first refresh (defaults),&lt;br/&gt;forward 6 platforms,&lt;br/&gt;refresh again (restored values)
     HA-&gt;&gt;ST: async_setup_entry
     Note over ST: ClaimRegistry.async_load (Store),&lt;br/&gt;hourly prune, state listener,&lt;br/&gt;blueprint check at started,&lt;br/&gt;9 services, TickScheduler,&lt;br/&gt;forward sensor + button,&lt;br/&gt;release rooms restored dark,&lt;br/&gt;prune stale, start area ticks
     HA-&gt;&gt;FE: async_setup_entry
@@ -386,14 +386,9 @@ automation’s inputs until then.</p>
   </thead>
   <tbody>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">state_changed</code> (lights only)</td>
-      <td><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code></td>
+      <td>each claimed light’s state</td>
+      <td><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code>, re-subscribed as the claimed set changes</td>
       <td>dropping a claim when its light goes unavailable, releasing a room gone dark, noting mismatches</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">sun.sun</code> state</td>
-      <td>Schedules entry</td>
-      <td>refreshing every schedule (Evening follows sunset)</td>
     </tr>
     <tr>
       <td>a light’s own state</td>
@@ -411,9 +406,14 @@ automation’s inputs until then.</p>
       <td>handing the ticker the new set of areas</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">entity_registry_updated</code></td>
-      <td><code class="language-plaintext highlighter-rouge">_LightStatuses</code>, <code class="language-plaintext highlighter-rouge">_LightStatusSensor</code>, <code class="language-plaintext highlighter-rouge">FlareLight</code></td>
-      <td>removing a status sensor with its light; following a rename; retracking a flare</td>
+      <td>a light’s registry entry</td>
+      <td>each <code class="language-plaintext highlighter-rouge">_LightStatusSensor</code></td>
+      <td>following a rename; going with its light when it’s removed</td>
+    </tr>
+    <tr>
+      <td>an automation’s registry entry</td>
+      <td>each <code class="language-plaintext highlighter-rouge">FlareLight</code>, for its own automation</td>
+      <td>retracking when it’s renamed or removed</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">automation_reloaded</code></td>
@@ -573,7 +573,9 @@ ever match by value.</li>
   <li><strong>The Phase event fires after the sensor updates.</strong> One coordinator
 refresh updates the schedule sensor and the Phase <code class="language-plaintext highlighter-rouge">event</code> entity. The
 event entity defers its fire with <code class="language-plaintext highlighter-rouge">loop.call_soon</code>, so an automation
-woken by it reads the sensor’s new phase, not the old one.</li>
+woken by it reads the sensor’s new phase, not the old one. That’s
+needed: HA starts the automation’s run inside the event entity’s own
+state write, so its <code class="language-plaintext highlighter-rouge">variables:</code> render before anything after it.</li>
   <li><strong><code class="language-plaintext highlighter-rouge">variables:</code> render once, at trigger time.</strong> Nothing in the
 blueprint’s <code class="language-plaintext highlighter-rouge">action:</code> may delay, or later steps would act on a stale
 snapshot (see <a href="/flare/beta/architecture/room-automation/">The room automation</a>).</li>
