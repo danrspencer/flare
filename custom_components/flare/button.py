@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import CLEAR_OBJECT_ID, CLEAR_ROLE
 from .sensor import settings_device_info
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
@@ -33,9 +34,9 @@ class _ClearButton(ButtonEntity):
     def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry) -> None:
         self.hass = hass
         self._registry = registry
-        self._attr_unique_id = f"{entry.entry_id}_clear"
-        self._attr_translation_key = "clear"
-        self.entity_id = ENTITY_ID_FORMAT.format("flare_clear")
+        self._attr_unique_id = f"{entry.entry_id}_{CLEAR_ROLE}"
+        self._attr_translation_key = CLEAR_ROLE
+        self.entity_id = ENTITY_ID_FORMAT.format(CLEAR_OBJECT_ID)
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:

@@ -32,6 +32,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    CLEAR_OBJECT_ID,
+    CLEAR_ROLE,
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_SETTINGS,
@@ -41,7 +43,7 @@ from .const import (
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .tracking.matching import shown
-from .tracking.override_protection import MISMATCH_GRACE
+from .tracking.override_protection import MISMATCH_GRACE, LightStatus
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
@@ -54,15 +56,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     registry: ClaimRegistry = entry.runtime_data
     entry.async_on_unload(ClaimEvents(hass, registry, entry).start())
-    async_add_entities([_CountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")])
+    async_add_entities([_CountSensor(hass, registry, entry, status) for status in COUNTED_STATUSES])
     _LightStatuses(hass, registry, entry, async_add_entities).start()
 
 
-def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> str:
+# The statuses with a count sensor.
+COUNTED_STATUSES = (LightStatus.CONTROLLED, LightStatus.OVERRIDDEN)
+
+
+def _count_object_id(status: LightStatus) -> str:
+    return f"flare_{status}_lights"
+
+
+def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> LightStatus:
     """One claimed light's status, shared by every sensor here so they agree."""
     status, _via = registry.status(entity_id)
-    # "untracked" shows as "controlled": either way, not excluded.
-    return "controlled" if status == "untracked" else status
+    # Untracked shows as controlled: either way, not excluded.
+    return LightStatus.CONTROLLED if status == LightStatus.UNTRACKED else status
 
 
 # How long a room gathers lights it has taken before announcing them.
@@ -82,9 +92,9 @@ def _filed_under(hass: HomeAssistant, entry: ConfigEntry, role: str) -> dict[str
     release, which is how the Activity card tells the kinds apart, and
     device_id puts it in FLARE's device's Activity (omitted, not None, if the
     device isn't registered)."""
-    domain = Platform.BUTTON if role == "clear" else Platform.SENSOR
+    domain = Platform.BUTTON if role == CLEAR_ROLE else Platform.SENSOR
     entity_id = er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{role}") or (
-        BUTTON_ENTITY_ID.format("flare_clear") if role == "clear" else ENTITY_ID_FORMAT.format(f"flare_{role}_lights")
+        BUTTON_ENTITY_ID.format(CLEAR_OBJECT_ID) if role == CLEAR_ROLE else ENTITY_ID_FORMAT.format(_count_object_id(role))
     )
     device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
     return {ATTR_ENTITY_ID: entity_id, **({ATTR_DEVICE_ID: device.id} if device else {})}
@@ -144,17 +154,22 @@ class ClaimEvents:
         for entity_id, record in self._registry.all_records().items():
             status = _classify_tracked(self._registry, entity_id)
             statuses[entity_id] = status
-            if status == "mismatched":
+            if status == LightStatus.MISMATCHED:
                 self._recheck_after_grace()
             if self._last_statuses is None:
                 continue
             previous = self._last_statuses.get(entity_id)
-            if status == "overridden" and previous != "overridden":
+            if status == LightStatus.OVERRIDDEN and previous != LightStatus.OVERRIDDEN:
                 self._fire_overridden(entity_id, record, previous)
             # Not back from overridden (churn), nor from unavailable or
             # mismatched (every light, after a restart), which were already
             # controlled.
-            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "mismatched"):
+            elif status == LightStatus.CONTROLLED and previous not in (
+                LightStatus.CONTROLLED,
+                LightStatus.OVERRIDDEN,
+                LightStatus.UNAVAILABLE,
+                LightStatus.MISMATCHED,
+            ):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
@@ -181,7 +196,7 @@ class ClaimEvents:
             {
                 "light": entity_id,
                 "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
-                **_filed_under(self.hass, self._entry, "overridden"),
+                **_filed_under(self.hass, self._entry, LightStatus.OVERRIDDEN),
                 "previous_status": previous,
                 "live_context_id": state.context.id if state else None,
                 "live": {"state": state.state, **shown(state.attributes)} if state else {"state": None},
@@ -208,7 +223,7 @@ class ClaimEvents:
         statuses = self._last_statuses or {}
         for key in sorted(self._registry.room_keys()):
             lit = sorted(
-                e for e in self._registry.room_lights(key) if statuses.get(e) == "controlled" and self._is_on(e)
+                e for e in self._registry.room_lights(key) if statuses.get(e) == LightStatus.CONTROLLED and self._is_on(e)
             )
             lights = [e for e in lit if e in gathered]
             if not lights:
@@ -219,7 +234,7 @@ class ClaimEvents:
                     "lights": lights,
                     "controlled": len(lit),
                     "room": self._registry.room_entity_id(key),
-                    **_filed_under(self.hass, self._entry, "controlled"),
+                    **_filed_under(self.hass, self._entry, LightStatus.CONTROLLED),
                 },
             )
 
@@ -233,7 +248,7 @@ class ClaimEvents:
             {
                 "lights": entity_ids,
                 "room": self._registry.room_entity_id(room) if room else None,
-                **_filed_under(self.hass, self._entry, "clear"),
+                **_filed_under(self.hass, self._entry, CLEAR_ROLE),
             },
         )
 
@@ -252,14 +267,14 @@ class _CountSensor(SensorEntity):
     _attr_native_unit_of_measurement = "lights"
     _attr_should_poll = False
 
-    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, status: str) -> None:
+    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, status: LightStatus) -> None:
         self.hass = hass
         self._registry = registry
         self._status = status
-        self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
+        self._attr_icon = "mdi:lightbulb-group" if status == LightStatus.CONTROLLED else "mdi:lightbulb-alert-outline"
         self._attr_unique_id = f"{entry.entry_id}_{status}"
         self._attr_translation_key = f"all_{status}"
-        self.entity_id = ENTITY_ID_FORMAT.format(f"flare_{status}_lights")
+        self.entity_id = ENTITY_ID_FORMAT.format(_count_object_id(status))
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:
@@ -282,7 +297,7 @@ class _CountSensor(SensorEntity):
 
 # What a light's status sensor can say; an unreachable light makes it
 # unavailable instead.
-LIGHT_STATUSES = ("controlled", "overridden", "mismatched", "untracked", "off")
+LIGHT_STATUSES = tuple(status.value for status in LightStatus if status != LightStatus.UNAVAILABLE)
 STATUS_UNIQUE_ID = "{entry_id}_status_{light}"
 
 
@@ -419,13 +434,13 @@ class _LightStatusSensor(SensorEntity):
     def _handle_update(self, _event: Event | None = None) -> None:
         self.async_write_ha_state()
 
-    def _status(self) -> str:
+    def _status(self) -> LightStatus:
         status, _via = self._registry.status(self.light_entity_id)
         return status
 
     @property
     def available(self) -> bool:
-        return self._status() != "unavailable"
+        return self._status() != LightStatus.UNAVAILABLE
 
     @property
     def native_value(self) -> str | None:

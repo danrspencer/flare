@@ -69,6 +69,11 @@ CONF_TICK_GAP = "tick_gap"
 DEFAULT_TICK_INTERVAL = 1
 DEFAULT_TICK_GAP = 1
 
+# The Clear button's role (its unique ID's suffix and translation key) and
+# the object ID it's created with.
+CLEAR_ROLE = "clear"
+CLEAR_OBJECT_ID = "flare_clear"
+
 # The event FLARE fires for each area in turn, which the blueprint listens for.
 EVENT_TYPE_TICK = "flare_tick"
 
