@@ -262,22 +262,12 @@ class _CountSensor(SensorEntity):
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:
-        self.async_on_remove(
-            async_dispatcher_connect(self.hass, SIGNAL_CLAIMS_UPDATED, self._handle_update)
-        )
-
-    @callback
-    def _handle_update(self) -> None:
-        self.async_write_ha_state()
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_CLAIMS_UPDATED, self.async_write_ha_state))
 
     def _matching_lights(self) -> tuple[list[str], int]:
-        lights: list[str] = []
         records = self._registry.all_records()
-        for entity_id, record in records.items():
-            status = _classify_tracked(self._registry, entity_id)
-            if status == self._status:
-                lights.append(entity_id)
-        return sorted(lights), len(records)
+        lights = sorted(e for e in records if _classify_tracked(self._registry, e) == self._status)
+        return lights, len(records)
 
     @property
     def native_value(self) -> int:
@@ -411,13 +401,9 @@ class _LightStatusSensor(SensorEntity):
         light's current entity_id."""
         self._stop_following()
         self._unsubscribe_light = [
-            async_track_state_change_event(self.hass, [self.light_entity_id], self._light_changed),
+            async_track_state_change_event(self.hass, [self.light_entity_id], self._handle_update),
             async_track_entity_registry_updated_event(self.hass, self.light_entity_id, self._light_registry_changed),
         ]
-
-    @callback
-    def _light_changed(self, _event: Event) -> None:
-        self.async_write_ha_state()
 
     @callback
     def _light_registry_changed(self, event: Event[er.EventEntityRegistryUpdatedData]) -> None:
@@ -429,7 +415,7 @@ class _LightStatusSensor(SensorEntity):
             self._handle_update()
 
     @callback
-    def _handle_update(self) -> None:
+    def _handle_update(self, _event: Event | None = None) -> None:
         self.async_write_ha_state()
 
     def _status(self) -> str:
