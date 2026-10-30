@@ -47,8 +47,7 @@ body:
         Any of these speed things up a lot. Attach files by dragging them into a box.
 
         - **For a room doing the wrong thing:** a trace of the run that did it. Open the room's automation, click **⋮ → Traces**, pick the run (the times are listed at the top), then **⋮ → Download trace**. A couple of runs either side of the problem is even better.
-        - **For overrides, or anything to do with lights FLARE has lost track of:** the diagnostics from **Settings → Devices & services → FLARE → Settings → ⋮ → Download diagnostics**. They list your light names and what FLARE last asked each one for.
-        - **For a light that keeps reading as overridden:** what's in **Developer Tools → States** for that light while it's on (the attributes block). `color_mode`, `color_temp_kelvin`, `xy_color` and `supported_color_modes` are the interesting ones.
+        - **For lights showing as overridden, or anything to do with lights FLARE has lost track of:** the diagnostics from **Settings → Devices & services → FLARE → Settings → ⋮ → Download diagnostics**. They include the last 50 overrides, each with what FLARE asked for, what the light reported and what kind of light it is, so grab them soon after it happens. They list your light names.
         - **For the dashboard:** any red errors from your browser's developer tools (Console tab). Often a hard reload (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) fixes it after an update.
         - **For installing:** your HACS version, and any lines mentioning `hacs` or `flare` in **Settings → System → Logs**.
 
@@ -56,7 +55,7 @@ body:
     id: lights
     attributes:
       label: Your lights and sensors
-      description: Brand and model, and how they're connected (Hue, ZHA, Zigbee2MQTT, Matter, etc.), for whichever ones are misbehaving. Same for any occupancy or motion sensors if they're involved.
+      description: Brand and model, and how they're connected (Hue, ZHA, Zigbee2MQTT, Matter, etc.), for whichever ones are misbehaving. Same for any occupancy or motion sensors if they're involved. If you've attached the diagnostics, they already cover the lights that were overridden.
       placeholder: e.g. IKEA TRADFRI bulbs through Zigbee2MQTT, Aqara FP2 presence sensor
     validations:
       required: false
