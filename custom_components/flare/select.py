@@ -46,7 +46,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
             self._attr_current_option = last_state.state
         if self._attr_current_option != PHASE_AUTO:
             # The original baseline isn't persisted, so use now.
-            self._baseline_phase = self.coordinator.data.get("computed_phase")
+            self._baseline_phase = self.coordinator.data.computed_phase
             # The first refresh predates this entity, so it missed the
             # restored override.
             await self.coordinator.async_request_refresh()
@@ -61,7 +61,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
             not self._sticky
             and self._attr_current_option != PHASE_AUTO
             and self._baseline_phase is not None
-            and self.coordinator.data.get("computed_phase") != self._baseline_phase
+            and self.coordinator.data.computed_phase != self._baseline_phase
         ):
             self._attr_current_option = PHASE_AUTO
             self._baseline_phase = None
@@ -72,6 +72,6 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
 
     async def async_select_option(self, option: str) -> None:
         self._attr_current_option = option
-        self._baseline_phase = self.coordinator.data.get("computed_phase") if option != PHASE_AUTO else None
+        self._baseline_phase = self.coordinator.data.computed_phase if option != PHASE_AUTO else None
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()

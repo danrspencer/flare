@@ -479,24 +479,24 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
 
     @property
     def native_value(self):
-        return self.coordinator.data.get("phase")
+        return self.coordinator.data.phase
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
-        rgb_color = data.get("rgb_color")
+        boundaries = data.boundaries
         return {
-            "phase": data.get("phase"),
-            "brightness": data.get("brightness"),
-            "color_temp": data.get("kelvin"),
+            "phase": data.phase,
+            "brightness": data.brightness,
+            "color_temp": data.kelvin,
             # A list, as the rgb_color service fields expect.
-            "rgb_color": list(rgb_color) if rgb_color is not None else None,
-            "morning_start": data.get("morning_ts"),
-            "day_start": data.get("day_ts"),
-            "evening_start": data.get("evening_ts"),
-            "night_start": data.get("night_ts"),
-            "evening_earliest": data.get("evening_earliest_ts"),
-            "evening_latest": data.get("evening_latest_ts"),
-            "points": data.get("points"),
+            "rgb_color": list(data.rgb_color),
+            "morning_start": boundaries.morning,
+            "day_start": boundaries.day,
+            "evening_start": boundaries.evening,
+            "night_start": boundaries.night,
+            "evening_earliest": boundaries.evening_earliest,
+            "evening_latest": boundaries.evening_latest,
+            "points": data.points,
         }
 

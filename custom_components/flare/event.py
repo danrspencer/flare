@@ -49,7 +49,7 @@ class _SchedulePhase(CoordinatorEntity[ScheduleCoordinator], EventEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        phase = (self.coordinator.data or {}).get("phase")
+        phase = self.coordinator.data.phase if self.coordinator.data else None
         if phase not in PHASES or phase == self._fired_phase:
             return
         self._fired_phase = phase
