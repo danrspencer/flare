@@ -4,6 +4,8 @@ from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import State
 
 DOMAIN = "flare"
+# The name FLARE goes by: its blueprint, label and service device.
+NAME = "FLARE"
 
 # What HA reports for an entity it can't reach, or hasn't heard from yet.
 UNREACHABLE_STATES = frozenset({STATE_UNAVAILABLE, STATE_UNKNOWN})
@@ -45,6 +47,17 @@ SUBENTRY_TYPE_ZONE = "state"
 EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"
 EVENT_LIGHTS_CONTROLLED = "flare_lights_controlled"
 EVENT_LIGHTS_RELEASED = "flare_lights_released"
+# Their data's keys, besides the entity_id and device_id they're filed under.
+ATTR_LIGHT = "light"
+ATTR_LIGHTS = "lights"
+ATTR_ROOM = "room"
+ATTR_ROOMS = "rooms"
+ATTR_CONTROLLED = "controlled"
+ATTR_PREVIOUS_STATUS = "previous_status"
+ATTR_LIVE = "live"
+ATTR_LIVE_CONTEXT_ID = "live_context_id"
+ATTR_OBSERVED = "observed"
+ATTR_LATEST = "latest"
 
 # One config entry per kind of thing, because HA's integration page can't
 # group subentries by type. The values are stored in each entry's data.
@@ -63,8 +76,9 @@ CONF_LIGHTS_INPUT_KIND = "lights_input_kind"  # "target", or the target key its 
 CONF_LIGHTS_TARGET = "lights_target"  # a plain automation's lights, as a target
 CONF_AREA = "area_id"  # where the flare's device starts out
 
-# Our blueprint's input naming the room's lights.
+# Our blueprint's inputs naming the room's lights and its schedule.
 BLUEPRINT_LIGHTS_INPUT = "room_target"
+BLUEPRINT_SCHEDULE_INPUT = "schedule"
 
 # Options keys: how close a light must be to its target, as a percentage of
 # the target brightness and in mireds of colour temperature, to be left alone:
@@ -82,6 +96,12 @@ CONF_TICK_INTERVAL = "tick_interval"
 CONF_TICK_GAP = "tick_gap"
 DEFAULT_TICK_INTERVAL = 1
 DEFAULT_TICK_GAP = 1
+
+# The service other FLARE code calls, and the fields its calls share.
+SERVICE_CLAIMS_OVERRIDE = "claims_override"
+ATTR_ENTITIES = "entities"
+ATTR_ROOM_ID = "room_id"
+ATTR_ROOM_ENTITIES = "room_entities"
 
 # The Clear button's role (its unique ID's suffix and translation key) and
 # the object ID it's created with.

@@ -35,6 +35,8 @@ from homeassistant.util.yaml import dump, load_yaml
 
 from .blueprint_check import async_blueprint_path
 from .const import (
+    BLUEPRINT_SCHEDULE_INPUT,
+    NAME,
     BLUEPRINT_LIGHTS_INPUT,
     CONF_AREA,
     CONF_AUTOMATION,
@@ -53,7 +55,7 @@ from .services.targets import target_entities
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
 
 # The label on every automation setup creates, so they're easy to find.
-LABEL_NAME = "FLARE"
+LABEL_NAME = NAME
 LABEL_ICON = "flare:logo"
 # One of the frontend's named label colours: warm, like the curve.
 LABEL_COLOR = "amber"
@@ -110,7 +112,7 @@ async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, 
             CONF_USE_BLUEPRINT: {
                 CONF_PATH: path,
                 CONF_INPUT: {
-                    "schedule": _schedule_device(hass, schedule_subentry_id),
+                    BLUEPRINT_SCHEDULE_INPUT: _schedule_device(hass, schedule_subentry_id),
                     BLUEPRINT_LIGHTS_INPUT: {ATTR_AREA_ID: area.area_id},
                 },
             },

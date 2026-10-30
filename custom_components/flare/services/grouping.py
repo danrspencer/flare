@@ -5,7 +5,13 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
-from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES, color_supported
+from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_RGB_COLOR,
+    ATTR_SUPPORTED_COLOR_MODES,
+    color_supported,
+)
 from homeassistant.const import STATE_OFF, STATE_ON
 
 from ..const import is_reachable
@@ -182,8 +188,8 @@ def build_groups(
 
         group = Group(
             brightness=brightness,
-            target={"brightness": brightness, "color_temp_kelvin": sensor_color_temp_kelvin},
-            target_rgb={"brightness": brightness, "rgb_color": list(rgb_color)} if use_rgb else None,
+            target={ATTR_BRIGHTNESS: brightness, ATTR_COLOR_TEMP_KELVIN: sensor_color_temp_kelvin},
+            target_rgb={ATTR_BRIGHTNESS: brightness, ATTR_RGB_COLOR: list(rgb_color)} if use_rgb else None,
         )
         if use_rgb:
             rgb_entities = [e for e in group_entities if lookup.supports_rgb(e)]

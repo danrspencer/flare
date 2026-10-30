@@ -29,7 +29,7 @@ from .blueprint_version import (
     language_from_description,
     version_from_description,
 )
-from .const import DOMAIN
+from .const import DOMAIN, NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ SHIPPED_BLUEPRINT = Path(__file__).parent / "blueprints" / "flare.yaml"
 
 QUICKSTART_URL = "https://danrspencer.github.io/flare/installation/"
 
-_OUR_NAME = "FLARE"
+_OUR_NAME = NAME
 
 
 @dataclass(frozen=True)

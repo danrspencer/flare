@@ -8,10 +8,24 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from homeassistant.components.logbook import LOGBOOK_ENTRY_ENTITY_ID, LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_RGB_COLOR
 from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Event, HomeAssistant, callback
 
-from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHTS_CONTROLLED, EVENT_LIGHTS_RELEASED
+from .const import (
+    ATTR_CONTROLLED,
+    ATTR_LATEST,
+    ATTR_LIGHT,
+    ATTR_LIGHTS,
+    ATTR_LIVE,
+    ATTR_ROOM,
+    ATTR_ROOMS,
+    DOMAIN,
+    EVENT_LIGHT_OVERRIDDEN,
+    EVENT_LIGHTS_CONTROLLED,
+    EVENT_LIGHTS_RELEASED,
+    NAME,
+)
 
 
 def _plural(count: int) -> str:
@@ -26,12 +40,12 @@ def _light_name(hass: HomeAssistant, entity_id: str | None) -> str:
 def _room_name(hass: HomeAssistant, data) -> str:
     """The room the event is about, by its entity's name, else "FLARE". An
     override names every room the light is in."""
-    rooms = data.get("rooms") or ([data["room"]] if data.get("room") else [])
+    rooms = data.get(ATTR_ROOMS) or ([data[ATTR_ROOM]] if data.get(ATTR_ROOM) else [])
     names = []
     for room in rooms:
         state = hass.states.get(room) if isinstance(room, str) else None
         names.append(state.name if state else str(room))
-    return ", ".join(names) or "FLARE"
+    return ", ".join(names) or NAME
 
 
 def _entry(hass: HomeAssistant, data, message: str) -> dict[str, str]:
@@ -53,27 +67,27 @@ def async_describe_events(
     @callback
     def async_describe_override(event: Event) -> dict[str, str]:
         data = event.data
-        live = data.get("live") or {}
-        target = (data.get("latest") or {}).get("target") or {}
+        live = data.get(ATTR_LIVE) or {}
+        target = (data.get(ATTR_LATEST) or {}).get("target") or {}
         # What was asked for against what is actually there, in the same
         # terms: RGB against RGB, colour temperature against colour temperature.
         detail = ""
-        if target.get("brightness") is not None:
-            colour = "rgb_color" if target.get("rgb_color") is not None else "color_temp_kelvin"
-            asked = f"{target.get('brightness')}/{target.get(colour)}"
-            found = f"{live.get('brightness')}/{live.get(colour)}"
+        if target.get(ATTR_BRIGHTNESS) is not None:
+            colour = ATTR_RGB_COLOR if target.get(ATTR_RGB_COLOR) is not None else ATTR_COLOR_TEMP_KELVIN
+            asked = f"{target.get(ATTR_BRIGHTNESS)}/{target.get(colour)}"
+            found = f"{live.get(ATTR_BRIGHTNESS)}/{live.get(colour)}"
             detail = f" (last asked for {asked}, found {found})"
-        light = _light_name(hass, data.get("light"))
+        light = _light_name(hass, data.get(ATTR_LIGHT))
         return _entry(hass, data, f"{_room_name(hass, data)} released {light} to something else{detail}")
 
     @callback
     def async_describe_controlled(event: Event) -> dict[str, str]:
-        controlled = _plural(event.data.get("controlled", 0))
+        controlled = _plural(event.data.get(ATTR_CONTROLLED, 0))
         return _entry(hass, event.data, f"{_room_name(hass, event.data)} is now controlling {controlled}")
 
     @callback
     def async_describe_released(event: Event) -> dict[str, str]:
-        cleared = _plural(len(event.data.get("lights") or []))
+        cleared = _plural(len(event.data.get(ATTR_LIGHTS) or []))
         return _entry(hass, event.data, f"{_room_name(hass, event.data)} cleared {cleared}")
 
     async_describe_event(DOMAIN, EVENT_LIGHT_OVERRIDDEN, async_describe_override)

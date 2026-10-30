@@ -32,11 +32,22 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    ATTR_CONTROLLED,
+    ATTR_LATEST,
+    ATTR_LIGHT,
+    ATTR_LIGHTS,
+    ATTR_LIVE,
+    ATTR_LIVE_CONTEXT_ID,
+    ATTR_OBSERVED,
+    ATTR_PREVIOUS_STATUS,
+    ATTR_ROOM,
+    ATTR_ROOMS,
     CLEAR_OBJECT_ID,
     CLEAR_ROLE,
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_SETTINGS,
+    NAME,
     EVENT_LIGHT_OVERRIDDEN,
     EVENT_LIGHTS_CONTROLLED,
     EVENT_LIGHTS_RELEASED,
@@ -83,7 +94,7 @@ def settings_device_info(entry: ConfigEntry) -> DeviceInfo:
     """FLARE's own device, holding the Settings entry's entities, so their
     events show in its Activity."""
     return DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)}, name="FLARE", entry_type=DeviceEntryType.SERVICE, model="Settings"
+        identifiers={(DOMAIN, entry.entry_id)}, name=NAME, entry_type=DeviceEntryType.SERVICE, model="Settings"
     )
 
 
@@ -194,14 +205,14 @@ class ClaimEvents:
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
-                "light": entity_id,
-                "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
+                ATTR_LIGHT: entity_id,
+                ATTR_ROOMS: [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
                 **_filed_under(self.hass, self._entry, LightStatus.OVERRIDDEN),
-                "previous_status": previous,
-                "live_context_id": state.context.id if state else None,
-                "live": {"state": state.state, **shown(state.attributes)} if state else {"state": None},
-                "observed": record.get("observed"),
-                "latest": record.get("latest"),
+                ATTR_PREVIOUS_STATUS: previous,
+                ATTR_LIVE_CONTEXT_ID: state.context.id if state else None,
+                ATTR_LIVE: {"state": state.state, **shown(state.attributes)} if state else {"state": None},
+                ATTR_OBSERVED: record.get("observed"),
+                ATTR_LATEST: record.get("latest"),
             },
         )
 
@@ -231,9 +242,9 @@ class ClaimEvents:
             self.hass.bus.async_fire(
                 EVENT_LIGHTS_CONTROLLED,
                 {
-                    "lights": lights,
-                    "controlled": len(lit),
-                    "room": self._registry.room_entity_id(key),
+                    ATTR_LIGHTS: lights,
+                    ATTR_CONTROLLED: len(lit),
+                    ATTR_ROOM: self._registry.room_entity_id(key),
                     **_filed_under(self.hass, self._entry, LightStatus.CONTROLLED),
                 },
             )
@@ -246,8 +257,8 @@ class ClaimEvents:
         self.hass.bus.async_fire(
             EVENT_LIGHTS_RELEASED,
             {
-                "lights": entity_ids,
-                "room": self._registry.room_entity_id(room) if room else None,
+                ATTR_LIGHTS: entity_ids,
+                ATTR_ROOM: self._registry.room_entity_id(room) if room else None,
                 **_filed_under(self.hass, self._entry, CLEAR_ROLE),
             },
         )

@@ -83,20 +83,20 @@ class Tolerance:
 def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance = Tolerance()) -> bool:
     """Whether a light reporting `attributes` shows `target`. A target
     without a brightness and a colour never matches."""
-    if not target or target.get("brightness") is None:
+    if not target or target.get(ATTR_BRIGHTNESS) is None:
         return False
-    if not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), target["brightness"], tolerance):
+    if not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), target[ATTR_BRIGHTNESS], tolerance):
         return False
-    if target.get("rgb_color") is not None:
+    if target.get(ATTR_RGB_COLOR) is not None:
         return attributes.get(ATTR_COLOR_MODE) != ColorMode.COLOR_TEMP and _rgb_matches(
-            attributes.get(ATTR_RGB_COLOR), target["rgb_color"], tolerance
+            attributes.get(ATTR_RGB_COLOR), target[ATTR_RGB_COLOR], tolerance
         )
-    if target.get("color_temp_kelvin") is None:
+    if target.get(ATTR_COLOR_TEMP_KELVIN) is None:
         return False
     current = reported_kelvin(attributes)
     if current is None:
         return False
-    asked = int(target["color_temp_kelvin"])
+    asked = int(target[ATTR_COLOR_TEMP_KELVIN])
     reachable = _clamp(asked, attributes.get(ATTR_MIN_COLOR_TEMP_KELVIN), attributes.get(ATTR_MAX_COLOR_TEMP_KELVIN))
     return _kelvin_matches(current, asked, tolerance) or (
         reachable != asked and _kelvin_matches(current, reachable, tolerance)
@@ -106,12 +106,12 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
 def shown(attributes: Mapping) -> dict:
     """What a light shows, as a target: its brightness and Kelvin, or its
     rgb_color if it isn't showing a white."""
-    target = {"brightness": attributes.get(ATTR_BRIGHTNESS)}
+    target = {ATTR_BRIGHTNESS: attributes.get(ATTR_BRIGHTNESS)}
     kelvin = reported_kelvin(attributes)
     if kelvin is not None:
-        target["color_temp_kelvin"] = kelvin
+        target[ATTR_COLOR_TEMP_KELVIN] = kelvin
     elif attributes.get(ATTR_RGB_COLOR) is not None:
-        target["rgb_color"] = list(attributes[ATTR_RGB_COLOR])
+        target[ATTR_RGB_COLOR] = list(attributes[ATTR_RGB_COLOR])
     return target
 
 
