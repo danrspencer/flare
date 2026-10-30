@@ -227,8 +227,8 @@ triggers:
 `observed-context` or `observed-value`. `rooms` lists the rooms the light is one of.
 
 Each claim has a `recorded_at` time and a `context_id`, which you can use to find the change in
-Home Assistant's logbook. Claims and rooms that haven't changed for a day are discarded, so a
-light deleted from Home Assistant stops being tracked.
+Home Assistant's logbook. A light's claim follows it when it's renamed, and goes when it's
+deleted from Home Assistant.
 
 ## When rooms update
 

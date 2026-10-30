@@ -44,6 +44,10 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
 - **A room waits a few seconds for its lights to start up when they come back online together**,
   such as when they're switched on at the wall, before setting them. A command sent while a bulb
   boots is lost, so FLARE no longer sends it then and resends it after.
+- **A light FLARE has let go of stays let go of**, however long its room stays lit. A light
+  changed by hand used to be taken back after a day. A light's record now follows it when it's
+  renamed, and goes when it's deleted.
+- **The schedule's settings are named in your language**, such as **Morgen-Helligkeit** in German.
 - **The dashboard is easier to read on a light theme.** A near-white colour temperature's slider
   is drawn a shade darker so you can see it, Day is amber instead of yellow, and Evening is deep
   orange so the two stay apart.
@@ -70,6 +74,8 @@ zones; rooms from the blueprint carry on as before. The details are under **Chan
   - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
     `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under
     `sensor.flare_controlled_lights`, `sensor.flare_overridden_lights` and `button.flare_clear`.
+  - `custom:flare-clear-card` and the `custom:flare-zone` view are gone. They only mattered
+    to a dashboard you'd taken control of, and pointed at zone buttons that no longer exist.
   - Each zone's entities are gone. `button.flare_clear` clears every claim, each light's
     status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
     all.

@@ -44,12 +44,10 @@ classDiagram
         adopt(room, lights)
         async_override(room, lights)
         async_clear(lights)
-        async_prune_stale()
     }
     class WriteRecord {
         observed: ContextClaim | None
         latest: ContextClaim | None
-        last_seen: iso
         mismatch_since: iso | absent
     }
     class ContextClaim {
@@ -60,7 +58,6 @@ classDiagram
     }
     class Room {
         lights: list~entity_id~
-        last_seen: iso
     }
     ClaimRegistry "1" --> "*" WriteRecord
     ClaimRegistry "1" --> "*" Room
@@ -182,7 +179,8 @@ stateDiagram-v2
 
 `ClaimRegistry.async_start_listening` follows exactly the claimed lights,
 through `async_track_state_change_event`, and re-subscribes whenever the
-set of claimed lights changes. For each change to one:
+set of claimed lights changes. It follows their registry entries too, with
+`async_track_entity_registry_updated_event`. For each change to one:
 
 | Change | Effect |
 |---|---|
@@ -190,6 +188,8 @@ set of claimed lights changes. For each change to one:
 | on/off → unavailable/unknown (*dropped*) | its claim is deleted, so its reconnect isn't read as an override; its rooms are checked for release |
 | on/off → off (*went off*) | each room containing it is released if none of its claimed lights is on |
 | none/unavailable/unknown → on/off (*arrived*) | each room is released if every claimed light has now reported and none is on |
+| renamed in the registry | its claim and its place in its rooms move to the new entity ID |
+| deleted from the registry | its claim and its place in its rooms go |
 
 The rules the listener keeps:
 
@@ -225,15 +225,15 @@ flowchart LR
     stop["EVENT_HOMEASSISTANT_FINAL_WRITE"] --> file
     file --> load["next start:<br/>async_load before platforms"]
     load --> seed["ClaimEvents.start():<br/>seed statuses, note mismatches"]
-    seed --> rel["release rooms restored dark,<br/>prune claims older than a day"]
+    seed --> rel["release rooms restored dark"]
 ```
 
 - A restart gives every light a fresh context, so a restored claim can
   only match by value. A light still showing FLARE's target stays
   `controlled`; one changed before the restart keeps its stored
   `mismatch_since`, so it's `overridden` at once.
-- `async_prune_stale` drops records untouched for a day, hourly. It's the
-  only cleanup a light deleted from HA ever gets.
+- A light deleted while HA was down never sends a registry event. Its
+  restored claim counts as dark, and goes when its room next does.
 - A crash loses the last 5 seconds of claims and fails open: an unclaimed
   light is free to drive.
 

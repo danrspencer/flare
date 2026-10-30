@@ -37,7 +37,7 @@ in this area: unit tests don't catch it.
 **Atomic by construction.** A callback can't be interrupted, so anything
 done inside one is one step as far as the rest of HA is concerned. The
 claim registry's writers (`async_record`, `async_override`,
-`async_clear`, `async_prune_stale`) are callbacks for this reason. In
+`async_clear`, `adopt`) are callbacks for this reason. In
 `apply_lighting` there's no `await` between planning the writes and
 recording their claims, so no state change can land in between and be
 misjudged. (The `async_` prefix is HA's convention for "must run on the
@@ -58,7 +58,7 @@ sequenceDiagram
     HA->>SE: async_setup_entry
     Note over SE: a ScheduleCoordinator per schedule,<br/>first refresh (defaults),<br/>forward 6 platforms,<br/>refresh again (restored values)
     HA->>ST: async_setup_entry
-    Note over ST: ClaimRegistry.async_load (Store),<br/>hourly prune, state listener,<br/>blueprint check at started,<br/>9 services, TickScheduler,<br/>forward sensor + button,<br/>release rooms restored dark,<br/>prune stale, start area ticks
+    Note over ST: ClaimRegistry.async_load (Store),<br/>claimed-light listeners,<br/>blueprint check at started,<br/>9 services, TickScheduler,<br/>forward sensor + button,<br/>release rooms restored dark,<br/>start area ticks
     HA->>FE: async_setup_entry
     Note over FE: forward light only if it has flares
     HA-->>HA: automations load (after integrations)
@@ -74,8 +74,8 @@ The order inside the Settings entry matters.
 3. **The claim events start inside the sensor platform** (`ClaimEvents.start()`).
    They seed every light's status on the spot, which also notes the
    mismatch of a claim restored from before a restart.
-4. **Only after that** are rooms restored dark released and stale claims
-   pruned, so the release is announced in Activity.
+4. **Only after that** are rooms restored dark released, so the release is
+   announced in Activity.
 5. **The blueprint check waits for `async_at_started`**: during setup no
    automation has loaded, so every blueprint looks unused.
 
@@ -93,6 +93,7 @@ automation's inputs until then.
 | a light's own state | each `_LightStatusSensor` | rewriting its status |
 | a flare's member lights | `FlareLight`, via `async_track_target_selector_state_change_event` | recomputing the group's state |
 | `area_registry_updated` | `_tick_areas` | handing the ticker the new set of areas |
+| each claimed light's registry entry | `ClaimRegistry.async_start_listening`, alongside its state listener | moving a claim with a rename; dropping it with a deletion |
 | a light's registry entry | each `_LightStatusSensor` | following a rename; going with its light when it's removed |
 | an automation's registry entry | each `FlareLight`, for its own automation | retracking when it's renamed or removed |
 | `automation_reloaded` | `FlareLight` | re-reading the automation's lights |
@@ -106,7 +107,6 @@ automation's inputs until then.
 | Area tick | each area once per `tick_interval` minutes (default 1), `tick_gap` seconds apart (default 1) | `TickScheduler`, chaining `async_track_point_in_utc_time` |
 | Schedule refresh | 60 s, plus on demand (debounced, at most 10 s) | `ScheduleCoordinator` (`DataUpdateCoordinator`) |
 | Claims save | 5 s after a change, and at shutdown | `Store.async_delay_save` |
-| Stale-claim prune | hourly | `async_track_time_interval` |
 | Mismatch recheck | once, 31 s after a light first mismatches | `ClaimEvents._recheck_after_grace` |
 | Controlled announcement | 3 s after a room's first light is taken | `ClaimEvents._controlled_soon` |
 
