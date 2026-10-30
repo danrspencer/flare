@@ -264,9 +264,9 @@ behaves.</p>
   <li><a href="#transitions" id="markdown-toc-transitions">Transitions</a></li>
   <li><a href="#settings" id="markdown-toc-settings">Settings</a>    <ul>
       <li><a href="#override-protection" id="markdown-toc-override-protection">Override protection</a></li>
-      <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
       <li><a href="#prefer-rgb-during" id="markdown-toc-prefer-rgb-during">Prefer RGB during</a></li>
       <li><a href="#stored-traces" id="markdown-toc-stored-traces">Stored traces</a></li>
+      <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
     </ul>
   </li>
   <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
@@ -330,8 +330,9 @@ label is on the light itself, it’s included.</li>
 <p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
 
-<p>To choose the sensors yourself while still picking an area for the lights, turn off
-<a href="#sensors-from-areas">Sensors From Areas</a>.</p>
+<p>To pick an area for its lights but leave some of its sensors out, add them with <strong>Exclude
+target</strong> (Home Assistant 2026.11 and later). On earlier versions, turn off
+<a href="#sensors-from-areas">Sensors From Areas</a> and pick the sensors you want by name.</p>
 
 <p>A room with no sensor follows the schedule but never turns its lights on or off.</p>
 
@@ -383,8 +384,9 @@ either room goes dark.</p>
     
 
 <p>Illuminance sensors are the <code class="language-plaintext highlighter-rouge">sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: illuminance</code> in <strong>Lights &amp;
-Occupancy</strong> — picked by name, or included through its area, floor, device or label. With
-<a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by name count.</p>
+Occupancy</strong> — picked by name, or included through its area, floor, device or label — that
+aren’t excluded. With <a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by
+name count.</p>
 
 <p>Above <code class="language-plaintext highlighter-rouge">0</code>, the room counts as bright enough while every one of those sensors reads above that
 many lux. A bright room isn’t switched on by:</p>
@@ -610,11 +612,6 @@ follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
       <td>Leaves a light alone once something else changes it, until all of the room’s lights are off.</td>
     </tr>
     <tr>
-      <td><strong>Sensors From Areas</strong></td>
-      <td>on</td>
-      <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used.</td>
-    </tr>
-    <tr>
       <td><strong>Prefer RGB During</strong></td>
       <td>Evening, Night</td>
       <td>Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature.</td>
@@ -623,6 +620,11 @@ follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
       <td><strong>Stored Traces</strong></td>
       <td>20</td>
       <td>How many of the automation’s recent runs keep a trace.</td>
+    </tr>
+    <tr>
+      <td><strong>Sensors From Areas</strong></td>
+      <td>on</td>
+      <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used. Deprecated: use <strong>Exclude target</strong> instead of turning this off.</td>
     </tr>
   </tbody>
 </table></div>
@@ -636,18 +638,6 @@ follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
     
 
 <p>Turn it off for a room <a href="#turning-override-protection-off">whose bulbs misreport</a>.</p>
-<h3 id="sensors-from-areas">
-  
-  
-    <a href="#sensors-from-areas" class="anchor-heading" aria-labelledby="sensors-from-areas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors from areas
-  
-  
-</h3>
-    
-
-<p>Turn <strong>Sensors From Areas</strong> off and only the sensors you pick by name in <strong>Lights &amp; Occupancy</strong>
-count, so you can pick an area for its lights and choose the sensors yourself, such as the
-hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
 <h3 id="prefer-rgb-during">
   
   
@@ -671,6 +661,24 @@ leaves Morning and Day on colour temperature.</p>
 <p>A room updates every minute, so the default keeps about the last 20 minutes of runs in the
 automation’s <strong>Traces</strong>. Raise it while you’re tracking down something that happened earlier;
 each trace takes memory, so set it back once you’re done.</p>
+<h3 id="sensors-from-areas">
+  
+  
+    <a href="#sensors-from-areas" class="anchor-heading" aria-labelledby="sensors-from-areas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors from areas
+  
+  
+</h3>
+    
+
+<p>Turn <strong>Sensors From Areas</strong> off and only the sensors you pick by name in <strong>Lights &amp; Occupancy</strong>
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
+
+<p><strong>Sensors From Areas is deprecated, and FLARE 3.0 removes it.</strong> From Home Assistant 2026.11,
+use <strong>Exclude target</strong> in <strong>Lights &amp; Occupancy</strong> instead of turning it off, to leave out the
+sensors you don’t want (see Home Assistant’s
+<a href="https://www.home-assistant.io/docs/automation/targets/#excluding-targets">excluding targets</a>).
+An excluded sensor doesn’t count, whether it came from an area, a device, a floor or a label.</p>
 <h2 id="how-a-room-behaves">
   
   

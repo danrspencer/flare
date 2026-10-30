@@ -532,6 +532,11 @@ and that isn’t reliable.</li>
   <li>With <strong>Sensors From Areas</strong> off, the native triggers still fire for
 every sensor in the target (a trigger’s <code class="language-plaintext highlighter-rouge">target:</code> takes no templates),
 so the top-level <code class="language-plaintext highlighter-rouge">condition:</code> drops the ones not named directly.</li>
+  <li>A sensor excluded from the target (<code class="language-plaintext highlighter-rouge">exclude:</code>, HA 2026.11) never fires
+the native triggers and isn’t in <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>’s entities, so
+the blueprint needs no code for exclusions. Only the <code class="language-plaintext highlighter-rouge">lux_dark</code> and
+<code class="language-plaintext highlighter-rouge">recovered</code> wake-ups ignore them, since their Jinja expands the target
+itself.</li>
 </ul>
 
           
