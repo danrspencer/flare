@@ -4,6 +4,7 @@ light as an override."""
 
 from __future__ import annotations
 
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -12,7 +13,7 @@ from ..const import DOMAIN
 
 def is_flare_entry(entry: er.RegistryEntry | None) -> bool:
     """True for a flare's own light's registry entry."""
-    return entry is not None and entry.platform == DOMAIN and entry.domain == "light"
+    return entry is not None and entry.platform == DOMAIN and entry.domain == LIGHT_DOMAIN
 
 
 def is_flare_light(hass: HomeAssistant, entity_id: str) -> bool:

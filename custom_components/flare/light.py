@@ -13,7 +13,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED
+from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED, SERVICE_TRIGGER
 from homeassistant.components.group.light import LightGroup
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED
@@ -164,8 +165,8 @@ class FlareLight(LightGroup):
             await super().async_turn_on(**kwargs)
             return
         await self.hass.services.async_call(
-            "automation",
-            "trigger",
+            AUTOMATION_DOMAIN,
+            SERVICE_TRIGGER,
             {ATTR_ENTITY_ID: automation_entity_id(self.hass, self._instance.config)},
             blocking=True,
             context=self._context,

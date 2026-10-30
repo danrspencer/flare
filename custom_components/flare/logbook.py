@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from homeassistant.components.logbook import LOGBOOK_ENTRY_ENTITY_ID, LOGBOOK_ENTRY_MESSAGE, LOGBOOK_ENTRY_NAME
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Event, HomeAssistant, callback
 
 from .const import DOMAIN, EVENT_LIGHT_OVERRIDDEN, EVENT_LIGHTS_CONTROLLED, EVENT_LIGHTS_RELEASED
@@ -37,8 +38,8 @@ def _entry(hass: HomeAssistant, data, message: str) -> dict[str, str]:
     """Filed under the entity the event names. Read with .get: one
     describer raising breaks the whole logbook."""
     entry = {LOGBOOK_ENTRY_NAME: _room_name(hass, data), LOGBOOK_ENTRY_MESSAGE: message}
-    if data.get("entity_id"):
-        entry[LOGBOOK_ENTRY_ENTITY_ID] = data["entity_id"]
+    if data.get(ATTR_ENTITY_ID):
+        entry[LOGBOOK_ENTRY_ENTITY_ID] = data[ATTR_ENTITY_ID]
     return entry
 
 

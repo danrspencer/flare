@@ -16,9 +16,13 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
+from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
 from homeassistant.components.automation.config import async_validate_config_item
+from homeassistant.components.blueprint.const import CONF_INPUT, CONF_USE_BLUEPRINT
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.config import AUTOMATION_CONFIG_PATH
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
+from homeassistant.const import ATTR_AREA_ID, CONF_ALIAS, CONF_DESCRIPTION, CONF_ID, CONF_PATH, SERVICE_RELOAD
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import area_registry as ar
@@ -74,7 +78,7 @@ def areas_with_lights(hass: HomeAssistant) -> list[Area]:
     areas = [
         Area(area.id, area.name)
         for area in ar.async_get(hass).async_list_areas()
-        if without_flares(hass, [e for e in target_entities(hass, {"area_id": [area.id]}) if e.startswith("light.")])
+        if without_flares(hass, [e for e in target_entities(hass, {ATTR_AREA_ID: [area.id]}) if e.startswith(f"{LIGHT_DOMAIN}.")])
     ]
     return sorted(areas, key=lambda area: area.name)
 
@@ -88,7 +92,7 @@ def areas_set_up(hass: HomeAssistant) -> set[str]:
     return {
         entry.area_id
         for entry in er.async_get(hass).entities.values()
-        if entry.domain == "automation" and label.label_id in entry.labels and entry.area_id
+        if entry.domain == AUTOMATION_DOMAIN and label.label_id in entry.labels and entry.area_id
     }
 
 
@@ -100,14 +104,14 @@ async def async_set_up_areas(hass: HomeAssistant, schedule_for_area: dict[Area, 
     path = await async_blueprint_path(hass)
     configs = {
         area: {
-            "id": uuid.uuid4().hex,
-            "alias": f"{area.name} Lighting",
-            "description": "Created by FLARE.",
-            "use_blueprint": {
-                "path": path,
-                "input": {
+            CONF_ID: uuid.uuid4().hex,
+            CONF_ALIAS: f"{area.name} Lighting",
+            CONF_DESCRIPTION: "Created by FLARE.",
+            CONF_USE_BLUEPRINT: {
+                CONF_PATH: path,
+                CONF_INPUT: {
                     "schedule": _schedule_device(hass, schedule_subentry_id),
-                    BLUEPRINT_LIGHTS_INPUT: {"area_id": area.area_id},
+                    BLUEPRINT_LIGHTS_INPUT: {ATTR_AREA_ID: area.area_id},
                 },
             },
         }
@@ -160,7 +164,7 @@ async def async_add_automations(hass: HomeAssistant, configs: list[dict[str, Any
     all of them are valid. Raises AutomationsFileInvalid, writing nothing,
     if the file can't be read as a list of automations."""
     for config in configs:
-        await async_validate_config_item(hass, config["id"], config)
+        await async_validate_config_item(hass, config[CONF_ID], config)
 
     path = hass.config.path(AUTOMATION_CONFIG_PATH)
     lock = hass.data.setdefault(_WRITE_LOCK, asyncio.Lock())
@@ -168,13 +172,13 @@ async def async_add_automations(hass: HomeAssistant, configs: list[dict[str, Any
         original = await hass.async_add_executor_job(_read_text, path)
         current = await hass.async_add_executor_job(_read_items, path)
         await hass.async_add_executor_job(write_utf8_file_atomic, path, dump([*current, *configs]))
-        await hass.services.async_call("automation", "reload", blocking=True)
+        await hass.services.async_call(AUTOMATION_DOMAIN, SERVICE_RELOAD, blocking=True)
 
         registry = er.async_get(hass)
-        entity_ids = [registry.async_get_entity_id("automation", "automation", c["id"]) for c in configs]
+        entity_ids = [registry.async_get_entity_id(AUTOMATION_DOMAIN, AUTOMATION_DOMAIN, c[CONF_ID]) for c in configs]
         if None in entity_ids:
             await hass.async_add_executor_job(_restore, path, original)
-            await hass.services.async_call("automation", "reload", blocking=True)
+            await hass.services.async_call(AUTOMATION_DOMAIN, SERVICE_RELOAD, blocking=True)
             raise AutomationsNotLoaded
     return entity_ids
 

@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from homeassistant.components.light import ATTR_TRANSITION
+
 # A transition says how, not what, so a turn-on carrying only one is still bare.
-_IGNORED = frozenset({"transition"})
+_IGNORED = frozenset({ATTR_TRANSITION})
 
 
 def is_bare_turn_on(kwargs: Mapping[str, Any]) -> bool:

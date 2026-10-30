@@ -12,10 +12,12 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
 from homeassistant.components.automation import automations_with_blueprint
 from homeassistant.components.automation.helpers import async_get_blueprints
 from homeassistant.components.blueprint.models import Blueprint
 from homeassistant.components.blueprint.schemas import BLUEPRINT_SCHEMA
+from homeassistant.const import CONF_DESCRIPTION, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import yaml as yaml_util
@@ -56,7 +58,7 @@ class InstalledBlueprint:
 
 
 def _is_ours(blueprint: Blueprint) -> bool:
-    return blueprint.metadata.get("name") == _OUR_NAME
+    return blueprint.metadata.get(CONF_NAME) == _OUR_NAME
 
 
 async def _ours(hass: HomeAssistant) -> dict[str, Blueprint]:
@@ -95,7 +97,7 @@ async def outdated_blueprints(hass: HomeAssistant) -> list[InstalledBlueprint]:
         using = automations_with_blueprint(hass, path)
         if not using:
             continue
-        description = blueprint.metadata.get("description")
+        description = blueprint.metadata.get(CONF_DESCRIPTION)
         version = version_from_description(description)
         language = language_from_description(description)
         if is_outdated(version) or (language or ENGLISH) != wanted:
@@ -168,7 +170,7 @@ def _load_shipped(language: str) -> dict:
 async def _shipped(hass: HomeAssistant) -> Blueprint:
     """The blueprint packaged with this release, in Home Assistant's language."""
     data = await hass.async_add_executor_job(_load_shipped, await _language(hass))
-    return Blueprint(data, expected_domain="automation", schema=BLUEPRINT_SCHEMA)
+    return Blueprint(data, expected_domain=AUTOMATION_DOMAIN, schema=BLUEPRINT_SCHEMA)
 
 
 async def async_install_blueprint(hass: HomeAssistant) -> str:

@@ -195,7 +195,7 @@ def _build_scene_lookup(hass: HomeAssistant) -> SceneLookup:
 
     def covered_entities(scene_entity_id: str) -> list:
         s = hass.states.get(scene_entity_id)
-        return list(s.attributes.get("entity_id") or []) if s else []
+        return list(s.attributes.get(ATTR_ENTITY_ID) or []) if s else []
 
     return SceneLookup(exists=exists, covered_entities=covered_entities)
 

@@ -22,6 +22,9 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
+from homeassistant.components.blueprint.const import CONF_BLUEPRINT, CONF_INPUT
+from homeassistant.const import CONF_DESCRIPTION, CONF_NAME, CONF_OPTIONS, CONF_SELECTOR, CONF_UNIT_OF_MEASUREMENT
+
 from .blueprint_version import version_from_description, with_language
 
 TRANSLATIONS = Path(__file__).parent / "blueprints" / "translations"
@@ -55,14 +58,14 @@ def _split(description: str) -> tuple[str, str]:
 def _text(value: Mapping[str, Any]) -> dict[str, Any]:
     """An input's or section's translatable English, its whitespace
     collapsed so re-wrapping the YAML doesn't change it."""
-    text: dict[str, Any] = {k: " ".join(value[k].split()) for k in ("name", "description") if k in value}
-    for config in (value.get("selector") or {}).values():
+    text: dict[str, Any] = {k: " ".join(value[k].split()) for k in (CONF_NAME, CONF_DESCRIPTION) if k in value}
+    for config in (value.get(CONF_SELECTOR) or {}).values():
         if not isinstance(config, Mapping):
             continue
-        if "options" in config:
-            text["options"] = list(config["options"])
-        if "unit_of_measurement" in config:
-            text["unit"] = config["unit_of_measurement"]
+        if CONF_OPTIONS in config:
+            text["options"] = list(config[CONF_OPTIONS])
+        if CONF_UNIT_OF_MEASUREMENT in config:
+            text["unit"] = config[CONF_UNIT_OF_MEASUREMENT]
     return text
 
 
@@ -72,16 +75,16 @@ def _each_input(inputs: Mapping[str, Any]) -> Iterable[tuple[str, Mapping[str, A
         if value is None:
             continue
         yield key, value
-        if "input" in value:
-            yield from _each_input(value["input"])
+        if CONF_INPUT in value:
+            yield from _each_input(value[CONF_INPUT])
 
 
 def english(data: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
     """Everything a table translates, by the key it's given under: the
     blueprint's own text as "blueprint", then each input and section."""
-    prose, stamp = _split(data["blueprint"]["description"])
+    prose, stamp = _split(data[CONF_BLUEPRINT][CONF_DESCRIPTION])
     text = {"blueprint": {"description": prose, "stamp": stamp}}
-    text.update((key, _text(value)) for key, value in _each_input(data["blueprint"]["input"]))
+    text.update((key, _text(value)) for key, value in _each_input(data[CONF_BLUEPRINT][CONF_INPUT]))
     return text
 
 
@@ -93,15 +96,15 @@ def source_of(text: Mapping[str, Any]) -> str:
 def translate(data: Mapping[str, Any], table: Mapping[str, Any] | None, language: str) -> dict[str, Any]:
     """The blueprint `data` written in `language` from `table`, stamped
     with the language. No table is English, stamped "en"."""
-    blueprint = dict(data["blueprint"])
-    description = blueprint["description"]
+    blueprint = dict(data[CONF_BLUEPRINT])
+    description = blueprint[CONF_DESCRIPTION]
     if table:
         own = table["blueprint"]
         version = version_from_description(description)
         description = f"{own['description'].strip()}\n\nBlueprint version {version} - {own['stamp'].strip()}\n"
-        blueprint["input"] = _inputs(blueprint["input"], table)
-    blueprint["description"] = with_language(description, language)
-    return {**data, "blueprint": blueprint}
+        blueprint[CONF_INPUT] = _inputs(blueprint[CONF_INPUT], table)
+    blueprint[CONF_DESCRIPTION] = with_language(description, language)
+    return {**data, CONF_BLUEPRINT: blueprint}
 
 
 def _inputs(inputs: Mapping[str, Any], table: Mapping[str, Any]) -> dict[str, Any]:
@@ -112,13 +115,13 @@ def _input(value: Mapping[str, Any] | None, entry: Mapping[str, Any], table: Map
     if value is None:
         return None
     value = dict(value)
-    for field in ("name", "description"):
+    for field in (CONF_NAME, CONF_DESCRIPTION):
         if field in entry:
             value[field] = entry[field]
-    if "input" in value:
-        value["input"] = _inputs(value["input"], table)
-    if "selector" in value:
-        value["selector"] = {kind: _selector(config, entry) for kind, config in value["selector"].items()}
+    if CONF_INPUT in value:
+        value[CONF_INPUT] = _inputs(value[CONF_INPUT], table)
+    if CONF_SELECTOR in value:
+        value[CONF_SELECTOR] = {kind: _selector(config, entry) for kind, config in value[CONF_SELECTOR].items()}
     return value
 
 
@@ -126,9 +129,9 @@ def _selector(config: Any, entry: Mapping[str, Any]) -> Any:
     if not isinstance(config, Mapping):
         return config
     config = dict(config)
-    if "options" in entry and "options" in config:
+    if "options" in entry and CONF_OPTIONS in config:
         labels = entry["options"]
-        config["options"] = [{"value": option, "label": labels.get(option, option)} for option in config["options"]]
-    if "unit" in entry and "unit_of_measurement" in config:
-        config["unit_of_measurement"] = entry["unit"]
+        config[CONF_OPTIONS] = [{"value": option, "label": labels.get(option, option)} for option in config[CONF_OPTIONS]]
+    if "unit" in entry and CONF_UNIT_OF_MEASUREMENT in config:
+        config[CONF_UNIT_OF_MEASUREMENT] = entry["unit"]
     return config

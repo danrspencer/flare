@@ -16,7 +16,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory
+from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory, Platform
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -81,12 +81,12 @@ def _filed_under(hass: HomeAssistant, entry: ConfigEntry, role: str) -> dict[str
     release, which is how the Activity card tells the kinds apart, and
     device_id puts it in FLARE's device's Activity (omitted, not None, if the
     device isn't registered)."""
-    domain = "button" if role == "clear" else "sensor"
+    domain = Platform.BUTTON if role == "clear" else Platform.SENSOR
     entity_id = er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{role}") or (
         "button.flare_clear" if role == "clear" else f"sensor.flare_{role}_lights"
     )
     device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    return {"entity_id": entity_id, **({"device_id": device.id} if device else {})}
+    return {ATTR_ENTITY_ID: entity_id, **({ATTR_DEVICE_ID: device.id} if device else {})}
 
 
 class ClaimEvents:
