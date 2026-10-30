@@ -41,7 +41,8 @@ shows the counts and each light for each area too.
 
 FLARE keeps its claims in Home Assistant's own storage, so they're kept across a restart. To see
 every claim at once, download the diagnostics from **FLARE → Settings**: they list each light's
-claims and each room's lights.
+claims and each room's lights. They also list the last 50 overrides, each with what FLARE asked
+for, what the light reported and what kind of light it is.
 
 A light's status sensor appears the first time a room names the light, under **Diagnostic** on
 the light's device page, and stays after its room lets the light go. It's unavailable while the

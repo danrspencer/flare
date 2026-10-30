@@ -51,6 +51,9 @@ After updating:
   sensor, a scene and idle brightness won't switch one on. If someone is still there when it gets
   darker, the lights come on then. Lights already on carry on as before, and running the
   automation by hand still switches the room on. `0`, the default, turns the check off.
+- **The diagnostics from FLARE → Settings list the last 50 overrides**, each with what FLARE
+  asked for, what the light reported and what kind of light it is, so one file explains lights
+  that keep being overridden.
 - **Stored Traces**, a new blueprint setting. Room automations keep their last 20 traces, up
   from Home Assistant's 5, which a room updating every minute used up in five minutes.
 

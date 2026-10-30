@@ -1,5 +1,5 @@
 """The Settings entry's diagnostics download: every claim and room as FLARE
-holds them, for bug reports."""
+holds them, and the recent overrides, for bug reports."""
 
 from __future__ import annotations
 
@@ -15,4 +15,9 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
     if entry.data.get(CONF_ENTRY_TYPE) != ENTRY_TYPE_SETTINGS:
         return {"options": dict(entry.options)}
     registry = entry.runtime_data
-    return {"options": dict(entry.options), "claims": registry.all_records(), "rooms": dict(registry.rooms)}
+    return {
+        "options": dict(entry.options),
+        "claims": registry.all_records(),
+        "rooms": dict(registry.rooms),
+        "recent_overrides": list(registry.overrides),
+    }
