@@ -430,8 +430,8 @@ dropped for being hidden; the status sensors are what make this one not.
 **The claim events aren't an entity** (`sensor.ClaimEvents`). There's no
 poll: every change that moves a count reaches the registry's listener,
 and the grace is the only timed change, with its own recheck. They seed
-the statuses when they start, and a room restored dark is released and
-stale claims pruned only after that, so the release is announced. The
+the statuses when they start, and a room restored dark is released only
+after that, so the release is announced. The
 wiring is in `docs/architecture/event-loop.md`.
 
 Persistence was tried once and reverted: a restart gives every entity a
@@ -442,9 +442,13 @@ FLARE asked for matches on value.
 
 **The registry follows exactly the claimed lights**
 (`async_track_state_change_event`, re-subscribed as the set changes),
-never the whole bus: nothing it does concerns an unclaimed light. Status
-sensors and flares likewise follow their own entity's registry entry
-(`async_track_entity_registry_updated_event`), not every registry change.
+never the whole bus: nothing it does concerns an unclaimed light. Its claims
+follow those lights' registry entries too, moving with a rename and going
+with a deletion. That replaced an hourly prune of claims a day without a
+write, which took back an overridden lamp from a room lit for a day.
+Status sensors and flares likewise follow their own entity's registry
+entry (`async_track_entity_registry_updated_event`), not every registry
+change.
 
 Two listener rules, pinned in `test_claim_persistence.py`:
 
@@ -1243,8 +1247,6 @@ an update is the whole migration and a new schedule or room just appears.
 "Take control" is the one-way escape hatch. (It replaced a docs-site YAML
 generator whose layout changed five times in a session.)
 
-- `custom:flare-zone` still answers, as `custom:flare-lights`, for
-  dashboards someone took control of.
 - **Entities are found by device and role** (`flare-entities.js`:
   `flareDevices()` from `hass.entities`, using each entry's platform and
   translation key), never by building entity IDs, so renamed entities
@@ -1322,10 +1324,6 @@ strategy type and files kept the name `lights`.
   light off) is labelled Untracked like `untracked` (user's call); only the
   icon says it's off. The counts come
   from the same statuses as the list, so the two agree.
-- **`custom:flare-clear-card`** (a round icon and a label, like the "All
-  off" toggle-group, pressing `entity:` or a list of buttons) isn't used
-  by the views any more; it's still loaded for dashboards someone took
-  control of.
 - **The Activity sidebar is `custom:flare-activity-card`**: it subscribes
   to the logbook's `logbook/event_stream` for FLARE's device itself,
   filters by kind, and renders each entry as HA's own `ha-logbook-entry`

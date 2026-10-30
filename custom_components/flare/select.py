@@ -25,7 +25,6 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
     _attr_icon = "mdi:sun-clock"
     _attr_options = PHASE_OPTIONS
     _attr_has_entity_name = True
-    _attr_name = "Phase"
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)

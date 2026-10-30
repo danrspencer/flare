@@ -8,10 +8,9 @@ import voluptuous as vol
 import yaml
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
-from custom_components.flare.const import DOMAIN
-from custom_components.flare.services.handlers import async_unload_services
+from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.services.schedules import async_setup_schedule_services
 from custom_components.flare.services.targets import async_setup_target_services
 from tests.functional.component.harness import (
@@ -198,10 +197,13 @@ async def test_the_services_registered_are_exactly_the_ones_services_yaml_docume
     assert set(setup_integration.services.async_services_for_domain(DOMAIN)) == documented
 
 
-async def test_unloading_the_services_removes_every_one_that_was_registered(setup_integration: HomeAssistant):
-    hass = setup_integration
+async def test_unloading_the_settings_entry_removes_every_service_it_registered(stub_entry_setup, hass: HomeAssistant):
+    entry = MockConfigEntry(domain=DOMAIN, data={CONF_ENTRY_TYPE: ENTRY_TYPE_SETTINGS}, version=3, minor_version=2)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
     assert hass.services.async_services_for_domain(DOMAIN), "precondition: services were registered"
 
-    async_unload_services(hass)
+    assert await hass.config_entries.async_unload(entry.entry_id)
 
-    assert hass.services.async_services_for_domain(DOMAIN) == {}
+    # Only those async_setup registers, which belong to no entry.
+    assert set(hass.services.async_services_for_domain(DOMAIN)) == {"export_schedule", "import_schedule", "resolve_target"}

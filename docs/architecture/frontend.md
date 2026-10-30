@@ -91,7 +91,6 @@ flowchart TB
     vs --> ls["flare-lights-section.js"]
     vs --> alc["flare-area-lights-card.js<br/>custom:flare-area-lights-card"]
     vs --> act["flare-activity-card.js<br/>custom:flare-activity-card"]
-    vs --> clr["flare-clear-card.js<br/>(only for taken-over dashboards)"]
     sec --> i18n["flare-i18n.js<br/>translations/#lt;lang#gt;.js"]
     ls --> i18n
 ```

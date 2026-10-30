@@ -27,18 +27,18 @@ def _real_setup(stub_entry_setup):
     """The entry set up as HA does, platforms and all."""
 
 
-def _claim(context_id: str, *, age: timedelta = timedelta(0)) -> dict:
+def _claim(context_id: str) -> dict:
     """A landed write: both claims carry the target."""
-    seen = (dt_util.utcnow() - age).isoformat()
+    seen = dt_util.utcnow().isoformat()
 
     def one(ctx):
         return {"context_id": ctx, "secondary_context_id": None, "recorded_at": seen, "target": ASKED}
 
-    return {"observed": one(f"{context_id}-before"), "latest": one(context_id), "last_seen": seen}
+    return {"observed": one(f"{context_id}-before"), "latest": one(context_id)}
 
 
 def _room(*lights: str) -> dict:
-    return {ROOM: {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}}
+    return {ROOM: {"lights": sorted(lights)}}
 
 
 async def _start(
@@ -150,14 +150,19 @@ async def test_a_light_unchanged_across_the_restart_is_still_ours(hass: HomeAssi
     assert _status(hass, registry, "light.a") == "controlled"
 
 
-async def test_a_restored_claim_over_a_day_old_is_dropped(hass: HomeAssistant, hass_storage: dict[str, Any]):
-    """Pruned at setup. The fresh claim beside it rules out "nothing was
-    restored"."""
+async def test_a_restored_claim_on_a_light_deleted_meanwhile_goes_when_its_room_goes_dark(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+):
+    _light(hass, "light.a", "on", brightness=200, color_temp_kelvin=3000)
     registry = await _start(
-        hass, hass_storage, {"light.fresh": _claim("ctx-1"), "light.stale": _claim("ctx-2", age=timedelta(days=2))}
+        hass, hass_storage, {"light.a": _claim("ctx-1"), "light.gone": _claim("ctx-2")}, _room("light.a", "light.gone")
     )
+    assert set(registry.all_records()) == {"light.a", "light.gone"}, "precondition: both restored"
 
-    assert set(registry.all_records()) == {"light.fresh"}
+    _light(hass, "light.a", "off")
+    await hass.async_block_till_done()
+
+    assert registry.all_records() == {}
 
 
 async def test_reconnecting_after_a_restart_does_not_take_the_light_back(hass: HomeAssistant, hass_storage: dict[str, Any]):
@@ -235,8 +240,8 @@ async def test_each_room_restored_dark_is_released_on_its_own(hass: HomeAssistan
     _light(hass, "light.a", "on", **ASKED)
     _light(hass, "light.b", "off")
     rooms = {
-        "automation.lit": {"lights": ["light.a"], "last_seen": dt_util.utcnow().isoformat()},
-        "automation.dark": {"lights": ["light.b"], "last_seen": dt_util.utcnow().isoformat()},
+        "automation.lit": {"lights": ["light.a"]},
+        "automation.dark": {"lights": ["light.b"]},
     }
 
     registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-a"), "light.b": _claim("ctx-b")}, rooms)

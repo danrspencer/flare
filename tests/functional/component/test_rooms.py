@@ -161,7 +161,7 @@ async def test_an_unavailable_light_holding_a_claim_does_not_hold_a_room_open(ha
     await hass.async_block_till_done()
     assert set(registry.all_records()) == {"light.a", "light.dead"}, "precondition: the claim survives"
 
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
 
@@ -176,7 +176,7 @@ async def test_a_room_light_flare_never_claimed_does_not_hold_it_open(hass: Home
     _light(hass, "light.a")
     _light(hass, "light.tv_backlight")
     await _record(registry, KITCHEN, "light.a", "ctx-ours", ASKED, room_lights=["light.a", "light.tv_backlight"])
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
@@ -193,7 +193,7 @@ async def test_a_light_switched_off_while_another_of_the_rooms_lights_is_on_keep
     _light(hass, "light.b")
     await _record(registry, KITCHEN, "light.b", "ctx-b", ASKED)
     await _record(registry, KITCHEN, "light.a", "ctx-a", ASKED, room_lights=["light.a"])
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
@@ -208,12 +208,47 @@ async def test_rooms_release_independently(hass: HomeAssistant):
     _light(hass, "light.h")
     await _record(registry, KITCHEN, "light.k", "ctx-ours", ASKED)
     await _record(registry, HALL, "light.h", "ctx-ours", ASKED)
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.k", "off", {})
     await hass.async_block_till_done()
 
     assert set(registry.all_records()) == {"light.h"}
+    unsub()
+
+
+async def test_a_deleted_lights_claim_goes_with_it(hass: HomeAssistant):
+    _entry, registry, _ = await _setup(hass)
+    entities = er.async_get(hass)
+    entities.async_get_or_create("light", "test", "lamp", suggested_object_id="lamp")
+    _light(hass, "light.lamp")
+    _light(hass, "light.b")
+    await _record(registry, KITCHEN, "light.lamp", "ctx-ours", ASKED, room_lights=["light.lamp", "light.b"])
+    await _record(registry, KITCHEN, "light.b", "ctx-ours", ASKED)
+    unsub = registry.async_start_listening()
+
+    entities.async_remove("light.lamp")
+    await hass.async_block_till_done()
+
+    assert set(registry.all_records()) == {"light.b"}
+    assert registry.room_lights(KITCHEN) == ["light.b"]
+    unsub()
+
+
+async def test_a_renamed_lights_claim_follows_it(hass: HomeAssistant):
+    _entry, registry, _ = await _setup(hass)
+    entities = er.async_get(hass)
+    entities.async_get_or_create("light", "test", "lamp", suggested_object_id="lamp")
+    _light(hass, "light.lamp")
+    await _record(registry, KITCHEN, "light.lamp", "ctx-ours", ASKED)
+    claim = registry.record("light.lamp")
+    unsub = registry.async_start_listening()
+
+    entities.async_update_entity("light.lamp", new_entity_id="light.reading_lamp")
+    await hass.async_block_till_done()
+
+    assert registry.all_records() == {"light.reading_lamp": claim}
+    assert registry.room_lights(KITCHEN) == ["light.reading_lamp"]
     unsub()
 
 
@@ -225,7 +260,7 @@ async def test_a_light_in_two_rooms_is_released_when_either_goes_dark(hass: Home
     await _record(registry, KITCHEN, "light.shared", "ctx-k", ASKED)
     await _record(registry, HALL, "light.shared", "ctx-h", ASKED, room_lights=["light.shared", "light.h"])
     await _record(registry, HALL, "light.h", "ctx-h", ASKED)
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.shared", "off", {})
     await hass.async_block_till_done()
@@ -357,7 +392,7 @@ async def test_a_room_going_dark_says_it_cleared_its_lights(hass: HomeAssistant)
     for light in ("light.a", "light.b"):
         _light(hass, light)
         await _record(registry, KITCHEN, light, f"ctx-{light}", ASKED)
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.a", "off", {})
     await hass.async_block_till_done()
@@ -492,7 +527,7 @@ async def test_counters_refresh_when_a_lights_live_state_changes(hass: HomeAssis
     refreshed: list = []
     async_dispatcher_connect(hass, SIGNAL_CLAIMS_UPDATED, lambda: refreshed.append(True))
 
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
     hass.states.async_set("light.a", "unavailable", {})
     await hass.async_block_till_done()
     unsub()
@@ -536,7 +571,7 @@ async def test_a_room_switched_off_by_something_else_goes_dark_without_overrides
         _light(hass, light, **ASKED)
         await _record(registry, KITCHEN, light, f"ctx-{light}", ASKED)
     tracker._refresh_statuses()
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     hass.states.async_set("light.a", "off", {}, context=Context())
     await hass.async_block_till_done()
@@ -563,7 +598,7 @@ async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant
     # The first write echoed back under another context, as a slow device does.
     _light(hass, "light.a", **{**ASKED, "brightness": ASKED["brightness"] + 1})
     tracker._refresh_statuses()
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     later = {"brightness": 120, "color_temp_kelvin": 2700}
     await _record(registry, KITCHEN, "light.a", "ctx-second", later)
@@ -608,7 +643,7 @@ async def test_a_claimed_light_is_not_adopted(hass: HomeAssistant):
 async def test_an_adopted_light_is_released_with_its_room(hass: HomeAssistant):
     _entry, registry, _ = await _setup(hass)
     _light(hass, "light.a", **ASKED)
-    unsub = registry.async_start_listening(hass)
+    unsub = registry.async_start_listening()
 
     registry.adopt(KITCHEN, ["light.a"])
     hass.states.async_set("light.a", "off", {})

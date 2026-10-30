@@ -35,17 +35,22 @@ its reconnect isn't mistaken for an override. There's deliberately no
 re-baseline on reconnect: after a restart it would mark every restored
 override as ours. Both listener rules require a real on/off starting
 state, since nearly every light passes through unavailable/unknown on
-restart. Nothing a light reports while HA is stopping counts."""
+restart. Nothing a light reports while HA is stopping counts.
+
+A claimed light's registry entry is followed too: its claim moves with a
+rename and goes when the light is deleted."""
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Optional, Protocol
 
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import (
+    async_track_entity_registry_updated_event,
+    async_track_state_change_event,
+)
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
@@ -60,12 +65,6 @@ from .override_protection import (
     classify_state,
     disagrees,
 )
-
-# Pruning early is harmless: a light with no record is simply free to
-# manage.
-STALE_RECORD_MAX_AGE_DAYS = 1
-
-PRUNE_CHECK_INTERVAL = timedelta(hours=1)
 
 # Fired whenever the claims change, so the sensors refresh.
 SIGNAL_CLAIMS_UPDATED = "flare_claims_updated"
@@ -93,15 +92,16 @@ class ClaimRegistry:
     def __init__(self, hass: HomeAssistant) -> None:
         self._hass = hass
         self.claims: dict[str, _WriteRecord] = {}
-        # Room key -> {"lights": [...], "last_seen": iso}.
+        # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
         self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._listener: ClaimListener | None = None
-        # The state listener, while listening, and the lights it follows:
-        # exactly the claimed ones (_retrack).
+        # The state and registry listeners, while listening, and the lights
+        # they follow: exactly the claimed ones (_retrack).
         self._on_change = None
+        self._on_registry_change = None
         self._tracked: frozenset[str] = frozenset()
-        self._untrack: CALLBACK_TYPE | None = None
+        self._untrack: list[CALLBACK_TYPE] = []
 
     async def async_load(self) -> None:
         """The claims and rooms from before the restart."""
@@ -128,13 +128,6 @@ class ClaimRegistry:
             return None
         entry = er.async_get(self._hass).async_get(room_id)
         return entry.id if entry is not None else room_id
-
-    def room_name(self, key: str) -> str:
-        """What a room is called: its entity's name, else its key."""
-        entry = er.async_get(self._hass).async_get(key)
-        entity_id = entry.entity_id if entry is not None else key
-        state = self._hass.states.get(entity_id)
-        return state.name if state is not None else entity_id
 
     def room_entity_id(self, key: str) -> str:
         """The entity a room is keyed by, as its current entity_id, else the key."""
@@ -198,12 +191,19 @@ class ClaimRegistry:
         lights = frozenset(self.claims)
         if self._on_change is None or lights == self._tracked:
             return
-        if self._untrack is not None:
-            self._untrack()
+        self._stop_tracking()
         self._tracked = lights
-        self._untrack = (
-            async_track_state_change_event(self._hass, sorted(lights), self._on_change) if lights else None
-        )
+        if lights:
+            self._untrack = [
+                async_track_state_change_event(self._hass, sorted(lights), self._on_change),
+                async_track_entity_registry_updated_event(self._hass, sorted(lights), self._on_registry_change),
+            ]
+
+    @callback
+    def _stop_tracking(self) -> None:
+        for untrack in self._untrack:
+            untrack()
+        self._untrack, self._tracked = [], frozenset()
 
     @callback
     def _join(self, key: str | None, written: list[str], room_entities: list[str] | None) -> None:
@@ -214,7 +214,7 @@ class ClaimRegistry:
             return
         held = [e for e in self.rooms.get(key, {}).get("lights", ()) if e in self.claims]
         lights = set(room_entities or ()) | set(written) | set(held)
-        self.rooms[key] = {"lights": sorted(lights), "last_seen": dt_util.utcnow().isoformat()}
+        self.rooms[key] = {"lights": sorted(lights)}
 
     @callback
     def async_clear(self, entity_ids: list[str], *, announce: bool = False) -> list[str]:
@@ -256,7 +256,6 @@ class ClaimRegistry:
                     "target": None,
                 },
                 "latest": None,
-                "last_seen": now,
                 "mismatch_since": overridden_since,
             }
         self._join(key, entity_ids, room_entities)
@@ -284,7 +283,6 @@ class ClaimRegistry:
                     "target": shown(state.attributes),
                 },
                 "latest": None,
-                "last_seen": now,
             }
             adopted.append(entity_id)
         if adopted:
@@ -349,32 +347,11 @@ class ClaimRegistry:
                     "recorded_at": dt_util.utcnow().isoformat(),
                     "target": targets.get(entity_id),
                 },
-                "last_seen": dt_util.utcnow().isoformat(),
             }
             # A new write starts afresh: a mismatch now is the write landing.
             self.note_mismatch(entity_id)
         self._join(key, entity_ids, room_entities)
         self._notify()
-
-    @callback
-    def async_prune_stale(self) -> None:
-        """Discards records untouched for STALE_RECORD_MAX_AGE_DAYS: the only
-        cleanup an entity deleted from HA, or a room no longer used, ever
-        gets. A record with no parseable `last_seen` is kept."""
-        cutoff = dt_util.utcnow() - timedelta(days=STALE_RECORD_MAX_AGE_DAYS)
-
-        def stale(record: dict) -> bool:
-            parsed = dt_util.parse_datetime(record.get("last_seen") or "")
-            return parsed is not None and parsed < cutoff
-
-        lights = [entity_id for entity_id, record in self.claims.items() if stale(record)]
-        rooms = [key for key, room in self.rooms.items() if stale(room)]
-        for entity_id in lights:
-            self.claims.pop(entity_id, None)
-        for key in rooms:
-            self.rooms.pop(key, None)
-        if lights or rooms:
-            self._notify()
 
     def _claimed_lights(self, key: str) -> list[str]:
         lights = self.rooms.get(key, {}).get("lights", ())
@@ -420,14 +397,20 @@ class ClaimRegistry:
         if any([self._release_if_settled_dark(key) for key in list(self.rooms)]):
             self._notify()
 
-    def async_start_listening(self, hass: HomeAssistant) -> CALLBACK_TYPE:
-        """One listener for the claimed lights, re-subscribed as they change:
+    def async_start_listening(self) -> CALLBACK_TYPE:
+        """Listeners for the claimed lights, re-subscribed as they change.
+        Their states:
 
         - Any change to a tracked light: its `mismatch_since` kept.
         - Drop (on/off -> unavailable/unknown): clears the light's claim.
         - Off (on/off -> off): releases each of its rooms that has gone dark.
         - Arrival (none/unavailable/unknown -> on/off): releases each of its
-          rooms whose claimed lights have all now reported and none is on."""
+          rooms whose claimed lights have all now reported and none is on.
+
+        Their registry entries: a rename moves the claim and the light's place
+        in its rooms; a deletion drops both."""
+        hass = self._hass
+
         @callback
         def _on_state_changed(event: Event[EventStateChangedData]) -> None:
             entity_id = event.data["entity_id"]
@@ -460,14 +443,30 @@ class ClaimRegistry:
             if dropped or went_off or arrived or changed:
                 self._notify()
 
+        @callback
+        def _on_registry_changed(event: Event[er.EventEntityRegistryUpdatedData]) -> None:
+            data = event.data
+            if data["action"] == "remove":
+                old, new = data["entity_id"], None
+            elif data["action"] == "update" and "old_entity_id" in data:
+                old, new = data["old_entity_id"], data["entity_id"]
+            else:
+                return
+            record = self.claims.pop(old, None)
+            if record is not None and new is not None:
+                self.claims[new] = record
+            for room in self.rooms.values():
+                if old in room["lights"]:
+                    room["lights"] = sorted((set(room["lights"]) - {old}) | ({new} if new else set()))
+            self._notify()
+
         self._on_change = _on_state_changed
+        self._on_registry_change = _on_registry_changed
         self._retrack()
 
         @callback
         def _stop() -> None:
-            self._on_change = None
-            if self._untrack is not None:
-                self._untrack()
-            self._untrack, self._tracked = None, frozenset()
+            self._on_change = self._on_registry_change = None
+            self._stop_tracking()
 
         return _stop

@@ -211,4 +211,4 @@ async def test_diagnostics_has_every_claim_and_room(stub_entry_setup, hass: Home
     diagnostics = await async_get_config_entry_diagnostics(hass, entry)
 
     assert set(diagnostics["claims"]) == {lamp}
-    assert diagnostics["rooms"] == {ROOM: {"lights": [lamp], "last_seen": ANY}}
+    assert diagnostics["rooms"] == {ROOM: {"lights": [lamp]}}

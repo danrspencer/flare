@@ -16,7 +16,6 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -37,12 +36,12 @@ from homeassistant.helpers.start import async_at_started
 from .blueprint_check import async_check as async_check_blueprint
 from .dashboard_reload import FrontendLoadedView, OldFingerprintView
 from .schedule.coordinator import ScheduleCoordinator, schedule_instances
-from .services.handlers import async_setup_services, async_unload_services
+from .services.handlers import async_setup_services
 from .services.schedules import async_setup_schedule_services
 from .services.targets import async_setup_target_services
 from .flares.instance import flare_instances
 from .tracking.ticker import TickScheduler
-from .tracking.claims import PRUNE_CHECK_INTERVAL, ClaimRegistry
+from .tracking.claims import ClaimRegistry
 
 # Both entry types use the sensor platform; each platform module checks
 # the entry type to decide what it adds.
@@ -146,17 +145,7 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
     registry = ClaimRegistry(hass)
     await registry.async_load()
     entry.runtime_data = registry
-
-    # Pruning catches entities deleted outright, which the listener never
-    # sees go unavailable.
-    @callback
-    def _periodic_prune(now) -> None:
-        registry.async_prune_stale()
-
-    entry.async_on_unload(
-        async_track_time_interval(hass, _periodic_prune, PRUNE_CHECK_INTERVAL, cancel_on_shutdown=True)
-    )
-    entry.async_on_unload(registry.async_start_listening(hass))
+    entry.async_on_unload(registry.async_start_listening())
 
     # After startup, since automations (which decide whether a blueprint
     # is in use) may not have loaded yet during setup.
@@ -179,11 +168,10 @@ async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None
 
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop_ticking))
     await hass.config_entries.async_forward_entry_setups(entry, SETTINGS_PLATFORMS)
-    # Once the claim events are listening, so these are announced: rooms whose
+    # Once the claim events are listening, so it's announced: rooms whose
     # lights went dark while HA wasn't watching won't change again to be
-    # released, and claims from long ago are stale.
+    # released.
     registry.release_settled_dark_rooms()
-    registry.async_prune_stale()
     entry.async_on_unload(_tick_areas(hass, scheduler))
 
 
@@ -230,7 +218,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
 
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
-        async_unload_services(hass)
         return await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
 
     return await hass.config_entries.async_unload_platforms(entry, SCHEDULE_PLATFORMS)

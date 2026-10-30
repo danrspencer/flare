@@ -30,7 +30,6 @@ class _SchedulePhase(CoordinatorEntity[ScheduleCoordinator], EventEntity):
     the first refresh after setup."""
 
     _attr_has_entity_name = True
-    _attr_name = "Phase"
     _attr_icon = "mdi:theme-light-dark"
     _attr_event_types = PHASES
 

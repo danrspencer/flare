@@ -1,5 +1,7 @@
 """Curve values and transition lengths as number entities, one per
-CURVE_KEYS per schedule."""
+CURVE_KEYS per schedule. A transition belongs to the phase it runs in:
+"Day Colour Transition" is how long before Day ends to start easing to
+Evening's colour."""
 
 from __future__ import annotations
 
@@ -11,27 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .schedule.coordinator import CURVE_KEYS, ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .schedule.curve import DEFAULT_CURVE_VALUES, value_range
-
-_LABELS = {
-    "morning_brightness": "Morning Brightness",
-    "morning_kelvin": "Morning Colour Temperature",
-    "day_brightness": "Day Brightness",
-    "day_kelvin": "Day Colour Temperature",
-    "evening_brightness": "Evening Brightness",
-    "evening_kelvin": "Evening Colour Temperature",
-    "night_brightness": "Night Brightness",
-    "night_kelvin": "Night Colour Temperature",
-    # A transition belongs to the phase it runs in: "Day Colour Transition"
-    # is how long before Day ends to start easing to Evening's colour.
-    "morning_brightness_transition": "Morning Brightness Transition",
-    "morning_kelvin_transition": "Morning Colour Transition",
-    "day_brightness_transition": "Day Brightness Transition",
-    "day_kelvin_transition": "Day Colour Transition",
-    "evening_brightness_transition": "Evening Brightness Transition",
-    "evening_kelvin_transition": "Evening Colour Transition",
-    "night_brightness_transition": "Night Brightness Transition",
-    "night_kelvin_transition": "Night Colour Transition",
-}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -53,7 +34,6 @@ class _CurveNumber(RestoreNumber, NumberEntity):
         self._attr_translation_key = key
         self.entity_id = instance.number_entity_id(key)
         self._attr_device_info = instance.device_info
-        self._attr_name = _LABELS[key]
         self._attr_native_min_value, self._attr_native_max_value = value_range(key)
         self._attr_native_step = 1
         if key.endswith("_transition"):
