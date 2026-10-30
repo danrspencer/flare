@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -53,7 +54,7 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
     @property
     def _sticky(self) -> bool:
         state = self.hass.states.get(self._instance.sticky_entity(self.hass))
-        return state is not None and state.state == "on"
+        return state is not None and state.state == STATE_ON
 
     def _handle_coordinator_update(self) -> None:
         if (

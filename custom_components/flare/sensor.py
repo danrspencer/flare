@@ -16,7 +16,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EntityCategory
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -238,7 +238,7 @@ class ClaimEvents:
 
     def _is_on(self, entity_id: str) -> bool:
         state = self.hass.states.get(entity_id)
-        return state is not None and state.state == "on"
+        return state is not None and state.state == STATE_ON
 
 
 class _CountSensor(SensorEntity):

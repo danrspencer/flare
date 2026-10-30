@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Optional, TypedDict
 
+from homeassistant.const import STATE_ON
 from homeassistant.util import dt as dt_util
 
 from ..const import (
@@ -133,7 +134,7 @@ def classify_state(
     if not is_reachable(state):
         return "unavailable", None
     status, matched_via = classify(
-        state.state == "on",
+        state.state == STATE_ON,
         (record or {}).get("observed"),
         (record or {}).get("latest"),
         state.context.id,

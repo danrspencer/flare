@@ -44,6 +44,7 @@ from __future__ import annotations
 
 from typing import Optional, Protocol
 
+from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -290,7 +291,7 @@ class ClaimRegistry:
         adopted = []
         for entity_id in entity_ids:
             state = self._hass.states.get(entity_id)
-            if state is None or state.state != "on" or entity_id in self.claims:
+            if state is None or state.state != STATE_ON or entity_id in self.claims:
                 continue
             self.claims[entity_id] = {
                 "observed": {
@@ -385,7 +386,7 @@ class ClaimRegistry:
             return False
         for entity_id in claimed:
             state = self._hass.states.get(entity_id)
-            if state is not None and state.state == "on":
+            if state is not None and state.state == STATE_ON:
                 return False
         for entity_id in claimed:
             self.claims.pop(entity_id, None)
@@ -444,7 +445,7 @@ class ClaimRegistry:
             new_explicitly_unavailable = new is not None and not is_reachable(new)
             dropped = old_available and new_explicitly_unavailable
             # Not unknown -> off, which is a light reconnecting.
-            went_off = old_available and new is not None and new.state == "off"
+            went_off = old_available and new is not None and new.state == STATE_OFF
             arrived = not old_available and is_reachable(new)
 
             rooms = self.rooms_of(entity_id)

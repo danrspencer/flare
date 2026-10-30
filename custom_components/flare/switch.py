@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -35,7 +35,7 @@ class _StickyOverrideSwitch(SwitchEntity, RestoreEntity):
         await super().async_added_to_hass()
         last_state = await self.async_get_last_state()
         if last_state is not None:
-            self._attr_is_on = last_state.state == "on"
+            self._attr_is_on = last_state.state == STATE_ON
 
     async def async_turn_on(self, **kwargs) -> None:
         self._attr_is_on = True

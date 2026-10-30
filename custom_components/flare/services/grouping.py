@@ -5,6 +5,9 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
+from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES, color_supported
+from homeassistant.const import STATE_OFF, STATE_ON
+
 from ..const import is_reachable
 from ..tracking.matching import Tolerance, shows
 from ..tracking.override_protection import classify_state, is_blocked
@@ -12,8 +15,6 @@ from .two_step import TWO_STEP_LABEL_ID, model_matches
 
 if TYPE_CHECKING:
     from homeassistant.core import State
-
-_RGB_COLOR_MODES = {"rgb", "rgbw", "rgbww", "hs", "xy"}
 
 # light.turn_on silently clamps to this, so an unclamped target would
 # never read as reached and be re-sent every tick.
@@ -73,8 +74,7 @@ class EntityLookup:
 
     def supports_rgb(self, entity_id: str) -> bool:
         """True if the entity supports a mode rgb_color works with."""
-        modes = self.state_attr(entity_id, "supported_color_modes") or []
-        return bool(set(modes) & _RGB_COLOR_MODES)
+        return color_supported(self.state_attr(entity_id, ATTR_SUPPORTED_COLOR_MODES))
 
 
 @dataclass
@@ -176,7 +176,7 @@ def build_groups(
     for brightness, group_entities in _bucket_by_brightness(entities, brightness_levels, sensor_brightness).items():
         if brightness <= 0:
             group = Group(brightness=brightness, target={"state": "off"})
-            group.needing_off = [e for e in writable(group_entities) if not lookup.is_state(e, "off")]
+            group.needing_off = [e for e in writable(group_entities) if not lookup.is_state(e, STATE_OFF)]
             groups.append(group)
             continue
 
@@ -202,4 +202,4 @@ def build_groups(
 def _already_set(entity_id: str, target: dict, lookup: EntityLookup, tolerance: Tolerance) -> bool:
     """On and close enough not to send - see matching.py."""
     state = lookup.state(entity_id)
-    return state is not None and state.state == "on" and shows(state.attributes, target, tolerance)
+    return state is not None and state.state == STATE_ON and shows(state.attributes, target, tolerance)

@@ -13,7 +13,10 @@ import time
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_TRANSITION
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
 from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
@@ -36,7 +39,7 @@ from ..flares.identity import without_flares
 from ..tracking.claims import ClaimRegistry
 
 # FLARE drives and tracks lights only.
-LIGHT_IDS = [cv.entity_domain("light")]
+LIGHT_IDS = [cv.entity_domain(LIGHT_DOMAIN)]
 
 # Who's writing, for override protection: a room, usually the calling
 # automation (`this.entity_id`), and its lights, which it releases together.
@@ -239,17 +242,17 @@ async def _two_step_turn_on(
     reporting just the first step is still recognised as ours. The caller
     creates the contexts, since the claims are recorded before dispatch."""
     await hass.services.async_call(
-        "light",
-        "turn_on",
-        {"entity_id": entity_ids, "transition": half_transition, "brightness": target["brightness"]},
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: entity_ids, ATTR_TRANSITION: half_transition, ATTR_BRIGHTNESS: target["brightness"]},
         blocking=True,
         context=brightness_context,
     )
     await asyncio.sleep(half_transition)
     await hass.services.async_call(
-        "light",
-        "turn_on",
-        {"entity_id": entity_ids, "transition": half_transition, **target},
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: entity_ids, ATTR_TRANSITION: half_transition, **target},
         blocking=True,
         context=color_context,
     )
@@ -337,12 +340,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 write_targets.update(dict.fromkeys(lights, target))
                 if not two_step:
                     # An off-group's target is {"state": "off"}.
-                    service, data = ("turn_off", {}) if "state" in target else ("turn_on", target)
+                    service, data = (SERVICE_TURN_OFF, {}) if "state" in target else (SERVICE_TURN_ON, target)
                     tasks.append(
                         hass.services.async_call(
-                            "light",
+                            LIGHT_DOMAIN,
                             service,
-                            {"entity_id": lights, "transition": transition, **data},
+                            {ATTR_ENTITY_ID: lights, ATTR_TRANSITION: transition, **data},
                             blocking=True,
                             context=call.context,
                         )
@@ -405,9 +408,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             room_entities=call.data.get("room_entities"),
         )
         await hass.services.async_call(
-            "light",
-            "turn_off",
-            {"entity_id": entities, "transition": transition},
+            LIGHT_DOMAIN,
+            SERVICE_TURN_OFF,
+            {ATTR_ENTITY_ID: entities, ATTR_TRANSITION: transition},
             blocking=True,
             context=call.context,
         )
