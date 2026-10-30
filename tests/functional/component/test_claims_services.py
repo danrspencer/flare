@@ -6,7 +6,11 @@ import pytest
 import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 
-from custom_components.flare.const import CONF_MIN_BRIGHTNESS_CHANGE, CONF_MIN_COLOR_TEMP_CHANGE, DOMAIN
+from custom_components.flare.const import (
+    CONF_MIN_BRIGHTNESS_CHANGE,
+    CONF_MIN_COLOR_TEMP_CHANGE,
+    DOMAIN,
+)
 from pytest_homeassistant_custom_component.common import async_mock_service
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
@@ -230,9 +234,9 @@ async def test_claims_override_needs_a_room(setup_integration: HomeAssistant):
 
 
 class TestOverrideTolerances:
-    """A light reporting within the Settings entry's tolerances (the same
-    minimum change that decides what's sent) of what FLARE asked for is
-    still FLARE's: only a change someone would notice is an override."""
+    """A light reporting within the Settings entry's tolerances of what FLARE
+    asked for is still FLARE's: only a change someone would notice is an
+    override. A call can pass its own."""
 
     async def _echo(self, hass: HomeAssistant, asked: dict, reported: dict) -> None:
         """Claimed at `asked`, then reported at `reported` under a fresh
@@ -280,5 +284,28 @@ class TestOverrideTolerances:
         turn_on = async_mock_service(hass, "light", "turn_on")
 
         assert (await claims_check(hass, ["light.a"]))["light.a"]["blocked"]
+        status, _via = claim_registry(hass).status("light.a")
+        assert status == "mismatched", "the status sensors and events read the option too"
         await apply_lighting(hass, ["light.a"], brightness=100, color_temp_kelvin=2700)
         assert turn_on == [], "with no tolerance the light reads as someone else's"
+
+    @CASES
+    async def test_a_calls_own_tolerance_wins(self, hass: HomeAssistant, asked, reported, option):
+        await setup_settings_entry(hass, options={option: 0})
+        await self._echo(hass, asked, reported)
+
+        result = await hass.services.async_call(
+            DOMAIN, "claims_check", {"entities": ["light.a"], option: 10}, blocking=True, return_response=True
+        )
+        assert result["results"]["light.a"]["status"] == "controlled"
+
+    async def test_the_fixed_tolerances_are_gone(self, hass: HomeAssistant):
+        await setup_settings_entry(hass)
+        with pytest.raises(vol.Invalid):
+            await hass.services.async_call(
+                DOMAIN,
+                "claims_check",
+                {"entities": ["light.a"], "brightness_tolerance": 2},
+                blocking=True,
+                return_response=True,
+            )

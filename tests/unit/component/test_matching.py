@@ -26,7 +26,8 @@ class TestTargets:
 
 
 class TestBrightness:
-    def test_within_tolerance(self):
+    def test_within_the_rounding_floor(self):
+        """2 points, whatever the percentage."""
         assert shows(_ct(198), KELVIN) and shows(_ct(202), KELVIN)
         assert not shows(_ct(197), KELVIN)
 
@@ -61,9 +62,10 @@ class TestReadingKelvin:
 
 
 class TestKelvin:
-    def test_within_tolerance(self):
-        assert shows(_ct(kelvin=3010), KELVIN)
-        assert not shows(_ct(kelvin=3050), KELVIN)
+    def test_without_a_tolerance_only_the_same_mired_matches(self):
+        """3000K and 3002K floor to mired 333; 3010K to 332."""
+        assert shows(_ct(kelvin=3002), KELVIN)
+        assert not shows(_ct(kelvin=3010), KELVIN)
 
     def test_the_same_mired_matches_beyond_tolerance(self):
         """4373K floors to mired 228, which reads back as 4385K."""

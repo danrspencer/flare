@@ -304,16 +304,22 @@ Facts verified against HA core:
   `tests/checks/test_one_value_matcher.py` fails if anything else reads a
   light's colour or imports `homeassistant.util.color` (the curve's
   Kelvin->RGB for sending excepted).
-- **One tolerance for what's sent and what's an override**: the minimum
-  change (`min_brightness_change` %, `min_color_temp_change` mireds,
-  defaults 5/5, about one just-noticeable difference), labelled
-  Brightness/Colour temperature tolerance. User's call, after
-  danrspencer/flare#323 (a bulb reporting 4312K for 4294K read as
-  overridden at random): only a change someone would notice is an
-  override, and one setting is easier to think about than two with the
-  same defaults. The `ClaimRegistry` holds the options, so the status
-  sensors, events, `claims_check` and grouping's `externally_set` agree; a
-  call's own values apply to that call. Colour is in mireds because a flat
+- **One pair of tolerances for what's sent and what's an override**:
+  `min_brightness_change` (% of the target) and `min_color_temp_change`
+  (mireds), defaults 5/5, labelled Brightness / Colour temperature
+  tolerance. User's call, after danrspencer/flare#323 (a bulb reporting
+  4312K for 4294K read as overridden at random): only a change someone
+  would notice is an override, in perceptual units (5% / 5 mireds is about
+  one just-noticeable difference). The per-call `brightness_tolerance`,
+  `color_temp_tolerance` and `rgb_color_tolerance` were removed; only
+  device rounding stays fixed (`BRIGHTNESS_FLOOR`, the same-mired rule,
+  `RGB_ROUNDING`). RGB isn't derived from the mired tolerance: HA's
+  Kelvin->RGB isn't colorimetric (2700K round-trips to ~1870K), and 5
+  mireds maps to only 1-6 per channel, inside the ~13 a bulb's xy->RGB
+  report is off by anyway.
+  The `ClaimRegistry` holds the options, so the status sensors, events,
+  `claims_check` and grouping's `externally_set` agree; a service call's
+  own values apply to that call. Colour is in mireds because a flat
   Kelvin gap is ~4x coarser at 6500K.
 - **`force` is the only bypass.**
 

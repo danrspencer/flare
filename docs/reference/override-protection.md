@@ -121,12 +121,12 @@ bulbs take longer than that to report back.
 
 A light matches a claim's values if it's within a tolerance of them, so only a change you'd
 notice counts as someone else's. Bulbs rarely report back exactly what they were sent: a colour
-temperature asked for as 4294 K can come back as 4312 K. You can set both tolerances under
+temperature asked for as 4294 K can come back as 4312 K. You can set the tolerances under
 **FLARE → Settings → Configure**:
 
 | Option | Default | Description |
 |---|---|---|
-| Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. |
+| Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. A dim light always gets at least 2 (of 255). |
 | Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. |
 
 The same tolerances decide what's worth sending: a light that close to its target isn't sent

@@ -14,14 +14,12 @@ from typing import TYPE_CHECKING, Optional, TypedDict
 
 from homeassistant.util import dt as dt_util
 
-from ..const import DEFAULT_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, is_reachable
-from .matching import (
-    DEFAULT_BRIGHTNESS_TOLERANCE,
-    DEFAULT_COLOR_TEMP_TOLERANCE,
-    DEFAULT_RGB_COLOR_TOLERANCE,
-    Tolerance,
-    shows,
+from ..const import (
+    DEFAULT_MIN_BRIGHTNESS_CHANGE,
+    DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    is_reachable,
 )
+from .matching import Tolerance, shows
 
 if TYPE_CHECKING:
     from homeassistant.core import State
@@ -119,9 +117,6 @@ MISMATCH_GRACE = timedelta(seconds=30)
 def classify_state(
     state: Optional["State"],
     record: Optional[_WriteRecord],
-    brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
-    color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
-    rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
     min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
     min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
     now: Optional[datetime] = None,
@@ -143,9 +138,7 @@ def classify_state(
         (record or {}).get("latest"),
         state.context.id,
         state.attributes,
-        Tolerance(
-            brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
-        ),
+        Tolerance(min_brightness_change, min_color_temp_change),
     )
     if status != "overridden":
         return status, matched_via

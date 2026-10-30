@@ -112,10 +112,11 @@ After updating:
   status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
   all.
 - `custom:flare-clear-card` and the `custom:flare-zone` view are gone.
-- `flare.claims_check` matches a light to its claim within the tolerances under **FLARE →
-  Settings → Configure** as well as its own `brightness_tolerance` and `color_temp_tolerance`.
-  On `flare.apply_lighting` and `flare.compute_lighting_groups`, `min_brightness_change` and
-  `min_color_temp_change` now also decide whether a light still matches its claim.
+- `brightness_tolerance`, `color_temp_tolerance` and `rgb_color_tolerance` are gone from
+  `flare.apply_lighting`, `flare.compute_lighting_groups` and `flare.claims_check`; a call that
+  passes them is rejected. All three take `min_brightness_change` and `min_color_temp_change`
+  instead, which decide both what's sent and whether a light still matches its claim. Each
+  defaults to its setting under **FLARE → Settings → Configure**.
 
 ## [1.2.1] - Unreleased
 

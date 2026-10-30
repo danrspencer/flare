@@ -91,11 +91,13 @@ flowchart TB
 ```
 
 **One closeness**, for both questions: *is this still what FLARE set?* and
-*should FLARE bother sending?* A light matches within 2 brightness, 10 K,
-10 per RGB channel or the same mired, widened by the **minimum change**:
-5 % of the target brightness and 5 mireds by default, from the Settings
-entry's options. That's about one just-noticeable difference, so a light
-too close to be worth a write is never someone else's change either.
+*should FLARE bother sending?* The **tolerances** are 5 % of the target
+brightness and 5 mireds by default, from the Settings entry's options; a
+call may pass its own. Three device-rounding allowances are fixed: 2
+brightness points as a floor for dim targets, Kelvins that floor to the
+same mired, and 10 per channel for an RGB target. 5 % and 5 mireds are about one just-noticeable
+difference, so a light too close to be worth a write is never someone
+else's change either.
 
 Both go through `tracking/matching.shows()`, the one place a light's
 reported values are compared with a target (see [Claims and override protection]({{ site.baseurl }}/architecture/claims/)).
