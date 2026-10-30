@@ -236,8 +236,8 @@ response_variable: check
 
 | Field | Required | Description |
 |---|---|---|
-| `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it. |
-| `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it. |
+| `brightness_tolerance`<br>0–50; default `2` | no | A light within this much of a claimed brightness matches it, as does one within the **Brightness tolerance for overrides** set under **FLARE → Settings → Configure**. |
+| `color_temp_tolerance`<br>Kelvin, 0–500; default `10` | no | A light within this many Kelvin of a claimed colour temperature matches it, as does one within the **Colour tolerance for overrides** set under **FLARE → Settings → Configure**. |
 | `entities`<br>list of light entity IDs | yes | The lights to check. |
 | `rgb_color_tolerance`<br>0–100; default `10` | no | A light within this much of a claimed RGB colour on every channel matches it. |
 

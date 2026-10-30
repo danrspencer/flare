@@ -21,18 +21,27 @@ Reading a light:
   advertised range often reports in xy.
 - RGB is `rgb_color`, compared only against an RGB target.
 
+Comparing brightness: within the absolute tolerance, or within
+`Tolerance.brightness_percent` of the target.
+
 Comparing, for a Kelvin target:
 
-- Within the Kelvin tolerance, or the same mired: Zigbee bulbs speak
-  mireds and HA floors both conversions, so 4373K reads back as 4385K.
+- Within the Kelvin tolerance, the same mired, or within the mired
+  tolerance (`Tolerance.color_temp_mireds`, the Settings entry's option).
+  Zigbee bulbs speak mireds and HA floors both conversions, so 4373K reads
+  back as 4385K, and a bulb reporting in xy or its own Kelvin steps can sit
+  a mired off (4294K asked, 4312K reported).
 - Against the target as asked, or clamped to the bulb's advertised range.
   Advertised ranges aren't always honest (spots advertising 4000K show
   6575K), while an honest bulb parks at its ceiling, so either is accepted.
 
-The minimum changes (`Tolerance.min_brightness_change`, percent of the
-target, and `min_color_temp_change`, mireds) widen the match. Only grouping
-sets them: they decide what's worth sending. Override protection never
-does, or a hand-set light near the curve would read as FLARE's."""
+`brightness_percent` and `color_temp_mireds` are override protection's:
+the Settings entry's options, defaulting to about the smallest change
+anyone notices, so only a change someone made on purpose reads as an
+override. The minimum changes (`min_brightness_change`, percent, and
+`min_color_temp_change`, mireds) are grouping's: what's worth sending.
+Grouping zeroes override protection's when it asks, so the two settings
+stay independent."""
 
 from __future__ import annotations
 
@@ -42,6 +51,8 @@ from typing import Optional
 
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
+
+from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE
 
 DEFAULT_BRIGHTNESS_TOLERANCE = 2
 DEFAULT_COLOR_TEMP_TOLERANCE = 10
@@ -60,6 +71,8 @@ class Tolerance:
     rgb_color: int = DEFAULT_RGB_COLOR_TOLERANCE  # per channel
     min_brightness_change: float = 0  # percent of the target
     min_color_temp_change: float = 0  # mireds
+    brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE  # of the target
+    color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE
 
 
 def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance = Tolerance()) -> bool:
@@ -116,7 +129,8 @@ def _brightness_matches(current, asked: int, tolerance: Tolerance) -> bool:
     current = _as_int(current)
     if current is None:
         return False
-    allowed = max(tolerance.brightness, asked * tolerance.min_brightness_change / 100)
+    percent = max(tolerance.brightness_percent, tolerance.min_brightness_change)
+    allowed = max(tolerance.brightness, asked * percent / 100)
     return abs(current - asked) <= allowed
 
 
@@ -127,7 +141,8 @@ def _kelvin_matches(current: int, asked: int, tolerance: Tolerance) -> bool:
         return True
     if _kelvin_to_mired(current) == _kelvin_to_mired(asked):
         return True
-    return abs(1_000_000 / current - 1_000_000 / asked) <= tolerance.min_color_temp_change
+    allowed = max(tolerance.color_temp_mireds, tolerance.min_color_temp_change)
+    return abs(1_000_000 / current - 1_000_000 / asked) <= allowed
 
 
 def _rgb_matches(current, asked, tolerance: int) -> bool:

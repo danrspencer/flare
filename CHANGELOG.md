@@ -86,6 +86,12 @@ After updating:
   started at its latest time.
 - **Renaming a light keeps FLARE's record of it**, so a light you'd changed by hand is still left
   alone after a rename.
+- **A light only counts as overridden once it's changed by enough to notice**: by default more
+  than 5% in brightness or 5 mireds in colour temperature away from what FLARE asked for. Some
+  bulbs report back slightly different values from the ones they were sent, such as 4312 K for
+  4294 K, and were marked overridden at random
+  ([#323](https://github.com/danrspencer/flare/issues/323)). Both tolerances are options under
+  **FLARE → Settings → Configure**.
 
 ### If you use FLARE's services or events yourself
 
@@ -104,6 +110,9 @@ After updating:
   status sensor shows its own, and **FLARE → Settings** has a diagnostics download of them
   all.
 - `custom:flare-clear-card` and the `custom:flare-zone` view are gone.
+- `flare.claims_check`, `flare.apply_lighting` and `flare.compute_lighting_groups` match a light
+  to its claim within the override tolerances under **FLARE → Settings → Configure** as well as
+  their own `brightness_tolerance` and `color_temp_tolerance`.
 
 ## [1.2.1] - Unreleased
 

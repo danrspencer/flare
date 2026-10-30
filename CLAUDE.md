@@ -304,13 +304,20 @@ Facts verified against HA core:
   `tests/checks/test_one_value_matcher.py` fails if anything else reads a
   light's colour or imports `homeassistant.util.color` (the curve's
   Kelvin->RGB for sending excepted).
+- **An override needs a change someone would notice** (user's call,
+  danrspencer/flare#323: a bulb reporting 4312K for 4294K read as
+  overridden at random). Override matching has its own tolerances,
+  `override_brightness_tolerance` % and `override_color_temp_tolerance`
+  mireds (defaults 5/5, about one just-noticeable difference), on the
+  Settings entry's options, held by the `ClaimRegistry` so the status
+  sensors, events, `claims_check` and grouping's `externally_set` all use
+  the same values.
 - **The minimum change (`min_brightness_change` %, `min_color_temp_change`
-  mireds) is only ever set by grouping** (`Tolerance`), never by
-  `classify()`: it
-  decides what's worth sending, and widening override matching by the
-  same amount would let a hand-set light near the curve read as FLARE's.
-  Colour is in mireds because a flat Kelvin gap is ~4x coarser at 6500K.
-  Defaults 5/5, on the Settings entry's options; a call can override them.
+  mireds) decides what's worth sending, and only that.** Grouping zeroes
+  the override tolerances in its own `close_enough`, so neither setting
+  moves the other. Colour is in mireds because a flat Kelvin gap is ~4x
+  coarser at 6500K. Defaults 5/5, on the Settings entry's options; a call
+  can override them.
 - **`force` is the only bypass.**
 
 **Claims are FLARE's; rooms only say when to let go** (2.0, replacing

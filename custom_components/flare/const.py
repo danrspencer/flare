@@ -59,6 +59,15 @@ CONF_MIN_COLOR_TEMP_CHANGE = "min_color_temp_change"
 DEFAULT_MIN_BRIGHTNESS_CHANGE = 5
 DEFAULT_MIN_COLOR_TEMP_CHANGE = 5
 
+# Options keys: how far a light can sit from what FLARE asked for and still
+# count as FLARE's, as a percentage of the target brightness and in mireds of
+# colour temperature. Wide enough that only a change someone would notice
+# reads as an override.
+CONF_OVERRIDE_BRIGHTNESS_TOLERANCE = "override_brightness_tolerance"
+CONF_OVERRIDE_COLOR_TEMP_TOLERANCE = "override_color_temp_tolerance"
+DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE = 5
+DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE = 5
+
 # Options keys: how often each area ticks (minutes) and the spacing between
 # areas (seconds).
 CONF_TICK_INTERVAL = "tick_interval"

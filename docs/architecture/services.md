@@ -90,15 +90,17 @@ flowchart TB
     TSQ -->|"no"| CB["combined / combined_rgb"]
 ```
 
-**Two kinds of closeness**, and they're deliberately different:
+**Two kinds of closeness**, kept separate:
 
-- *Override matching* (is this still what FLARE set?) uses the tight
-  tolerances: 2 brightness, 10 K, 10 per RGB channel, or the same mired.
-- *Worth sending* (should FLARE bother?) widens that by the **minimum
-  change**: 5 % of the target brightness and 5 mireds by default, from the
-  Settings entry's options. Only grouping uses it. Widening override
-  matching the same way would let a hand-set light near the curve pass as
-  FLARE's.
+- *Override matching* (is this still what FLARE set?) uses the **override
+  tolerances**: 5 % of the target brightness and 5 mireds by default, from
+  the Settings entry's options, besides 2 brightness, 10 K, 10 per RGB
+  channel or the same mired. Wide enough that only a change someone would
+  notice reads as an override.
+- *Worth sending* (should FLARE bother?) uses the **minimum change**: 5 %
+  of the target brightness and 5 mireds by default, also from the options.
+  Grouping zeroes the override tolerances when it asks, so the two
+  settings don't feed into each other.
 
 Both go through `tracking/matching.shows()`, the one place a light's
 reported values are compared with a target (see [Claims and override protection]({{ site.baseurl }}/architecture/claims/)).

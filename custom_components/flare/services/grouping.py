@@ -5,7 +5,7 @@ EntityLookup."""
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
-from ..const import is_reachable
+from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, is_reachable
 from ..tracking.matching import (
     DEFAULT_BRIGHTNESS_TOLERANCE,
     DEFAULT_COLOR_TEMP_TOLERANCE,
@@ -67,6 +67,8 @@ class EntityLookup:
         brightness_tolerance: int = DEFAULT_BRIGHTNESS_TOLERANCE,
         color_temp_tolerance: int = DEFAULT_COLOR_TEMP_TOLERANCE,
         rgb_color_tolerance: int = DEFAULT_RGB_COLOR_TOLERANCE,
+        brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
+        color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
     ) -> bool:
         """True if something other than the caller's own writes has touched this
         light since. force bypasses it."""
@@ -76,6 +78,8 @@ class EntityLookup:
             brightness_tolerance,
             color_temp_tolerance,
             rgb_color_tolerance,
+            brightness_percent,
+            color_temp_mireds,
         )
         return is_blocked(status, force)
 
@@ -147,6 +151,8 @@ def build_groups(
     force: bool = False,
     min_brightness_change: float = 0,
     min_color_temp_change: float = 0,
+    brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
 ) -> list:
     """What needs commanding for `entities`, bucketed by the brightness each
     is sent. Each Group is an off-group (brightness 0, `needing_off`) or an
@@ -159,10 +165,20 @@ def build_groups(
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
     lists. A light is two-step if it carries two_step_label or its model
-    matches two_step_model_patterns. force bypasses override protection."""
+    matches two_step_model_patterns. force bypasses override protection.
+    brightness_percent and color_temp_mireds are override matching's own
+    tolerances, the Settings entry's options."""
     use_rgb = prefer_rgb_color and rgb_color is not None
+    # Override matching's own tolerances say whose change it was, not what's
+    # worth sending, so only the minimum change widens this.
     close_enough = Tolerance(
-        brightness_tolerance, color_temp_tolerance, rgb_color_tolerance, min_brightness_change, min_color_temp_change
+        brightness_tolerance,
+        color_temp_tolerance,
+        rgb_color_tolerance,
+        min_brightness_change,
+        min_color_temp_change,
+        brightness_percent=0,
+        color_temp_mireds=0,
     )
 
     def writable(lights: list) -> list:
@@ -170,7 +186,15 @@ def build_groups(
             e
             for e in lights
             if lookup.reachable(e)
-            and not lookup.externally_set(e, force, brightness_tolerance, color_temp_tolerance, rgb_color_tolerance)
+            and not lookup.externally_set(
+                e,
+                force,
+                brightness_tolerance,
+                color_temp_tolerance,
+                rgb_color_tolerance,
+                brightness_percent,
+                color_temp_mireds,
+            )
         ]
 
     def route(lights: list, target: Optional[dict]) -> tuple[list, list, list]:

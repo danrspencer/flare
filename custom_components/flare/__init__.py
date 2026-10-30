@@ -20,8 +20,12 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     CONF_ENTRY_TYPE,
+    CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
     CONF_TICK_GAP,
     CONF_TICK_INTERVAL,
+    DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
     DEFAULT_TICK_GAP,
     DEFAULT_TICK_INTERVAL,
     DOMAIN,
@@ -142,7 +146,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def _async_setup_settings(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """The claims, the services and the area ticks."""
-    registry = ClaimRegistry(hass)
+    registry = ClaimRegistry(
+        hass,
+        brightness_percent=float(
+            entry.options.get(CONF_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE)
+        ),
+        color_temp_mireds=float(
+            entry.options.get(CONF_OVERRIDE_COLOR_TEMP_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE)
+        ),
+    )
     await registry.async_load()
     entry.runtime_data = registry
     entry.async_on_unload(registry.async_start_listening())

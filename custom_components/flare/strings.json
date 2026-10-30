@@ -224,19 +224,23 @@
     "step": {
       "init": {
         "title": "Settings",
-        "description": "**Two-step bulb models** lists the bulb models that need brightness and colour sent separately, one pattern per line. Each pattern is matched against a light's manufacturer and model, ignoring case, and * matches anything, as in *TRADFRI bulb* or IKEA*.\n\nThe field is pre-filled with FLARE's default patterns. Your saved list replaces those defaults entirely, so you can remove a pattern as well as add one, but it won't pick up patterns added in later releases. If you save the field empty, FLARE uses the defaults again.\n\nEach area ticks once per **Update interval**, a gap apart from the next area, so rooms don't all send at once. A change smaller than the **Minimum brightness change** or **Minimum colour temperature change** isn't sent.",
+        "description": "**Two-step bulb models** lists the bulb models that need brightness and colour sent separately, one pattern per line. Each pattern is matched against a light's manufacturer and model, ignoring case, and * matches anything, as in *TRADFRI bulb* or IKEA*.\n\nThe field is pre-filled with FLARE's default patterns. Your saved list replaces those defaults entirely, so you can remove a pattern as well as add one, but it won't pick up patterns added in later releases. If you save the field empty, FLARE uses the defaults again.\n\nEach area ticks once per **Update interval**, a gap apart from the next area, so rooms don't all send at once. A change smaller than the **Minimum brightness change** or **Minimum colour temperature change** isn't sent.\n\nA light within the **Brightness tolerance for overrides** and the **Colour tolerance for overrides** of what FLARE asked for still counts as FLARE's, so only a change you'd notice reads as an override.",
         "data": {
           "two_step_models": "Two-step bulb models",
           "tick_interval": "Update interval",
           "tick_gap": "Gap between areas",
           "min_brightness_change": "Minimum brightness change",
-          "min_color_temp_change": "Minimum colour temperature change"
+          "min_color_temp_change": "Minimum colour temperature change",
+          "override_brightness_tolerance": "Brightness tolerance for overrides",
+          "override_color_temp_tolerance": "Colour tolerance for overrides"
         },
         "data_description": {
           "tick_interval": "How often each area ticks, in minutes.",
           "tick_gap": "Seconds between one area's tick and the next. Shrinks automatically if the areas wouldn't otherwise fit in the interval.",
           "min_brightness_change": "A light within this percentage of its target brightness is left alone.",
-          "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone."
+          "min_color_temp_change": "A light within this many mireds of its target colour temperature is left alone.",
+          "override_brightness_tolerance": "A light within this percentage of the brightness FLARE asked for still counts as FLARE's. Raise it if lights are marked overridden when nobody changed them.",
+          "override_color_temp_tolerance": "A light within this many mireds of the colour temperature FLARE asked for still counts as FLARE's. Raise it if lights are marked overridden when nobody changed them."
         }
       }
     }

@@ -55,7 +55,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
-from ..const import is_reachable
+from ..const import DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, is_reachable
 from .matching import shown
 from .override_protection import (
     MISMATCH_GRACE,
@@ -89,8 +89,16 @@ class ClaimListener(Protocol):
 class ClaimRegistry:
     """Every claim and room, and the rules for keeping them."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        brightness_percent: float = DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
+        color_temp_mireds: float = DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
+    ) -> None:
         self._hass = hass
+        # The Settings entry's options; a change to them reloads the entry.
+        self.brightness_percent = brightness_percent
+        self.color_temp_mireds = color_temp_mireds
         self.claims: dict[str, _WriteRecord] = {}
         # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
@@ -140,7 +148,13 @@ class ClaimRegistry:
 
     def status(self, entity_id: str, **tolerances: int) -> tuple[str, str | None]:
         """classify_state for one light: its live state against its claims."""
-        return classify_state(self._hass.states.get(entity_id), self.record(entity_id), **tolerances)
+        return classify_state(
+            self._hass.states.get(entity_id),
+            self.record(entity_id),
+            brightness_percent=self.brightness_percent,
+            color_temp_mireds=self.color_temp_mireds,
+            **tolerances,
+        )
 
     def all_records(self) -> dict[str, _WriteRecord]:
         return dict(self.claims)

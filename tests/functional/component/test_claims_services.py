@@ -6,7 +6,12 @@ import pytest
 import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 
-from custom_components.flare.const import DOMAIN
+from custom_components.flare.const import (
+    CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
+    DOMAIN,
+)
+from pytest_homeassistant_custom_component.common import async_mock_service
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,
@@ -14,7 +19,9 @@ from tests.functional.component.harness import (
     claims_check,
     claims_record,
     ROOM,
+    apply_lighting,
     set_light,
+    setup_settings_entry,
 )
 
 
@@ -224,3 +231,58 @@ async def test_claims_override_needs_a_room(setup_integration: HomeAssistant):
     hass = setup_integration
     with pytest.raises(vol.Invalid):
         await hass.services.async_call(DOMAIN, "claims_override", {"entities": ["light.a"]}, blocking=True)
+
+
+class TestOverrideTolerances:
+    """A light reporting within the Settings entry's tolerances of what FLARE
+    asked for is still FLARE's: only a change someone would notice is an
+    override."""
+
+    async def _echo(self, hass: HomeAssistant, asked: dict, reported: dict) -> None:
+        """Claimed at `asked`, then reported at `reported` under a fresh
+        context, as a bulb does once HA has forgotten the write's context."""
+        our_context = Context()
+        set_light(hass, "light.a", "on", supported_color_modes=CT, context=our_context, **asked)
+        await claims_record(hass, ["light.a"], targets={"light.a": asked}, context=our_context)
+        set_light(hass, "light.a", "on", supported_color_modes=CT, **reported)
+
+    # Seen live: 4294K asked, 4312K reported, about a mired apart. 192 is 4%
+    # off 200.
+    CASES = pytest.mark.parametrize(
+        ("asked", "reported", "option"),
+        [
+            (
+                {"brightness": 255, "color_temp_kelvin": 4294},
+                {"brightness": 255, "color_temp_kelvin": 4312},
+                CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
+            ),
+            (
+                {"brightness": 200, "color_temp_kelvin": 3000},
+                {"brightness": 192, "color_temp_kelvin": 3000},
+                CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
+            ),
+        ],
+        ids=["colour", "brightness"],
+    )
+
+    @CASES
+    async def test_a_small_difference_is_still_controlled_by_default(
+        self, hass: HomeAssistant, asked, reported, option
+    ):
+        await setup_settings_entry(hass)
+        await self._echo(hass, asked, reported)
+        turn_on = async_mock_service(hass, "light", "turn_on")
+
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "controlled"
+        await apply_lighting(hass, ["light.a"], brightness=100, color_temp_kelvin=2700)
+        assert len(turn_on) == 1, "a controlled light should get the next write"
+
+    @CASES
+    async def test_the_entrys_option_sets_it(self, hass: HomeAssistant, asked, reported, option):
+        await setup_settings_entry(hass, options={option: 0})
+        await self._echo(hass, asked, reported)
+        turn_on = async_mock_service(hass, "light", "turn_on")
+
+        assert (await claims_check(hass, ["light.a"]))["light.a"]["blocked"]
+        await apply_lighting(hass, ["light.a"], brightness=100, color_temp_kelvin=2700)
+        assert turn_on == [], "with no tolerance the light reads as someone else's"

@@ -26,17 +26,24 @@ class TestTargets:
 
 
 class TestBrightness:
-    def test_within_tolerance(self):
-        assert shows(_ct(198), KELVIN) and shows(_ct(202), KELVIN)
-        assert not shows(_ct(197), KELVIN)
+    def test_within_the_absolute_tolerance(self):
+        """2 points, for a dim light where a percentage is less than one."""
+        dim = {"brightness": 10, "color_temp_kelvin": 3000}
+        assert shows(_ct(12, 3000), dim) and shows(_ct(8, 3000), dim)
+        assert not shows(_ct(13, 3000), dim)
 
     def test_a_light_reporting_none_does_not_match(self):
         assert not shows(_ct(None), KELVIN)
 
-    def test_the_minimum_change_widens_it(self):
+    def test_within_the_percentage_tolerance(self):
         """5% of 200 is 10."""
-        assert shows(_ct(190), KELVIN, Tolerance(min_brightness_change=5))
-        assert not shows(_ct(189), KELVIN, Tolerance(min_brightness_change=5))
+        assert shows(_ct(190), KELVIN) and shows(_ct(210), KELVIN)
+        assert not shows(_ct(189), KELVIN)
+
+    def test_the_minimum_change_widens_it(self):
+        """8% of 200 is 16."""
+        assert shows(_ct(184), KELVIN, Tolerance(min_brightness_change=8))
+        assert not shows(_ct(183), KELVIN, Tolerance(min_brightness_change=8))
 
 
 class TestReadingKelvin:
@@ -61,13 +68,26 @@ class TestReadingKelvin:
 
 
 class TestKelvin:
-    def test_within_tolerance(self):
-        assert shows(_ct(kelvin=3010), KELVIN)
-        assert not shows(_ct(kelvin=3050), KELVIN)
+    def test_within_the_kelvin_tolerance(self):
+        exact = Tolerance(color_temp_mireds=0)
+        assert shows(_ct(kelvin=3010), KELVIN, exact)
+        assert not shows(_ct(kelvin=3020), KELVIN, exact)
 
     def test_the_same_mired_matches_beyond_tolerance(self):
         """4373K floors to mired 228, which reads back as 4385K."""
-        assert shows(_ct(255, 4385), {"brightness": 255, "color_temp_kelvin": 4373})
+        assert shows(_ct(255, 4385), {"brightness": 255, "color_temp_kelvin": 4373}, Tolerance(color_temp_mireds=0))
+
+    def test_within_the_mired_tolerance_matches_beyond_the_kelvin_one(self):
+        """Seen live: asked for 4294K (232.9 mireds), reported 4312K (231.9)."""
+        target = {"brightness": 255, "color_temp_kelvin": 4294}
+        assert shows(_ct(255, 4312), target)
+        assert not shows(_ct(255, 4312), target, Tolerance(color_temp_mireds=0))
+
+    def test_a_change_someone_would_notice_does_not_match(self):
+        """4420K is 226.2 mireds, 6.6 from 4294K."""
+        target = {"brightness": 255, "color_temp_kelvin": 4294}
+        assert not shows(_ct(255, 4420), target)
+        assert shows(_ct(255, 4420), target, Tolerance(color_temp_mireds=7))
 
     def test_the_minimum_change_widens_it_in_mireds(self):
         """3000K is 333.3 mireds, 3040K is 328.9."""

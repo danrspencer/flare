@@ -12,11 +12,15 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_MIN_BRIGHTNESS_CHANGE,
     CONF_MIN_COLOR_TEMP_CHANGE,
+    CONF_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    CONF_OVERRIDE_COLOR_TEMP_TOLERANCE,
     CONF_TICK_GAP,
     CONF_TICK_INTERVAL,
     CONF_TWO_STEP_MODELS,
     DEFAULT_MIN_BRIGHTNESS_CHANGE,
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
+    DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE,
+    DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE,
     DEFAULT_TICK_GAP,
     DEFAULT_TICK_INTERVAL,
 )
@@ -25,8 +29,8 @@ from .services.two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS
 
 class FlareOptionsFlow(config_entries.OptionsFlow):
     """The Settings entry's options: which bulb models need two-step transitions
-    (see two_step.py), the areas' tick timing, and the smallest change worth
-    sending. The models field is pre-filled with the shipped defaults and is
+    (see two_step.py), the areas' tick timing, the smallest change worth
+    sending, and how far a light can drift and still be FLARE's. The models field is pre-filled with the shipped defaults and is
     the whole list."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -47,6 +51,8 @@ class FlareOptionsFlow(config_entries.OptionsFlow):
             (CONF_TICK_GAP, DEFAULT_TICK_GAP, 0, 10, 0.5, "s"),
             (CONF_MIN_BRIGHTNESS_CHANGE, DEFAULT_MIN_BRIGHTNESS_CHANGE, 0, 25, 0.5, "%"),
             (CONF_MIN_COLOR_TEMP_CHANGE, DEFAULT_MIN_COLOR_TEMP_CHANGE, 0, 50, 0.5, "mired"),
+            (CONF_OVERRIDE_BRIGHTNESS_TOLERANCE, DEFAULT_OVERRIDE_BRIGHTNESS_TOLERANCE, 0, 50, 0.5, "%"),
+            (CONF_OVERRIDE_COLOR_TEMP_TOLERANCE, DEFAULT_OVERRIDE_COLOR_TEMP_TOLERANCE, 0, 50, 0.5, "mired"),
         ):
             fields[vol.Required(key, default=options.get(key, default))] = _number(minimum, maximum, step, unit)
         return self.async_show_form(
