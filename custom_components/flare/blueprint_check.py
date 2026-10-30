@@ -1,5 +1,6 @@
-"""Raises a repair when the blueprint is missing or older than this
-release's, and installs or updates it on Fix.
+"""Raises a repair when the blueprint is missing, older than this
+release's or in another language than Home Assistant's, and installs or
+updates it on Fix.
 
 Only blueprints an automation uses count as outdated: HA never removes
 an unused copy, so one left at another path would otherwise nag
@@ -19,7 +20,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import yaml as yaml_util
 
-from .blueprint_version import BLUEPRINT_VERSION, is_outdated, version_from_description
+from .blueprint_translation import ENGLISH, TRANSLATIONS, language_for, translate
+from .blueprint_version import (
+    BLUEPRINT_VERSION,
+    is_outdated,
+    language_from_description,
+    version_from_description,
+)
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,6 +51,7 @@ class InstalledBlueprint:
 
     path: str  # as Home Assistant knows it, e.g. "flare/flare.yaml"
     version: str | None  # None for anything released before the stamp existed
+    language: str | None  # None for anything stamped before copies carried it
     automations: int
 
 
@@ -77,24 +85,28 @@ async def automations_using_our_blueprint(hass: HomeAssistant) -> list[str]:
 
 
 async def outdated_blueprints(hass: HomeAssistant) -> list[InstalledBlueprint]:
-    """Every copy of our blueprint that is in use and out of date."""
+    """Every copy of our blueprint that is in use and out of date, or in
+    a language other than Home Assistant's."""
     installed = await _ours(hass)
+    wanted = await _language(hass)
 
     outdated = []
     for path, blueprint in installed.items():
         using = automations_with_blueprint(hass, path)
         if not using:
             continue
-        version = version_from_description(blueprint.metadata.get("description"))
-        if is_outdated(version):
-            outdated.append(InstalledBlueprint(path, version, len(using)))
+        description = blueprint.metadata.get("description")
+        version = version_from_description(description)
+        language = language_from_description(description)
+        if is_outdated(version) or (language or ENGLISH) != wanted:
+            outdated.append(InstalledBlueprint(path, version, language, len(using)))
     return outdated
 
 
 def describe(blueprints: list[InstalledBlueprint]) -> str:
     """Markdown for the issue and the confirm step."""
     return "\n".join(
-        f"- `{b.path}` — version {b.version or 'unknown'}, "
+        f"- `{b.path}` — version {b.version or 'unknown'}{f' ({b.language})' if b.language else ''}, "
         f"used by {b.automations} automation{'s' if b.automations != 1 else ''}"
         for b in blueprints
     )
@@ -136,9 +148,26 @@ async def async_check(hass: HomeAssistant) -> None:
     )
 
 
+def _available_languages() -> list[str]:
+    return [path.stem for path in TRANSLATIONS.glob("*.yaml")]
+
+
+async def _language(hass: HomeAssistant) -> str:
+    """The language our blueprint should be written in: Home Assistant's,
+    if there's a table for it."""
+    available = await hass.async_add_executor_job(_available_languages)
+    return language_for(hass.config.language, available)
+
+
+def _load_shipped(language: str) -> dict:
+    data = yaml_util.load_yaml_dict(SHIPPED_BLUEPRINT)
+    table = None if language == ENGLISH else yaml_util.load_yaml_dict(TRANSLATIONS / f"{language}.yaml")
+    return translate(data, table, language)
+
+
 async def _shipped(hass: HomeAssistant) -> Blueprint:
-    """The blueprint packaged with this release."""
-    data = await hass.async_add_executor_job(yaml_util.load_yaml_dict, SHIPPED_BLUEPRINT)
+    """The blueprint packaged with this release, in Home Assistant's language."""
+    data = await hass.async_add_executor_job(_load_shipped, await _language(hass))
     return Blueprint(data, expected_domain="automation", schema=BLUEPRINT_SCHEMA)
 
 

@@ -218,12 +218,17 @@ Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
 ## Translations
 
-FLARE has two sets of text, and a language needs both:
+FLARE has three sets of text, and a language needs all of them:
 
 - **The integration's** (setup, options, repairs): `custom_components/flare/strings.json` is the English, copied to
   `translations/en.json`; a language is `translations/<code>.json` with the same keys.
 - **The dashboard's**: `custom_components/flare/www/translations/en.js`; a language is `<code>.js` beside it, added
   to `LANGUAGES` in `www/flare-i18n.js`.
+- **The blueprint's** (its inputs' names and descriptions): the English is in
+  `custom_components/flare/blueprints/flare.yaml`; a language is `blueprints/translations/<code>.yaml`, keyed by
+  input. FLARE writes the blueprint in Home Assistant's language when it installs it. Each entry's `source` is a hash
+  of the English it was translated from: when you reword an input, `tests/checks/test_blueprint_translations.py`
+  names the entries to revisit and their new hash.
 
 `tests/checks/test_translations.py` and `tests/unit/dashboard/test_i18n.py` fail if a language is missing a key, has
 one English no longer uses, or fills in different placeholders, so change a translation whenever its English

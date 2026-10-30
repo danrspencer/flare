@@ -1133,6 +1133,22 @@ real dispatch - keep patterns narrow.
   through `my.home-assistant.io` to a `main` raw URL - lessons 9 and 10 in
   one link.
 
+**The blueprint is written in HA's language** (`blueprint_translation.py`,
+tables in `blueprints/translations/`), since HA has no translations for a
+blueprint. Only text changes; select options keep their English values
+under a label, since phase names are the schedule sensor's states. Things
+to keep:
+
+- **One file, one name.** It's the same `flare/flare.yaml` and `name:
+  FLARE` in every language, since ours is recognised by name (lesson 3).
+- **The stamp carries the language**, so changing HA's language raises
+  the outdated repair rather than a new one. A copy stamped without one
+  reads as English, so English houses see no repair from this.
+- **A table must cover every input** (the same rule as `de.json`), and
+  each entry's `source` hashes the English it was made from, so rewording
+  an input fails the check until its translations are revisited. Per
+  house, not per user: a blueprint is one file.
+
 **The functional tests install the blueprint as a COPY**
 (`tests/functional/conftest.py`), never a symlink: tests write blueprint
 files, and a symlink once wrote junk blueprints into the repo.

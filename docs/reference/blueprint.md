@@ -267,5 +267,10 @@ System → Repairs** offering the new copy. Press **Fix** to install it; your au
 their settings. If you've edited
 your own copy, ignore the repair, because installing replaces the file.
 
+FLARE installs the blueprint in Home Assistant's language (**Settings → System → General**) when
+it has a translation for it, so far German, and in English otherwise. If you change Home
+Assistant's language, the same repair offers the blueprint in the new one. Its **Details** links
+lead to this page, in English.
+
 The [test trace reports](../../trace-report/) show runs of the blueprint from its tests, with
 each step matched to the line of the blueprint it comes from.

@@ -38,8 +38,8 @@ After updating:
 
 ### Added
 
-- **FLARE speaks German**, in setup, on the dashboard and in its entities' names, following your
-  Home Assistant language. Thanks to @stefanr09 for the translation
+- **FLARE speaks German**, in setup, on the dashboard, in its entities' names and in the
+  blueprint's settings, following your Home Assistant language. Thanks to @stefanr09 for the translation
   ([#301](https://github.com/danrspencer/flare/issues/301)). The dashboard's cards now translate
   their own text, so other languages can follow.
 - **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE

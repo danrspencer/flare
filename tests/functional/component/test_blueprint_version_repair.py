@@ -5,6 +5,8 @@ path is never removed."""
 
 from pathlib import Path
 
+import yaml
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.setup import async_setup_component
@@ -19,7 +21,11 @@ from custom_components.flare.blueprint_check import (
     blueprint_is_installed,
     outdated_blueprints,
 )
-from custom_components.flare.blueprint_version import BLUEPRINT_VERSION, version_from_description
+from custom_components.flare.blueprint_version import (
+    BLUEPRINT_VERSION,
+    language_from_description,
+    version_from_description,
+)
 from custom_components.flare.const import DOMAIN
 from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH
 
@@ -217,3 +223,78 @@ async def test_fix_updates_a_stale_copy_where_it_was_found(hass: HomeAssistant):
     assert await async_update_blueprints(hass) == ["stale/flare.yaml"]
 
     assert _installed_version(hass, "stale/flare.yaml") == BLUEPRINT_VERSION
+
+
+def _installed(hass: HomeAssistant, path: str) -> dict:
+    target = Path(hass.config.config_dir) / "blueprints" / "automation" / path
+    return yaml.load(target.read_text(), Loader=_InputLoader)
+
+
+class _InputLoader(yaml.SafeLoader):
+    pass
+
+
+_InputLoader.add_constructor("!input", lambda loader, node: loader.construct_scalar(node))
+
+
+async def test_a_german_house_gets_the_blueprint_in_german(hass: HomeAssistant):
+    hass.config.language = "de"
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "automation", {})
+    await hass.async_block_till_done()
+
+    await async_install_blueprint(hass)
+
+    installed = _installed(hass, INSTALL_PATH)["blueprint"]
+    assert installed["name"] == "FLARE"
+    assert installed["input"]["schedule"]["name"] == "Zeitplan"
+    assert language_from_description(installed["description"]) == "de"
+    assert version_from_description(installed["description"]) == BLUEPRINT_VERSION
+    await async_check(hass)
+    assert _issues(hass) == set()
+
+
+# The two inputs the shipped blueprint requires.
+ROOM = {"schedule": "a_schedule_device", "room_target": {"entity_id": "light.lamp"}}
+
+
+async def _switch_off(hass: HomeAssistant) -> None:
+    """A room on the shipped blueprint ticks every minute; its timer must
+    not outlive the test."""
+    await hass.services.async_call("automation", "turn_off", {"entity_id": "automation.room"}, blocking=True)
+
+
+async def test_a_room_on_the_german_blueprint_keeps_its_english_values(hass: HomeAssistant):
+    hass.config.language = "de"
+    _remove_ours(hass)
+    assert await async_setup_component(hass, "blueprint", {})
+    await async_install_blueprint(hass)
+
+    rgb = _installed(hass, INSTALL_PATH)["blueprint"]["input"]["settings"]["input"]["rgb_phases"]
+    assert {"value": "Evening", "label": "Abend"} in rgb["selector"]["select"]["options"]
+    await _automation_using(hass, INSTALL_PATH, "room", **ROOM, rgb_phases=["Evening"])
+    assert hass.states.get("automation.room").state != "unavailable"
+    await _switch_off(hass)
+
+
+async def test_changing_home_assistants_language_reports_the_blueprint_and_fix_rewrites_it(
+    hass: HomeAssistant,
+):
+    await _automation_using(hass, BLUEPRINT_PATH, "room", **ROOM)
+    hass.config.language = "de"
+
+    outdated = await outdated_blueprints(hass)
+    assert [(b.path, b.version, b.language) for b in outdated] == [(BLUEPRINT_PATH, "0.0.0-dev", None)]
+
+    assert await async_update_blueprints(hass) == [BLUEPRINT_PATH]
+    assert _installed(hass, BLUEPRINT_PATH)["blueprint"]["input"]["schedule"]["name"] == "Zeitplan"
+    assert await outdated_blueprints(hass) == []
+    await _switch_off(hass)
+
+
+async def test_a_language_with_no_translation_gets_english_without_a_repair(hass: HomeAssistant):
+    hass.config.language = "fr"
+    await _automation_using(hass, BLUEPRINT_PATH, "room", **ROOM)
+
+    assert await outdated_blueprints(hass) == []
+    await _switch_off(hass)

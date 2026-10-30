@@ -1,0 +1,245 @@
+# The FLARE blueprint's text in German, by input key (blueprint_translation.py).
+# `source` is a hash of the English each entry was translated from; when the
+# English changes, tests/checks/test_blueprint_translations.py names the
+# entries to revisit and their new hash.
+
+blueprint:
+  source: 8098d45a
+  description: >-
+    FLARE: phasenbasiertes zirkadianes Licht – setzt Helligkeit und
+    Farbtemperatur nach einem FLARE-Zeitplan, hält die Lampen aktuell, wenn
+    er sich ändert, und schaltet sie eine Weile, nachdem niemand mehr da ist,
+    aus. Alle Details zu jeder Eingabe:
+    [die Blueprint-Referenz](https://danrspencer.github.io/flare/reference/blueprint/).
+  stamp: die Integration meldet eine Reparatur, sobald ein neuerer verfügbar ist.
+
+schedule:
+  source: 4ea6d160
+  name: Zeitplan
+  description: >-
+    Der FLARE-Zeitplan, dem der Raum folgt: die Helligkeit und
+    Farbtemperatur, die er anwendet.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+
+room_target:
+  source: 8de378ed
+  name: Lampen & Anwesenheit
+  description: >-
+    Entität, Gerät, Bereich, Etage oder Label – die Lampen darin werden
+    gesteuert, die Anwesenheits- und Bewegungssensoren darin entscheiden,
+    wann (siehe „Sensoren aus Bereichen“ unter Einstellungen).
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
+
+sensors_triggers:
+  source: a3349ab7
+  name: Sensoren & Auslöser
+
+no_motion_wait:
+  source: 3926d95b
+  name: Wartezeit
+  description: >-
+    Nur für Räume mit Anwesenheits- oder Bewegungssensoren: wie lange alle
+    frei sein müssen, bevor der Raum als leer gilt und seine Lampen
+    ausgehen.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-and-triggers).
+  unit: Sekunden
+
+lux_threshold:
+  source: a8e2b214
+  name: Lux-Schwelle
+  description: >-
+    Wenn jeder Helligkeitssensor in „Lampen & Anwesenheit“ mehr als so viele
+    Lux misst, lässt der Raum seine Lampen aus: Ein Sensor, ein Takt oder
+    eine Szene schaltet keine ein, bis es dunkler ist. Ist dann noch jemand
+    da, gehen die Lampen an, sobald es dunkler wird. Den Raum von Hand
+    einzuschalten funktioniert weiterhin. 0 schaltet dies ab.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
+  unit: lx
+
+extra_triggers:
+  source: 5ed8d791
+  name: Zusätzliche Auslöser
+  description: >-
+    Entitäten, bei deren Änderung der Raum sofort aktualisiert wird, etwa
+    eine Entität, von der die Szenen- oder Helligkeitsvorlage abhängt. Sie
+    passen nur Lampen an, die schon an sind, und schalten nie eine ein.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+
+brightness_exclusions:
+  source: 46d35d57
+  name: Helligkeit & Ausnahmen
+
+brightness_template:
+  source: 6fb697c3
+  name: Helligkeitsvorlage
+  description: >-
+    Vorlage, die entity_id → Helligkeit (0–255) liefert und für die Lampen,
+    die sie nennt, die Helligkeit der Kurve ersetzt (0 = aus, null = ganz
+    auslassen). Dieselbe Skala wie die Helligkeiten der Phasen. Ihre eigenen
+    Werte haben immer Vorrang vor den Ausnahmen je Phase unten – diese
+    gelten nur für Entitäten, die sie nicht schon nennt. Liest sie eine
+    andere Entität, füge diese zu „Zusätzliche Auslöser“ hinzu, damit der
+    Raum sofort aktualisiert wird, wenn sie sich ändert.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
+
+morning_exclude_lights:
+  source: f35aec9e
+  name: Lampen aus am Morgen
+
+day_exclude_lights:
+  source: 46e50c03
+  name: Lampen aus am Tag
+
+evening_exclude_lights:
+  source: a22be64b
+  name: Lampen aus am Abend
+
+night_exclude_lights:
+  source: 61e88fda
+  name: Lampen aus in der Nacht
+
+idle_brightness:
+  source: 1bd55853
+  name: Ruhehelligkeit
+
+idle_brightness_template:
+  source: 1f8ad476
+  name: Ruhehelligkeitsvorlage
+  description: >-
+    Vorlage, die entity_id → Helligkeit (1–255) liefert, für Lampen, die
+    gedimmt an bleiben sollen, wenn der Raum leer ist, statt auszugehen. Ihre
+    eigenen Werte haben immer Vorrang vor den Einstellungen je Phase unten –
+    diese gelten nur für Entitäten, die sie nicht schon nennt. Liest sie
+    eine andere Entität, füge diese zu „Zusätzliche Auslöser“ hinzu, damit
+    der Raum sofort aktualisiert wird, wenn sie sich ändert.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+
+morning_idle_brightness:
+  source: 189d6f76
+  name: Ruhehelligkeit am Morgen
+  description: &idle >-
+    Worauf diese Phase dimmt, wenn der Raum leer ist, statt auszuschalten,
+    auf derselben Skala von 0–255 wie die Helligkeiten der Phasen. 0 heißt,
+    es wird dunkel; das ist die Voreinstellung.
+
+day_idle_brightness:
+  source: 4682fbc3
+  name: Ruhehelligkeit am Tag
+  description: *idle
+
+evening_idle_brightness:
+  source: a5a4e14c
+  name: Ruhehelligkeit am Abend
+  description: *idle
+
+night_idle_brightness:
+  source: 5008d65d
+  name: Ruhehelligkeit in der Nacht
+  description: *idle
+
+scene_handoff:
+  source: 67b45ca9
+  name: Szenen
+
+scene_template:
+  source: a09f38d4
+  name: Szenenvorlage
+  description: >-
+    Vorlage, die die entity_id einer Szene liefert, an die der Raum statt
+    der adaptiven Helligkeit und Farbe übergeben wird. Sie hat Vorrang vor
+    den Szenen je Phase unten, wann immer sie eine liefert – diese sind der
+    Ersatz für Phasen, die sie nicht abdeckt. Liest sie eine andere
+    Entität, füge diese zu „Zusätzliche Auslöser“ hinzu, damit der Raum
+    sofort aktualisiert wird, wenn sie sich ändert.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+
+morning_scene:
+  source: 7e50412b
+  name: Szene am Morgen
+
+day_scene:
+  source: 6be6da24
+  name: Szene am Tag
+
+evening_scene:
+  source: 42546bd4
+  name: Szene am Abend
+
+night_scene:
+  source: f7634048
+  name: Szene in der Nacht
+
+timing:
+  source: 90775e3b
+  name: Übergänge
+
+motion_on_transition:
+  source: 749103d9
+  name: Übergang beim Einschalten
+  description: >-
+    Dauer des Übergangs beim Einschalten durch Bewegung oder einen
+    manuellen Lauf.
+  unit: Sekunden
+
+motion_off_transition:
+  source: c4b99469
+  name: Übergang beim Ausschalten
+  description: Dauer des Übergangs beim Ausschalten durch Bewegung.
+  unit: Sekunden
+
+background_transition:
+  source: 13910eec
+  name: Hintergrund-Übergang
+  description: >-
+    Dauer des Übergangs, wenn der Zeitplan, die Szenenvorlage oder ein
+    zusätzlicher Auslöser aktualisiert – also nichts, worauf jemand gerade
+    wartet.
+  unit: Sekunden
+
+settings:
+  source: 3b0b2c95
+  name: Einstellungen
+
+override_protection:
+  source: 85e6124a
+  name: Schutz vor Überschreiben
+  description: >-
+    Lässt eine Lampe in Ruhe, sobald etwas anderes sie ändert, bis alle
+    Lampen des Raums aus sind. Schalte dies für einen Raum ab, dessen
+    Lampen etwas anderes melden, als sie zeigen.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#override-protection).
+
+use_area_sensors:
+  source: cdaab6f9
+  name: Sensoren aus Bereichen
+  description: >-
+    Wenn abgeschaltet, werden Anwesenheits- und Bewegungssensoren nicht aus
+    den Bereichen, Etagen, Geräten oder Labels in „Lampen & Anwesenheit“
+    übernommen, ebenso wenig die Helligkeitssensoren für die Lux-Schwelle.
+    Nur ausdrücklich gewählte Sensoren zählen.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+
+rgb_phases:
+  source: 809e3fe0
+  name: RGB bevorzugen während
+  description: >-
+    Phasen, in denen Lampen, die es können (automatisch erkannt), RGB-Farbe
+    statt Farbtemperatur bekommen. Bei den hohen Farbtemperaturen am Morgen
+    und Tag kann das bläulich statt sauber weiß wirken, daher sind diese
+    Phasen standardmäßig aus – die wärmeren Werte am Abend und in der Nacht
+    haben das Problem nicht.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#prefer-rgb-during).
+  options:
+    Morning: Morgen
+    Day: Tag
+    Evening: Abend
+    Night: Nacht
+
+stored_traces:
+  source: df8e4c32
+  name: Gespeicherte Traces
+  description: >-
+    Wie viele der letzten Läufe der Automation einen Trace behalten. Der
+    Raum aktualisiert sich jede Minute, das ist also ungefähr, wie viele
+    Minuten du zurückschauen kannst.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#stored-traces).
