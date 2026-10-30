@@ -53,7 +53,6 @@ from .const import (
     EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
-from .tracking.matching import shown
 from .tracking.override_protection import MISMATCH_GRACE, LightStatus
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
@@ -85,6 +84,17 @@ def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> LightStatus:
     # Untracked shows as controlled: either way, not excluded.
     return LightStatus.CONTROLLED if status == LightStatus.UNTRACKED else status
 
+
+# What the override event carries of the registry's log entry.
+_OVERRIDE_EVENT_KEYS = (
+    ATTR_LIGHT,
+    ATTR_ROOMS,
+    ATTR_PREVIOUS_STATUS,
+    ATTR_LIVE_CONTEXT_ID,
+    ATTR_LIVE,
+    ATTR_OBSERVED,
+    ATTR_LATEST,
+)
 
 # How long a room gathers lights it has taken before announcing them.
 CONTROLLED_GATHER_SECONDS = 3
@@ -162,7 +172,7 @@ class ClaimEvents:
         # claim's.
         self._registry.note_mismatches()
         statuses = {}
-        for entity_id, record in self._registry.all_records().items():
+        for entity_id in self._registry.all_records():
             status = _classify_tracked(self._registry, entity_id)
             statuses[entity_id] = status
             if status == LightStatus.MISMATCHED:
@@ -171,7 +181,7 @@ class ClaimEvents:
                 continue
             previous = self._last_statuses.get(entity_id)
             if status == LightStatus.OVERRIDDEN and previous != LightStatus.OVERRIDDEN:
-                self._fire_overridden(entity_id, record, previous)
+                self._fire_overridden(entity_id, previous)
             # Not back from overridden (churn), nor from unavailable or
             # mismatched (every light, after a restart), which were already
             # controlled.
@@ -200,19 +210,14 @@ class ClaimEvents:
         async_dispatcher_send(self.hass, SIGNAL_CLAIMS_UPDATED)
 
     @callback
-    def _fire_overridden(self, entity_id: str, record: dict, previous: str | None) -> None:
-        state = self.hass.states.get(entity_id)
+    def _fire_overridden(self, entity_id: str, previous: str | None) -> None:
+        """Logged in the registry too, for the diagnostics."""
+        logged = self._registry.log_override(entity_id, previous)
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
-                ATTR_LIGHT: entity_id,
-                ATTR_ROOMS: [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
+                **{key: logged[key] for key in _OVERRIDE_EVENT_KEYS},
                 **_filed_under(self.hass, self._entry, LightStatus.OVERRIDDEN),
-                ATTR_PREVIOUS_STATUS: previous,
-                ATTR_LIVE_CONTEXT_ID: state.context.id if state else None,
-                ATTR_LIVE: {"state": state.state, **shown(state.attributes)} if state else {"state": None},
-                ATTR_OBSERVED: record.get("observed"),
-                ATTR_LATEST: record.get("latest"),
             },
         )
 

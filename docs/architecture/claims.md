@@ -222,7 +222,7 @@ reported on or off, and none is on.
 ```mermaid
 flowchart LR
     ch["any claim change"] --> ds["Store.async_delay_save(5 s)"]
-    ds --> file[".storage/flare.claims<br/>{claims, rooms}"]
+    ds --> file[".storage/flare.claims<br/>{claims, rooms, overrides}"]
     stop["EVENT_HOMEASSISTANT_FINAL_WRITE"] --> file
     file --> load["next start:<br/>async_load before platforms"]
     load --> seed["ClaimEvents.start():<br/>seed statuses, note mismatches"]
@@ -237,6 +237,12 @@ flowchart LR
   restored claim counts as dark, and goes when its room next does.
 - A crash loses the last 5 seconds of claims and fails open: an unclaimed
   light is free to drive.
+- `overrides` is the override log (`log_override`): the last 50 overrides,
+  each with both claims, the live values, the light's raw colour
+  attributes (`matching.reported()`), its device's manufacturer and model,
+  the integration providing it and the tolerances in force. Logged when
+  `ClaimEvents` fires `flare_light_overridden`, which carries part of the
+  same entry. Only the Settings entry's diagnostics read it.
 
 ## Showing it
 

@@ -13,6 +13,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
+from custom_components.flare.diagnostics import async_get_config_entry_diagnostics
 from custom_components.flare.sensor import _classify_tracked
 from custom_components.flare.tracking.claims import SAVE_DELAY, STORAGE_KEY, STORAGE_VERSION, ClaimRegistry
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
@@ -110,6 +111,29 @@ async def test_lights_going_unavailable_at_shutdown_keep_their_claims(
     hass.set_state(CoreState.running)
 
     assert list(hass_storage[STORAGE_KEY]["data"]["claims"]) == ["light.a"]
+
+
+async def test_the_recent_overrides_are_saved_and_come_back_after_a_restart(
+    hass: HomeAssistant, hass_storage: dict[str, Any], frozen_time
+):
+    _light(hass, "light.a", "on", **ASKED)
+    registry = await _start(hass, hass_storage, {"light.a": _claim("ctx-ours")})
+    _light(hass, "light.a", "on", brightness=90, color_temp_kelvin=3000)
+    await hass.async_block_till_done()
+    for wait in (MISMATCH_GRACE + timedelta(seconds=2), timedelta(seconds=SAVE_DELAY + 1)):
+        frozen_time.tick(wait)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    saved = hass_storage[STORAGE_KEY]["data"]
+    assert [entry["light"] for entry in saved["overrides"]] == ["light.a"], "precondition: logged and saved"
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.runtime_data is not registry, "precondition: loaded afresh"
+    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+    assert diagnostics["recent_overrides"] == saved["overrides"]
 
 
 async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant, hass_storage: dict[str, Any]):

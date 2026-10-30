@@ -52,6 +52,7 @@ from homeassistant.components.light import (
     ATTR_MAX_COLOR_TEMP_KELVIN,
     ATTR_MIN_COLOR_TEMP_KELVIN,
     ATTR_RGB_COLOR,
+    ATTR_SUPPORTED_COLOR_MODES,
     ATTR_XY_COLOR,
     ColorMode,
 )
@@ -113,6 +114,34 @@ def shown(attributes: Mapping) -> dict:
     elif attributes.get(ATTR_RGB_COLOR) is not None:
         target[ATTR_RGB_COLOR] = list(attributes[ATTR_RGB_COLOR])
     return target
+
+
+# What a light reports about its brightness and colour, as reported(), for
+# explaining an override after the fact.
+REPORTED_ATTRIBUTES = (
+    ATTR_COLOR_MODE,
+    ATTR_SUPPORTED_COLOR_MODES,
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_XY_COLOR,
+    ATTR_RGB_COLOR,
+    ATTR_MIN_COLOR_TEMP_KELVIN,
+    ATTR_MAX_COLOR_TEMP_KELVIN,
+)
+
+
+def reported(attributes: Mapping) -> dict:
+    """A light's brightness and colour attributes as it reports them, raw,
+    with sequences as lists so they can be saved."""
+    values = {}
+    for name in REPORTED_ATTRIBUTES:
+        value = attributes.get(name)
+        if name == ATTR_SUPPORTED_COLOR_MODES and value is not None:
+            value = sorted(map(str, value))
+        elif isinstance(value, (list, tuple)):
+            value = list(value)
+        values[name] = value
+    return values
 
 
 def reported_kelvin(attributes: Mapping) -> Optional[int]:

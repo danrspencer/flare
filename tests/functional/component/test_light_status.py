@@ -11,6 +11,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.diagnostics import async_get_config_entry_diagnostics
+from custom_components.flare.tracking.claims import OVERRIDE_LOG_SIZE
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 
 ROOM = "automation.kitchen"
@@ -36,7 +37,11 @@ def _bulb(hass: HomeAssistant, object_id: str, *, on_device: bool = True) -> str
     device_id = None
     if on_device:
         device_id = dr.async_get(hass).async_get_or_create(
-            config_entry_id=owner.entry_id, identifiers={("test", object_id)}, name=object_id.title()
+            config_entry_id=owner.entry_id,
+            identifiers={("test", object_id)},
+            name=object_id.title(),
+            manufacturer="IKEA of Sweden",
+            model="TRADFRI bulb E27 WS",
         ).id
     er.async_get(hass).async_get_or_create(
         "light", "test", object_id, suggested_object_id=object_id, device_id=device_id, config_entry=owner
@@ -212,3 +217,52 @@ async def test_diagnostics_has_every_claim_and_room(stub_entry_setup, hass: Home
 
     assert set(diagnostics["claims"]) == {lamp}
     assert diagnostics["rooms"] == {ROOM: {"lights": [lamp]}}
+
+
+async def _overridden(hass: HomeAssistant, frozen_time, lamp: str, **showing) -> None:
+    """The lamp changed by hand, past the grace."""
+    hass.states.async_set(lamp, "on", {**SHOWING, **showing}, context=Context())
+    await hass.async_block_till_done()
+    frozen_time.tick(MISMATCH_GRACE + timedelta(seconds=2))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+
+async def test_diagnostics_explain_each_recent_override(stub_entry_setup, hass: HomeAssistant, frozen_time):
+    entry = await _set_up(hass)
+    lamp = _bulb(hass, "lamp")
+    await _apply(hass, [lamp])
+
+    await _overridden(hass, frozen_time, lamp, brightness=20, color_temp_kelvin=2700)
+
+    [logged] = (await async_get_config_entry_diagnostics(hass, entry))["recent_overrides"]
+    assert logged["light"] == lamp
+    assert logged["rooms"] == [ROOM]
+    assert logged["previous_status"] == "mismatched"
+    assert logged["latest"]["target"] == {"brightness": 200, "color_temp_kelvin": 3000}
+    assert logged["live"] == {"state": "on", "brightness": 20, "color_temp_kelvin": 2700}
+    assert logged["reported"] == {
+        "color_mode": "color_temp",
+        "supported_color_modes": ["color_temp"],
+        "brightness": 20,
+        "color_temp_kelvin": 2700,
+        "xy_color": None,
+        "rgb_color": None,
+        "min_color_temp_kelvin": None,
+        "max_color_temp_kelvin": None,
+    }
+    assert logged["integration"] == "test"
+    assert logged["device"] == {"manufacturer": "IKEA of Sweden", "model": "TRADFRI bulb E27 WS", "model_id": None}
+    assert logged["tolerances"] == {"min_brightness_change": 5, "min_color_temp_change": 5}
+    assert logged["time"] == ANY
+
+
+async def test_diagnostics_keep_only_the_most_recent_overrides(stub_entry_setup, hass: HomeAssistant, frozen_time):
+    entry = await _set_up(hass)
+    lamp = _bulb(hass, "lamp")
+    for brightness in range(1, OVERRIDE_LOG_SIZE + 3):
+        await _apply(hass, [lamp])
+        await _overridden(hass, frozen_time, lamp, brightness=brightness)
+
+    logged = (await async_get_config_entry_diagnostics(hass, entry))["recent_overrides"]
+    assert [entry["live"]["brightness"] for entry in logged] == list(range(3, OVERRIDE_LOG_SIZE + 3))

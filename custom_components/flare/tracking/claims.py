@@ -38,14 +38,20 @@ state, since nearly every light passes through unavailable/unknown on
 restart. Nothing a light reports while HA is stopping counts.
 
 A claimed light's registry entry is followed too: its claim moves with a
-rename and goes when the light is deleted."""
+rename and goes when the light is deleted.
+
+The last OVERRIDE_LOG_SIZE overrides are kept in the same Store, each with
+the claims, what the light reported and what kind of light it is, for the
+diagnostics download."""
 
 from __future__ import annotations
 
+import copy
 from typing import Optional, Protocol
 
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
@@ -57,11 +63,18 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import ulid as ulid_util
 
 from ..const import (
+    ATTR_LATEST,
+    ATTR_LIGHT,
+    ATTR_LIVE,
+    ATTR_LIVE_CONTEXT_ID,
+    ATTR_OBSERVED,
+    ATTR_PREVIOUS_STATUS,
+    ATTR_ROOMS,
     DEFAULT_MIN_BRIGHTNESS_CHANGE,
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
     is_reachable,
 )
-from .matching import shown
+from .matching import reported, shown
 from .override_protection import (
     MISMATCH_GRACE,
     _context_matches,
@@ -78,6 +91,8 @@ STORAGE_KEY = "flare.claims"
 STORAGE_VERSION = 1
 # Seconds a change waits to be saved, so a room's writes are saved together.
 SAVE_DELAY = 5
+# How many overrides the log keeps, newest last.
+OVERRIDE_LOG_SIZE = 50
 
 
 class ClaimListener(Protocol):
@@ -109,6 +124,8 @@ class ClaimRegistry:
         self.claims: dict[str, _WriteRecord] = {}
         # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
+        # The most recent overrides, oldest first (log_override).
+        self.overrides: list[dict] = []
         self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._listener: ClaimListener | None = None
         # The state and registry listeners, while listening, and the lights
@@ -123,10 +140,13 @@ class ClaimRegistry:
         data = await self._storage.async_load() or {}
         self.claims = dict(data.get("claims") or {})
         self.rooms = dict(data.get("rooms") or {})
+        self.overrides = list(data.get("overrides") or [])[-OVERRIDE_LOG_SIZE:]
 
     @callback
     def _save(self) -> None:
-        self._storage.async_delay_save(lambda: {"claims": self.claims, "rooms": self.rooms}, SAVE_DELAY)
+        self._storage.async_delay_save(
+            lambda: {"claims": self.claims, "rooms": self.rooms, "overrides": self.overrides}, SAVE_DELAY
+        )
 
     @callback
     def register(self, listener: ClaimListener) -> None:
@@ -189,6 +209,42 @@ class ClaimRegistry:
             return False
         self._save()
         return True
+
+    @callback
+    def log_override(self, entity_id: str, previous: str | None) -> dict:
+        """Logs that this light has just become overridden: its claims, what
+        it shows and reports, what provides it and the tolerances in force.
+        Returns the entry, which the override event carries part of."""
+        state = self._hass.states.get(entity_id)
+        record = self.record(entity_id) or {}
+        entity = er.async_get(self._hass).async_get(entity_id)
+        device = (
+            dr.async_get(self._hass).async_get(entity.device_id) if entity is not None and entity.device_id else None
+        )
+        entry = {
+            "time": dt_util.utcnow().isoformat(),
+            ATTR_LIGHT: entity_id,
+            ATTR_ROOMS: [self.room_entity_id(key) for key in self.rooms_of(entity_id)],
+            ATTR_PREVIOUS_STATUS: previous,
+            ATTR_OBSERVED: copy.deepcopy(record.get("observed")),
+            ATTR_LATEST: copy.deepcopy(record.get("latest")),
+            "mismatch_since": record.get("mismatch_since"),
+            ATTR_LIVE_CONTEXT_ID: state.context.id if state else None,
+            ATTR_LIVE: {"state": state.state, **shown(state.attributes)} if state else {"state": None},
+            "reported": reported(state.attributes) if state else None,
+            "integration": entity.platform if entity is not None else None,
+            "device": {
+                "manufacturer": device.manufacturer,
+                "model": device.model,
+                "model_id": device.model_id,
+            }
+            if device is not None
+            else None,
+            "tolerances": dict(self.tolerances),
+        }
+        self.overrides = [*self.overrides, entry][-OVERRIDE_LOG_SIZE:]
+        self._save()
+        return entry
 
     @callback
     def note_mismatches(self) -> bool:
