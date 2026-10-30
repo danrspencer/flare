@@ -14,7 +14,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_ENTRY_TYPE, ENTRY_TYPE_SETTINGS, PHASES
-from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .schedule.coordinator import (
+    PHASE_EVENT_ROLE,
+    PHASE_OBJECT_ID,
+    ScheduleCoordinator,
+    ScheduleInstance,
+    schedule_instances,
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -35,9 +41,9 @@ class _SchedulePhase(CoordinatorEntity[ScheduleCoordinator], EventEntity):
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{instance.subentry_id}_phase_event"
-        self._attr_translation_key = "phase_event"
-        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare_phase")
+        self._attr_unique_id = instance.unique_id(PHASE_EVENT_ROLE)
+        self._attr_translation_key = PHASE_EVENT_ROLE
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}{PHASE_OBJECT_ID}")
         self._attr_device_info = instance.device_info
         self._fired_phase: str | None = None
 

@@ -26,12 +26,20 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
-from ..const import DOMAIN, SUBENTRY_TYPE_SENSOR, is_reachable
+from ..const import DOMAIN, PHASE_AUTO, SUBENTRY_TYPE_SENSOR, is_reachable
 from .curve import DEFAULT_SCHEDULE_HOURS, phase_at, targets_for_phase
 
 _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(seconds=60)
+
+# Roles: each entity's unique ID suffix and translation key, which the
+# dashboard finds it by.
+PHASE_OVERRIDE_ROLE = "phase_override"
+STICKY_PHASE_OVERRIDE_ROLE = "sticky_phase_override"
+PHASE_EVENT_ROLE = "phase_event"
+# The object ID the phase override select and the Phase event share.
+PHASE_OBJECT_ID = "flare_phase"
 
 # Also each time entity's entity_id suffix.
 TIME_KEYS = (
@@ -94,11 +102,14 @@ class ScheduleInstance:
         """The ID it's created with; read it through number_entity()."""
         return NUMBER_ENTITY_ID.format(f"{self.prefix}{key}")
 
-    def current_id(self, hass: HomeAssistant, entity_id: str, key: str) -> str:
+    def unique_id(self, role: str) -> str:
+        return f"{self.subentry_id}_{role}"
+
+    def current_id(self, hass: HomeAssistant, entity_id: str, role: str) -> str:
         """The entity's ID now, found by its unique ID so one the user renamed
         is still read. `entity_id` until it's registered."""
         domain = split_entity_id(entity_id)[0]
-        return er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{self.subentry_id}_{key}") or entity_id
+        return er.async_get(hass).async_get_entity_id(domain, DOMAIN, self.unique_id(role)) or entity_id
 
     def time_entity(self, hass: HomeAssistant, key: str) -> str:
         return self.current_id(hass, self.time_entity_id(key), key)
@@ -107,10 +118,10 @@ class ScheduleInstance:
         return self.current_id(hass, self.number_entity_id(key), key)
 
     def override_entity(self, hass: HomeAssistant) -> str:
-        return self.current_id(hass, self.override_entity_id, "phase_override")
+        return self.current_id(hass, self.override_entity_id, PHASE_OVERRIDE_ROLE)
 
     def sticky_entity(self, hass: HomeAssistant) -> str:
-        return self.current_id(hass, self.sticky_entity_id, "sticky_phase_override")
+        return self.current_id(hass, self.sticky_entity_id, STICKY_PHASE_OVERRIDE_ROLE)
 
 
 def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
@@ -125,8 +136,8 @@ def schedule_instances(entry: ConfigEntry) -> list[ScheduleInstance]:
             ScheduleInstance(
                 subentry_id=subentry_id,
                 prefix=prefix,
-                override_entity_id=SELECT_ENTITY_ID.format(f"{prefix}flare_phase"),
-                sticky_entity_id=SWITCH_ENTITY_ID.format(f"{prefix}sticky_phase_override"),
+                override_entity_id=SELECT_ENTITY_ID.format(f"{prefix}{PHASE_OBJECT_ID}"),
+                sticky_entity_id=SWITCH_ENTITY_ID.format(f"{prefix}{STICKY_PHASE_OVERRIDE_ROLE}"),
                 title=subentry.title,
             )
         )
@@ -224,7 +235,7 @@ def _compute_curve_points(boundaries: dict[str, float], curve_kwargs: dict[str, 
 
 def _phase_override(hass: HomeAssistant, instance: ScheduleInstance) -> str | None:
     state = hass.states.get(instance.override_entity(hass))
-    if not is_reachable(state) or state.state == "Auto":
+    if not is_reachable(state) or state.state == PHASE_AUTO:
         return None
     return state.state
 

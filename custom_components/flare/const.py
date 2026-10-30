@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import State
 
@@ -13,8 +15,20 @@ def is_reachable(state: State | None) -> bool:
     return state is not None and state.state not in UNREACHABLE_STATES
 
 
-PHASES = ["Morning", "Day", "Evening", "Night"]
-PHASE_OPTIONS = ["Auto", *PHASES]
+class Phase(StrEnum):
+    """The schedule's phases, in the order a day runs through them. Their
+    names are the schedule sensor's states."""
+
+    MORNING = "Morning"
+    DAY = "Day"
+    EVENING = "Evening"
+    NIGHT = "Night"
+
+
+PHASES = [phase.value for phase in Phase]
+# The phase override's "no override".
+PHASE_AUTO = "Auto"
+PHASE_OPTIONS = [PHASE_AUTO, *PHASES]
 
 # Subentry type for a schedule sensor.
 SUBENTRY_TYPE_SENSOR = "sensor"

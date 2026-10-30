@@ -6,6 +6,8 @@ import math
 # The one HA import: a colour conversion isn't worth reimplementing.
 from homeassistant.util.color import color_temperature_to_rgb
 
+from ..const import Phase
+
 # The only place these numbers are literals.
 DEFAULT_MORNING_BRIGHTNESS = 255
 DEFAULT_DAY_BRIGHTNESS = 255
@@ -96,21 +98,21 @@ def _night_clock(t: float, morning_ts: float, night_ts: float) -> tuple[float, f
     return t, night_ts + SECONDS_PER_DAY
 
 
-def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> str:
+def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> Phase:
     """Which phase an instant falls in, given today's boundaries."""
     t, night_ts = _night_clock(t, morning_ts, night_ts)
     if t < morning_ts:
-        return "Night"
+        return Phase.NIGHT
     if t < day_start_ts:
-        return "Morning"
+        return Phase.MORNING
     if t < evening_ts:
-        return "Day"
+        return Phase.DAY
     if t < night_ts:
-        return "Evening"
-    return "Night"
+        return Phase.EVENING
+    return Phase.NIGHT
 
 
-PHASE_ORDER = ("Morning", "Day", "Evening", "Night")
+PHASE_ORDER = tuple(Phase)
 
 
 def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> list:
@@ -142,25 +144,25 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
             marks.append((name, effective_starts[i]))
 
     if after_midnight:
-        return [("Night", night_ts), *marks]
+        return [(Phase.NIGHT, night_ts), *marks]
     # Night last, and only if some other phase happens.
     if marks:
-        marks.append(("Night", effective_starts[-1]))
+        marks.append((Phase.NIGHT, effective_starts[-1]))
     return marks
 
 
 # Night wraps to Morning.
-_NEXT_PHASE = {"Morning": "Day", "Day": "Evening", "Evening": "Night", "Night": "Morning"}
+_NEXT_PHASE = {phase: PHASE_ORDER[(i + 1) % len(PHASE_ORDER)] for i, phase in enumerate(PHASE_ORDER)}
 
 
 def _phase_span(day_phase: str, now_ts: float, boundaries: dict) -> tuple:
     """(start, end) of the phase's own span, on _night_clock()'s clock.
     Night is one span crossing midnight, starting either yesterday or today."""
-    if day_phase == "Morning":
+    if day_phase == Phase.MORNING:
         return boundaries["morning"], boundaries["day"]
-    if day_phase == "Day":
+    if day_phase == Phase.DAY:
         return boundaries["day"], boundaries["evening"]
-    if day_phase == "Evening":
+    if day_phase == Phase.EVENING:
         return boundaries["evening"], boundaries["night"]
     if now_ts >= boundaries["night"]:
         return boundaries["night"], boundaries["morning"] + SECONDS_PER_DAY
@@ -219,16 +221,16 @@ def brightness_for_phase(
             now_ts,
             {"morning": morning_ts, "day": day_start_ts, "evening": evening_ts, "night": night_ts},
             {
-                "Morning": morning_brightness,
-                "Day": day_brightness,
-                "Evening": evening_brightness,
-                "Night": night_brightness,
+                Phase.MORNING: morning_brightness,
+                Phase.DAY: day_brightness,
+                Phase.EVENING: evening_brightness,
+                Phase.NIGHT: night_brightness,
             },
             {
-                "Morning": morning_brightness_transition,
-                "Day": day_brightness_transition,
-                "Evening": evening_brightness_transition,
-                "Night": night_brightness_transition,
+                Phase.MORNING: morning_brightness_transition,
+                Phase.DAY: day_brightness_transition,
+                Phase.EVENING: evening_brightness_transition,
+                Phase.NIGHT: night_brightness_transition,
             }[day_phase],
         )
     )
@@ -258,16 +260,16 @@ def kelvin_for_phase(
             now_ts,
             {"morning": morning_ts, "day": day_start_ts, "evening": evening_ts, "night": night_ts},
             {
-                "Morning": morning_kelvin,
-                "Day": day_kelvin,
-                "Evening": evening_kelvin,
-                "Night": night_kelvin,
+                Phase.MORNING: morning_kelvin,
+                Phase.DAY: day_kelvin,
+                Phase.EVENING: evening_kelvin,
+                Phase.NIGHT: night_kelvin,
             },
             {
-                "Morning": morning_kelvin_transition,
-                "Day": day_kelvin_transition,
-                "Evening": evening_kelvin_transition,
-                "Night": night_kelvin_transition,
+                Phase.MORNING: morning_kelvin_transition,
+                Phase.DAY: day_kelvin_transition,
+                Phase.EVENING: evening_kelvin_transition,
+                Phase.NIGHT: night_kelvin_transition,
             }[day_phase],
         )
     )

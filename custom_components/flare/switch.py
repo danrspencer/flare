@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
-from .schedule.coordinator import ScheduleInstance, schedule_instances
+from .schedule.coordinator import STICKY_PHASE_OVERRIDE_ROLE, ScheduleInstance, schedule_instances
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -25,8 +25,8 @@ class _StickyOverrideSwitch(SwitchEntity, RestoreEntity):
     _attr_icon = "mdi:pin"
 
     def __init__(self, instance: ScheduleInstance) -> None:
-        self._attr_unique_id = f"{instance.subentry_id}_sticky_phase_override"
-        self._attr_translation_key = "sticky_phase_override"
+        self._attr_unique_id = instance.unique_id(STICKY_PHASE_OVERRIDE_ROLE)
+        self._attr_translation_key = STICKY_PHASE_OVERRIDE_ROLE
         self.entity_id = instance.sticky_entity_id
         self._attr_device_info = instance.device_info
         self._attr_is_on = False
