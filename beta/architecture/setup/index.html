@@ -390,7 +390,7 @@ its own once HA has started (<code class="language-plaintext highlighter-rouge">
 <pre><code class="language-mermaid">flowchart TB
     start(["HA started"]) --&gt; ours{"any blueprint&lt;br/&gt;named FLARE?"}
     ours --&gt;|"no"| miss["repair: blueprint_not_installed&lt;br/&gt;Fix installs flare/flare.yaml"]
-    ours --&gt;|"yes"| used{"used by an automation,&lt;br/&gt;and stamped older than&lt;br/&gt;this release?"}
+    ours --&gt;|"yes"| used{"used by an automation,&lt;br/&gt;and stamped older than&lt;br/&gt;this release, or in&lt;br/&gt;another language?"}
     used --&gt;|"yes"| old["repair: outdated_blueprint&lt;br/&gt;Fix writes the shipped file&lt;br/&gt;over each stale copy"]
     used --&gt;|"no"| ok(["clear both repairs"])
 </code></pre>
@@ -404,6 +404,14 @@ one nobody reads couldn’t be silenced.</li>
 import route. It’s <code class="language-plaintext highlighter-rouge">0.0.0-dev</code> in source. <code class="language-plaintext highlighter-rouge">scripts/release.py</code> writes
 the real version into each release’s zip, along with the manifest and
 <code class="language-plaintext highlighter-rouge">BLUEPRINT_VERSION</code>.</li>
+  <li><strong>The blueprint is written in HA’s language</strong> (<code class="language-plaintext highlighter-rouge">blueprint_translation.py</code>).
+HA has no translations for a blueprint, so <code class="language-plaintext highlighter-rouge">_shipped()</code> swaps in each
+input’s text from <code class="language-plaintext highlighter-rouge">blueprints/translations/&lt;language&gt;.yaml</code> before saving
+it; keys, defaults and selectors stay, and select options keep their
+English values under a translated label. The stamp names the language
+(<code class="language-plaintext highlighter-rouge">Blueprint version 2.0.0 (de)</code>), so a copy in another language than
+HA’s counts as outdated and Fix rewrites it. A copy stamped without one
+reads as English.</li>
   <li>A blueprint that fails to load comes back from <code class="language-plaintext highlighter-rouge">async_get_blueprints()</code>
 as the exception itself, hence <code class="language-plaintext highlighter-rouge">isinstance</code> rather than a <code class="language-plaintext highlighter-rouge">None</code> check.</li>
 </ul>
