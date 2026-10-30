@@ -307,7 +307,7 @@ in this area: unit tests don’t catch it.</p>
 <p><strong>Atomic by construction.</strong> A callback can’t be interrupted, so anything
 done inside one is one step as far as the rest of HA is concerned. The
 claim registry’s writers (<code class="language-plaintext highlighter-rouge">async_record</code>, <code class="language-plaintext highlighter-rouge">async_override</code>,
-<code class="language-plaintext highlighter-rouge">async_clear</code>, <code class="language-plaintext highlighter-rouge">async_prune_stale</code>) are callbacks for this reason. In
+<code class="language-plaintext highlighter-rouge">async_clear</code>, <code class="language-plaintext highlighter-rouge">adopt</code>) are callbacks for this reason. In
 <code class="language-plaintext highlighter-rouge">apply_lighting</code> there’s no <code class="language-plaintext highlighter-rouge">await</code> between planning the writes and
 recording their claims, so no state change can land in between and be
 misjudged. (The <code class="language-plaintext highlighter-rouge">async_</code> prefix is HA’s convention for “must run on the
@@ -333,7 +333,7 @@ loop”, not “is a coroutine”.)</p>
     HA-&gt;&gt;SE: async_setup_entry
     Note over SE: a ScheduleCoordinator per schedule,&lt;br/&gt;first refresh (defaults),&lt;br/&gt;forward 6 platforms,&lt;br/&gt;refresh again (restored values)
     HA-&gt;&gt;ST: async_setup_entry
-    Note over ST: ClaimRegistry.async_load (Store),&lt;br/&gt;hourly prune, state listener,&lt;br/&gt;blueprint check at started,&lt;br/&gt;9 services, TickScheduler,&lt;br/&gt;forward sensor + button,&lt;br/&gt;release rooms restored dark,&lt;br/&gt;prune stale, start area ticks
+    Note over ST: ClaimRegistry.async_load (Store),&lt;br/&gt;claimed-light listeners,&lt;br/&gt;blueprint check at started,&lt;br/&gt;9 services, TickScheduler,&lt;br/&gt;forward sensor + button,&lt;br/&gt;release rooms restored dark,&lt;br/&gt;start area ticks
     HA-&gt;&gt;FE: async_setup_entry
     Note over FE: forward light only if it has flares
     HA--&gt;&gt;HA: automations load (after integrations)
@@ -350,8 +350,8 @@ call one that isn’t there yet.</li>
   <li><strong>The claim events start inside the sensor platform</strong> (<code class="language-plaintext highlighter-rouge">ClaimEvents.start()</code>).
 They seed every light’s status on the spot, which also notes the
 mismatch of a claim restored from before a restart.</li>
-  <li><strong>Only after that</strong> are rooms restored dark released and stale claims
-pruned, so the release is announced in Activity.</li>
+  <li><strong>Only after that</strong> are rooms restored dark released, so the release is
+announced in Activity.</li>
   <li><strong>The blueprint check waits for <code class="language-plaintext highlighter-rouge">async_at_started</code></strong>: during setup no
 automation has loaded, so every blueprint looks unused.</li>
 </ol>
@@ -404,6 +404,11 @@ automation’s inputs until then.</p>
       <td><code class="language-plaintext highlighter-rouge">area_registry_updated</code></td>
       <td><code class="language-plaintext highlighter-rouge">_tick_areas</code></td>
       <td>handing the ticker the new set of areas</td>
+    </tr>
+    <tr>
+      <td>each claimed light’s registry entry</td>
+      <td><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code>, alongside its state listener</td>
+      <td>moving a claim with a rename; dropping it with a deletion</td>
     </tr>
     <tr>
       <td>a light’s registry entry</td>
@@ -464,11 +469,6 @@ automation’s inputs until then.</p>
       <td>Claims save</td>
       <td>5 s after a change, and at shutdown</td>
       <td><code class="language-plaintext highlighter-rouge">Store.async_delay_save</code></td>
-    </tr>
-    <tr>
-      <td>Stale-claim prune</td>
-      <td>hourly</td>
-      <td><code class="language-plaintext highlighter-rouge">async_track_time_interval</code></td>
     </tr>
     <tr>
       <td>Mismatch recheck</td>

@@ -319,12 +319,10 @@ room-empty, light-off and reconnect releases all just happen.</p>
         adopt(room, lights)
         async_override(room, lights)
         async_clear(lights)
-        async_prune_stale()
     }
     class WriteRecord {
         observed: ContextClaim | None
         latest: ContextClaim | None
-        last_seen: iso
         mismatch_since: iso | absent
     }
     class ContextClaim {
@@ -335,7 +333,6 @@ room-empty, light-off and reconnect releases all just happen.</p>
     }
     class Room {
         lights: list~entity_id~
-        last_seen: iso
     }
     ClaimRegistry "1" --&gt; "*" WriteRecord
     ClaimRegistry "1" --&gt; "*" Room
@@ -504,7 +501,8 @@ read as something else.</p>
 
 <p><code class="language-plaintext highlighter-rouge">ClaimRegistry.async_start_listening</code> follows exactly the claimed lights,
 through <code class="language-plaintext highlighter-rouge">async_track_state_change_event</code>, and re-subscribes whenever the
-set of claimed lights changes. For each change to one:</p>
+set of claimed lights changes. It follows their registry entries too, with
+<code class="language-plaintext highlighter-rouge">async_track_entity_registry_updated_event</code>. For each change to one:</p>
 
 <div class="table-wrapper"><table>
   <thead>
@@ -529,6 +527,14 @@ set of claimed lights changes. For each change to one:</p>
     <tr>
       <td>none/unavailable/unknown → on/off (<em>arrived</em>)</td>
       <td>each room is released if every claimed light has now reported and none is on</td>
+    </tr>
+    <tr>
+      <td>renamed in the registry</td>
+      <td>its claim and its place in its rooms move to the new entity ID</td>
+    </tr>
+    <tr>
+      <td>deleted from the registry</td>
+      <td>its claim and its place in its rooms go</td>
     </tr>
   </tbody>
 </table></div>
@@ -580,7 +586,7 @@ reported on or off, and none is on.</p>
     stop["EVENT_HOMEASSISTANT_FINAL_WRITE"] --&gt; file
     file --&gt; load["next start:&lt;br/&gt;async_load before platforms"]
     load --&gt; seed["ClaimEvents.start():&lt;br/&gt;seed statuses, note mismatches"]
-    seed --&gt; rel["release rooms restored dark,&lt;br/&gt;prune claims older than a day"]
+    seed --&gt; rel["release rooms restored dark"]
 </code></pre>
 
 <ul>
@@ -588,8 +594,8 @@ reported on or off, and none is on.</p>
 only match by value. A light still showing FLARE’s target stays
 <code class="language-plaintext highlighter-rouge">controlled</code>; one changed before the restart keeps its stored
 <code class="language-plaintext highlighter-rouge">mismatch_since</code>, so it’s <code class="language-plaintext highlighter-rouge">overridden</code> at once.</li>
-  <li><code class="language-plaintext highlighter-rouge">async_prune_stale</code> drops records untouched for a day, hourly. It’s the
-only cleanup a light deleted from HA ever gets.</li>
+  <li>A light deleted while HA was down never sends a registry event. Its
+restored claim counts as dark, and goes when its room next does.</li>
   <li>A crash loses the last 5 seconds of claims and fails open: an unclaimed
 light is free to drive.</li>
 </ul>
