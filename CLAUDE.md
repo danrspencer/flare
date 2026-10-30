@@ -1032,6 +1032,31 @@ having switched it on and left.
   would leave a forgotten lamp in an empty room on forever.
   Presence (mmWave) sensors remove the cause, but that's hardware.
 
+### Planned for 3.0: Sensors From Areas goes, the floor goes to 2026.11
+
+Deprecated in 2.0 (its description, the reference page and the changelog
+say so); remove it in 3.0 and raise the blueprint's `min_version` and
+`hacs.json` to 2026.11.0 together (user's call).
+
+- **Exclude replaces it.** From 2026.11 a target takes an `exclude`
+  block, the target selector offers it in blueprint forms, and
+  `async_extract_referenced_entity_ids`, `cv.TARGET_FIELDS` and the native
+  occupancy/motion triggers all honour it. So `resolve_target`, a flare's
+  members and the triggers drop an excluded sensor with no code of ours.
+- **Removing it deletes** the input, `named_entities`, the top-level
+  `condition:` (it exists only because a trigger's target couldn't be
+  narrowed) and the `use_area_sensors` branches in `room_lux_entities`,
+  `room_occupancy_entities` and the `lux_dark` trigger. That trigger's
+  Jinja ignores exclusions, like `recovered`'s: a wake-up only.
+- **Not done in 2.0 because** HA before 2026.11 rejects a blueprint input
+  with an unknown key (`BLUEPRINT_INPUT_SCHEMA` is closed), so hiding it
+  with `visible:` would stop the blueprint, and every room, loading there.
+  With the floor at 2026.11 it can simply go: a stored input that no
+  longer exists is ignored.
+- **A room with it off then reads every sensor its target reaches.** It
+  only differs where the target names an area, device, floor or label;
+  3.0's changelog needs to say so.
+
 ### Parked: scene handling in `apply_lighting`
 
 Not built; recorded so it isn't re-derived.

@@ -49,8 +49,9 @@ The room's [flare](../flares/) controls the same lights.
 Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_class: motion`;
 other binary sensors in the target are ignored. A room can mix both kinds.
 
-To choose the sensors yourself while still picking an area for the lights, turn off
-[Sensors From Areas](#sensors-from-areas).
+To pick an area for its lights but leave some of its sensors out, add them with **Exclude
+target** (Home Assistant 2026.11 and later). On earlier versions, turn off
+[Sensors From Areas](#sensors-from-areas) and pick the sensors you want by name.
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
@@ -69,8 +70,9 @@ either room goes dark.
 ### Lux Threshold
 
 Illuminance sensors are the `sensor` entities with `device_class: illuminance` in **Lights &
-Occupancy** — picked by name, or included through its area, floor, device or label. With
-[Sensors From Areas](#sensors-from-areas) off, only the ones picked by name count.
+Occupancy** — picked by name, or included through its area, floor, device or label — that
+aren't excluded. With [Sensors From Areas](#sensors-from-areas) off, only the ones picked by
+name count.
 
 Above `0`, the room counts as bright enough while every one of those sensors reads above that
 many lux. A bright room isn't switched on by:
@@ -158,7 +160,7 @@ follows the schedule. See [Scenes](../../guides/scenes/).
 | Input | Default | Description |
 |---|---|---|
 | **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
-| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. |
+| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
 
@@ -171,6 +173,12 @@ Turn it off for a room [whose bulbs misreport](#turning-override-protection-off)
 Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
 count, so you can pick an area for its lights and choose the sensors yourself, such as the
 hallway's for a landing. Pick none for a room that only follows the schedule.
+
+**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** From Home Assistant 2026.11,
+leave it on and leave out the sensors you don't want with **Exclude target** in **Lights &
+Occupancy** instead (see Home Assistant's
+[excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
+An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
 
 ### Prefer RGB during
 

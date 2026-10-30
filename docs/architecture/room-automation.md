@@ -174,3 +174,8 @@ after it.
 - With **Sensors From Areas** off, the native triggers still fire for
   every sensor in the target (a trigger's `target:` takes no templates),
   so the top-level `condition:` drops the ones not named directly.
+- A sensor excluded from the target (`exclude:`, HA 2026.11) never fires
+  the native triggers and isn't in `flare.resolve_target`'s entities, so
+  the blueprint needs no code for exclusions. Only the `lux_dark` and
+  `recovered` wake-ups ignore them, since their Jinja expands the target
+  itself.
