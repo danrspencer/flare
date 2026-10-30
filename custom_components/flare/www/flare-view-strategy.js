@@ -17,9 +17,6 @@ import { scheduleSensors, normaliseSlug, flareTotals, claimsByArea } from './fla
 import { localize } from './flare-i18n.js';
 import { sectionConfig } from './flare-section.js';
 import { areaSections, totalsSection } from './flare-lights-section.js';
-// Not used by these views any more, but dashboards someone took control of
-// may name custom:flare-clear-card.
-import './flare-clear-card.js';
 import './flare-area-lights-card.js';
 import './flare-activity-card.js';
 
@@ -116,8 +113,6 @@ class FlareLightsViewStrategy extends HTMLElement {
 }
 
 customElements.define('ll-strategy-view-flare-lights', FlareLightsViewStrategy);
-// Its name before 2.0, for dashboards someone took control of.
-customElements.define('ll-strategy-view-flare-zone', class extends FlareLightsViewStrategy {});
 
 /**
  * The whole dashboard: a view per schedule, then Overrides once FLARE tracks

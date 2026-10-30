@@ -18,7 +18,6 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-curve-card.js")});
-await import({js_path(WWW / "flare-clear-card.js")});
 
 // An element per selector, found only if the markup has it, recording
 // what the card sets on it.
@@ -49,7 +48,6 @@ const seen = (card) => ({{
   header: card.shadowRoot.found['ha-card']?.attrs.header,
   error: card.shadowRoot.found['.error']?.textContent,
   phase: card.shadowRoot.found['.phase']?.textContent,
-  name: card.shadowRoot.found['.name']?.textContent,
 }});
 
 const missing = new defined['flare-curve-card']();
@@ -64,16 +62,13 @@ const titled = new defined['flare-curve-card']();
 titled.setConfig({{ sensor: 'home', title: input.hostile }});
 titled.hass = {{ states: {{ 'sensor.home_flare': {{ state: 'Day', attributes: {{}} }} }} }};
 
-const clear = new defined['flare-clear-card']();
-clear.setConfig({{ entity: 'button.kitchen_flare_clear', name: input.hostile }});
-
-return {{ missing: seen(missing), named: seen(named), titled: seen(titled), clear: seen(clear) }};
+return {{ missing: seen(missing), named: seen(named), titled: seen(titled) }};
 """,
         {"hostile": HOSTILE},
     )
 
 
-@pytest.mark.parametrize("card", ["missing", "named", "titled", "clear"])
+@pytest.mark.parametrize("card", ["missing", "named", "titled"])
 def test_nothing_from_a_name_reaches_the_markup(result, card):
     assert "<img" not in result[card]["html"]
 
@@ -89,7 +84,3 @@ def test_the_schedules_name_is_the_header_and_its_phase_is_text(result):
 
 def test_the_title_option_is_the_header(result):
     assert result["titled"]["header"] == HOSTILE
-
-
-def test_the_clear_cards_name_is_text(result):
-    assert result["clear"]["name"] == HOSTILE

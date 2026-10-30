@@ -92,7 +92,6 @@ const empty = {{ ...input, entities: Object.fromEntries(Object.entries(input.ent
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
   view: await defined['ll-strategy-view-flare-lights'].generate({{}}, input),
-  oldName: await defined['ll-strategy-view-flare-zone'].generate({{}}, input),
   empty: await defined['ll-strategy-view-flare-lights'].generate({{}}, empty),
   noSettings: await defined['ll-strategy-view-flare-lights'].generate({{}}, noSettings),
   kitchen: areaSummary(input, 'kitchen'),
@@ -223,11 +222,6 @@ def test_activity_follows_flares_device_in_the_sidebar(view):
     assert view["sidebar"]["sidebar_label"] == "Activity"
     activity = view["sidebar"]["sections"][0]["cards"][1]
     assert (activity["type"], activity["device_id"]) == ("custom:flare-activity-card", ["flare_device"])
-
-
-def test_the_view_answers_to_its_name_from_before_2_0(result):
-    """A dashboard someone took control of may name custom:flare-zone."""
-    assert result["oldName"] == result["view"]
 
 
 def test_with_no_lights_yet_it_says_so(result):
