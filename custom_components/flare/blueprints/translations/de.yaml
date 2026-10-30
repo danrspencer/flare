@@ -22,12 +22,12 @@ schedule:
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
 
 room_target:
-  source: 8de378ed
+  source: 473fa05e
   name: Lampen & Anwesenheit
   description: >-
     Entität, Gerät, Bereich, Etage oder Label – die Lampen darin werden
     gesteuert, die Anwesenheits- und Bewegungssensoren darin entscheiden,
-    wann (siehe „Sensoren aus Bereichen“ unter Einstellungen).
+    wann. Mit „Ziel ausnehmen“ lässt du Sensoren weg, die du nicht willst.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
 
 sensors_triggers:
@@ -209,16 +209,6 @@ override_protection:
     Lampen etwas anderes melden, als sie zeigen.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#override-protection).
 
-use_area_sensors:
-  source: cdaab6f9
-  name: Sensoren aus Bereichen
-  description: >-
-    Wenn abgeschaltet, werden Anwesenheits- und Bewegungssensoren nicht aus
-    den Bereichen, Etagen, Geräten oder Labels in „Lampen & Anwesenheit“
-    übernommen, ebenso wenig die Helligkeitssensoren für die Lux-Schwelle.
-    Nur ausdrücklich gewählte Sensoren zählen.
-    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
-
 rgb_phases:
   source: 809e3fe0
   name: RGB bevorzugen während
@@ -243,3 +233,11 @@ stored_traces:
     Raum aktualisiert sich jede Minute, das ist also ungefähr, wie viele
     Minuten du zurückschauen kannst.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#stored-traces).
+
+use_area_sensors:
+  source: 4755b2a6
+  name: Sensoren aus Bereichen (veraltet)
+  description: >-
+    Veraltet und wird in FLARE 3.0 als Option entfernt. Ab Home Assistant
+    2026.11 nutze „Ziel ausnehmen“, statt dies abzuschalten.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
