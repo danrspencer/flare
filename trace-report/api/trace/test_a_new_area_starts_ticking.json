@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/choose/1/sequence/0",
-      "run_id": "b6cc72e404721cd13e467060083e58e2",
+      "run_id": "7bf648402b7eee2e597fbdf05b8b7a64",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-10-31T02:00:02+00:00",
                 "last_updated": "2026-10-31T02:00:02+00:00",
                 "context": {
-                  "id": "01M67TYW6GP5E53WE1ZP6G8GMJ",
+                  "id": "01M67TYW6GG47VY2ZBVSA2KC0H",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -52,7 +52,7 @@
                   "origin": "LOCAL",
                   "time_fired": "2026-10-31T02:01:05+00:00",
                   "context": {
-                    "id": "01M67V0SQ8VKHEPW9NF0P1AE2C",
+                    "id": "01M67V0SQ8N16SR37N2XE8G1Z1",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -69,7 +69,7 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": "porch",
-              "schedule": "6f42496ea9d45c98582a9128c46acd8d",
+              "schedule": "6639078cc9781c64ae129f92e63f21f4",
               "override_protection_on": true,
               "room_id": "automation.porch",
               "adaptive_sensor": "sensor.test_flare",
@@ -108,8 +108,8 @@
             "timestamp": "2026-10-31T02:01:05+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M67V0SQ80V6J51NATV5SX5WD",
-                "parent_id": "01M67V0SQ8VKHEPW9NF0P1AE2C",
+                "id": "01M67V0SQ8CP1S8BE9BXZ0DTMZ",
+                "parent_id": "01M67V0SQ8N16SR37N2XE8G1Z1",
                 "user_id": null
               },
               "room": {
@@ -356,7 +356,7 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "6f42496ea9d45c98582a9128c46acd8d",
+          "schedule": "6639078cc9781c64ae129f92e63f21f4",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -380,7 +380,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "6f42496ea9d45c98582a9128c46acd8d"
+              "device_id": "6639078cc9781c64ae129f92e63f21f4"
             },
             "options": {
               "event_type": [
@@ -811,7 +811,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "6f42496ea9d45c98582a9128c46acd8d",
+            "schedule": "6639078cc9781c64ae129f92e63f21f4",
             "room_target": {
               "entity_id": [
                 "light.porch_lamp",
@@ -824,8 +824,8 @@
         }
       },
       "context": {
-        "id": "01M67V0SQ80V6J51NATV5SX5WD",
-        "parent_id": "01M67V0SQ8VKHEPW9NF0P1AE2C",
+        "id": "01M67V0SQ8CP1S8BE9BXZ0DTMZ",
+        "parent_id": "01M67V0SQ8N16SR37N2XE8G1Z1",
         "user_id": null
       }
     }

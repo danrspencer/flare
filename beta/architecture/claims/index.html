@@ -586,7 +586,7 @@ reported on or off, and none is on.</p>
 
 <pre><code class="language-mermaid">flowchart LR
     ch["any claim change"] --&gt; ds["Store.async_delay_save(5 s)"]
-    ds --&gt; file[".storage/flare.claims&lt;br/&gt;{claims, rooms}"]
+    ds --&gt; file[".storage/flare.claims&lt;br/&gt;{claims, rooms, overrides}"]
     stop["EVENT_HOMEASSISTANT_FINAL_WRITE"] --&gt; file
     file --&gt; load["next start:&lt;br/&gt;async_load before platforms"]
     load --&gt; seed["ClaimEvents.start():&lt;br/&gt;seed statuses, note mismatches"]
@@ -602,6 +602,12 @@ only match by value. A light still showing FLARE’s target stays
 restored claim counts as dark, and goes when its room next does.</li>
   <li>A crash loses the last 5 seconds of claims and fails open: an unclaimed
 light is free to drive.</li>
+  <li><code class="language-plaintext highlighter-rouge">overrides</code> is the override log (<code class="language-plaintext highlighter-rouge">log_override</code>): the last 50 overrides,
+each with both claims, the live values, the light’s raw colour
+attributes (<code class="language-plaintext highlighter-rouge">matching.reported()</code>), its device’s manufacturer and model,
+the integration providing it and the tolerances in force. Logged when
+<code class="language-plaintext highlighter-rouge">ClaimEvents</code> fires <code class="language-plaintext highlighter-rouge">flare_light_overridden</code>, which carries part of the
+same entry. Only the Settings entry’s diagnostics read it.</li>
 </ul>
 <h2 id="showing-it">
   
