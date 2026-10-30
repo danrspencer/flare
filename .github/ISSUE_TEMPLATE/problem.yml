@@ -1,0 +1,70 @@
+name: Something isn't working
+description: Lights doing something odd, setup or install trouble, the dashboard not loading
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying FLARE! Tell me what's going on in your own words. Everything below the first box is optional: if you can grab any of it, I can usually help quicker, but don't let it stop you posting.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What's happening?
+      description: What you expected, what you saw instead, and roughly when. Screenshots are very welcome.
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: FLARE's version (HACS → FLARE) and Home Assistant's (Settings → About).
+      placeholder: FLARE 2.0.0, Home Assistant 2026.10.4
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: What's it about?
+      description: Just so I know where to start looking.
+      options:
+        - Lights turning on or off when they shouldn't (or not when they should)
+        - Lights showing as overridden
+        - Brightness or colour not what I expected
+        - Installing or updating
+        - Setting up
+        - The dashboard
+        - Something else
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ### Extras that help
+
+        Any of these speed things up a lot. Attach files by dragging them into a box.
+
+        - **For a room doing the wrong thing:** a trace of the run that did it. Open the room's automation, click **⋮ → Traces**, pick the run (the times are listed at the top), then **⋮ → Download trace**. A couple of runs either side of the problem is even better.
+        - **For overrides, or anything to do with lights FLARE has lost track of:** the diagnostics from **Settings → Devices & services → FLARE → Settings → ⋮ → Download diagnostics**. They list your light names and what FLARE last asked each one for.
+        - **For a light that keeps reading as overridden:** what's in **Developer Tools → States** for that light while it's on (the attributes block). `color_mode`, `color_temp_kelvin`, `xy_color` and `supported_color_modes` are the interesting ones.
+        - **For the dashboard:** any red errors from your browser's developer tools (Console tab). Often a hard reload (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) fixes it after an update.
+        - **For installing:** your HACS version, and any lines mentioning `hacs` or `flare` in **Settings → System → Logs**.
+
+  - type: textarea
+    id: lights
+    attributes:
+      label: Your lights and sensors
+      description: Brand and model, and how they're connected (Hue, ZHA, Zigbee2MQTT, Matter, etc.), for whichever ones are misbehaving. Same for any occupancy or motion sensors if they're involved.
+      placeholder: e.g. IKEA TRADFRI bulbs through Zigbee2MQTT, Aqara FP2 presence sensor
+    validations:
+      required: false
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: Traces, diagnostics, logs
+      description: Drop any of the files above in here, or paste text. Anything you'd rather keep private, just leave out.
+    validations:
+      required: false
