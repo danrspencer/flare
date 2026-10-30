@@ -1,5 +1,5 @@
 """What happens to claims as lights change on their own: a room going
-dark, a light dropping and recovering, and pruning."""
+dark, and a light dropping and recovering."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
-from custom_components.flare.tracking.claims import STALE_RECORD_MAX_AGE_DAYS
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,
@@ -181,64 +180,6 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
         return_response=True,
     )
     assert "light.a" not in result["groups"][0]["combined"]
-
-
-async def test_prune_stale_removes_a_record_untouched_past_the_cutoff(setup_integration: HomeAssistant):
-    hass = setup_integration
-    async_mock_service(hass, "light", "turn_on")
-    set_light(hass, "light.a", "off", supported_color_modes=CT)
-
-    with freeze_time(dt_util.utcnow()) as frozen:
-        await apply_lighting(
-            hass,
-            ['light.a'],
-            brightness=180,
-            color_temp_kelvin=3200,
-            transition=2,
-        )
-        tracker = claim_registry(hass)
-        assert "light.a" in tracker.all_records()
-
-        frozen.move_to(dt_util.utcnow() + timedelta(days=STALE_RECORD_MAX_AGE_DAYS, hours=1))
-        tracker.async_prune_stale()
-
-    assert "light.a" not in tracker.all_records()
-
-
-async def test_prune_stale_leaves_a_recent_record_alone(setup_integration: HomeAssistant):
-    hass = setup_integration
-    async_mock_service(hass, "light", "turn_on")
-    set_light(hass, "light.a", "off", supported_color_modes=CT)
-
-    with freeze_time(dt_util.utcnow()) as frozen:
-        await apply_lighting(
-            hass,
-            ['light.a'],
-            brightness=180,
-            color_temp_kelvin=3200,
-            transition=2,
-        )
-        tracker = claim_registry(hass)
-
-        frozen.move_to(dt_util.utcnow() + timedelta(hours=1))
-        tracker.async_prune_stale()
-
-    assert "light.a" in tracker.all_records()
-
-
-async def test_prune_stale_leaves_a_record_with_no_last_seen_alone(setup_integration: HomeAssistant):
-    """Age can't be judged, so it's kept."""
-    hass = setup_integration
-    tracker = claim_registry(hass)
-    tracker.claims["light.a"] = {  # this shape shouldn't occur naturally
-        "observed": {"context_id": "ctx-old", "recorded_at": None, "target": None},
-        "latest": None,
-        "last_seen": None,
-    }
-
-    tracker.async_prune_stale()
-
-    assert "light.a" in tracker.all_records()
 
 
 async def _groups(hass: HomeAssistant) -> list[str]:

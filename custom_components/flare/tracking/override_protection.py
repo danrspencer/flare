@@ -41,8 +41,6 @@ class _ContextClaim(TypedDict):
 class _WriteRecord(TypedDict, total=False):
     observed: Optional[_ContextClaim]
     latest: Optional[_ContextClaim]
-    # ISO 8601 last write, for pruning only.
-    last_seen: Optional[str]
     # ISO 8601: when the light first stopped matching its claims, kept by
     # claims.py. Absent while it matches.
     mismatch_since: Optional[str]
