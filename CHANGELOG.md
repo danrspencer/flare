@@ -127,6 +127,10 @@ After updating:
   passes them is rejected. All three take `min_brightness_change` and `min_color_temp_change`
   instead, which decide both what's sent and whether a light still matches its claim. Each
   defaults to its setting under **FLARE → Settings → Configure**.
+- `brightness`, `color_temp_kelvin`, `rgb_color` and `transition` are checked as
+  `light.turn_on` checks them, so a call is rejected straight away for an `rgb_color` value
+  outside 0–255 or a negative `color_temp_kelvin`, rather than failing when FLARE sends it on.
+  `room_entities` also takes a comma-separated list.
 
 ## [1.2.1] - Unreleased
 

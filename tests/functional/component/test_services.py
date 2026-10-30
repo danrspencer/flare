@@ -100,6 +100,29 @@ async def test_apply_lighting_non_numeric_color_temp_kelvin_raises(setup_integra
         await apply_lighting(hass, ['light.a'], brightness=180, color_temp_kelvin='not-a-number', transition=2)
 
 
+@pytest.mark.parametrize(
+    "values",
+    [{"rgb_color": [256, 0, 0]}, {"rgb_color": [255, 0]}, {"color_temp_kelvin": -1}],
+    ids=["rgb out of range", "rgb too short", "negative kelvin"],
+)
+async def test_apply_lighting_rejects_what_light_turn_on_would(setup_integration: HomeAssistant, values):
+    hass = setup_integration
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    with pytest.raises(vol.Invalid):
+        await apply_lighting(hass, ["light.a"], **{"brightness": 180, "color_temp_kelvin": 3200, "transition": 2, **values})
+
+
+async def test_apply_lighting_clamps_brightness_and_transition_as_light_turn_on_does(setup_integration: HomeAssistant):
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    await apply_lighting(hass, ["light.a"], brightness=300, color_temp_kelvin=3200, transition=-1)
+
+    assert (turn_on[-1].data["brightness"], turn_on[-1].data["transition"]) == (255, 0)
+
+
 async def test_apply_lighting_accepts_an_explicit_null_rgb_color(setup_integration: HomeAssistant):
     """A sensor that doesn't publish rgb_color renders a literal None."""
     hass = setup_integration

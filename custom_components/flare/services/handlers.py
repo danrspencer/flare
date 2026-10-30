@@ -9,7 +9,7 @@ import asyncio
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_TRANSITION
+from homeassistant.components.light import ATTR_BRIGHTNESS, ATTR_TRANSITION, VALID_BRIGHTNESS, VALID_TRANSITION
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, SERVICE_TURN_OFF, SERVICE_TURN_ON
@@ -43,7 +43,7 @@ LIGHT_IDS = [cv.entity_domain(LIGHT_DOMAIN)]
 # No room means "write, but track nothing".
 ROOM_FIELDS = {
     vol.Optional("room_id"): vol.Any(None, cv.string),
-    vol.Optional("room_entities"): vol.Any(None, [cv.entity_id]),
+    vol.Optional("room_entities"): vol.Any(None, cv.entity_ids),
 }
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
@@ -63,13 +63,13 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
-        vol.Optional("brightness"): vol.Any(None, vol.Coerce(int)),
-        vol.Required("color_temp_kelvin"): vol.Coerce(int),
+        vol.Optional("brightness"): vol.Any(None, VALID_BRIGHTNESS),
+        vol.Required("color_temp_kelvin"): cv.positive_int,
         vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # Accepts an explicit None: a template reading a missing attribute
-        # renders None, not an omitted key.
-        vol.Optional("rgb_color"): vol.Any(None, vol.All([vol.Coerce(int)], vol.Length(min=3, max=3))),
+        # renders None, not an omitted key. Otherwise as light.turn_on takes it.
+        vol.Optional("rgb_color"): vol.Any(None, vol.All(vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3))),
         vol.Optional("force", default=False): cv.boolean,
         **TOLERANCE_FIELDS,
         **ROOM_FIELDS,
@@ -96,12 +96,12 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
     }
 )
 
-APPLY_LIGHTING_SCHEMA = COMPUTE_LIGHTING_GROUPS_SCHEMA.extend({vol.Required("transition"): vol.Coerce(float)})
+APPLY_LIGHTING_SCHEMA = COMPUTE_LIGHTING_GROUPS_SCHEMA.extend({vol.Required("transition"): VALID_TRANSITION})
 
 TURN_OFF_SCHEMA = vol.Schema(
     {
         vol.Required("entities"): LIGHT_IDS,
-        vol.Optional("transition", default=0): vol.Coerce(float),
+        vol.Optional("transition", default=0): VALID_TRANSITION,
         **ROOM_FIELDS,
     }
 )
