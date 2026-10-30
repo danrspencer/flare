@@ -145,6 +145,14 @@ class TestRgb:
         assert not shows({"brightness": 200, "rgb_color": [255, 120, 10, 0]}, RGB)
         assert not shows({"brightness": 200}, RGB)
 
+    def test_a_white_in_color_temp_mode_does_not_show_an_rgb_target(self):
+        """HA backfills rgb_color in color_temp mode: 3200K reports exactly
+        the curve's RGB for 3200K, which a bulb in a colour mode shows far
+        warmer."""
+        target = {"brightness": 180, "rgb_color": [255, 184, 123]}
+        assert not shows(_ct(180, 3200, rgb_color=[255, 184, 123]), target)
+        assert shows({"brightness": 180, "color_mode": "rgb", "rgb_color": [255, 184, 123]}, target)
+
     def test_only_an_rgb_target_reads_rgb(self):
         """A Kelvin target never falls back to comparing rgb_color."""
         assert not shows({"brightness": 255, "rgb_color": [255, 255, 252]}, {"brightness": 255, "color_temp_kelvin": 6578})

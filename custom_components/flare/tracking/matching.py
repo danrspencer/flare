@@ -21,7 +21,9 @@ Reading a light:
   advertised range often reports in xy.
 - RGB is `rgb_color`, compared only against an RGB target, by its
   difference summed over the three channels, so a shift spread across them
-  counts as much as one in a single channel.
+  counts as much as one in a single channel. Never in COLOR_TEMP mode,
+  where HA works `rgb_color` out from the Kelvin: 3200K reports exactly the
+  curve's RGB for 3200K, which a bulb in a colour mode shows far warmer.
 
 Comparing, for a Kelvin target:
 
@@ -43,6 +45,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Optional
 
+from homeassistant.components.light import ColorMode
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
@@ -76,7 +79,9 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
     if not _brightness_matches(attributes.get("brightness"), target["brightness"], tolerance):
         return False
     if target.get("rgb_color") is not None:
-        return _rgb_matches(attributes.get("rgb_color"), target["rgb_color"], tolerance)
+        return attributes.get("color_mode") != ColorMode.COLOR_TEMP and _rgb_matches(
+            attributes.get("rgb_color"), target["rgb_color"], tolerance
+        )
     if target.get("color_temp_kelvin") is None:
         return False
     current = reported_kelvin(attributes)

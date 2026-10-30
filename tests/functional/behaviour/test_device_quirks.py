@@ -81,6 +81,34 @@ async def test_an_rgb_capable_bulb_gets_colour_while_its_non_rgb_neighbour_stays
     )
 
 
+async def test_an_rgb_bulb_lit_in_colour_temperature_switches_to_rgb_when_its_phase_prefers_it(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """Lit through a boundary into a Prefer RGB phase whose values match the
+    last, a bulb in colour-temp mode reports the very rgb_color it would be
+    sent, and must still be sent it."""
+    for key, value in (("night_brightness", CURVE_BRIGHTNESS), ("night_kelvin", CURVE_KELVIN)):
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": f"number.test_{key}", "value": value}, blocking=True
+        )
+    (bulb,) = await add_bulbs("rgb_spot", area_id=area, rgb_spot={"supports_rgb": True})
+    occupancy(hass, SENSOR, "off")
+    await setup_room(lights=[bulb], occupancy_sensors=[SENSOR], rgb_phases=["Night"])
+
+    occupancy(hass, SENSOR, "on")
+    await hass.async_block_till_done()
+    state = hass.states.get(bulb.entity_id)
+    assert state.attributes.get("color_mode") == "color_temp", "precondition: Evening sends colour temperature"
+    assert state.attributes.get("rgb_color") == kelvin_to_rgb(CURVE_KELVIN), (
+        "precondition: HA backfills the rgb_color Night will ask for"
+    )
+
+    await move_to_phase(hass, frozen_time, "Night")
+
+    state = hass.states.get(bulb.entity_id)
+    assert state.attributes.get("color_mode") == "rgb", "Night prefers RGB, so the bulb should have been sent rgb_color"
+
+
 async def test_a_device_matching_the_two_step_pattern_lands_at_the_right_brightness_and_colour(
     hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
