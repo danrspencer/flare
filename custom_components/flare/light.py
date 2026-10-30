@@ -13,17 +13,29 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED
+from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED, SERVICE_TRIGGER
 from homeassistant.components.group.light import LightGroup
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
+from homeassistant.components.light import ENTITY_ID_FORMAT
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STARTED
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback, split_entity_id
 from homeassistant.helpers import area_registry as ar, device_registry as dr
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.event import async_track_entity_registry_updated_event
 from homeassistant.helpers.target import TargetStateChangedData, async_track_target_selector_state_change_event
 
-from .const import CONF_AREA, CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_FLARES
+from .const import (
+    ATTR_ENTITIES,
+    ATTR_ROOM_ENTITIES,
+    ATTR_ROOM_ID,
+    CONF_AREA,
+    CONF_ENTRY_TYPE,
+    DOMAIN,
+    ENTRY_TYPE_FLARES,
+    SERVICE_CLAIMS_OVERRIDE,
+)
 from .flares.identity import is_flare_light
 from .flares.automation import automation_entity_id, automation_exists, lights_target
 from .flares.bare import is_bare_turn_on
@@ -69,7 +81,7 @@ class FlareLight(LightGroup):
         self._attr_name = None
         self._instance = instance
         self._attr_device_info = instance.device_info
-        self.entity_id = f"light.{instance.prefix}flare"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare")
         self._untrack: CALLBACK_TYPE | None = None
         # Following the automation's own registry entry, under its current id.
         self._untrack_automation: CALLBACK_TYPE | None = None
@@ -134,7 +146,7 @@ class FlareLight(LightGroup):
 
     @callback
     def _only_room_lights(self, entity_ids: set[str]) -> set[str]:
-        return {e for e in entity_ids if e.startswith("light.") and not is_flare_light(self.hass, e)}
+        return {e for e in entity_ids if split_entity_id(e)[0] == LIGHT_DOMAIN and not is_flare_light(self.hass, e)}
 
     @callback
     def _members_changed(self, added, removed, states) -> None:
@@ -164,8 +176,8 @@ class FlareLight(LightGroup):
             await super().async_turn_on(**kwargs)
             return
         await self.hass.services.async_call(
-            "automation",
-            "trigger",
+            AUTOMATION_DOMAIN,
+            SERVICE_TRIGGER,
             {ATTR_ENTITY_ID: automation_entity_id(self.hass, self._instance.config)},
             blocking=True,
             context=self._context,
@@ -181,12 +193,12 @@ class FlareLight(LightGroup):
         going dark hands the lights back. Needs the Settings entry, which owns
         flare.claims_override."""
         automation = automation_entity_id(self.hass, self._instance.config)
-        if automation is None or not self._entity_ids or not self.hass.services.has_service(DOMAIN, "claims_override"):
+        if automation is None or not self._entity_ids or not self.hass.services.has_service(DOMAIN, SERVICE_CLAIMS_OVERRIDE):
             return
         await self.hass.services.async_call(
             DOMAIN,
-            "claims_override",
-            {"entities": self._entity_ids, "room_id": automation, "room_entities": self._entity_ids},
+            SERVICE_CLAIMS_OVERRIDE,
+            {ATTR_ENTITIES: self._entity_ids, ATTR_ROOM_ID: automation, ATTR_ROOM_ENTITIES: self._entity_ids},
             blocking=True,
             context=self._context,
         )

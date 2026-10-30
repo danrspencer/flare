@@ -9,8 +9,17 @@ from tests.support import COMPONENT as PACKAGE
 HOME = PACKAGE / "tracking" / "matching.py"
 # The curve converts Kelvin for sending, never for comparing.
 CONVERTS_FOR_SENDING = {PACKAGE / "schedule" / "curve.py"}
-# What a light reports about its colour; reading any of these is matching.py's job.
+# What a light reports about its colour, as strings or HA's ATTR_ names;
+# reading any of these is matching.py's job.
 LIGHT_COLOUR_ATTRIBUTES = {"color_temp_kelvin", "xy_color", "rgb_color", "hs_color"}
+LIGHT_COLOUR_ATTRIBUTE_NAMES = {f"ATTR_{attribute.upper()}" for attribute in LIGHT_COLOUR_ATTRIBUTES}
+
+
+def _names_a_colour(arg: ast.expr) -> bool:
+    if isinstance(arg, ast.Constant):
+        return arg.value in LIGHT_COLOUR_ATTRIBUTES
+    name = arg.id if isinstance(arg, ast.Name) else arg.attr if isinstance(arg, ast.Attribute) else None
+    return name in LIGHT_COLOUR_ATTRIBUTE_NAMES
 
 
 def _modules():
@@ -37,8 +46,7 @@ def test_only_matching_reads_a_lights_colour_from_its_state():
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
                 continue
-            args = [a.value for a in node.args if isinstance(a, ast.Constant)]
             on_attributes = node.func.attr == "get" and getattr(node.func.value, "attr", None) == "attributes"
-            if (on_attributes or node.func.attr == "state_attr") and LIGHT_COLOUR_ATTRIBUTES & set(args):
+            if (on_attributes or node.func.attr == "state_attr") and any(_names_a_colour(a) for a in node.args):
                 readers.append(f"{path.relative_to(PACKAGE)}:{node.lineno}")
     assert readers == [], "read a light's colour through tracking/matching.py"

@@ -23,17 +23,25 @@ import re
 
 import yaml
 
-from .coordinator import CURVE_KEYS, TIME_KEYS
+from .coordinator import (
+    CURVE_KEYS,
+    DAY_TIME,
+    EVENING_EARLIEST_TIME,
+    EVENING_LATEST_TIME,
+    MORNING_TIME,
+    NIGHT_TIME,
+    TIME_KEYS,
+)
 from .curve import PHASE_ORDER, value_range
 
 PHASES = tuple(p.lower() for p in PHASE_ORDER)
 
 # Evening has two limits around sunset where every other phase has a start.
 _TIME_FIELDS = {
-    "morning": {"time": "morning_time"},
-    "day": {"time": "day_time"},
-    "evening": {"earliest": "evening_earliest_time", "latest": "evening_latest_time"},
-    "night": {"time": "night_time"},
+    "morning": {"time": MORNING_TIME},
+    "day": {"time": DAY_TIME},
+    "evening": {"earliest": EVENING_EARLIEST_TIME, "latest": EVENING_LATEST_TIME},
+    "night": {"time": NIGHT_TIME},
 }
 _NUMBER_FIELDS = ("brightness", "kelvin", "brightness_transition", "kelvin_transition")
 

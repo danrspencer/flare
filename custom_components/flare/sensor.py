@@ -14,10 +14,11 @@ import copy
 from collections.abc import Callable
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.button import ENTITY_ID_FORMAT as BUTTON_ENTITY_ID
+from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STOP, EntityCategory
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
+from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory, Platform
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback, split_entity_id
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -31,16 +32,29 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    ATTR_CONTROLLED,
+    ATTR_LATEST,
+    ATTR_LIGHT,
+    ATTR_LIGHTS,
+    ATTR_LIVE,
+    ATTR_LIVE_CONTEXT_ID,
+    ATTR_OBSERVED,
+    ATTR_PREVIOUS_STATUS,
+    ATTR_ROOM,
+    ATTR_ROOMS,
+    CLEAR_OBJECT_ID,
+    CLEAR_ROLE,
     CONF_ENTRY_TYPE,
     DOMAIN,
     ENTRY_TYPE_SETTINGS,
+    NAME,
     EVENT_LIGHT_OVERRIDDEN,
     EVENT_LIGHTS_CONTROLLED,
     EVENT_LIGHTS_RELEASED,
 )
 from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
 from .tracking.matching import shown
-from .tracking.override_protection import MISMATCH_GRACE
+from .tracking.override_protection import MISMATCH_GRACE, LightStatus
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 
@@ -53,15 +67,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     registry: ClaimRegistry = entry.runtime_data
     entry.async_on_unload(ClaimEvents(hass, registry, entry).start())
-    async_add_entities([_CountSensor(hass, registry, entry, status) for status in ("controlled", "overridden")])
+    async_add_entities([_CountSensor(hass, registry, entry, status) for status in COUNTED_STATUSES])
     _LightStatuses(hass, registry, entry, async_add_entities).start()
 
 
-def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> str:
+# The statuses with a count sensor.
+COUNTED_STATUSES = (LightStatus.CONTROLLED, LightStatus.OVERRIDDEN)
+
+
+def _count_object_id(status: LightStatus) -> str:
+    return f"flare_{status}_lights"
+
+
+def _classify_tracked(registry: ClaimRegistry, entity_id: str) -> LightStatus:
     """One claimed light's status, shared by every sensor here so they agree."""
     status, _via = registry.status(entity_id)
-    # "untracked" shows as "controlled": either way, not excluded.
-    return "controlled" if status == "untracked" else status
+    # Untracked shows as controlled: either way, not excluded.
+    return LightStatus.CONTROLLED if status == LightStatus.UNTRACKED else status
 
 
 # How long a room gathers lights it has taken before announcing them.
@@ -72,7 +94,7 @@ def settings_device_info(entry: ConfigEntry) -> DeviceInfo:
     """FLARE's own device, holding the Settings entry's entities, so their
     events show in its Activity."""
     return DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)}, name="FLARE", entry_type=DeviceEntryType.SERVICE, model="Settings"
+        identifiers={(DOMAIN, entry.entry_id)}, name=NAME, entry_type=DeviceEntryType.SERVICE, model="Settings"
     )
 
 
@@ -81,12 +103,12 @@ def _filed_under(hass: HomeAssistant, entry: ConfigEntry, role: str) -> dict[str
     release, which is how the Activity card tells the kinds apart, and
     device_id puts it in FLARE's device's Activity (omitted, not None, if the
     device isn't registered)."""
-    domain = "button" if role == "clear" else "sensor"
+    domain = Platform.BUTTON if role == CLEAR_ROLE else Platform.SENSOR
     entity_id = er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"{entry.entry_id}_{role}") or (
-        "button.flare_clear" if role == "clear" else f"sensor.flare_{role}_lights"
+        BUTTON_ENTITY_ID.format(CLEAR_OBJECT_ID) if role == CLEAR_ROLE else ENTITY_ID_FORMAT.format(_count_object_id(role))
     )
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    return {"entity_id": entity_id, **({"device_id": device.id} if device else {})}
+    device = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
+    return {ATTR_ENTITY_ID: entity_id, **({ATTR_DEVICE_ID: device.id} if device else {})}
 
 
 class ClaimEvents:
@@ -143,17 +165,22 @@ class ClaimEvents:
         for entity_id, record in self._registry.all_records().items():
             status = _classify_tracked(self._registry, entity_id)
             statuses[entity_id] = status
-            if status == "mismatched":
+            if status == LightStatus.MISMATCHED:
                 self._recheck_after_grace()
             if self._last_statuses is None:
                 continue
             previous = self._last_statuses.get(entity_id)
-            if status == "overridden" and previous != "overridden":
+            if status == LightStatus.OVERRIDDEN and previous != LightStatus.OVERRIDDEN:
                 self._fire_overridden(entity_id, record, previous)
             # Not back from overridden (churn), nor from unavailable or
             # mismatched (every light, after a restart), which were already
             # controlled.
-            elif status == "controlled" and previous not in ("controlled", "overridden", "unavailable", "mismatched"):
+            elif status == LightStatus.CONTROLLED and previous not in (
+                LightStatus.CONTROLLED,
+                LightStatus.OVERRIDDEN,
+                LightStatus.UNAVAILABLE,
+                LightStatus.MISMATCHED,
+            ):
                 self._controlled_soon(entity_id)
         # The first pass seeds without firing, so a restart doesn't re-announce.
         self._last_statuses = statuses
@@ -178,14 +205,14 @@ class ClaimEvents:
         self.hass.bus.async_fire(
             EVENT_LIGHT_OVERRIDDEN,
             {
-                "light": entity_id,
-                "rooms": [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
-                **_filed_under(self.hass, self._entry, "overridden"),
-                "previous_status": previous,
-                "live_context_id": state.context.id if state else None,
-                "live": {"state": state.state, **shown(state.attributes)} if state else {"state": None},
-                "observed": record.get("observed"),
-                "latest": record.get("latest"),
+                ATTR_LIGHT: entity_id,
+                ATTR_ROOMS: [self._registry.room_entity_id(key) for key in self._registry.rooms_of(entity_id)],
+                **_filed_under(self.hass, self._entry, LightStatus.OVERRIDDEN),
+                ATTR_PREVIOUS_STATUS: previous,
+                ATTR_LIVE_CONTEXT_ID: state.context.id if state else None,
+                ATTR_LIVE: {"state": state.state, **shown(state.attributes)} if state else {"state": None},
+                ATTR_OBSERVED: record.get("observed"),
+                ATTR_LATEST: record.get("latest"),
             },
         )
 
@@ -207,7 +234,7 @@ class ClaimEvents:
         statuses = self._last_statuses or {}
         for key in sorted(self._registry.room_keys()):
             lit = sorted(
-                e for e in self._registry.room_lights(key) if statuses.get(e) == "controlled" and self._is_on(e)
+                e for e in self._registry.room_lights(key) if statuses.get(e) == LightStatus.CONTROLLED and self._is_on(e)
             )
             lights = [e for e in lit if e in gathered]
             if not lights:
@@ -215,10 +242,10 @@ class ClaimEvents:
             self.hass.bus.async_fire(
                 EVENT_LIGHTS_CONTROLLED,
                 {
-                    "lights": lights,
-                    "controlled": len(lit),
-                    "room": self._registry.room_entity_id(key),
-                    **_filed_under(self.hass, self._entry, "controlled"),
+                    ATTR_LIGHTS: lights,
+                    ATTR_CONTROLLED: len(lit),
+                    ATTR_ROOM: self._registry.room_entity_id(key),
+                    **_filed_under(self.hass, self._entry, LightStatus.CONTROLLED),
                 },
             )
 
@@ -230,15 +257,15 @@ class ClaimEvents:
         self.hass.bus.async_fire(
             EVENT_LIGHTS_RELEASED,
             {
-                "lights": entity_ids,
-                "room": self._registry.room_entity_id(room) if room else None,
-                **_filed_under(self.hass, self._entry, "clear"),
+                ATTR_LIGHTS: entity_ids,
+                ATTR_ROOM: self._registry.room_entity_id(room) if room else None,
+                **_filed_under(self.hass, self._entry, CLEAR_ROLE),
             },
         )
 
     def _is_on(self, entity_id: str) -> bool:
         state = self.hass.states.get(entity_id)
-        return state is not None and state.state == "on"
+        return state is not None and state.state == STATE_ON
 
 
 class _CountSensor(SensorEntity):
@@ -251,14 +278,14 @@ class _CountSensor(SensorEntity):
     _attr_native_unit_of_measurement = "lights"
     _attr_should_poll = False
 
-    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, status: str) -> None:
+    def __init__(self, hass: HomeAssistant, registry: ClaimRegistry, entry: ConfigEntry, status: LightStatus) -> None:
         self.hass = hass
         self._registry = registry
         self._status = status
-        self._attr_icon = "mdi:lightbulb-group" if status == "controlled" else "mdi:lightbulb-alert-outline"
+        self._attr_icon = "mdi:lightbulb-group" if status == LightStatus.CONTROLLED else "mdi:lightbulb-alert-outline"
         self._attr_unique_id = f"{entry.entry_id}_{status}"
         self._attr_translation_key = f"all_{status}"
-        self.entity_id = f"sensor.flare_{status}_lights"
+        self.entity_id = ENTITY_ID_FORMAT.format(_count_object_id(status))
         self._attr_device_info = settings_device_info(entry)
 
     async def async_added_to_hass(self) -> None:
@@ -281,7 +308,7 @@ class _CountSensor(SensorEntity):
 
 # What a light's status sensor can say; an unreachable light makes it
 # unavailable instead.
-LIGHT_STATUSES = ("controlled", "overridden", "mismatched", "untracked", "off")
+LIGHT_STATUSES = tuple(status.value for status in LightStatus if status != LightStatus.UNAVAILABLE)
 STATUS_UNIQUE_ID = "{entry_id}_status_{light}"
 
 
@@ -381,7 +408,7 @@ class _LightStatusSensor(SensorEntity):
             state = hass.states.get(self.light_entity_id)
             self._attr_has_entity_name = False
             self._attr_name = f"{state.name if state else self.light_entity_id} FLARE status"
-        self.entity_id = f"sensor.{self.light_entity_id.split('.', 1)[1]}_flare_status"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{split_entity_id(self.light_entity_id)[1]}_flare_status")
         self._unsubscribe_light: list[CALLBACK_TYPE] = []
 
     async def async_added_to_hass(self) -> None:
@@ -418,13 +445,13 @@ class _LightStatusSensor(SensorEntity):
     def _handle_update(self, _event: Event | None = None) -> None:
         self.async_write_ha_state()
 
-    def _status(self) -> str:
+    def _status(self) -> LightStatus:
         status, _via = self._registry.status(self.light_entity_id)
         return status
 
     @property
     def available(self) -> bool:
-        return self._status() != "unavailable"
+        return self._status() != LightStatus.UNAVAILABLE
 
     @property
     def native_value(self) -> str | None:
@@ -458,29 +485,29 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
         super().__init__(coordinator)
         self._attr_unique_id = f"{instance.subentry_id}_flare"
         self._attr_translation_key = "schedule"
-        self.entity_id = f"sensor.{instance.prefix}flare"
+        self.entity_id = ENTITY_ID_FORMAT.format(f"{instance.prefix}flare")
         self._attr_device_info = instance.device_info
 
     @property
     def native_value(self):
-        return self.coordinator.data.get("phase")
+        return self.coordinator.data.phase
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
-        rgb_color = data.get("rgb_color")
+        boundaries = data.boundaries
         return {
-            "phase": data.get("phase"),
-            "brightness": data.get("brightness"),
-            "color_temp": data.get("kelvin"),
+            "phase": data.phase,
+            "brightness": data.brightness,
+            "color_temp": data.kelvin,
             # A list, as the rgb_color service fields expect.
-            "rgb_color": list(rgb_color) if rgb_color is not None else None,
-            "morning_start": data.get("morning_ts"),
-            "day_start": data.get("day_ts"),
-            "evening_start": data.get("evening_ts"),
-            "night_start": data.get("night_ts"),
-            "evening_earliest": data.get("evening_earliest_ts"),
-            "evening_latest": data.get("evening_latest_ts"),
-            "points": data.get("points"),
+            "rgb_color": list(data.rgb_color),
+            "morning_start": boundaries.morning,
+            "day_start": boundaries.day,
+            "evening_start": boundaries.evening,
+            "night_start": boundaries.night,
+            "evening_earliest": boundaries.evening_earliest,
+            "evening_latest": boundaries.evening_latest,
+            "points": data.points,
         }
 

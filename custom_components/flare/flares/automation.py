@@ -11,8 +11,11 @@ from collections.abc import Mapping
 from typing import Any
 
 from homeassistant.components.automation import DATA_COMPONENT, blueprint_in_automation
+from homeassistant.components.blueprint.const import CONF_INPUT, CONF_USE_BLUEPRINT
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.automation.helpers import async_get_blueprints
 from homeassistant.components.blueprint.models import Blueprint
+from homeassistant.const import ATTR_AREA_ID, ATTR_DEVICE_ID, ATTR_ENTITY_ID, ATTR_FLOOR_ID, ATTR_LABEL_ID, CONF_DOMAIN, CONF_SELECTOR
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
@@ -30,11 +33,11 @@ TARGET = "target"
 # A target selector's value is already a whole target.
 _LIGHTS_SELECTORS = {
     "target": TARGET,
-    "area": "area_id",
-    "device": "device_id",
-    "entity": "entity_id",
-    "floor": "floor_id",
-    "label": "label_id",
+    "area": ATTR_AREA_ID,
+    "device": ATTR_DEVICE_ID,
+    "entity": ATTR_ENTITY_ID,
+    "floor": ATTR_FLOOR_ID,
+    "label": ATTR_LABEL_ID,
 }
 
 
@@ -58,7 +61,7 @@ def blueprint_inputs(hass: HomeAssistant, entity_id: str) -> dict[str, Any] | No
     raw = getattr(entity, "_blueprint_inputs", None)
     if not raw:
         return None
-    return dict(raw.get("use_blueprint", {}).get("input") or {})
+    return dict(raw.get(CONF_USE_BLUEPRINT, {}).get(CONF_INPUT) or {})
 
 
 def automation_exists(hass: HomeAssistant, entity_id: str | None) -> bool:
@@ -109,8 +112,8 @@ def _allows_lights(entity_config: Mapping[str, Any] | list | None) -> bool:
     at all could hold anything, so it doesn't count."""
     configs = entity_config if isinstance(entity_config, list) else _filters(entity_config)
     for config in configs:
-        domains = config.get("domain")
-        if domains == "light" or (isinstance(domains, list) and "light" in domains):
+        domains = config.get(CONF_DOMAIN)
+        if domains == LIGHT_DOMAIN or (isinstance(domains, list) and LIGHT_DOMAIN in domains):
             return True
     return False
 
@@ -125,7 +128,7 @@ def lights_input_kinds(blueprint: Blueprint) -> dict[str, str]:
     """Each input that can name lights, and the target key its value is."""
     kinds = {}
     for name, spec in blueprint.inputs.items():
-        selector = (spec or {}).get("selector") or {}
+        selector = (spec or {}).get(CONF_SELECTOR) or {}
         if "entity" in selector and not _allows_lights(selector["entity"]):
             continue
         if "device" in selector and _flare_device_models(selector["device"]):

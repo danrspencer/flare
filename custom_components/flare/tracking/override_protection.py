@@ -10,8 +10,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime, timedelta
+from enum import StrEnum
 from typing import TYPE_CHECKING, Optional, TypedDict
 
+from homeassistant.const import STATE_ON
 from homeassistant.util import dt as dt_util
 
 from ..const import (
@@ -23,6 +25,17 @@ from .matching import Tolerance, shows
 
 if TYPE_CHECKING:
     from homeassistant.core import State
+
+
+class LightStatus(StrEnum):
+    """What override protection makes of a light: classify_state()'s answer."""
+
+    CONTROLLED = "controlled"
+    OVERRIDDEN = "overridden"
+    MISMATCHED = "mismatched"
+    UNTRACKED = "untracked"
+    OFF = "off"
+    UNAVAILABLE = "unavailable"
 
 
 class _ContextClaim(TypedDict):
@@ -68,7 +81,7 @@ def classify(
     current_context: Optional[str],
     attributes: Mapping = {},
     tolerance: Tolerance = Tolerance(),
-) -> tuple[str, Optional[str]]:
+) -> tuple[LightStatus, Optional[str]]:
     """The decision table. Returns `(status, matched_via)`.
 
     - "off": not on, and no claim. An off light with a claim is judged
@@ -85,27 +98,27 @@ def classify(
     `matched_via` ("latest-context", "latest-value", "observed-context",
     "observed-value", or None) is diagnostic only."""
     if observed is None and latest is None:
-        return ("untracked" if is_on else "off"), None
+        return (LightStatus.UNTRACKED if is_on else LightStatus.OFF), None
     if _context_matches(latest, current_context):
-        return "controlled", "latest-context"
+        return LightStatus.CONTROLLED, "latest-context"
     if _context_matches(observed, current_context):
-        return "controlled", "observed-context"
+        return LightStatus.CONTROLLED, "observed-context"
     if not is_on:
         # An off light matches only a claim that asked for off.
         if _asked_for_off(latest):
-            return "controlled", "latest-value"
+            return LightStatus.CONTROLLED, "latest-value"
         if _asked_for_off(observed):
-            return "controlled", "observed-value"
+            return LightStatus.CONTROLLED, "observed-value"
         if observed is None:
-            return "untracked", None
-        return "overridden", None
+            return LightStatus.UNTRACKED, None
+        return LightStatus.OVERRIDDEN, None
     if observed is None:
-        return "untracked", None
+        return LightStatus.UNTRACKED, None
     if latest is not None and shows(attributes, latest.get("target"), tolerance):
-        return "controlled", "latest-value"
+        return LightStatus.CONTROLLED, "latest-value"
     if shows(attributes, observed.get("target"), tolerance):
-        return "controlled", "observed-value"
-    return "overridden", None
+        return LightStatus.CONTROLLED, "observed-value"
+    return LightStatus.OVERRIDDEN, None
 
 
 # How long a light can disagree with its claims before it counts as
@@ -120,7 +133,7 @@ def classify_state(
     min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
     min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
     now: Optional[datetime] = None,
-) -> tuple[str, Optional[str]]:
+) -> tuple[LightStatus, Optional[str]]:
     """classify() for a live HA state and its claim record (None if
     untracked). "unavailable" for a light HA can't reach or doesn't know,
     before any claim is consulted.
@@ -131,31 +144,31 @@ def classify_state(
     or a bulb reporting late. A mismatched light is blocked like an
     overridden one, so a real change is never written over meanwhile."""
     if not is_reachable(state):
-        return "unavailable", None
+        return LightStatus.UNAVAILABLE, None
     status, matched_via = classify(
-        state.state == "on",
+        state.state == STATE_ON,
         (record or {}).get("observed"),
         (record or {}).get("latest"),
         state.context.id,
         state.attributes,
         Tolerance(min_brightness_change, min_color_temp_change),
     )
-    if status != "overridden":
+    if status != LightStatus.OVERRIDDEN:
         return status, matched_via
     since = _parse((record or {}).get("mismatch_since"))
     if since is None or (now or dt_util.utcnow()) < since + MISMATCH_GRACE:
-        return "mismatched", None
+        return LightStatus.MISMATCHED, None
     return status, matched_via
 
 
 def disagrees(status: str) -> bool:
     """Whether a status means the light doesn't match its claims."""
-    return status in ("mismatched", "overridden")
+    return status in (LightStatus.MISMATCHED, LightStatus.OVERRIDDEN)
 
 
 def _parse(value: Optional[str]) -> Optional[datetime]:
     try:
-        return datetime.fromisoformat(value) if value else None
+        return dt_util.parse_datetime(value) if value else None
     except (TypeError, ValueError):
         return None
 

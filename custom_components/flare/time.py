@@ -30,7 +30,7 @@ class _BoundaryTime(TimeEntity, RestoreEntity):
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance, key: str) -> None:
         self._coordinator = coordinator
         self._key = key
-        self._attr_unique_id = f"{instance.subentry_id}_{key}"
+        self._attr_unique_id = instance.unique_id(key)
         self._attr_translation_key = key
         self.entity_id = instance.time_entity_id(key)
         self._attr_device_info = instance.device_info

@@ -10,6 +10,9 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components import number as number_platform
+from homeassistant.components import time as time_platform
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import Context, HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
@@ -50,11 +53,11 @@ async def async_apply_schedule(
     validated, so nothing is set unless all of it can be."""
     for key, value in values.items():
         if key in TIME_KEYS:
-            domain, entity_id, data = "time", instance.time_entity(hass, key), {"time": value}
+            platform, entity_id, data = time_platform, instance.time_entity(hass, key), {time_platform.ATTR_TIME: value}
         else:
-            domain, entity_id, data = "number", instance.number_entity(hass, key), {"value": value}
+            platform, entity_id, data = number_platform, instance.number_entity(hass, key), {number_platform.ATTR_VALUE: value}
         await hass.services.async_call(
-            domain, "set_value", {"entity_id": entity_id, **data}, blocking=True, context=context
+            platform.DOMAIN, platform.SERVICE_SET_VALUE, {ATTR_ENTITY_ID: entity_id, **data}, blocking=True, context=context
         )
 
 

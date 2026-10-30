@@ -6,7 +6,10 @@ from __future__ import annotations
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.config_entries import ConfigEntry, ConfigSubentryFlow, SubentryFlowResult
+from homeassistant.const import CONF_NAME
 from homeassistant.helpers import entity_registry as er, selector
 from homeassistant.util import slugify
 
@@ -32,7 +35,7 @@ from .schedule.transfer import ScheduleError, dump, parse
 from .schedule.coordinator import read_schedule
 from .services.schedules import async_apply_schedule, schedule_instance_for
 
-SUBENTRY_FIELDS = {vol.Required("name"): selector.TextSelector()}
+SUBENTRY_FIELDS = {vol.Required(CONF_NAME): selector.TextSelector()}
 
 
 class SensorSubentryFlow(ConfigSubentryFlow):
@@ -43,12 +46,12 @@ class SensorSubentryFlow(ConfigSubentryFlow):
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> SubentryFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            name = user_input["name"].strip()
+            name = user_input[CONF_NAME].strip()
             slug = slugify(name)
             # Slugified, to match the entity_id prefix schedule_instances() derives.
             for subentry in self._get_entry().subentries.values():
                 if slugify(subentry.title) == slug:
-                    errors["name"] = "already_configured"
+                    errors[CONF_NAME] = "already_configured"
                     break
             if not errors:
                 return self.async_create_entry(title=name, unique_id=slug or None, data={})
@@ -145,7 +148,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         return self.async_show_form(
             step_id="custom",
             data_schema=vol.Schema(
-                {vol.Required(CONF_AUTOMATION): selector.EntitySelector(selector.EntitySelectorConfig(domain="automation"))}
+                {vol.Required(CONF_AUTOMATION): selector.EntitySelector(selector.EntitySelectorConfig(domain=AUTOMATION_DOMAIN))}
             ),
         )
 
@@ -185,9 +188,9 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         """Name, and the area the flare starts out in."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            name = user_input["name"].strip()
+            name = user_input[CONF_NAME].strip()
             if _name_taken(self._get_entry(), name):
-                errors["name"] = "already_configured"
+                errors[CONF_NAME] = "already_configured"
             else:
                 return self.async_create_entry(
                     title=name,
@@ -199,11 +202,11 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                 )
         entry = er.async_get(self.hass).async_get(self._entity_id)
         suggested = {
-            "name": self._label(self._entity_id),
+            CONF_NAME: self._label(self._entity_id),
             CONF_AREA: entry.area_id if entry else None,
         }
         fields = {
-            vol.Required("name"): selector.TextSelector(),
+            vol.Required(CONF_NAME): selector.TextSelector(),
             vol.Optional(CONF_AREA): selector.AreaSelector(),
         }
         return self.async_show_form(
@@ -220,7 +223,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         subentry = self._get_reconfigure_subentry()
         data = dict(subentry.data)
         entity_id = automation_entity_id(self.hass, data)
-        fields: dict = {vol.Required("name"): selector.TextSelector()}
+        fields: dict = {vol.Required(CONF_NAME): selector.TextSelector()}
         # The same fields for every flare, however it was added.
         if data.get(CONF_LIGHTS_TARGET):
             fields.update(_TARGET_SCHEMA.schema)
@@ -231,9 +234,9 @@ class FlareSubentryFlow(ConfigSubentryFlow):
 
         errors: dict[str, str] = {}
         if user_input is not None:
-            name = user_input["name"].strip()
+            name = user_input[CONF_NAME].strip()
             if _name_taken(self._get_entry(), name, skip=subentry.subentry_id):
-                errors["name"] = "already_configured"
+                errors[CONF_NAME] = "already_configured"
             else:
                 # Settings flares no longer have.
                 data.pop("turn_off", None)
@@ -246,7 +249,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
                     data[CONF_LIGHTS_INPUT_KIND] = lights_input_kinds(blueprint).get(user_input[CONF_LIGHTS_INPUT], TARGET)
                 return self.async_update_and_abort(self._get_entry(), subentry, title=name, data=data)
 
-        suggested = user_input or {"name": subentry.title, **data}
+        suggested = user_input or {CONF_NAME: subentry.title, **data}
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(vol.Schema(fields), suggested),
@@ -266,7 +269,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
 _TARGET_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_LIGHTS_TARGET): selector.TargetSelector(
-            selector.TargetSelectorConfig(entity=selector.EntityFilterSelectorConfig(domain="light"))
+            selector.TargetSelectorConfig(entity=selector.EntityFilterSelectorConfig(domain=LIGHT_DOMAIN))
         )
     }
 )

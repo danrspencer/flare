@@ -6,13 +6,14 @@ from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.select import SelectEntity
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import PHASE_OPTIONS
-from .schedule.coordinator import ScheduleCoordinator, ScheduleInstance, schedule_instances
+from .const import PHASE_AUTO, PHASE_OPTIONS
+from .schedule.coordinator import PHASE_OVERRIDE_ROLE, ScheduleCoordinator, ScheduleInstance, schedule_instances
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
@@ -28,11 +29,11 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
 
     def __init__(self, coordinator: ScheduleCoordinator, instance: ScheduleInstance) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{instance.subentry_id}_phase_override"
-        self._attr_translation_key = "phase_override"
-        self.entity_id = f"select.{instance.prefix}flare_phase"
+        self._attr_unique_id = instance.unique_id(PHASE_OVERRIDE_ROLE)
+        self._attr_translation_key = PHASE_OVERRIDE_ROLE
+        self.entity_id = instance.override_entity_id
         self._attr_device_info = instance.device_info
-        self._attr_current_option = "Auto"
+        self._attr_current_option = PHASE_AUTO
         self._instance = instance
         # computed_phase when the override was set; once it moves on, the
         # override clears. None while Auto.
@@ -43,9 +44,9 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
         last_state = await self.async_get_last_state()
         if last_state is not None and last_state.state in PHASE_OPTIONS:
             self._attr_current_option = last_state.state
-        if self._attr_current_option != "Auto":
+        if self._attr_current_option != PHASE_AUTO:
             # The original baseline isn't persisted, so use now.
-            self._baseline_phase = self.coordinator.data.get("computed_phase")
+            self._baseline_phase = self.coordinator.data.computed_phase
             # The first refresh predates this entity, so it missed the
             # restored override.
             await self.coordinator.async_request_refresh()
@@ -53,16 +54,16 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
     @property
     def _sticky(self) -> bool:
         state = self.hass.states.get(self._instance.sticky_entity(self.hass))
-        return state is not None and state.state == "on"
+        return state is not None and state.state == STATE_ON
 
     def _handle_coordinator_update(self) -> None:
         if (
             not self._sticky
-            and self._attr_current_option != "Auto"
+            and self._attr_current_option != PHASE_AUTO
             and self._baseline_phase is not None
-            and self.coordinator.data.get("computed_phase") != self._baseline_phase
+            and self.coordinator.data.computed_phase != self._baseline_phase
         ):
-            self._attr_current_option = "Auto"
+            self._attr_current_option = PHASE_AUTO
             self._baseline_phase = None
             # This update's data still reflects the override. The refresh is
             # debounced, so the sensor catches up within 10s.
@@ -71,6 +72,6 @@ class _PhaseOverrideSelect(CoordinatorEntity[ScheduleCoordinator], SelectEntity,
 
     async def async_select_option(self, option: str) -> None:
         self._attr_current_option = option
-        self._baseline_phase = self.coordinator.data.get("computed_phase") if option != "Auto" else None
+        self._baseline_phase = self.coordinator.data.computed_phase if option != PHASE_AUTO else None
         self.async_write_ha_state()
         await self.coordinator.async_request_refresh()
