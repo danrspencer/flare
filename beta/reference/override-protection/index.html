@@ -257,6 +257,7 @@ else’s and leave alone a light you’ve changed yourself. Its entities and opt
   <li><a href="#how-it-works" id="markdown-toc-how-it-works">How it works</a>    <ol>
       <li><a href="#rooms" id="markdown-toc-rooms">Rooms</a></li>
       <li><a href="#the-two-claims" id="markdown-toc-the-two-claims">The two claims</a></li>
+      <li><a href="#how-close-counts-as-a-match" id="markdown-toc-how-close-counts-as-a-match">How close counts as a match</a></li>
       <li><a href="#turning-a-light-off-counts" id="markdown-toc-turning-a-light-off-counts">Turning a light off counts</a></li>
       <li><a href="#when-flare-sets-a-light-again" id="markdown-toc-when-flare-sets-a-light-again">When FLARE sets a light again</a></li>
     </ol>
@@ -405,6 +406,47 @@ still matches <code class="language-plaintext highlighter-rouge">observed</code>
 <p>A light matches a claim if it reports the context of that claim’s change, or the values in it.
 Values are needed because Home Assistant drops a change’s context after five seconds, and some
 bulbs take longer than that to report back.</p>
+<h3 id="how-close-counts-as-a-match">
+  
+  
+    <a href="#how-close-counts-as-a-match" class="anchor-heading" aria-labelledby="how-close-counts-as-a-match"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> How close counts as a match
+  
+  
+</h3>
+    
+
+<p>A light matches a claim’s values if it’s within a tolerance of them, so only a change you’d
+notice counts as someone else’s. Bulbs rarely report back exactly what they were sent: a colour
+temperature asked for as 4294 K can come back as 4312 K. You can set the tolerances under
+<strong>FLARE → Settings → Configure</strong>:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Brightness tolerance</td>
+      <td>5%</td>
+      <td>How far, as a percentage of the brightness FLARE asked for, a light’s brightness can be and still match. A dim light always gets at least 2 (of 255).</td>
+    </tr>
+    <tr>
+      <td>Colour temperature tolerance</td>
+      <td>5 mireds</td>
+      <td>How far a light’s colour temperature can be from what FLARE asked for and still match. For a light FLARE sets by RGB, the red, green and blue differences added together can be up to twice this (10 by default).</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>The same tolerances decide what’s worth sending: a light that close to its target isn’t sent
+anything.</p>
+
+<p>If lights are marked overridden when nobody has changed them, raise the one that matches the
+difference shown on the <a href="../../dashboard/">dashboard</a>. Lower them to catch smaller changes.</p>
 
 <p>Claims are kept across a restart. After a restart every light has a new context, so restored
 claims are matched by values only: a light still showing what FLARE set is FLARE’s, and any

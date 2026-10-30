@@ -415,17 +415,15 @@ nothing that doesn’t.</p>
     TSQ --&gt;|"no"| CB["combined / combined_rgb"]
 </code></pre>
 
-<p><strong>Two kinds of closeness</strong>, and they’re deliberately different:</p>
-
-<ul>
-  <li><em>Override matching</em> (is this still what FLARE set?) uses the tight
-tolerances: 2 brightness, 10 K, 10 per RGB channel, or the same mired.</li>
-  <li><em>Worth sending</em> (should FLARE bother?) widens that by the <strong>minimum
-change</strong>: 5 % of the target brightness and 5 mireds by default, from the
-Settings entry’s options. Only grouping uses it. Widening override
-matching the same way would let a hand-set light near the curve pass as
-FLARE’s.</li>
-</ul>
+<p><strong>One closeness</strong>, for both questions: <em>is this still what FLARE set?</em> and
+<em>should FLARE bother sending?</em> The <strong>tolerances</strong> are 5 % of the target
+brightness and 5 mireds by default, from the Settings entry’s options; a
+call may pass its own. An RGB target’s channel differences are summed and
+allowed twice the colour tolerance. Device rounding has fixed floors: 2
+brightness points for dim targets, Kelvins that floor to the same mired,
+and 4 summed for RGB. 5 % and 5 mireds are about one just-noticeable
+difference, so a light too close to be worth a write is never someone
+else’s change either.</p>
 
 <p>Both go through <code class="language-plaintext highlighter-rouge">tracking/matching.shows()</code>, the one place a light’s
 reported values are compared with a target (see <a href="/flare/beta/architecture/claims/">Claims and override protection</a>).</p>

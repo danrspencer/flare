@@ -440,7 +440,7 @@ anything else calls <code class="language-plaintext highlighter-rouge">classify(
   <tbody>
     <tr>
       <td>brightness</td>
-      <td><code class="language-plaintext highlighter-rouge">brightness</code>, within tolerance</td>
+      <td><code class="language-plaintext highlighter-rouge">brightness</code>, within the Settings entry’s tolerance (5% by default), never less than 2</td>
     </tr>
     <tr>
       <td>Kelvin</td>
@@ -451,12 +451,16 @@ anything else calls <code class="language-plaintext highlighter-rouge">classify(
       <td>two Kelvins that floor to the same mired are the same to a Zigbee bulb</td>
     </tr>
     <tr>
+      <td>near mired</td>
+      <td>within the Settings entry’s tolerance (5 mireds by default), about the smallest change anyone notices</td>
+    </tr>
+    <tr>
       <td>out-of-range target</td>
       <td>match the target as asked, or clamped to the bulb’s advertised range</td>
     </tr>
     <tr>
       <td>RGB</td>
-      <td><code class="language-plaintext highlighter-rouge">rgb_color</code>, only against an RGB target</td>
+      <td><code class="language-plaintext highlighter-rouge">rgb_color</code>, only against an RGB target: the channels’ differences summed, within twice the colour tolerance (10 at the default), never less than 4</td>
     </tr>
   </tbody>
 </table></div>

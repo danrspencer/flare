@@ -435,19 +435,9 @@ something else (see <a href="../override-protection/">override protection</a>).<
       <td>A brightness for individual lights, in place of <code class="language-plaintext highlighter-rouge">brightness</code>. See <a href="#brightness-levels">brightness levels</a>.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">brightness_tolerance</code><br />0–50; default <code class="language-plaintext highlighter-rouge">2</code></td>
-      <td>no</td>
-      <td>A light within this much of the target brightness isn’t sent anything.</td>
-    </tr>
-    <tr>
       <td><code class="language-plaintext highlighter-rouge">color_temp_kelvin</code><br />Kelvin</td>
       <td>yes</td>
       <td>The colour temperature.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">color_temp_tolerance</code><br />Kelvin, 0–500; default <code class="language-plaintext highlighter-rouge">10</code></td>
-      <td>no</td>
-      <td>A light within this many Kelvin of the target isn’t sent anything. Two values that convert to the same mired always count as a match.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
@@ -460,14 +450,14 @@ something else (see <a href="../override-protection/">override protection</a>).<
       <td>Sets every light, including ones someone else has changed. The change is still recorded as FLARE’s.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">min_brightness_change</code><br />percent, 0–25; default 5, from <strong>FLARE → Settings → Configure</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">min_brightness_change</code><br />percent, 0–25; default from <strong>FLARE → Settings → Configure</strong></td>
       <td>no</td>
-      <td>A light within this percentage of the target brightness isn’t sent anything. It’s never smaller than <code class="language-plaintext highlighter-rouge">brightness_tolerance</code>.</td>
+      <td>A light within this percentage of the target brightness, or 2 if that’s more, isn’t sent anything, and still matches its claim. See <a href="../override-protection/#how-close-counts-as-a-match">tolerances</a>.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">min_color_temp_change</code><br />mireds, 0–50; default 5, from <strong>FLARE → Settings → Configure</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">min_color_temp_change</code><br />mireds, 0–50; default from <strong>FLARE → Settings → Configure</strong></td>
       <td>no</td>
-      <td>A light within this many mireds of the target colour temperature isn’t sent anything.</td>
+      <td>A light within this many mireds of the target colour temperature isn’t sent anything, and still matches its claim. For an <code class="language-plaintext highlighter-rouge">rgb_color</code> target, the channels’ differences added together can be up to twice this.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">prefer_rgb_color</code><br />boolean; default <code class="language-plaintext highlighter-rouge">false</code></td>
@@ -478,11 +468,6 @@ something else (see <a href="../override-protection/">override protection</a>).<
       <td><code class="language-plaintext highlighter-rouge">rgb_color</code><br /><code class="language-plaintext highlighter-rouge">[r, g, b]</code> or <code class="language-plaintext highlighter-rouge">null</code></td>
       <td>no</td>
       <td>The colour for RGB lights when <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is on. The schedule sensor’s <code class="language-plaintext highlighter-rouge">rgb_color</code> attribute is the colour temperature converted to RGB. Ignored if <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is off.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">rgb_color_tolerance</code><br />0–100; default <code class="language-plaintext highlighter-rouge">10</code></td>
-      <td>no</td>
-      <td>A light within this much of <code class="language-plaintext highlighter-rouge">rgb_color</code> on every channel isn’t sent anything.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">room_entities</code><br />list of light entity IDs</td>
@@ -812,24 +797,19 @@ yourself with <a href="../override-protection/">override protection</a>. It chan
   </thead>
   <tbody>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">brightness_tolerance</code><br />0–50; default <code class="language-plaintext highlighter-rouge">2</code></td>
-      <td>no</td>
-      <td>A light within this much of a claimed brightness matches it.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">color_temp_tolerance</code><br />Kelvin, 0–500; default <code class="language-plaintext highlighter-rouge">10</code></td>
-      <td>no</td>
-      <td>A light within this many Kelvin of a claimed colour temperature matches it.</td>
-    </tr>
-    <tr>
       <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
       <td>yes</td>
       <td>The lights to check.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">rgb_color_tolerance</code><br />0–100; default <code class="language-plaintext highlighter-rouge">10</code></td>
+      <td><code class="language-plaintext highlighter-rouge">min_brightness_change</code><br />percent, 0–25; default from <strong>FLARE → Settings → Configure</strong></td>
       <td>no</td>
-      <td>A light within this much of a claimed RGB colour on every channel matches it.</td>
+      <td>A light within this percentage of a claimed brightness, or 2 if that’s more, matches it.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">min_color_temp_change</code><br />mireds, 0–50; default from <strong>FLARE → Settings → Configure</strong></td>
+      <td>no</td>
+      <td>A light within this many mireds of a claimed colour temperature matches it. For a claimed RGB colour, the channels’ differences added together can be up to twice this.</td>
     </tr>
   </tbody>
 </table></div>
