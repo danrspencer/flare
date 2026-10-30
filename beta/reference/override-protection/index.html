@@ -299,13 +299,13 @@ else’s and leave alone a light you’ve changed yourself. Its entities and opt
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">sensor.&lt;light&gt;_flare_status</code></td>
-      <td>One for each light a room has named: its <a href="#inspecting-tracked-state">status</a>, on the light’s own device. <code class="language-plaintext highlighter-rouge">rooms</code> lists the rooms it’s in, <code class="language-plaintext highlighter-rouge">claimed</code> whether FLARE has a claim on it, and <code class="language-plaintext highlighter-rouge">asked</code> what FLARE last asked it for.</td>
+      <td>One for each light a room has named: its <a href="#inspecting-tracked-state">status</a>, on the light’s own device. <code class="language-plaintext highlighter-rouge">rooms</code> lists the rooms it’s in, <code class="language-plaintext highlighter-rouge">claimed</code> whether FLARE has a claim on it, <code class="language-plaintext highlighter-rouge">asked</code> what FLARE last asked it for, and <code class="language-plaintext highlighter-rouge">differs</code> which of that it isn’t showing (<code class="language-plaintext highlighter-rouge">state</code>, <code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color</code>), within the tolerances.</td>
     </tr>
   </tbody>
 </table></div>
 
 <p>The two counts and each light’s status are recorded in history, with long-term statistics for
-the counts. <code class="language-plaintext highlighter-rouge">asked</code> isn’t recorded, since it changes with every update. A light that’s
+the counts. <code class="language-plaintext highlighter-rouge">asked</code> and <code class="language-plaintext highlighter-rouge">differs</code> aren’t recorded, since they change with every update. A light that’s
 unavailable or has no claim isn’t included in either count. The <a href="../../dashboard/">dashboard</a>
 shows the counts and each light for each area too.</p>
 
