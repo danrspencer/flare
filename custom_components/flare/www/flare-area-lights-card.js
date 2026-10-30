@@ -1,7 +1,8 @@
 /**
  * An area's lights, worked out live from each light's status sensor: a header with the area's Controlled and Overridden
  * counts and Clear all, then each light with its status, what FLARE asked
- * for, what it shows, and its own Clear.
+ * for, what it shows (any value that differs in red), and its own Clear.
+ * Untracked lights sit behind a row that shows them.
  *
  *   type: custom:flare-area-lights-card
  *   area: kitchen
@@ -64,30 +65,47 @@ function summarise(lights) {
 }
 
 /**
- * Brightness as a percentage, then colour: "78% · 3000K", "off", or null
- * for nothing to say.
+ * Brightness as a percentage, then colour, as parts naming the value each
+ * shows: [{value: 'brightness', text: '78%'}, {value: 'color', text:
+ * '3000K'}], [{value: 'state', text: 'off'}], or null for nothing to say.
  */
-export function describe(values) {
+export function parts(values) {
   if (!values) return null;
-  if (values.state === 'off') return 'off';
-  const parts = [];
-  if (values.brightness != null) parts.push(`${Math.round((values.brightness / 255) * 100)}%`);
-  if (values.color_temp_kelvin != null) parts.push(`${values.color_temp_kelvin}K`);
-  else if (Array.isArray(values.rgb_color)) parts.push(`RGB ${values.rgb_color.join(', ')}`);
-  return parts.length ? parts.join(' · ') : null;
+  if (values.state === 'off') return [{ value: 'state', text: 'off' }];
+  const found = [];
+  if (values.brightness != null) {
+    found.push({ value: 'brightness', text: `${Math.round((values.brightness / 255) * 100)}%` });
+  }
+  if (values.color_temp_kelvin != null) found.push({ value: 'color', text: `${values.color_temp_kelvin}K` });
+  else if (Array.isArray(values.rgb_color)) found.push({ value: 'color', text: `RGB ${values.rgb_color.join(', ')}` });
+  return found.length ? found : null;
+}
+
+/** parts() as one line: "78% · 3000K", "off", or null. */
+export function describe(values) {
+  const found = parts(values);
+  return found && found.map((part) => part.text).join(' · ');
 }
 
 function showing(state) {
   if (!state) return null;
-  if (state.state !== 'on') return state.state;
-  return describe(state.attributes) || 'on';
+  if (state.state !== 'on') return [{ value: 'state', text: state.state }];
+  return parts(state.attributes) || [{ value: 'state', text: 'on' }];
 }
+
+// Parts with on/off/unavailable in hass's language.
+const translated = (hass, found) => found && found.map((part) => ({ ...part, text: word(hass, part.text) }));
+
+/** A light that isn't FLARE's: kept behind the card's "untracked" row. */
+export const isUntracked = (light) => !light.claimed && (light.status === 'untracked' || light.status === 'off');
 
 /**
  * Each of the area's room lights, as the lights card lists them:
- * {entity_id, name, status, claimed, asked, showing}, overridden and
- * mismatched first. `asked` is FLARE's last write, null with none or when
- * the light was marked as someone else's.
+ * {entity_id, name, status, claimed, asked, showing, differs}, overridden
+ * and mismatched first. `asked` and `showing` are parts(); `asked` is
+ * FLARE's last write, null with none or when the light was marked as
+ * someone else's. `differs` names the values it shows that aren't what was
+ * asked, by the same rule as override protection.
  */
 export function areaLights(hass, area) {
   const entry = claimsByArea(hass).get(area);
@@ -95,25 +113,56 @@ export function areaLights(hass, area) {
   const lights = lightStatuses(hass);
   return entry.lights
     .map((entityId) => {
-      const { status, claimed, asked } = lights.get(entityId);
+      const { status, claimed, asked, differs } = lights.get(entityId);
       return {
         entity_id: entityId,
         name: nameOf(hass, entityId),
         status,
         claimed,
-        asked: word(hass, describe(asked)),
-        showing: word(hass, showing(hass.states?.[entityId])),
+        asked: translated(hass, parts(asked)),
+        showing: translated(hass, showing(hass.states?.[entityId])),
+        differs,
       };
     })
     .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
 }
 
-/** A light's line under its name: "Asked 78% · 3000K, showing 20% · 3000K". */
+/**
+ * The lines under a light's name, each {label, parts}: what FLARE asked
+ * for, then what it shows, its parts marked `differs` where they aren't what
+ * was asked.
+ */
 export function detail(light, hass) {
-  const { asked, showing: shown } = light;
-  if (asked && shown) return localize(hass, 'overrides.asked_showing', { asked, showing: shown });
-  if (asked) return localize(hass, 'overrides.asked', { asked });
-  return shown ? localize(hass, 'overrides.showing', { showing: shown }) : '';
+  const lines = [];
+  if (light.asked) lines.push({ label: localize(hass, 'overrides.asked'), parts: light.asked });
+  if (light.showing) {
+    const differs = new Set(light.differs);
+    lines.push({
+      label: localize(hass, 'overrides.showing'),
+      parts: light.showing.map((part) => ({ ...part, differs: differs.has(part.value) || differs.has('state') })),
+    });
+  }
+  return lines;
+}
+
+// The lines as a two-column grid, so each line's values start together.
+function detailLines(lines) {
+  const grid = document.createElement('div');
+  grid.className = 'values';
+  for (const { label, parts: found } of lines) {
+    const name = document.createElement('span');
+    name.textContent = label;
+    const line = document.createElement('span');
+    found.forEach((part, index) => {
+      if (index) line.append(' · ');
+      const text = document.createElement('span');
+      text.textContent = part.text;
+      if (part.differs) text.className = 'differs';
+      line.append(text);
+    });
+    grid.append(name, line);
+  }
+  return grid;
 }
 
 function badge(icon, color) {
@@ -134,7 +183,11 @@ const BADGE_STYLE = `
   }
   .text { display: flex; flex-direction: column; min-width: 0; }
   .name { font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
-  .value { font-size: 12px; color: var(--secondary-text-color); }
+  .values {
+    display: grid; grid-template-columns: auto 1fr; column-gap: 6px;
+    font-size: 12px; color: var(--secondary-text-color);
+  }
+  .values .differs { color: var(--error-color, #db4437); font-weight: 500; }
 `;
 
 class FlareAreaLightsCard extends HTMLElement {
@@ -142,12 +195,13 @@ class FlareAreaLightsCard extends HTMLElement {
     if (!config || !config.area) throw new Error('area is required');
     this._config = config;
     this._key = null;
+    this._showUntracked = false;
   }
 
   set hass(hass) {
     this._hass = hass;
     const lights = areaLights(hass, this._config.area);
-    const key = JSON.stringify([language(hass), lights]);
+    const key = JSON.stringify([language(hass), lights, this._showUntracked]);
     if (key === this._key) return;
     this._key = key;
     this._render(lights);
@@ -170,7 +224,7 @@ class FlareAreaLightsCard extends HTMLElement {
     this.shadowRoot.innerHTML = `
       <style>
         :host { display: block; }
-        ha-card { padding: 4px 0; }
+        ha-card { padding: 4px 0; overflow: hidden; }
         .header {
           display: flex; align-items: center; gap: 12px; padding: 4px 10px 8px 16px;
           border-bottom: 1px solid var(--divider-color);
@@ -194,6 +248,16 @@ class FlareAreaLightsCard extends HTMLElement {
         button:hover { background: color-mix(in srgb, var(--secondary-text-color) 15%, transparent); }
         button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
         button[hidden] { visibility: hidden; display: flex; }
+        .untracked {
+          display: flex; align-items: center; gap: 10px; width: 100%; height: auto; border-radius: 0;
+          padding: 8px 16px; font: inherit; font-size: 13px; color: var(--secondary-text-color);
+          border-top: 1px solid var(--divider-color);
+        }
+        .untracked:hover { background: color-mix(in srgb, var(--secondary-text-color) 8%, transparent); }
+        .untracked:focus-visible { outline-offset: -2px; }
+        /* Last in the card: down to its edge, clipped to its corners. */
+        .untracked:last-child { margin-bottom: -4px; }
+        .untracked span { flex: 1; text-align: left; }
         ${BADGE_STYLE}
       </style>
       <ha-card></ha-card>
@@ -220,29 +284,49 @@ class FlareAreaLightsCard extends HTMLElement {
     clearAll.disabled = !claimed.length;
     clearAll.addEventListener('click', () => this._clear(claimed));
     card.append(header);
-    for (const light of lights) {
-      const look = statusLook(light.status, this._hass);
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.append(badge(look.icon, look.color));
-      row.insertAdjacentHTML(
-        'beforeend',
-        '<div class="text"><span class="name"></span><span class="value"></span></div><span class="status"></span>' +
-          '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
-      );
-      row.querySelector('.name').textContent = light.name;
-      row.querySelector('.value').textContent = detail(light, this._hass);
-      const status = row.querySelector('.status');
-      status.textContent = look.label;
-      status.style.color = look.color;
-      const clear = row.querySelector('button');
-      clear.hidden = !light.claimed;
-      clear.title = localize(this._hass, 'overrides.clear_light', { name: light.name });
-      clear.setAttribute('aria-label', clear.title);
-      clear.addEventListener('click', () => this._clear([light.entity_id]));
-      row.querySelector('.text').addEventListener('click', () => this._moreInfo(light.entity_id));
-      card.append(row);
-    }
+    const untracked = lights.filter(isUntracked);
+    for (const light of lights.filter((l) => !isUntracked(l))) card.append(this._row(light));
+    if (!untracked.length) return;
+    const toggle = document.createElement('button');
+    toggle.className = 'untracked';
+    toggle.setAttribute('aria-expanded', String(this._showUntracked));
+    toggle.innerHTML = '<span></span><ha-icon></ha-icon>';
+    toggle.querySelector('span').textContent = localize(
+      this._hass,
+      this._showUntracked ? 'overrides.hide_untracked' : 'overrides.show_untracked',
+      { count: untracked.length }
+    );
+    toggle.querySelector('ha-icon').setAttribute('icon', this._showUntracked ? 'mdi:chevron-up' : 'mdi:chevron-down');
+    toggle.addEventListener('click', () => {
+      this._showUntracked = !this._showUntracked;
+      this.hass = this._hass;
+    });
+    card.append(toggle);
+    if (this._showUntracked) for (const light of untracked) card.append(this._row(light));
+  }
+
+  _row(light) {
+    const look = statusLook(light.status, this._hass);
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.append(badge(look.icon, look.color));
+    row.insertAdjacentHTML(
+      'beforeend',
+      '<div class="text"><span class="name"></span></div><span class="status"></span>' +
+        '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
+    );
+    row.querySelector('.name').textContent = light.name;
+    row.querySelector('.text').append(detailLines(detail(light, this._hass)));
+    const status = row.querySelector('.status');
+    status.textContent = look.label;
+    status.style.color = look.color;
+    const clear = row.querySelector('button');
+    clear.hidden = !light.claimed;
+    clear.title = localize(this._hass, 'overrides.clear_light', { name: light.name });
+    clear.setAttribute('aria-label', clear.title);
+    clear.addEventListener('click', () => this._clear([light.entity_id]));
+    row.querySelector('.text').addEventListener('click', () => this._moreInfo(light.entity_id));
+    return row;
   }
 }
 

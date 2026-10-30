@@ -86,8 +86,22 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
     without a brightness and a colour never matches."""
     if not target or target.get(ATTR_BRIGHTNESS) is None:
         return False
-    if not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), target[ATTR_BRIGHTNESS], tolerance):
-        return False
+    return not differs(attributes, target, tolerance)
+
+
+def differs(attributes: Mapping, target: Mapping, tolerance: Tolerance = Tolerance()) -> list[str]:
+    """Which of a target's values a light reporting `attributes` doesn't
+    show: "brightness", "color", both or neither."""
+    values = []
+    brightness = target.get(ATTR_BRIGHTNESS)
+    if brightness is not None and not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), brightness, tolerance):
+        values.append("brightness")
+    if not _color_matches(attributes, target, tolerance):
+        values.append("color")
+    return values
+
+
+def _color_matches(attributes: Mapping, target: Mapping, tolerance: Tolerance) -> bool:
     if target.get(ATTR_RGB_COLOR) is not None:
         return attributes.get(ATTR_COLOR_MODE) != ColorMode.COLOR_TEMP and _rgb_matches(
             attributes.get(ATTR_RGB_COLOR), target[ATTR_RGB_COLOR], tolerance

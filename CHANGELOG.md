@@ -45,7 +45,8 @@ After updating:
 - **Each light FLARE drives has a status sensor** on its own device page, saying whether FLARE
   is setting it or something else has taken it over, with history.
 - **The Overrides view lists each area's lights**: each light's status, what FLARE last asked for
-  and what the light is showing, and a **Clear** for that light alone.
+  and what the light is showing, with any value that differs in red, and a **Clear** for that
+  light alone. Lights FLARE isn't driving are tucked away behind a row that shows them.
 - **Lux Threshold**, a new blueprint input under **Sensors & Triggers**. Above 0, the room
   leaves its lights off while every illuminance sensor in it reads above that many lux: a
   sensor, a scene and idle brightness won't switch one on. If someone is still there when it gets

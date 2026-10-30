@@ -208,6 +208,22 @@ async def test_it_says_what_flare_last_asked_for_and_whether_flare_holds_it(stub
     assert (spot_state.attributes["asked"], spot_state.attributes["claimed"]) == (None, False)
 
 
+async def test_it_says_which_of_what_flare_asked_for_the_light_doesnt_show(stub_entry_setup, hass: HomeAssistant):
+    await _set_up(hass)
+    lamp, spot = _bulb(hass, "lamp"), _bulb(hass, "spot")
+    # The spot stays on, so the room keeps its claims.
+    await _apply(hass, [lamp, spot])
+    assert hass.states.get("sensor.lamp_flare_status").attributes["differs"] == []
+
+    hass.states.async_set(lamp, "on", {**SHOWING, "color_temp_kelvin": 4000})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.lamp_flare_status").attributes["differs"] == ["color"]
+
+    hass.states.async_set(lamp, "off", {})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.lamp_flare_status").attributes["differs"] == ["state"]
+
+
 async def test_diagnostics_has_every_claim_and_room(stub_entry_setup, hass: HomeAssistant):
     entry = await _set_up(hass)
     lamp = _bulb(hass, "lamp")
