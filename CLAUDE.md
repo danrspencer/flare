@@ -410,7 +410,10 @@ skip a write as already set. It replaced adoption (claiming the light as it
 reported, with no write), which trusted the report: a Hue bulb back from a
 power cut reported its old 6711K while it had booted at 2732K, was adopted
 unwritten, and read as overridden once its real state arrived. The cost is
-one write per light per claim, nearly always invisible.
+one write per light per claim, nearly always invisible. That first claim's
+`observed` holds what an on light was showing as well as its context, so a
+lost first write followed by a fresh report of the same state (a bulb back
+online reporting again) still matches and is retried, not overridden.
 
 **Each room light has a status sensor** (`sensor.<light>_flare_status`),
 at the user's direction, so tracked state is visible in HA's own UI

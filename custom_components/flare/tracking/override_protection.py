@@ -45,7 +45,8 @@ class _ContextClaim(TypedDict):
     secondary_context_id: Optional[str]
     # ISO 8601, or None for the first-write baseline.
     recorded_at: Optional[str]
-    # What this write asked for, or None if it isn't one of our writes.
+    # What this write asked for, what an on light showed before a first-ever
+    # write, or None for a claim nothing should match by value.
     target: Optional[dict]
 
 

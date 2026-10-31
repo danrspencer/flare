@@ -71,12 +71,14 @@ driving the same light never mistake each other's writes for overrides.
 
 - `latest` is FLARE's most recent write, not yet seen landing.
 - `observed` is a state FLARE can safely write over: a write it has seen
-  land, or for a light's first-ever write, the context it had just before.
+  land, or for a light's first-ever write, the context it had just before
+  and what it was showing then.
 
 On each new write, if the light's live context matches `latest`, that
 write landed and is promoted to `observed`. If it still matches
 `observed`, the write never landed and `observed` stays as it was. Either
-way the light is still FLARE's, so a dropped write can't lock FLARE out.
+way the light is still FLARE's, so a dropped write can't lock FLARE out,
+even if the light reports the same state again under a new context.
 
 **A target** is what a write asked for: `{brightness, color_temp_kelvin}`,
 `{brightness, rgb_color}`, or `{state: off}` for a turn-off. A light

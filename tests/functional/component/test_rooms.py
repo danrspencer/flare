@@ -593,7 +593,7 @@ async def test_flares_own_write_landing_is_never_an_override(hass: HomeAssistant
     tracker = _tracker(added)
     events: list = []
     hass.bus.async_listen("flare_light_overridden", events.append)
-    _light(hass, "light.a", **ASKED)
+    _light(hass, "light.a", brightness=60, color_temp_kelvin=2200)
     await _record(registry, KITCHEN, "light.a", "ctx-first", ASKED)
     # The first write echoed back under another context, as a slow device does.
     _light(hass, "light.a", **{**ASKED, "brightness": ASKED["brightness"] + 1})
