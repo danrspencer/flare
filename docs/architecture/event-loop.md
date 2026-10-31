@@ -37,7 +37,7 @@ in this area: unit tests don't catch it.
 **Atomic by construction.** A callback can't be interrupted, so anything
 done inside one is one step as far as the rest of HA is concerned. The
 claim registry's writers (`async_record`, `async_override`,
-`async_clear`, `adopt`) are callbacks for this reason. In
+`async_clear`) are callbacks for this reason. In
 `apply_lighting` there's no `await` between planning the writes and
 recording their claims, so no state change can land in between and be
 misjudged. (The `async_` prefix is HA's convention for "must run on the
@@ -124,7 +124,7 @@ the first time a room names a light.
 
 ```mermaid
 flowchart LR
-    W["a write<br/>(async_record, adopt,<br/>override, clear)"] --> N
+    W["a write<br/>(async_record,<br/>override, clear)"] --> N
     L["state listener:<br/>drop / off / arrive /<br/>mismatch change"] --> N
     N["ClaimRegistry._notify()"] --> SAVE["Store.async_delay_save (5 s)"]
     N --> EV["ClaimEvents.async_claims_changed()<br/>→ refresh statuses, fire events"]

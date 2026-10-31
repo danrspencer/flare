@@ -214,14 +214,15 @@ class TestTwoStep:
 
 class TestMinimumChange:
     """A change too small to notice isn't sent. The entry's options set it;
-    a call can set its own."""
+    a call can set its own. Calls name no room, since a room's unclaimed
+    lights are always sent the target."""
 
     async def test_a_small_change_is_not_sent_by_default(self, setup_integration: HomeAssistant):
         hass = setup_integration
         turn_on = async_mock_service(hass, "light", "turn_on")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=192, color_temp_kelvin=3000)
 
-        await apply_lighting(hass, ["light.a"])
+        await apply_lighting(hass, ["light.a"], room_id=None)
 
         assert turn_on == [], "8 points off a 200 target is inside the default 5%"
 
@@ -239,26 +240,40 @@ class TestMinimumChange:
         turn_on = async_mock_service(hass, "light", "turn_on")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=2900)
 
-        await apply_lighting(hass, ["light.a"], min_color_temp_change=20)
+        await apply_lighting(hass, ["light.a"], room_id=None, min_color_temp_change=20)
         assert turn_on == [], "2900K is 11 mireds from 3000K"
 
-        await apply_lighting(hass, ["light.a"], min_color_temp_change=0)
+        await apply_lighting(hass, ["light.a"], room_id=None, min_color_temp_change=0)
         assert len(turn_on) == 1
 
 
 class TestLightsAlreadyShowingTheCurve:
-    """Nothing is sent to them, so they're claimed as they are - after a
-    Clear, say, when the room never went dark."""
+    """An unclaimed one is still sent the target, once, so its claim is what
+    FLARE sent rather than what it reported - after a Clear, say, or a
+    reconnect."""
 
-    async def test_an_unclaimed_one_is_claimed_without_a_write(self, setup_integration: HomeAssistant):
+    async def test_an_unclaimed_one_is_written_and_claimed(self, setup_integration: HomeAssistant):
         hass = setup_integration
         turn_on = async_mock_service(hass, "light", "turn_on")
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
 
         await apply_lighting(hass, ["light.a"])
 
-        assert turn_on == []
-        assert (await claims_check(hass, ["light.a"]))["light.a"]["status"] == "controlled"
+        assert [c.data["entity_id"] for c in turn_on] == [["light.a"]]
+        assert claim_field(claim_registry(hass), "light.a", "latest", "target") == {
+            "brightness": 200,
+            "color_temp_kelvin": 3000,
+        }
+
+    async def test_a_claimed_one_is_not_written_again(self, setup_integration: HomeAssistant):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+        await apply_lighting(hass, ["light.a"])
+
+        await apply_lighting(hass, ["light.a"])
+
+        assert len(turn_on) == 1
 
     async def test_one_changed_after_it_was_claimed_is_left_alone(self, setup_integration: HomeAssistant):
         hass = setup_integration
@@ -268,6 +283,16 @@ class TestLightsAlreadyShowingTheCurve:
 
         set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=60, color_temp_kelvin=2200)
         await apply_lighting(hass, ["light.a"])
+
+        assert len(turn_on) == 1
+
+    async def test_a_call_naming_no_room_sends_nothing(self, setup_integration: HomeAssistant):
+        """Nothing is claimed without a room, so writing would repeat every call."""
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
+
+        await apply_lighting(hass, ["light.a"], room_id=None)
 
         assert turn_on == []
 

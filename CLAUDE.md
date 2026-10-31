@@ -294,7 +294,7 @@ Facts verified against HA core:
   `matching.shows` accepts the raw target or the clamped one.
 - **What a light shows is decided in one place, `tracking/matching.py`**:
   `shows()` (override matching, `_already_set`), `reported_kelvin()` and
-  `shown()` (adoption, the override event's `live`). Its docstring is the
+  `shown()` (the override event's `live`). Its docstring is the
   rule set: Kelvin from `color_temp_kelvin`, else from a white's `xy_color`
   (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
   Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
@@ -402,11 +402,15 @@ whose previous write was never confirmed, and another automation
 switching a room off light by light (the room goes dark and releases them
 first). The claim events recheck once the grace has passed.
 
-**A light already showing what `apply_lighting` would send is adopted**
-(`ClaimRegistry.adopt`): no write goes to it, so if it's on and unclaimed
-it gets an `observed` claim of its current context and values, and joins
-the room. Otherwise a Clear in a lit room left most lights unclaimed, and a
-hand change to one went unnoticed.
+**An unclaimed light is written to even when it already shows the target**,
+if the call names a room (`EntityLookup.unclaimed`): the write is what
+claims it, so after a Clear in a lit room every light is claimed and a hand
+change to one is noticed. Only claimed lights, or calls tracking nothing,
+skip a write as already set. It replaced adoption (claiming the light as it
+reported, with no write), which trusted the report: a Hue bulb back from a
+power cut reported its old 6711K while it had booted at 2732K, was adopted
+unwritten, and read as overridden once its real state arrived. The cost is
+one write per light per claim, nearly always invisible.
 
 **Each room light has a status sensor** (`sensor.<light>_flare_status`),
 at the user's direction, so tracked state is visible in HA's own UI

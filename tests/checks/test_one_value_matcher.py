@@ -1,6 +1,6 @@
 """A light's reported values are read, converted and compared with a
 target only in tracking/matching.py, so override protection, grouping and
-adoption can't disagree about what a light shows."""
+the override events can't disagree about what a light shows."""
 
 import ast
 

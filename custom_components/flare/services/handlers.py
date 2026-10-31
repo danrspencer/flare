@@ -173,6 +173,7 @@ def _build_lookup(hass: HomeAssistant, tracker: ClaimRegistry, room_id: str | No
         labels=labels,
         manufacturer_model=manufacturer_model,
         claims=lambda eid: tracker.record(eid) if room_id else None,
+        tracking=bool(room_id),
     )
 
 
@@ -382,10 +383,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
                 context_id_overrides=context_id_overrides,
                 room_entities=room_entities,
             )
-
-        # Lights already showing what this call would send get no write, so
-        # an unclaimed one is claimed as it is.
-        registry.adopt(room_id, [e for g in groups for e in g.already_set], room_entities)
 
         if tasks:
             await asyncio.gather(*tasks)

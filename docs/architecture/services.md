@@ -58,7 +58,6 @@ sequenceDiagram
     G-->>H: groups
     H->>H: one send per non-empty list:<br/>off, combined, combined RGB,<br/>two-step, two-step RGB
     H->>R: async_record(written lights, context, targets)
-    H->>R: adopt(already_set lights)
     H->>B: asyncio.gather(all sends)
     H-->>C: groups (optional response)
 ```
@@ -83,8 +82,8 @@ flowchart TB
     RGB --> ROUTE
     CT --> ROUTE
     ROUTE["route(lights, target)"] --> W["writable:<br/>reachable and not overridden"]
-    W --> AS{"on and already<br/>close enough?"}
-    AS -->|"yes"| ALR["already_set<br/>(adopted, not sent)"]
+    W --> AS{"on, already close enough,<br/>and claimed (or no room)?"}
+    AS -->|"yes"| ALR["already_set<br/>(not sent)"]
     AS -->|"no"| TSQ{"two-step model<br/>or label?"}
     TSQ -->|"yes"| TS["two_step / two_step_rgb"]
     TSQ -->|"no"| CB["combined / combined_rgb"]
@@ -137,13 +136,15 @@ protection: a room emptying takes hand-set lights too. The off target is
 what tells FLARE's off from anyone else's once the context has expired.
 Callers mustn't split it back into a claim and a bare `light.turn_off`.
 
-## Adoption
+## Unclaimed lights
 
 A light that's already on and showing what `apply_lighting` would send
-gets no write. If it's unclaimed, `ClaimRegistry.adopt()` claims it as it
-is, with its current context and values, and adds it to the room.
-Otherwise, a Clear in a lit room would leave most lights unclaimed, and a
-hand change to one would go unnoticed.
+gets no write if it's claimed, or if the call names no room. An unclaimed
+light in a room is written to anyway (`EntityLookup.unclaimed`), and that
+write's claim adds it to the room. So after a Clear in a lit room every
+light is claimed again, and its claim is what FLARE sent rather than what
+the light reported, which a bulb just back on can get wrong. It costs one
+write per light each time a room takes it on.
 
 ## `resolve_target`
 

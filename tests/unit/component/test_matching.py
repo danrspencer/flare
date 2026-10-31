@@ -159,7 +159,7 @@ class TestRgb:
 
 
 class TestShown:
-    """What a light shows, as a target - what adoption claims."""
+    """What a light shows, as a target - what the override event reports."""
 
     def test_a_white_is_its_kelvin_even_in_xy(self):
         assert shown(_ct(200, 3000)) == {"brightness": 200, "color_temp_kelvin": 3000}

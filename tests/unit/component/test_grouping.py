@@ -77,6 +77,17 @@ class TestTolerance:
         )
         assert sorted(groups[0].already_set) == ["light.rgb", "light.there"]
 
+    def test_a_tracked_call_sends_an_unclaimed_light_the_target_anyway(self):
+        states = {"light.claimed": _on(180, 3050, context_id="ours"), "light.unclaimed": _on(180, 3050)}
+        groups = _groups(
+            states,
+            brightness=180,
+            kelvin=3050,
+            lookup_kwargs={"tracking": True, "latest_context_ids": {"light.claimed": "ours"}},
+        )
+        assert groups[0].already_set == ["light.claimed"]
+        assert groups[0].combined == ["light.unclaimed"]
+
     def test_rgb_is_compared_by_its_summed_difference(self):
         close = _on(200, supported_color_modes=["rgb"], rgb_color=[253, 181, 108])
         far = _on(200, supported_color_modes=["rgb"], rgb_color=[255, 180, 90])
