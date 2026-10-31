@@ -16,7 +16,8 @@ classify()). What they say is shown through each light's status sensor.
 Two claims per light
 --------------------
 - `observed`: a state we've seen and can safely write over - a write
-  seen landing, or for a first-ever write, the context from just before.
+  seen landing, or for a first-ever write, the light's context and what it
+  showed just before.
 - `latest`: our most recent write, not yet seen landing.
 
 Claims are recorded before dispatch. On the next write, if the light's
@@ -93,6 +94,15 @@ STORAGE_VERSION = 1
 SAVE_DELAY = 5
 # How many overrides the log keeps, newest last.
 OVERRIDE_LOG_SIZE = 50
+
+
+def _baseline_target(state) -> Optional[dict]:
+    """What an on light was showing just before FLARE's first write to it,
+    as a target, so a fresh report of the same state still matches. An off
+    one needs none: reporting off again releases its room."""
+    if state is None or state.state != STATE_ON:
+        return None
+    return shown(state.attributes)
 
 
 class ClaimListener(Protocol):
@@ -387,15 +397,14 @@ class ClaimRegistry:
                 else:
                     observed = old.get("observed")
             else:
-                baseline_context = live_context
                 observed = (
                     {
-                        "context_id": baseline_context,
+                        "context_id": live_context,
                         "secondary_context_id": None,
                         "recorded_at": None,
-                        "target": None,
+                        "target": _baseline_target(state),
                     }
-                    if baseline_context is not None
+                    if live_context is not None
                     else None
                 )
             claims[entity_id] = {
