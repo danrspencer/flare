@@ -38,6 +38,8 @@ class EntityLookup:
     manufacturer_model: Callable[[str], tuple[Optional[str], Optional[str]]]
     # The light's claims, or None if it has none or the caller tracks nothing - see claims.py.
     claims: Callable[[str], Optional[dict]]
+    # Whether the caller's writes are claimed (it names a room).
+    tracking: bool = False
 
     def is_state(self, entity_id: str, value: str) -> bool:
         s = self.state(entity_id)
@@ -78,6 +80,10 @@ class EntityLookup:
         )
         return is_blocked(status, force)
 
+    def unclaimed(self, entity_id: str) -> bool:
+        """True if a write to this light would be its first claim."""
+        return self.tracking and self.claims(entity_id) is None
+
     def supports_rgb(self, entity_id: str) -> bool:
         """True if the entity supports a mode rgb_color works with."""
         return color_supported(self.state_attr(entity_id, ATTR_SUPPORTED_COLOR_MODES))
@@ -97,7 +103,8 @@ class Group:
     two_step: list = field(default_factory=list)
     combined_rgb: list = field(default_factory=list)
     two_step_rgb: list = field(default_factory=list)
-    # On and already showing the target, so nothing is sent to them.
+    # On, already showing the target and claimed (or untracked), so nothing
+    # is sent to them.
     already_set: list = field(default_factory=list)
 
 
@@ -150,7 +157,9 @@ def build_groups(
     Close enough is within the tolerances: `min_brightness_change` percent
     of the target brightness and `min_color_temp_change` mireds. Override
     protection matches on the same values, so a light that close is never
-    someone else's change either.
+    someone else's change either. An unclaimed light is sent the target
+    even when it's close enough, if the caller tracks its writes: its claim
+    is then what FLARE sent, not a report it can't vouch for.
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
     lists. A light is two-step if it carries two_step_label or its model
@@ -169,7 +178,7 @@ def build_groups(
     def route(lights: list, target: Optional[dict]) -> tuple[list, list, list]:
         """(already set, two-step, combined) for lights sent `target`."""
         candidates = writable(lights)
-        already = [e for e in candidates if _already_set(e, target, lookup, close_enough)]
+        already = [e for e in candidates if not lookup.unclaimed(e) and _already_set(e, target, lookup, close_enough)]
         needing = [e for e in candidates if e not in already]
         two_step = [
             e

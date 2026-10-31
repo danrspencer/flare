@@ -627,27 +627,3 @@ async def test_claims_override_is_an_override_at_once(hass: HomeAssistant):
 
     assert overridden.native_value == 1
     assert registry.rooms_of("light.a") == [KITCHEN], "released with its room"
-
-
-async def test_a_claimed_light_is_not_adopted(hass: HomeAssistant):
-    """Whichever room claimed it."""
-    _entry, registry, _ = await _setup(hass)
-    _light(hass, "light.a", **ASKED)
-    await _record(registry, HALL, "light.a", "ctx-hall", ASKED)
-
-    registry.adopt(KITCHEN, ["light.a"])
-
-    assert claim_field(registry, "light.a", "latest", "context_id") == "ctx-hall"
-
-
-async def test_an_adopted_light_is_released_with_its_room(hass: HomeAssistant):
-    _entry, registry, _ = await _setup(hass)
-    _light(hass, "light.a", **ASKED)
-    unsub = registry.async_start_listening()
-
-    registry.adopt(KITCHEN, ["light.a"])
-    hass.states.async_set("light.a", "off", {})
-    await hass.async_block_till_done()
-
-    assert registry.all_records() == {}
-    unsub()

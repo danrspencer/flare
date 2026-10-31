@@ -105,6 +105,10 @@ After updating:
   set this as well as what's worth sending, and are called **Brightness tolerance** and
   **Colour temperature tolerance**. A light FLARE sets by RGB follows the colour temperature
   tolerance too.
+- **A light that comes back on reporting its old state is still set.** A bulb back from a power
+  cut can first report what it showed before while it has really started at its default. FLARE
+  took the report at its word, sent nothing, and the light was then marked overridden. A light
+  FLARE isn't yet driving is now always sent the schedule's values when FLARE takes it on.
 - **A light Brightness Template leaves alone (`null`) no longer keeps an empty room lit.** While
   it was on, the rest of the room switched off and back on every minute.
 - **Lights that are on when a phase in Prefer RGB During starts now switch to RGB.** A colour

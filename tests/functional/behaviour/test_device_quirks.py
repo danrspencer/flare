@@ -169,3 +169,38 @@ async def test_a_light_that_reconnects_already_on_is_corrected_immediately_not_o
         "a reconnected light reporting a stale value was left wrong instead of being "
         "corrected immediately, rather than waiting for the next scheduled tick"
     )
+
+
+async def test_a_light_that_reconnects_reporting_its_old_state_is_still_sent_the_curve(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """A bulb back from a power cut can first report the state it had (a
+    cached or restored report) while it has really booted at its default.
+    Even though that report matches the curve, the bulb is written to, so
+    its real state can't then read as an override."""
+    (bulb,) = await add_bulbs("stale", area_id=area)
+    occupancy(hass, SENSOR, "off")
+    await setup_room(lights=[bulb], occupancy_sensors=[SENSOR])
+    occupancy(hass, SENSOR, "on")
+    await hass.async_block_till_done()
+    assert hass.states.get(bulb.entity_id).attributes.get("brightness") == CURVE_BRIGHTNESS, (
+        "precondition: the room must be lit before the drop-out"
+    )
+
+    await bulb.async_go_unavailable()
+    await hass.async_block_till_done()
+    await bulb.async_reconnect_stale(
+        brightness=CURVE_BRIGHTNESS,
+        color_temp_kelvin=CURVE_KELVIN,
+        boot={"brightness": 255, "color_temp_kelvin": 2732},
+    )
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, 6)
+    await bulb.async_report_actual()
+    await hass.async_block_till_done()
+
+    state = hass.states.get(bulb.entity_id)
+    assert (state.attributes.get("brightness"), state.attributes.get("color_temp_kelvin")) == (
+        CURVE_BRIGHTNESS,
+        CURVE_KELVIN,
+    ), "the bulb's stale report was taken as already showing the curve, so nothing was sent"

@@ -41,7 +41,6 @@ classDiagram
         rooms: dict~room_key, Room~
         status(entity_id)
         async_record(room, lights, context, targets)
-        adopt(room, lights)
         async_override(room, lights)
         async_clear(lights)
     }
@@ -162,7 +161,7 @@ stateDiagram-v2
     direction LR
     [*] --> off: no claim
     off --> untracked: switched on, no claim
-    untracked --> controlled: FLARE writes (claim recorded)<br/>or adopts it
+    untracked --> controlled: FLARE writes (claim recorded)
     off --> controlled: FLARE switches it on
     controlled --> controlled: FLARE writes again,<br/>light reports back
     controlled --> mismatched: shows something else

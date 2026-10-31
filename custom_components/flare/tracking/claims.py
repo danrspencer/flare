@@ -349,34 +349,6 @@ class ClaimRegistry:
         self._notify()
 
     @callback
-    def adopt(self, room_id: str | None, entity_ids: list[str], room_entities: list[str] | None = None) -> None:
-        """Claims lights that are on and already showing what the caller would
-        send, so nothing was written to them: their claim is what they show
-        now. Claimed lights are left alone. No-op without a room."""
-        key = self.room_key(room_id)
-        if key is None:
-            return
-        now = dt_util.utcnow().isoformat()
-        adopted = []
-        for entity_id in entity_ids:
-            state = self._hass.states.get(entity_id)
-            if state is None or state.state != STATE_ON or entity_id in self.claims:
-                continue
-            self.claims[entity_id] = {
-                "observed": {
-                    "context_id": state.context.id,
-                    "secondary_context_id": None,
-                    "recorded_at": now,
-                    "target": shown(state.attributes),
-                },
-                "latest": None,
-            }
-            adopted.append(entity_id)
-        if adopted:
-            self._join(key, adopted, room_entities)
-            self._notify()
-
-    @callback
     def async_record(
         self,
         room_id: str | None,

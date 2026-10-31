@@ -19,12 +19,14 @@ def make_lookup(
     observed_targets: Optional[dict] = None,
     latest_secondary_context_ids: Optional[dict] = None,
     observed_secondary_context_ids: Optional[dict] = None,
+    tracking: bool = False,
 ) -> EntityLookup:
     """
     states:    {entity_id: {"state": ..., "attributes": {...}, "context_id": ...}}
     device_of: {entity_id: device_id}
     labels_of: {entity_id or device_id: [label, ...]}
     device_identity: {device_id: (manufacturer, model)}
+    tracking:  whether the caller's writes are claimed (it names a room)
     observed_/latest_context_ids, _targets, _secondary_context_ids:
                {entity_id: value} for each claim field; absent means none.
     """
@@ -67,6 +69,7 @@ def make_lookup(
         labels=lambda target_id: labels_of.get(target_id, []),
         manufacturer_model=lambda entity_id: device_identity.get(device_of.get(entity_id), (None, None)),
         claims=claims,
+        tracking=tracking,
     )
 
 

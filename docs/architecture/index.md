@@ -90,9 +90,8 @@ sequenceDiagram
     Note over AU: variables render once:<br/>levels, occupancy, allow_turn_on
     AU->>SV: flare.apply_lighting(lights, brightness, kelvin, room_id)
     SV->>CR: classify each light (claims vs live state)
-    Note over SV: build_groups: bucket by brightness,<br/>drop overridden lights, skip lights<br/>already close enough, split two-step
+    Note over SV: build_groups: bucket by brightness,<br/>drop overridden lights, skip claimed lights<br/>already close enough, split two-step
     SV->>CR: async_record (before sending)
-    SV->>CR: adopt lights already showing the target
     SV->>B: light.turn_on, one call per group
     B-->>CR: state_changed under the call's context
     Note over CR: context matches the claim:<br/>the light stays "controlled"

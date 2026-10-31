@@ -66,7 +66,9 @@ class FakeBulb(LightEntity):
     changes brightness and sets a colour applies only the brightness);
     supports_transition (HA drops `transition` for a light without it);
     reports_off_late (switches off, but only reports it on
-    async_report_off(), as a slow Zigbee bulb does).
+    async_report_off(), as a slow Zigbee bulb does). async_reconnect_stale()
+    brings it back reporting its old state while it's really at its boot
+    default, until async_report_actual().
     """
 
     _attr_should_poll = False
@@ -100,8 +102,11 @@ class FakeBulb(LightEntity):
         # Gated on brightness *changing*: two-step's second call re-sends
         # the same brightness with the colour, and must land.
         self._needs_two_step = needs_two_step
+        # What a stale-reporting bulb really shows, until a write or its report.
+        self._actual: dict | None = None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
+        self._actual = None
         self._attr_is_on = True
         self._attr_available = True
         has_colour = ATTR_COLOR_TEMP_KELVIN in kwargs or ATTR_RGB_COLOR in kwargs
@@ -142,6 +147,18 @@ class FakeBulb(LightEntity):
         """A dropped Zigbee/MQTT connection."""
         self._attr_available = False
         self.async_write_ha_state()
+
+    async def async_reconnect_stale(self, *, brightness: int, color_temp_kelvin: int, boot: dict) -> None:
+        """Back from unavailable reporting `brightness`/`color_temp_kelvin`
+        (a cached or restored state) while really showing `boot`."""
+        self._actual = boot
+        await self.async_echo(brightness=brightness, color_temp_kelvin=color_temp_kelvin)
+
+    async def async_report_actual(self) -> None:
+        """The bulb's real state, if a write hasn't replaced it."""
+        if self._actual is not None:
+            await self.async_echo(**self._actual)
+            self._actual = None
 
     async def async_echo(self, *, is_on=True, brightness=None, color_temp_kelvin=None, rgb_color=None) -> None:
         """A state report of the device's own, under a fresh context (as on

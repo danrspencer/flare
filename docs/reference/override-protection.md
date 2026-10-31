@@ -67,10 +67,10 @@ what FLARE set, FLARE carries on setting it. If it doesn't, something else has c
 FLARE leaves it alone.
 
 Claims are FLARE's, not any one automation's: a light one automation set is FLARE's to every
-other automation too. A light that's on, has no claim, and already shows what
-`flare.apply_lighting` would set isn't changed, so FLARE claims it as it is. After a **Clear**,
-for example, a room's lights are claimed again on their next update even if none of them needs
-changing.
+other automation too. A light that's on and has no claim is always sent what
+`flare.apply_lighting` would set, even if it already shows it, and that write claims it. After a
+**Clear**, for example, a room's lights are claimed again on their next update. Without a
+`room_id`, a light already showing the values isn't sent anything.
 
 ### Rooms
 
