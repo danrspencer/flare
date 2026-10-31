@@ -109,6 +109,11 @@ After updating:
   cut can first report what it showed before while it has really started at its default. FLARE
   took the report at its word, sent nothing, and the light was then marked overridden. A light
   FLARE isn't yet driving is now always sent the schedule's values when FLARE takes it on.
+- **A light whose first command from FLARE doesn't arrive is sent it again.** FLARE remembers
+  what the light was showing when it sent it, so if the light reports that again, it's tried on
+  the next update. It used to be marked overridden and left alone until the room went dark: a bulb
+  switched on at the wall, sent its schedule while still starting up, stayed at its start-up
+  setting all evening.
 - **A light Brightness Template leaves alone (`null`) no longer keeps an empty room lit.** While
   it was on, the rest of the room switched off and back on every minute.
 - **Lights that are on when a phase in Prefer RGB During starts now switch to RGB.** A colour

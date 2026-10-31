@@ -116,6 +116,34 @@ class TestOverrideProtection:
 
         assert len(turn_on) == 2
 
+    async def test_a_dropped_first_write_is_retried_after_the_light_reports_the_same_again(
+        self, setup_integration: HomeAssistant
+    ):
+        """A bulb back online reports again under a new context, still
+        showing what it showed before FLARE's write."""
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=90, color_temp_kelvin=3200)
+
+        await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200)
+        set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=91, color_temp_kelvin=3200)
+        await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200)
+
+        assert len(turn_on) == 2
+
+    async def test_a_dropped_first_turn_on_is_retried_after_the_light_reports_off_again(
+        self, setup_integration: HomeAssistant
+    ):
+        hass = setup_integration
+        turn_on = async_mock_service(hass, "light", "turn_on")
+        set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+        await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200)
+        set_light(hass, "light.a", "off", supported_color_modes=CT, friendly_name="A")
+        await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200)
+
+        assert len(turn_on) == 2
+
     async def test_force_writes_through_and_the_write_is_then_ours(self, setup_integration: HomeAssistant):
         hass = setup_integration
         turn_on = async_mock_service(hass, "light", "turn_on")
