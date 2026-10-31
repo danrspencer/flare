@@ -378,7 +378,6 @@ soon as the integration loads.</p>
     G--&gt;&gt;H: groups
     H-&gt;&gt;H: one send per non-empty list:&lt;br/&gt;off, combined, combined RGB,&lt;br/&gt;two-step, two-step RGB
     H-&gt;&gt;R: async_record(written lights, context, targets)
-    H-&gt;&gt;R: adopt(already_set lights)
     H-&gt;&gt;B: asyncio.gather(all sends)
     H--&gt;&gt;C: groups (optional response)
 </code></pre>
@@ -408,8 +407,8 @@ nothing that doesn’t.</p>
     RGB --&gt; ROUTE
     CT --&gt; ROUTE
     ROUTE["route(lights, target)"] --&gt; W["writable:&lt;br/&gt;reachable and not overridden"]
-    W --&gt; AS{"on and already&lt;br/&gt;close enough?"}
-    AS --&gt;|"yes"| ALR["already_set&lt;br/&gt;(adopted, not sent)"]
+    W --&gt; AS{"on, already close enough,&lt;br/&gt;and claimed (or no room)?"}
+    AS --&gt;|"yes"| ALR["already_set&lt;br/&gt;(not sent)"]
     AS --&gt;|"no"| TSQ{"two-step model&lt;br/&gt;or label?"}
     TSQ --&gt;|"yes"| TS["two_step / two_step_rgb"]
     TSQ --&gt;|"no"| CB["combined / combined_rgb"]
@@ -472,20 +471,22 @@ calls <code class="language-plaintext highlighter-rouge">light.turn_off</code>, 
 protection: a room emptying takes hand-set lights too. The off target is
 what tells FLARE’s off from anyone else’s once the context has expired.
 Callers mustn’t split it back into a claim and a bare <code class="language-plaintext highlighter-rouge">light.turn_off</code>.</p>
-<h2 id="adoption">
+<h2 id="unclaimed-lights">
   
   
-    <a href="#adoption" class="anchor-heading" aria-labelledby="adoption"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Adoption
+    <a href="#unclaimed-lights" class="anchor-heading" aria-labelledby="unclaimed-lights"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Unclaimed lights
   
   
 </h2>
     
 
 <p>A light that’s already on and showing what <code class="language-plaintext highlighter-rouge">apply_lighting</code> would send
-gets no write. If it’s unclaimed, <code class="language-plaintext highlighter-rouge">ClaimRegistry.adopt()</code> claims it as it
-is, with its current context and values, and adds it to the room.
-Otherwise, a Clear in a lit room would leave most lights unclaimed, and a
-hand change to one would go unnoticed.</p>
+gets no write if it’s claimed, or if the call names no room. An unclaimed
+light in a room is written to anyway (<code class="language-plaintext highlighter-rouge">EntityLookup.unclaimed</code>), and that
+write’s claim adds it to the room. So after a Clear in a lit room every
+light is claimed again, and its claim is what FLARE sent rather than what
+the light reported, which a bulb just back on can get wrong. It costs one
+write per light each time a room takes it on.</p>
 <h2 id="resolve_target">
   
   

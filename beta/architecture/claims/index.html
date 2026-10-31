@@ -316,7 +316,6 @@ room-empty, light-off and reconnect releases all just happen.</p>
         rooms: dict~room_key, Room~
         status(entity_id)
         async_record(room, lights, context, targets)
-        adopt(room, lights)
         async_override(room, lights)
         async_clear(lights)
     }
@@ -481,7 +480,7 @@ read as something else.</p>
     direction LR
     [*] --&gt; off: no claim
     off --&gt; untracked: switched on, no claim
-    untracked --&gt; controlled: FLARE writes (claim recorded)&lt;br/&gt;or adopts it
+    untracked --&gt; controlled: FLARE writes (claim recorded)
     off --&gt; controlled: FLARE switches it on
     controlled --&gt; controlled: FLARE writes again,&lt;br/&gt;light reports back
     controlled --&gt; mismatched: shows something else

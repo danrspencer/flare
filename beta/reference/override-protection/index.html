@@ -342,10 +342,10 @@ what FLARE set, FLARE carries on setting it. If it doesn’t, something else has
 FLARE leaves it alone.</p>
 
 <p>Claims are FLARE’s, not any one automation’s: a light one automation set is FLARE’s to every
-other automation too. A light that’s on, has no claim, and already shows what
-<code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> would set isn’t changed, so FLARE claims it as it is. After a <strong>Clear</strong>,
-for example, a room’s lights are claimed again on their next update even if none of them needs
-changing.</p>
+other automation too. A light that’s on and has no claim is always sent what
+<code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> would set, even if it already shows it, and that write claims it. After a
+<strong>Clear</strong>, for example, a room’s lights are claimed again on their next update. Without a
+<code class="language-plaintext highlighter-rouge">room_id</code>, a light already showing the values isn’t sent anything.</p>
 <h3 id="rooms">
   
   

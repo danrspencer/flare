@@ -375,9 +375,8 @@ curve.</p>
     Note over AU: variables render once:&lt;br/&gt;levels, occupancy, allow_turn_on
     AU-&gt;&gt;SV: flare.apply_lighting(lights, brightness, kelvin, room_id)
     SV-&gt;&gt;CR: classify each light (claims vs live state)
-    Note over SV: build_groups: bucket by brightness,&lt;br/&gt;drop overridden lights, skip lights&lt;br/&gt;already close enough, split two-step
+    Note over SV: build_groups: bucket by brightness,&lt;br/&gt;drop overridden lights, skip claimed lights&lt;br/&gt;already close enough, split two-step
     SV-&gt;&gt;CR: async_record (before sending)
-    SV-&gt;&gt;CR: adopt lights already showing the target
     SV-&gt;&gt;B: light.turn_on, one call per group
     B--&gt;&gt;CR: state_changed under the call's context
     Note over CR: context matches the claim:&lt;br/&gt;the light stays "controlled"
