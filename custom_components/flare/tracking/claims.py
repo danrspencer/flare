@@ -97,12 +97,11 @@ OVERRIDE_LOG_SIZE = 50
 
 
 def _baseline_target(state) -> Optional[dict]:
-    """What a light was showing just before FLARE's first write to it, as a
-    target, so a fresh report of the same state still matches."""
-    if not is_reachable(state):
+    """What an on light was showing just before FLARE's first write to it,
+    as a target, so a fresh report of the same state still matches. An off
+    one needs none: reporting off again releases its room."""
+    if state is None or state.state != STATE_ON:
         return None
-    if state.state != STATE_ON:
-        return {"state": STATE_OFF}
     return shown(state.attributes)
 
 
