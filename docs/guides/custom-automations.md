@@ -1,7 +1,7 @@
 ---
 title: Building without the blueprint
 parent: Guides
-nav_order: 5
+nav_order: 6
 permalink: /guides/custom-automations/
 redirect_from:
   - /reference/custom-automations/

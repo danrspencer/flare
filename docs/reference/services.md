@@ -137,7 +137,7 @@ data:
 
 ### `flare.turn_off` or `light.turn_off`?
 
-Both turn the light off, but they leave its [claim](../override-protection/#how-it-works)
+Both turn the light off, but they leave its [claim](../../guides/overrides/#claims)
 saying different things:
 
 | | `light.turn_off` | `flare.turn_off` |

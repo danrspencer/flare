@@ -199,7 +199,7 @@ verb.
 |---|---|---|
 | override | external | A light changed by anything that isn't FLARE. The user's word for it. |
 | override protection | external | Leaving an overridden light alone. |
-| claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public); avoid on mainstream pages, where "what FLARE is driving" reads better. |
+| claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public) and in the **Lights you change yourself** guide, which explains them; avoid on other mainstream pages, where "what FLARE is driving" reads better. |
 | scene handoff | external | Letting a scene own part or all of a room. |
 | self-healing | external | Retrying a command that didn't land. |
 | two-step transition | both | Sending brightness and colour separately. Users meet it via the **Two-step bulb models** option and the `no_combined_transition` label. |
