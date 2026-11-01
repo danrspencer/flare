@@ -6,7 +6,7 @@ nav_order: 1
 # FLARE
 {: .no_toc }
 
-**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — [phase-based](#four-phases-not-one-curve)
+**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — phase-based
 circadian lighting for Home Assistant, with [scene handoff]({{ site.baseurl }}/guides/scenes/)
 and [override protection]({{ site.baseurl }}/guides/overrides/) built in.
 {: .fs-6 .fw-300 }
