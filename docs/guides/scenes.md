@@ -16,9 +16,12 @@ render_with_liquid: false
 {: .no_toc }
 
 If you've already made a scene for how a room should look at night, or while you're watching a
-film, a room can follow it instead of the curve, either one scene per phase or one chosen by a
-template. FLARE applies the scene, lights anything it doesn't cover from the curve, and takes
-the room back when the scene no longer applies.
+film, a room can use it, either one scene per phase or one chosen by a template.
+
+The scene only takes over the lights it sets. Every other light in the room keeps following the
+curve, and FLARE carries on adjusting it as usual. So a scene that sets just the TV backlight
+and one lamp leaves the rest of the room to FLARE. When the scene no longer applies, FLARE takes
+its lights back too.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -30,15 +33,12 @@ the room back when the scene no longer applies.
 ## Handing a room to a scene
 
 If you pick a scene in the blueprint's **Night Scene** (or whichever phase), the room uses it
-instead of the curve during that phase. For anything a phase can't express — a different scene
+during that phase. For anything a phase can't express — a different scene
 while the TV is on — use [Scene Template](../templates/#scene-template), which wins over the
 per-phase pickers whenever it returns a scene.
 
 A scene is only used if every entity it touches is in the room. A scene that reaches into
 another room, or doesn't exist, is ignored and the room follows the curve.
-
-Lights in the room that the scene doesn't cover carry on following the curve, so a scene
-naming half the room leaves the other half to FLARE.
 
 ## When the scene is applied
 
