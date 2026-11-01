@@ -1,4 +1,4 @@
-"""FLARE's nine services, registered by the Settings entry: adapters that
+"""FLARE's eight services, registered by the Settings entry: adapters that
 read HA state into the pure planners (grouping.py, scenes.py, curve.py,
 override_protection.py) and dispatch the result. Field contracts are in
 services.yaml."""
@@ -35,7 +35,7 @@ from ..schedule.curve import phase_at, targets_for_phase
 from .grouping import EntityLookup, Group, build_groups
 from ..tracking.override_protection import is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
-from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, TWO_STEP_LABEL_ID, parse_patterns
+from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, parse_patterns
 from ..flares.identity import without_flares
 from ..tracking.claims import ClaimRegistry
 
@@ -43,12 +43,8 @@ from ..tracking.claims import ClaimRegistry
 LIGHT_IDS = [cv.entity_domain(LIGHT_DOMAIN)]
 
 # Who's writing, for override protection: a room, usually the calling
-# automation (`this.entity_id`), and its lights, which it releases together.
-# No room means "write, but track nothing".
-ROOM_FIELDS = {
-    vol.Optional(ATTR_ROOM_ID): vol.Any(None, cv.string),
-    vol.Optional(ATTR_ROOM_ENTITIES): vol.Any(None, cv.entity_ids),
-}
+# automation (`this.entity_id`). No room means "write, but track nothing".
+ROOM_ID_FIELD = {vol.Optional(ATTR_ROOM_ID): vol.Any(None, cv.string)}
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
@@ -63,20 +59,23 @@ TOLERANCE_FIELDS = {
     vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, cv.positive_float),
 }
 
-COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
+APPLY_LIGHTING_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITIES): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
         vol.Optional("brightness"): vol.Any(None, VALID_BRIGHTNESS),
         vol.Required("color_temp_kelvin"): cv.positive_int,
-        vol.Optional("two_step_label", default=TWO_STEP_LABEL_ID): cv.string,
         vol.Optional("prefer_rgb_color", default=False): cv.boolean,
         # Accepts an explicit None: a template reading a missing attribute
         # renders None, not an omitted key. Otherwise as light.turn_on takes it.
         vol.Optional("rgb_color"): vol.Any(None, vol.All(vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3))),
+        vol.Optional("transition", default=0): VALID_TRANSITION,
         vol.Optional("force", default=False): cv.boolean,
+        vol.Optional("dry_run", default=False): cv.boolean,
         **TOLERANCE_FIELDS,
-        **ROOM_FIELDS,
+        **ROOM_ID_FIELD,
+        # The room's lights, which it releases together.
+        vol.Optional(ATTR_ROOM_ENTITIES): vol.Any(None, cv.entity_ids),
     }
 )
 
@@ -100,13 +99,10 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
     }
 )
 
-APPLY_LIGHTING_SCHEMA = COMPUTE_LIGHTING_GROUPS_SCHEMA.extend({vol.Required("transition"): VALID_TRANSITION})
-
 TURN_OFF_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITIES): LIGHT_IDS,
         vol.Optional("transition", default=0): VALID_TRANSITION,
-        **ROOM_FIELDS,
     }
 )
 
@@ -261,11 +257,11 @@ async def _two_step_turn_on(
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
-    """Registers the nine services for as long as the Settings entry is
+    """Registers the eight services for as long as the Settings entry is
     loaded."""
 
     def plan(call: ServiceCall) -> list[Group]:
-        """build_groups for a compute_lighting_groups or apply_lighting call."""
+        """build_groups for an apply_lighting call."""
         rgb_color = call.data.get("rgb_color")
         return build_groups(
             entities=without_flares(hass, call.data[ATTR_ENTITIES]),
@@ -273,17 +269,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             sensor_brightness=_brightness(call),
             sensor_color_temp_kelvin=call.data["color_temp_kelvin"],
             lookup=_build_lookup(hass, registry, call.data.get(ATTR_ROOM_ID)),
-            two_step_label=call.data["two_step_label"],
             two_step_model_patterns=_two_step_model_patterns(entry),
             prefer_rgb_color=call.data["prefer_rgb_color"],
             rgb_color=tuple(rgb_color) if rgb_color else None,
             force=call.data["force"],
             **_tolerances(registry, call),
         )
-
-    async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
-        """flare.compute_lighting_groups - see services.yaml."""
-        return _groups_response(plan(call))
 
     async def compute_curve(call: ServiceCall) -> ServiceResponse:
         """flare.compute_curve - see services.yaml."""
@@ -300,7 +291,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         return {
             "phase": phase,
             "brightness": targets["brightness"],
-            "kelvin": targets["kelvin"],
+            "color_temp_kelvin": targets["kelvin"],
             "rgb_color": list(targets["rgb_color"]),
         }
 
@@ -312,6 +303,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         room_id = call.data.get(ATTR_ROOM_ID)
         room_entities = call.data.get(ATTR_ROOM_ENTITIES)
         groups = plan(call)
+        if call.data["dry_run"]:
+            return _groups_response(groups)
         transition = call.data["transition"]
         half_transition = round(transition / 2, 1)
 
@@ -390,7 +383,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         return _groups_response(groups)
 
     async def turn_off(call: ServiceCall) -> None:
-        """flare.turn_off - records {"state": "off"} claims, then switches off.
+        """flare.turn_off - records {"state": "off"} on the lights FLARE
+        claims, then switches off, so a light switched off in a room that
+        stays lit is still FLARE's.
 
         One operation so callers can't get the order or the encoding wrong.
         No override protection: it turns off everything it's given."""
@@ -398,13 +393,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         if not entities:
             return
         transition = call.data["transition"]
-        registry.async_record(
-            call.data.get(ATTR_ROOM_ID),
-            entities,
-            call.context.id,
-            targets={e: {"state": "off"} for e in entities},
-            room_entities=call.data.get(ATTR_ROOM_ENTITIES),
-        )
+        registry.async_record_off(entities, call.context.id)
         await hass.services.async_call(
             LIGHT_DOMAIN,
             SERVICE_TURN_OFF,
@@ -429,9 +418,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             }
         return {"results": results}
 
-    async def claims_record(call: ServiceCall) -> ServiceResponse:
-        """flare.claims_record - call it before your write. Returns the
-        entities recorded."""
+    async def claims_record(call: ServiceCall) -> None:
+        """flare.claims_record - call it before your write."""
         entities = call.data[ATTR_ENTITIES]
         targets = call.data.get("targets", {})
         registry.async_record(
@@ -441,15 +429,11 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             targets=targets,
             room_entities=call.data.get(ATTR_ROOM_ENTITIES),
         )
-        tracked = registry.all_records()
-        return {"recorded": [e for e in entities if e in tracked]}
 
-    async def claims_override(call: ServiceCall) -> ServiceResponse:
+    async def claims_override(call: ServiceCall) -> None:
         """flare.claims_override - marks lights as changed by someone else, so
         FLARE leaves them alone. The opposite of claims_clear."""
-        entities = call.data[ATTR_ENTITIES]
-        registry.async_override(call.data[ATTR_ROOM_ID], entities, call.data.get(ATTR_ROOM_ENTITIES))
-        return {"overridden": entities}
+        registry.async_override(call.data[ATTR_ROOM_ID], call.data[ATTR_ENTITIES], call.data.get(ATTR_ROOM_ENTITIES))
 
     async def claims_clear(call: ServiceCall) -> ServiceResponse:
         """flare.claims_clear - discards claims, the escape hatch for a light
@@ -465,14 +449,12 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             lookup=_build_scene_lookup(hass),
         )
         return {
-            "scene_active": result.scene_active,
             "scene_valid": result.scene_valid,
             "covered_entities": result.covered_entities,
             "uncovered_entities": result.uncovered_entities,
         }
 
     services = {
-        "compute_lighting_groups": (compute_lighting_groups, COMPUTE_LIGHTING_GROUPS_SCHEMA, SupportsResponse.ONLY),
         "compute_curve": (compute_curve, COMPUTE_CURVE_SCHEMA, SupportsResponse.ONLY),
         "compute_scene_coverage": (
             compute_scene_coverage_service,
@@ -482,9 +464,9 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         "apply_lighting": (apply_lighting, APPLY_LIGHTING_SCHEMA, SupportsResponse.OPTIONAL),
         "turn_off": (turn_off, TURN_OFF_SCHEMA, SupportsResponse.NONE),
         "claims_check": (claims_check, CLAIMS_CHECK_SCHEMA, SupportsResponse.ONLY),
-        "claims_record": (claims_record, CLAIMS_RECORD_SCHEMA, SupportsResponse.OPTIONAL),
+        "claims_record": (claims_record, CLAIMS_RECORD_SCHEMA, SupportsResponse.NONE),
         "claims_clear": (claims_clear, CLAIMS_CLEAR_SCHEMA, SupportsResponse.OPTIONAL),
-        SERVICE_CLAIMS_OVERRIDE: (claims_override, CLAIMS_OVERRIDE_SCHEMA, SupportsResponse.OPTIONAL),
+        SERVICE_CLAIMS_OVERRIDE: (claims_override, CLAIMS_OVERRIDE_SCHEMA, SupportsResponse.NONE),
     }
     for name, (handler, schema, response) in services.items():
         hass.services.async_register(DOMAIN, name, handler, schema=schema, supports_response=response)

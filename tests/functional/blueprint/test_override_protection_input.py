@@ -52,7 +52,7 @@ async def test_with_protection_off_lights_handed_to_a_scene_have_no_claims_to_re
         override_protection=False,
     )
 
-    hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+    hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
     await hass.async_block_till_done()
 
     assert scene_turn_on_calls, "the scene still takes its lights"

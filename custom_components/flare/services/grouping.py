@@ -142,7 +142,6 @@ def build_groups(
     sensor_brightness: Optional[int],
     sensor_color_temp_kelvin: int,
     lookup: EntityLookup,
-    two_step_label: str = TWO_STEP_LABEL_ID,
     two_step_model_patterns: Iterable[str] = (),
     prefer_rgb_color: bool = False,
     rgb_color: Optional[tuple] = None,
@@ -162,7 +161,7 @@ def build_groups(
     is then what FLARE sent, not a report it can't vouch for.
 
     prefer_rgb_color + rgb_color route RGB-capable lights into the *_rgb
-    lists. A light is two-step if it carries two_step_label or its model
+    lists. A light is two-step if it carries TWO_STEP_LABEL_ID or its model
     matches two_step_model_patterns. force bypasses override protection."""
     use_rgb = prefer_rgb_color and rgb_color is not None
     close_enough = Tolerance(min_brightness_change, min_color_temp_change)
@@ -183,7 +182,7 @@ def build_groups(
         two_step = [
             e
             for e in needing
-            if two_step_label in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
+            if TWO_STEP_LABEL_ID in lookup.tags(e) or lookup.matches_two_step_pattern(e, two_step_model_patterns)
         ]
         return already, two_step, [e for e in needing if e not in two_step]
 

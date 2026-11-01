@@ -1,126 +1,3 @@
-compute_lighting_groups:
-  name: Compute lighting groups
-  description: >-
-    Returns the commands apply_lighting would send, without sending them.
-    Lights are grouped by brightness, with two-step and RGB lights listed
-    separately. Unavailable lights, lights already close to the target and
-    overridden lights are left out.
-  fields:
-    entities:
-      name: Entities
-      description: Light entities to consider.
-      required: true
-      selector:
-        entity:
-          multiple: true
-          domain: light
-    brightness_levels:
-      name: Brightness levels
-      description: >-
-        Map of entity ID to the brightness (0-255) for that light, in place of
-        Target brightness. 0 turns the light off, and null or false leaves the
-        light alone.
-      example: '{"light.lamp": 120, "light.strip": 0}'
-      selector:
-        object:
-    brightness:
-      name: Target brightness
-      description: >-
-        Brightness (0-255) for every light that isn't in Brightness levels,
-        where 0 turns them off. Required unless every light has a level.
-      selector:
-        number:
-          min: 0
-          max: 255
-    color_temp_kelvin:
-      name: Target colour temperature
-      description: Target colour temperature in Kelvin.
-      required: true
-      selector:
-        number:
-          min: 1000
-          max: 10000
-          unit_of_measurement: K
-    two_step_label:
-      name: Two-step label
-      description: >-
-        Lights or devices with this label are listed under two_step, for bulbs
-        that can't change brightness and colour temperature in one command.
-        Lights matching the two-step models under FLARE → Settings → Configure are
-        listed there too.
-      default: no_combined_transition
-      selector:
-        text:
-    prefer_rgb_color:
-      name: Prefer RGB colour
-      description: >-
-        Lights that support RGB are listed under combined_rgb or two_step_rgb,
-        targeting rgb_color instead of color_temp_kelvin. Needs rgb_color.
-      default: false
-      selector:
-        boolean:
-    rgb_color:
-      name: Target RGB colour
-      description: >-
-        The colour for RGB lights when Prefer RGB colour is on, usually the
-        colour temperature as RGB (the rgb_color from the schedule sensor or
-        compute_curve). Can be null.
-      selector:
-        color_rgb:
-    min_brightness_change:
-      name: Brightness tolerance
-      description: >-
-        A light within this percentage of its target brightness, or 2 points
-        if that's more, is left alone: it isn't sent anything, and still counts
-        as FLARE's. Leave unset to use the setting under FLARE → Settings →
-        Configure.
-      selector:
-        number:
-          min: 0
-          max: 25
-          step: 0.5
-          unit_of_measurement: "%"
-    min_color_temp_change:
-      name: Colour temperature tolerance
-      description: >-
-        A light within this many mireds of its target colour temperature is
-        left alone: it isn't sent anything, and still counts as FLARE's. For an
-        RGB target, the channels' differences added together can be up to
-        twice this. Leave unset to use the setting under FLARE → Settings →
-        Configure.
-      selector:
-        number:
-          min: 0
-          max: 50
-          step: 0.5
-          unit_of_measurement: mired
-    force:
-      name: Force
-      description: >-
-        Sets every light, including overridden ones. The change is still
-        recorded, so later calls treat it as FLARE's.
-      default: false
-      selector:
-        boolean:
-    room_id:
-      name: Room
-      description: >-
-        Usually the calling automation, `{{ this.entity_id }}`. With a room,
-        lights something else has changed are treated as overridden. Leave
-        unset to treat no light as overridden.
-      example: automation.kitchen_lighting
-      selector:
-        text:
-    room_entities:
-      name: Room lights
-      description: >-
-        The room's lights. FLARE releases its claims on them once none of them
-        is on. Without it, only the lights this call names.
-      selector:
-        entity:
-          multiple: true
-          domain: light
-
 apply_lighting:
   name: Apply lighting
   description: >-
@@ -169,22 +46,12 @@ apply_lighting:
       description: >-
         Transition in seconds. Two-step bulbs take half for brightness, then
         half for colour temperature.
-      required: true
+      default: 0
       selector:
         number:
           min: 0
           max: 300
           unit_of_measurement: s
-    two_step_label:
-      name: Two-step label
-      description: >-
-        Lights or devices with this label are sent brightness and colour
-        temperature as two commands, for bulbs that can't change both in one.
-        So are lights matching the two-step models under FLARE → Settings →
-        Configure.
-      default: no_combined_transition
-      selector:
-        text:
     prefer_rgb_color:
       name: Prefer RGB colour
       description: >-
@@ -236,12 +103,20 @@ apply_lighting:
       default: false
       selector:
         boolean:
+    dry_run:
+      name: Dry run
+      description: >-
+        Returns what would be sent, without sending anything or recording
+        claims.
+      default: false
+      selector:
+        boolean:
     room_id:
       name: Room
       description: >-
         Usually the calling automation, `{{ this.entity_id }}`. The change is
-        recorded for this room. Leave unset to set the lights without
-        recording anything, so no light is treated as overridden.
+        recorded for this room. Leave unset to set the lights without recording
+        or checking claims, so no light is left out as overridden.
       example: automation.kitchen_lighting
       selector:
         text:
@@ -258,9 +133,11 @@ apply_lighting:
 turn_off:
   name: Turn off lights
   description: >-
-    Turns lights off and records it, so FLARE doesn't treat them as
-    overridden. It turns off every light it's given, including overridden
-    ones.
+    Sets the lights' claims to off, then turns them off, so they still match
+    their claims and come on with the rest of the room next time. A light
+    turned off with light.turn_off keeps a claim that says on, so it's
+    overridden and stays off until none of the room's claimed lights is on.
+    Turns off every light it's given, including overridden ones.
   fields:
     entities:
       name: Entities
@@ -280,24 +157,6 @@ turn_off:
           min: 0
           max: 300
           unit_of_measurement: s
-    room_id:
-      name: Room
-      description: >-
-        Usually the calling automation, `{{ this.entity_id }}`. The turn-off
-        is recorded for this room. Leave unset to turn the lights off without
-        recording anything.
-      example: automation.kitchen_lighting
-      selector:
-        text:
-    room_entities:
-      name: Room lights
-      description: >-
-        The room's lights. FLARE releases its claims on them once none of them
-        is on. Without it, only the lights this call names.
-      selector:
-        entity:
-          multiple: true
-          domain: light
 
 compute_curve:
   name: Compute curve
@@ -637,8 +496,9 @@ claims_record:
       description: >-
         Map of entity ID to the values you're about to send: {"brightness":
         ..., "color_temp_kelvin": ...} or {"brightness": ..., "rgb_color":
-        [...]}. Without it, a light that's slow to report back is treated as
-        overridden.
+        [...]}. Without it, the claim holds no values to compare, so a light
+        that reports back after Home Assistant has dropped the change's
+        context doesn't match its claim and becomes overridden.
       example: '{"light.lamp": {"brightness": 200, "color_temp_kelvin": 3000}}'
       selector:
         object:
@@ -664,9 +524,9 @@ claims_override:
   description: >-
     Marks entities as changed by someone else, so FLARE leaves them alone until
     the room goes dark, their claims are cleared, or a forced write takes them
-    back. Usually unnecessary, since FLARE notices changes to lights it's
-    driving; it's for lights it isn't driving yet, such as ones your automation
-    turns on in a dark room.
+    back. Usually unnecessary: a light with a claim becomes overridden by
+    itself once it stops matching that claim. It's for lights with no claim
+    yet, such as ones your automation turns on in a dark room.
   fields:
     entities:
       name: Entities

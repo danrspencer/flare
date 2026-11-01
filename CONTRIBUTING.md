@@ -347,7 +347,7 @@ compatibility matrix. CI (`.github/workflows/tests.yml`) runs the full suite on 
 
 The pure-Python core (`curve.py`, `grouping.py`, `scenes.py`) and the integration wrapping it as HA services
 are both written, unit tested, and **installed via HACS and confirmed working against a live Home Assistant
-instance** — `compute_lighting_groups`/`compute_curve`/`compute_scene_coverage` verified registered and
+instance** — `compute_curve`/`compute_scene_coverage` verified registered and
 functionally correct, the blueprint's full compute-groups-then-turn-on-lights path exercised end to end
 against real hardware, the day-phase/curve sensors deployed and iterated on live (multi-sensor subentries,
 per-sensor devices), `apply_lighting`'s RGB colour support (`prefer_rgb_color`) confirmed live end to end -

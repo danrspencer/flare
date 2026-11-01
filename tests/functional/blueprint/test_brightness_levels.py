@@ -27,7 +27,7 @@ class TestBrightnessScaling:
 
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 0, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 0, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -43,7 +43,7 @@ class TestBrightnessScaling:
             hass, room_target={"entity_id": ["light.a", "light.excluded"]}, day_exclude_lights=["light.excluded"]
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -65,7 +65,7 @@ class TestBrightnessScaling:
             brightness_template="{{ {'light.a': 128} }}",
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -85,7 +85,7 @@ class TestBrightnessScaling:
             brightness_template="{{ 40 }}",
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -421,7 +421,7 @@ class TestIdleBrightness:
         apply_lighting_calls.clear()
         turn_off_calls.clear()
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert any("light.a" in c.data["entities"] for c in turn_off_calls), (

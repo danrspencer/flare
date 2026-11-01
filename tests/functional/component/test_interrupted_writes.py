@@ -14,6 +14,7 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.script import SCRIPT_MODE_RESTART, Script
+from pytest_homeassistant_custom_component.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
 from tests.functional.component.harness import (
@@ -240,15 +241,11 @@ async def test_turn_off_is_recorded_before_the_light_call_goes_out(setup_integra
         seen.append((claim_field(registry, "light.a", "latest", "context_id"), call.context.id))
 
     hass.services.async_register("light", "turn_off", turn_off)
+    async_mock_service(hass, "light", "turn_on")
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=180, color_temp_kelvin=3200)
+    await apply_lighting(hass, ["light.a"], brightness=180, color_temp_kelvin=3200)
 
-    await hass.services.async_call(
-        DOMAIN,
-        "turn_off",
-        {"entities": ["light.a"], "room_id": ROOM},
-        blocking=True,
-        context=Context(),
-    )
+    await hass.services.async_call(DOMAIN, "turn_off", {"entities": ["light.a"]}, blocking=True, context=Context())
 
     [(recorded, issued)] = seen
     assert recorded == issued
@@ -275,13 +272,7 @@ async def test_a_turn_off_that_fails_leaves_the_light_matching_its_last_confirme
     _land(hass, "light.a", context=c1, brightness=180, kelvin=3200)
 
     with pytest.raises(HomeAssistantError):
-        await hass.services.async_call(
-            DOMAIN,
-            "turn_off",
-            {"entities": ["light.a"], "room_id": ROOM},
-            blocking=True,
-            context=Context(),
-        )
+        await hass.services.async_call(DOMAIN, "turn_off", {"entities": ["light.a"]}, blocking=True, context=Context())
 
     status = await _status(hass, "light.a")
     assert status["status"] == "controlled"

@@ -154,7 +154,25 @@ uses the defaults again."
 Short sentences are fine. A paragraph made only of them, each one
 starting from scratch, is not.
 
-**17. Open with the reader's problem, not the feature's definition.** The
+**17. FLARE doesn't think; it compares lights with their claims.** Never
+write that FLARE thinks, knows, believes, assumes, notices, remembers or
+treats a light as something, nor "FLARE thinks it did it itself" or
+"treated as switched off by someone". Say what the claim records, how the
+light compares with it, and the status that gives (`controlled`,
+`overridden`, `untracked`). Then, if it isn't obvious, say what that status
+leads to.
+
+Don't write: "With `light.turn_off`, FLARE treats the light as switched off
+by someone else and leaves it off." Write: "With `light.turn_off`, the
+light's claim still says on, so once the light has been off for 30 seconds
+it doesn't match and is `overridden`. FLARE's updates leave overridden
+lights alone, so it stays off."
+
+On the pages where the lexicon keeps "claim" out, describe only what
+happens to the light ("FLARE leaves it off"), still without a thinking
+verb.
+
+**18. Open with the reader's problem, not the feature's definition.** The
 first paragraph of a guide or section is where a reader decides whether
 it's for them, so it says what goes wrong without the feature, in terms
 they'd recognise from their own house, and then what the feature does
@@ -209,7 +227,7 @@ Reference pages are the exception: they open with the table (rule 3).
 |---|---|---|
 | override | external | A light changed by anything that isn't FLARE. The user's word for it. |
 | override protection | external | Leaving an overridden light alone. |
-| claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public); avoid on mainstream pages, where "what FLARE is driving" reads better. |
+| claim | both | A recorded write. Fine in `docs/reference/` (the `claims_*` services are public) and in the **Override protection explained** guide, which explains them; avoid on other mainstream pages, where "what FLARE is driving" reads better. |
 | scene handoff | external | Letting a scene own part or all of a room. |
 | self-healing | external | Retrying a command that didn't land. |
 | two-step transition | both | Sending brightness and colour separately. Users meet it via the **Two-step bulb models** option and the `no_combined_transition` label. |
@@ -237,8 +255,7 @@ Never paraphrase these. They are what the user types or clicks.
   Motion On / Motion Off / Background Transition.
   Several carry a literal "(Optional)" in the label — keep it when
   quoting the label, drop it in running prose.
-- **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_lighting_groups`,
-  `flare.compute_curve`, `flare.compute_scene_coverage`,
+- **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`,
   `flare.claims_override`, `flare.export_schedule`, `flare.import_schedule`.
 - **Config entries** — Schedules, Settings, Flares, under FLARE. Write the path as

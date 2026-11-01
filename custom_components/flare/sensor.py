@@ -1,7 +1,7 @@
 """Sensor platform for both entries.
 
 Schedules: sensor.<name>_flare per schedule. State is the phase; the
-attributes carry the current brightness/color_temp/rgb_color, today's
+attributes carry the current brightness/color_temp_kelvin/rgb_color, today's
 boundaries, and the full-day `points` curve.
 
 Settings: the `controlled`/`overridden` counts, and a status sensor for each
@@ -506,7 +506,7 @@ class _ScheduleSensor(CoordinatorEntity[ScheduleCoordinator], SensorEntity):
         return {
             "phase": data.phase,
             "brightness": data.brightness,
-            "color_temp": data.kelvin,
+            "color_temp_kelvin": data.kelvin,
             # A list, as the rgb_color service fields expect.
             "rgb_color": list(data.rgb_color),
             "morning_start": boundaries.morning,

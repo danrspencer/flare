@@ -66,7 +66,7 @@ class TestAdaptiveScheduleAndTransitions:
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
 
         # Same phase, attributes only: only the tick picks this up.
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -82,7 +82,7 @@ class TestAdaptiveScheduleAndTransitions:
         """On a flat stretch the sensor emits state_reported, not state_changed,
         so only the tick guarantees an update."""
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
-        hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp": 6667})
+        hass.states.async_set("sensor.test_adaptive", "Morning", {"brightness": 255, "color_temp_kelvin": 6667})
         await hass.async_block_till_done()
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
         apply_lighting_calls.clear()
@@ -101,7 +101,7 @@ class TestAdaptiveScheduleAndTransitions:
             hass, room_target={"entity_id": "light.a"}, background_transition=45, motion_on_transition=2
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -134,7 +134,7 @@ class TestAdaptiveScheduleAndTransitions:
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
         apply_lighting_calls.clear()
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 220, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 220, "color_temp_kelvin": 4000})
         await hass.async_block_till_done()
 
         assert apply_lighting_calls == []
@@ -145,7 +145,7 @@ class TestAdaptiveScheduleAndTransitions:
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
         apply_lighting_calls.clear()
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
@@ -180,7 +180,7 @@ class TestAdaptiveScheduleAndTransitions:
             schedule=add_schedule(hass, sensor="sensor.brand_new_adaptive", slug="brand_new"),
         )
 
-        hass.states.async_set("sensor.brand_new_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.brand_new_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         await hass.async_block_till_done()
 
         calls = apply_lighting_calls
@@ -242,7 +242,7 @@ class TestRgbColour:
         await hass.async_block_till_done()
         await setup_room_automation(hass, room_target={"entity_id": "light.a"}, rgb_phases=["Day"])
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -254,7 +254,7 @@ class TestRgbColour:
         await hass.async_block_till_done()
         await setup_room_automation(hass, room_target={"entity_id": "light.a"})
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 

@@ -1,7 +1,7 @@
 ---
 title: Voice assistants and HomeKit
 parent: Guides
-nav_order: 4
+nav_order: 5
 permalink: /guides/flares/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which

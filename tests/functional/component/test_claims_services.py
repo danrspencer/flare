@@ -108,9 +108,9 @@ async def test_claims_record_records_everything_passed(setup_integration: HomeAs
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
     hass.states.async_set("light.elsewhere", "on", {"brightness": 100, "color_temp_kelvin": 3000})
 
-    result = await claims_record(hass, ["light.a", "light.elsewhere"])
+    await claims_record(hass, ["light.a", "light.elsewhere"])
 
-    assert sorted(result["recorded"]) == ["light.a", "light.elsewhere"]
+    assert sorted(claim_registry(hass).all_records()) == ["light.a", "light.elsewhere"]
 
 
 async def test_claims_check_does_not_take_force(setup_integration: HomeAssistant):
@@ -184,14 +184,8 @@ async def test_claims_clear_is_a_noop_for_an_untracked_entity(setup_integration:
     assert claim_registry(hass).all_records() == {}
 
 
-async def _override(hass: HomeAssistant, entities: list[str]) -> dict:
-    return await hass.services.async_call(
-        DOMAIN,
-        "claims_override",
-        {"entities": entities, "room_id": ROOM},
-        blocking=True,
-        return_response=True,
-    )
+async def _override(hass: HomeAssistant, entities: list[str]) -> None:
+    await hass.services.async_call(DOMAIN, "claims_override", {"entities": entities, "room_id": ROOM}, blocking=True)
 
 
 async def test_claims_override_marks_lights_overridden_whatever_their_state(setup_integration: HomeAssistant):
@@ -204,9 +198,8 @@ async def test_claims_override_marks_lights_overridden_whatever_their_state(setu
     set_light(hass, "light.untracked", "on", supported_color_modes=CT, brightness=100, color_temp_kelvin=3000)
     set_light(hass, "light.off", "off")
 
-    response = await _override(hass, ["light.ours", "light.untracked", "light.off"])
+    await _override(hass, ["light.ours", "light.untracked", "light.off"])
 
-    assert response == {"overridden": ["light.ours", "light.untracked", "light.off"]}
     results = await claims_check(hass, ["light.ours", "light.untracked", "light.off"])
     assert {e: r["status"] for e, r in results.items()} == {
         "light.ours": "overridden",

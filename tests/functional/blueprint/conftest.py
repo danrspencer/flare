@@ -51,7 +51,7 @@ def claims_clear_calls(hass: HomeAssistant, read_only_services):
 def adaptive_sensor(hass: HomeAssistant):
     """A plain state standing in for the schedule sensor, in Day (outside
     the default rgb_phases)."""
-    hass.states.async_set(SENSOR, "Day", {"brightness": 200, "color_temp": 4000})
+    hass.states.async_set(SENSOR, "Day", {"brightness": 200, "color_temp_kelvin": 4000})
 
 
 @pytest.fixture(autouse=True)

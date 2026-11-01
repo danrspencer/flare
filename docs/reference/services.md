@@ -21,8 +21,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | Service | Description |
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
-| [`flare.turn_off`](#flareturn_off) | Turns lights off, recording that FLARE did it |
-| [`flare.compute_lighting_groups`](#flarecompute_lighting_groups) | Works out what `apply_lighting` would send, without sending it |
+| [`flare.turn_off`](#flareturn_off) | Turns lights off for now, so FLARE turns them on again later |
 | [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
@@ -56,7 +55,7 @@ action: flare.apply_lighting
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
-  color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
+  color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp_kelvin') }}"
   transition: 2
   brightness_levels: { light.kitchen_2: 60 }
   room_id: "{{ this.entity_id }}"
@@ -74,14 +73,14 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_kelvin`<br>Kelvin | yes | The colour temperature. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
+| `dry_run`<br>boolean; default `false` | no | Works out what would be sent and returns it, without sending anything or recording claims. |
 | `min_brightness_change`<br>percent, 0–25; default from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness, or 2 if that's more, isn't sent anything, and still matches its claim. See [tolerances](../override-protection/#how-close-counts-as-a-match). |
 | `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. For an `rgb_color` target, the channels' differences added together can be up to twice this. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. Without it, the lights this room's calls have set. |
 | `room_id`<br>text | no | The room to record the change for, usually the calling automation: `{{ this.entity_id }}`. Without it, FLARE records nothing and doesn't leave any light alone. See [rooms](../override-protection/#rooms). |
-| `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
-| `two_step_label`<br>label ID; default `no_combined_transition` | no | Lights or devices with this label are sent two commands. See [two-step bulbs](#two-step-bulbs). |
+| `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. [Two-step bulbs](#two-step-bulbs) spend half of it on brightness and half on colour. |
 
 ### Brightness levels
 
@@ -93,56 +92,8 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 
 ### Response data
 
-Optional. With `response_variable`, the response is what was sent, in the same shape as
-[`compute_lighting_groups`](#flarecompute_lighting_groups) returns.
-
-## `flare.turn_off`
-
-Use this action to turn lights off and record that FLARE did it, so FLARE doesn't treat them
-as changed by someone else.
-
-```yaml
-action: flare.turn_off
-data:
-  entities: [light.kitchen_1, light.kitchen_2]
-  transition: 15
-  room_id: "{{ this.entity_id }}"
-```
-
-### Fields
-
-| Field | Required | Description |
-|---|---|---|
-| `entities`<br>list of light entity IDs | yes | The lights to turn off. |
-| `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
-| `room_id`<br>text | no | The room to record the turn-off for. Without it, FLARE records nothing. |
-| `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. |
-
-### Good to know
-
-- It turns off every light it's given, including lights someone else has changed. To turn off
-  only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
-- Use it rather than `light.turn_off`, which records nothing, so FLARE would treat the lights
-  as switched off by someone else.
-
-## `flare.compute_lighting_groups`
-
-Use this action to find out what [`apply_lighting`](#flareapply_lighting) would send, without
-sending it. It takes the same fields as `apply_lighting`, except `transition`.
-
-```yaml
-action: flare.compute_lighting_groups
-data:
-  entities: [light.kitchen_1, light.kitchen_2]
-  brightness: 200
-  color_temp_kelvin: 3200
-  brightness_levels: { light.kitchen_2: 100 }
-response_variable: plan
-```
-
-### Response data
-
-`groups` is a list with one entry for each brightness being sent, and each entry has these
+Optional. With `response_variable`, the response is what was sent, or with `dry_run`, what
+would be sent. `groups` is a list with one entry for each brightness, and each entry has these
 fields:
 
 - `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
@@ -170,6 +121,52 @@ groups:
     combined_rgb: []
     two_step_rgb: []
 ```
+
+## `flare.turn_off`
+
+Use this action to turn lights off while keeping them `controlled`. It sets each light's claim
+to off before turning it off, so the light still matches its claim and comes on with the rest
+of the room next time.
+
+```yaml
+action: flare.turn_off
+data:
+  entities: [light.kitchen_1, light.kitchen_2]
+  transition: 15
+```
+
+### `flare.turn_off` or `light.turn_off`?
+
+Both turn the light off, but they leave its [claim](../../guides/overrides/#claims)
+saying different things:
+
+| | `light.turn_off` | `flare.turn_off` |
+|---|---|---|
+| The light's claim | Still says what FLARE last set, such as on at 180 | Says off |
+| The light's status | `overridden`, once it has been off for 30 seconds, since it doesn't match its claim | `controlled`, since it matches its claim |
+| The next time the room's lights are turned on | It's left off | It's set with the rest, so it comes on |
+
+Either way, once none of the room's claimed lights is on, the room deletes its claims, and every
+light is set the next time the room's lights are turned on. So if you're turning the whole room
+off, it makes no difference which you use.
+
+Use `light.turn_off` when you want a light to stay off while the rest of the room is on, such as
+a lamp switched off for the evening. Use `flare.turn_off` when a room has emptied but a
+nightlight stays on, so the other lights come on again when someone returns. In a room that's
+still in use, a light turned off with `flare.turn_off` comes back on at the next update.
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `entities`<br>list of light entity IDs | yes | The lights to turn off. |
+| `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. |
+
+### Good to know
+
+- It turns off every light it's given, including lights someone else has changed. To turn off
+  only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
+- A light FLARE isn't driving is just turned off, as `light.turn_off` would.
 
 ## `flare.compute_curve`
 
@@ -207,13 +204,13 @@ brightness. The defaults are the values a new schedule starts with, and
 
 - `phase`: `Morning`, `Day`, `Evening` or `Night`.
 - `brightness`: The brightness, 0–255.
-- `kelvin`: The colour temperature, in Kelvin.
+- `color_temp_kelvin`: The colour temperature, in Kelvin.
 - `rgb_color`: The colour temperature converted to RGB, as `[r, g, b]`.
 
 ```yaml
 phase: Evening
 brightness: 150
-kelvin: 3200
+color_temp_kelvin: 3200
 rgb_color: [255, 184, 123]
 ```
 
@@ -281,15 +278,11 @@ data:
 | `room_id`<br>text | yes | The room to record the claim for, usually your automation: `{{ this.entity_id }}`. |
 | `targets`<br>map of entity ID to values | no | What you're about to send each entity: `brightness` and either `color_temp_kelvin` or `rgb_color`. |
 
-### Response data
-
-Optional. `recorded` lists the entities a claim was recorded for.
-
 ### Good to know
 
-- Without `targets`, FLARE can only match the change by its context, which Home Assistant
-  drops after five seconds. A bulb that's slower than that to report back is then treated as
-  changed by someone else.
+- Without `targets`, the claim holds only the change's context, which Home Assistant drops
+  after five seconds. A bulb that's slower than that to report back doesn't match its claim,
+  so it becomes `overridden`.
 - A light running an effect that keeps changing its colour won't match its claim. Use a scene
   for it instead, or hand it over with a `null` brightness in the blueprint.
 
@@ -319,11 +312,10 @@ Optional. `cleared` lists the entities that had a claim to discard.
 
 Use this action to mark lights as changed by someone else, so FLARE leaves them alone.
 
-You don't usually need it. When something other than FLARE changes a light that FLARE is
-driving, FLARE notices on its own and leaves the light alone. It's for lights FLARE isn't
-driving yet, such as when your automation turns lights on in a dark room and you want FLARE to
-leave them as they are. Without it, the room's FLARE automation sets those lights back to the
-curve on its next update.
+You don't usually need it. A light with a claim becomes `overridden` by itself once something
+else changes it and it stops matching its claim. It's for lights with no claim yet, such as
+when your automation turns lights on in a dark room and you want FLARE to leave them as they
+are. Without it, they're `untracked`, so the room's next update sets them to the curve.
 
 It marks each entity whether it's on or off. A light marked this way stays overridden until its
 room goes dark, its claims are cleared, or a forced `flare.apply_lighting` takes it back.
@@ -343,10 +335,6 @@ data:
 | `entities`<br>list of light entity IDs | yes | The lights to mark. |
 | `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
 | `room_id`<br>text | yes | The room that releases them once it's dark, usually the automation driving them. |
-
-### Response data
-
-Optional. `overridden` lists the entities passed in.
 
 ## `flare.compute_scene_coverage`
 
@@ -373,13 +361,11 @@ response_variable: coverage
 ### Response data
 
 - `scene_valid`: `true` if the scene exists and every entity it sets is in `scope_entities`.
-- `scene_active`: The same as `scene_valid`.
 - `covered_entities`: The entities the scene sets.
 - `uncovered_entities`: The entries in `target_entities` that the scene doesn't set. If
   `scene_valid` is `false`, this is all of them.
 
 ```yaml
-scene_active: true
 scene_valid: true
 covered_entities: [light.kitchen_1]
 uncovered_entities: [light.kitchen_2]

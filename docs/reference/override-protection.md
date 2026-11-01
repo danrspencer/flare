@@ -18,6 +18,9 @@ FLARE records what it last asked each light for, so it can tell its own changes 
 else's and leave alone a light you've changed yourself. Its entities and options are under
 **Settings → Devices & Services → FLARE → Settings**.
 
+This page lists what you can set and use. For what override protection does and how it works,
+with examples, see [Override protection explained](../../guides/overrides/).
+
 <details open markdown="block">
   <summary>On this page</summary>
   {: .text-delta }
@@ -61,13 +64,12 @@ again on its next update.
 
 ## How it works
 
-When `flare.apply_lighting` or `flare.turn_off` changes a light, it records a **claim** on the
-light. On the next update, FLARE compares the light with its claim. If the light still shows
-what FLARE set, FLARE carries on setting it. If it doesn't, something else has changed it, and
-FLARE leaves it alone.
+[Override protection explained](../../guides/overrides/) explains what override protection
+does and how claims work, with examples. This section is the detail for calling FLARE's services yourself.
 
-Claims are FLARE's, not any one automation's: a light one automation set is FLARE's to every
-other automation too. A light that's on and has no claim is always sent what
+`flare.apply_lighting` records a claim on each light it sets, and `flare.turn_off` sets the
+claim of each light it switches off to off. Claims belong to the lights, not to any one
+automation. A light that's on and has no claim is always sent what
 `flare.apply_lighting` would set, even if it already shows it, and that write claims it. After a
 **Clear**, for example, a room's lights are claimed again on their next update. Without a
 `room_id`, a light already showing the values isn't sent anything.
@@ -89,8 +91,10 @@ data:
   room_entities: [light.kitchen_1, light.kitchen_2, light.kitchen_lamp]
 ```
 
-- Without `room_id`, `apply_lighting`, `turn_off` and `compute_lighting_groups` set the lights
-  but record nothing, and don't leave any light alone.
+- Without `room_id`, `apply_lighting` sets the lights but records nothing, and doesn't leave any
+  light alone.
+- `turn_off` doesn't take a room: it updates the claims of the lights FLARE already has, which
+  already belong to their rooms.
 - `claims_record` and `claims_override` require `room_id`. `claims_check` and `claims_clear`
   don't take one.
 - Without `room_entities`, a room's lights are the ones its calls have set.
@@ -101,22 +105,6 @@ data:
 
 If an automation is renamed, its room carries on: FLARE keeps rooms by the automation's entity
 registry entry, not its entity ID.
-
-### The two claims
-
-Each tracked light has two claims:
-
-- **`latest`**: the last change FLARE sent to the light.
-- **`observed`**: a change FLARE has seen the light report. On its next update, if the light
-  reports `latest`'s context, FLARE promotes `latest` to `observed`.
-
-A light matching either claim is FLARE's. So a change that never reaches the light, such as a
-dropped Zigbee command, doesn't make FLARE treat the light as changed by someone else; the light
-still matches `observed`.
-
-A light matches a claim if it reports the context of that claim's change, or the values in it.
-Values are needed because Home Assistant drops a change's context after five seconds, and some
-bulbs take longer than that to report back.
 
 ### How close counts as a match
 
@@ -135,36 +123,6 @@ anything.
 
 If lights are marked overridden when nobody has changed them, raise the one that matches the
 difference shown on the [dashboard](../../dashboard/). Lower them to catch smaller changes.
-
-Claims are kept across a restart. After a restart every light has a new context, so restored
-claims are matched by values only: a light still showing what FLARE set is FLARE's, and any
-other light is left alone.
-
-### Turning a light off counts
-
-Turning a light off yourself counts as changing it, so FLARE doesn't turn it back on. FLARE's own
-turn-offs record a claim of `{"state": "off"}`, which is how FLARE tells them apart from yours.
-
-### When FLARE sets a light again
-
-**A room discards its claims when none of its claimed lights are on.** This is what normally
-ends an override: once the room is dark, FLARE sets every light in it again.
-
-- A light FLARE has no claim on doesn't count, so a lamp in the room that something else runs
-  can't keep the room's claims.
-- A light that's unavailable counts as off, so one dead bulb can't either.
-- After a restart, a room whose claimed lights are all off once they've reported in discards its
-  claims too, so a room switched off while Home Assistant was restarting comes on again as
-  usual.
-- A light in two rooms loses its claim when either of them goes dark.
-
-A light also loses its claim when it goes unavailable, and you can discard claims by hand with
-**Clear**, the dashboard's **Clear** for an area, or
-[`flare.claims_clear`](../services/#flareclaims_clear).
-
-A light that has just come back online, say switched on at the wall, starts at whatever it
-powers up as, and misses a command sent while it boots. So when a room's lights come back
-online together, FLARE waits a few seconds before setting them.
 
 ## FLARE's events
 

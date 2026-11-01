@@ -82,7 +82,7 @@ async def apply_lighting(hass: HomeAssistant, entities: list[str], *, context: C
 
 
 async def turn_off(hass: HomeAssistant, entities: list[str], *, context: Context | None = None, **overrides):
-    data = {"entities": entities, "room_id": ROOM, **overrides}
+    data = {"entities": entities, **overrides}
     await hass.services.async_call(DOMAIN, "turn_off", data, blocking=True, context=context)
 
 
@@ -93,11 +93,11 @@ async def claims_check(hass: HomeAssistant, entities: list[str]) -> dict:
     return result["results"]
 
 
-async def claims_record(hass: HomeAssistant, entities: list[str], *, targets=None, context=None, room=ROOM):
+async def claims_record(hass: HomeAssistant, entities: list[str], *, targets=None, context=None, room=ROOM) -> None:
     data = {"entities": entities, "room_id": room}
     if targets is not None:
         data["targets"] = targets
-    return await hass.services.async_call(DOMAIN, "claims_record", data, blocking=True, context=context, return_response=True)
+    await hass.services.async_call(DOMAIN, "claims_record", data, blocking=True, context=context)
 
 
 async def label_two_step(hass: HomeAssistant, entity_id: str) -> None:

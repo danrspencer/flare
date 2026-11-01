@@ -320,7 +320,7 @@ def test_the_heading_shows_the_live_values(result):
     contents = [b.get("state_content") for b in title["badges"]]
 
     assert "brightness" in contents
-    assert "color_temp" in contents
+    assert "color_temp_kelvin" in contents
 
 
 def test_the_override_badge_only_shows_while_an_override_is_active(result):
