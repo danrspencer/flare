@@ -130,11 +130,15 @@ can cancel the run mid-sleep.
 
 ## `turn_off`
 
-`flare.turn_off` records `{"state": "off"}` as each light's target, then
-calls `light.turn_off`, as one operation and with **no** override
-protection: a room emptying takes hand-set lights too. The off target is
-what tells FLARE's off from anyone else's once the context has expired.
-Callers mustn't split it back into a claim and a bare `light.turn_off`.
+`flare.turn_off` records `{"state": "off"}` as the target of each light
+that already has a claim (`ClaimRegistry.async_record_off`), then calls
+`light.turn_off`, as one operation and with **no** override protection: a
+room emptying takes hand-set lights too. The off target is what tells
+FLARE's off from anyone else's once the context has expired, which matters
+only while the room stays lit; a dark room releases its claims anyway. It
+takes no room, since a claimed light is already in its rooms, and it
+claims nothing new. Callers mustn't split it back into a claim and a bare
+`light.turn_off`.
 
 ## Unclaimed lights
 

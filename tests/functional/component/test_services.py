@@ -32,7 +32,7 @@ async def test_compute_curve_service_returns_expected_shape(setup_integration: H
     )
     assert result["phase"] == "Day"
     assert "brightness" in result
-    assert "kelvin" in result
+    assert "color_temp_kelvin" in result
     assert isinstance(result["rgb_color"], list) and len(result["rgb_color"]) == 3
 
 
@@ -134,6 +134,19 @@ async def test_apply_lighting_accepts_an_explicit_null_rgb_color(setup_integrati
     assert len(turn_on_calls) == 1
 
 
+async def test_compute_lighting_groups_takes_no_room_lights(setup_integration: HomeAssistant):
+    """Only a write joins a room."""
+    hass = setup_integration
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(
+            DOMAIN,
+            "compute_lighting_groups",
+            {"entities": ["light.a"], "brightness": 200, "color_temp_kelvin": 4000, "room_entities": ["light.a"]},
+            blocking=True,
+            return_response=True,
+        )
+
+
 async def test_compute_lighting_groups_accepts_an_explicit_null_rgb_color(setup_integration: HomeAssistant):
     """The same, on compute_lighting_groups."""
     hass = setup_integration
@@ -205,7 +218,7 @@ async def test_compute_scene_coverage_reports_covered_and_uncovered_entities(set
         blocking=True,
         return_response=True,
     )
-    assert result["scene_active"] is True
+    assert result["scene_valid"] is True
     assert result["covered_entities"] == ["light.a"]
     assert result["uncovered_entities"] == ["light.b"]
 
@@ -230,3 +243,35 @@ async def test_unloading_the_settings_entry_removes_every_service_it_registered(
 
     # Only those async_setup registers, which belong to no entry.
     assert set(hass.services.async_services_for_domain(DOMAIN)) == {"export_schedule", "import_schedule", "resolve_target"}
+
+
+async def test_apply_lighting_transition_defaults_to_zero(setup_integration: HomeAssistant):
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    await hass.services.async_call(
+        DOMAIN, "apply_lighting", {"entities": ["light.a"], "brightness": 200, "color_temp_kelvin": 3200}, blocking=True
+    )
+
+    assert turn_on[-1].data["transition"] == 0
+
+
+@pytest.mark.parametrize("service", ["apply_lighting", "compute_lighting_groups"])
+async def test_two_step_bulbs_are_not_chosen_per_call(setup_integration: HomeAssistant, service):
+    """Whether a bulb needs two steps is the bulb's, from its label or model."""
+    hass = setup_integration
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(
+            DOMAIN,
+            service,
+            {"entities": ["light.a"], "brightness": 200, "color_temp_kelvin": 3200, "two_step_label": "mine"},
+            blocking=True,
+            return_response=service == "compute_lighting_groups",
+        )
+
+
+@pytest.mark.parametrize("service", ["claims_record", "claims_override"])
+async def test_the_claim_writers_respond_with_nothing(setup_integration: HomeAssistant, service):
+    """Every light passed is marked, so a list back would only repeat it."""
+    assert setup_integration.services.supports_response(DOMAIN, service) is SupportsResponse.NONE

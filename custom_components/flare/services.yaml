@@ -41,16 +41,6 @@ compute_lighting_groups:
           min: 1000
           max: 10000
           unit_of_measurement: K
-    two_step_label:
-      name: Two-step label
-      description: >-
-        Lights or devices with this label are listed under two_step, for bulbs
-        that can't change brightness and colour temperature in one command.
-        Lights matching the two-step models under FLARE → Settings → Configure are
-        listed there too.
-      default: no_combined_transition
-      selector:
-        text:
     prefer_rgb_color:
       name: Prefer RGB colour
       description: >-
@@ -106,20 +96,11 @@ compute_lighting_groups:
       name: Room
       description: >-
         Usually the calling automation, `{{ this.entity_id }}`. With a room,
-        lights something else has changed are treated as overridden. Leave
-        unset to treat no light as overridden.
+        lights something else has changed are treated as overridden and left
+        out. Leave unset to treat no light as overridden.
       example: automation.kitchen_lighting
       selector:
         text:
-    room_entities:
-      name: Room lights
-      description: >-
-        The room's lights. FLARE releases its claims on them once none of them
-        is on. Without it, only the lights this call names.
-      selector:
-        entity:
-          multiple: true
-          domain: light
 
 apply_lighting:
   name: Apply lighting
@@ -169,22 +150,12 @@ apply_lighting:
       description: >-
         Transition in seconds. Two-step bulbs take half for brightness, then
         half for colour temperature.
-      required: true
+      default: 0
       selector:
         number:
           min: 0
           max: 300
           unit_of_measurement: s
-    two_step_label:
-      name: Two-step label
-      description: >-
-        Lights or devices with this label are sent brightness and colour
-        temperature as two commands, for bulbs that can't change both in one.
-        So are lights matching the two-step models under FLARE → Settings →
-        Configure.
-      default: no_combined_transition
-      selector:
-        text:
     prefer_rgb_color:
       name: Prefer RGB colour
       description: >-
@@ -258,9 +229,9 @@ apply_lighting:
 turn_off:
   name: Turn off lights
   description: >-
-    Turns lights off and records it, so FLARE doesn't treat them as
-    overridden. It turns off every light it's given, including overridden
-    ones.
+    Turns lights off, including overridden ones. Lights FLARE is driving stay
+    FLARE's, so while the rest of their room is on they come back on with it
+    rather than being treated as overridden.
   fields:
     entities:
       name: Entities
@@ -280,24 +251,6 @@ turn_off:
           min: 0
           max: 300
           unit_of_measurement: s
-    room_id:
-      name: Room
-      description: >-
-        Usually the calling automation, `{{ this.entity_id }}`. The turn-off
-        is recorded for this room. Leave unset to turn the lights off without
-        recording anything.
-      example: automation.kitchen_lighting
-      selector:
-        text:
-    room_entities:
-      name: Room lights
-      description: >-
-        The room's lights. FLARE releases its claims on them once none of them
-        is on. Without it, only the lights this call names.
-      selector:
-        entity:
-          multiple: true
-          domain: light
 
 compute_curve:
   name: Compute curve

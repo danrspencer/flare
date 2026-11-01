@@ -46,7 +46,7 @@ device.
 |---|---|
 | state | The phase: `Morning`, `Day`, `Evening` or `Night`. |
 | `brightness` | The current brightness, 0–255. |
-| `color_temp` | The current colour temperature, in Kelvin. |
+| `color_temp_kelvin` | The current colour temperature, in Kelvin. |
 | `rgb_color` | The current colour temperature as `[r, g, b]`. |
 | `morning_start`, `day_start`, `evening_start`, `night_start` | Today's phase start times, as timestamps. |
 | `evening_earliest`, `evening_latest` | Today's earliest and latest Evening start, as timestamps. |

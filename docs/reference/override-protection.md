@@ -61,8 +61,8 @@ again on its next update.
 
 ## How it works
 
-When `flare.apply_lighting` or `flare.turn_off` changes a light, it records a **claim** on the
-light. On the next update, FLARE compares the light with its claim. If the light still shows
+When `flare.apply_lighting` changes a light, it records a **claim** on the light, and
+`flare.turn_off` updates the claim of a light it switches off. On the next update, FLARE compares the light with its claim. If the light still shows
 what FLARE set, FLARE carries on setting it. If it doesn't, something else has changed it, and
 FLARE leaves it alone.
 
@@ -89,8 +89,11 @@ data:
   room_entities: [light.kitchen_1, light.kitchen_2, light.kitchen_lamp]
 ```
 
-- Without `room_id`, `apply_lighting`, `turn_off` and `compute_lighting_groups` set the lights
-  but record nothing, and don't leave any light alone.
+- Without `room_id`, `apply_lighting` sets the lights but records nothing, and doesn't leave any
+  light alone. `compute_lighting_groups` takes `room_id` only to say which lights
+  `apply_lighting` would leave alone, and doesn't take `room_entities`.
+- `turn_off` doesn't take a room: it updates the claims of the lights FLARE already has, which
+  already belong to their rooms.
 - `claims_record` and `claims_override` require `room_id`. `claims_check` and `claims_clear`
   don't take one.
 - Without `room_entities`, a room's lights are the ones its calls have set.

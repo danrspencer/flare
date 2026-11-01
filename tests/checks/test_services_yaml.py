@@ -13,11 +13,11 @@ PLANNER = SERVICES["compute_lighting_groups"]["fields"]
 DISPATCHER = SERVICES["apply_lighting"]["fields"]
 
 # Worded differently on purpose: one plans, the other writes.
-INTENTIONALLY_DIFFERENT = {"prefer_rgb_color", "two_step_label", "room_id"}
+INTENTIONALLY_DIFFERENT = {"prefer_rgb_color", "room_id"}
 
 
-def test_apply_lighting_is_the_planner_plus_transition():
-    assert set(DISPATCHER) - set(PLANNER) == {"transition"}
+def test_apply_lighting_is_the_planner_plus_transition_and_room_lights():
+    assert set(DISPATCHER) - set(PLANNER) == {"transition", "room_entities"}
     assert set(PLANNER) <= set(DISPATCHER)
 
 

@@ -21,7 +21,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | Service | Description |
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
-| [`flare.turn_off`](#flareturn_off) | Turns lights off, recording that FLARE did it |
+| [`flare.turn_off`](#flareturn_off) | Turns lights off, keeping them FLARE's |
 | [`flare.compute_lighting_groups`](#flarecompute_lighting_groups) | Works out what `apply_lighting` would send, without sending it |
 | [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
@@ -56,7 +56,7 @@ action: flare.apply_lighting
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
-  color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
+  color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp_kelvin') }}"
   transition: 2
   brightness_levels: { light.kitchen_2: 60 }
   room_id: "{{ this.entity_id }}"
@@ -80,8 +80,7 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
 | `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. Without it, the lights this room's calls have set. |
 | `room_id`<br>text | no | The room to record the change for, usually the calling automation: `{{ this.entity_id }}`. Without it, FLARE records nothing and doesn't leave any light alone. See [rooms](../override-protection/#rooms). |
-| `transition`<br>seconds, 0–300 | yes | How long the change takes. Two-step bulbs spend half of it on brightness and half on colour. |
-| `two_step_label`<br>label ID; default `no_combined_transition` | no | Lights or devices with this label are sent two commands. See [two-step bulbs](#two-step-bulbs). |
+| `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. [Two-step bulbs](#two-step-bulbs) spend half of it on brightness and half on colour. |
 
 ### Brightness levels
 
@@ -98,15 +97,16 @@ Optional. With `response_variable`, the response is what was sent, in the same s
 
 ## `flare.turn_off`
 
-Use this action to turn lights off and record that FLARE did it, so FLARE doesn't treat them
-as changed by someone else.
+Use this action to turn off some of a room's lights while FLARE carries on running the room.
+The lights stay FLARE's, so they come back on with the room next time. Turned off with
+`light.turn_off`, they'd count as switched off by someone, and FLARE would leave them off until
+the whole room is dark.
 
 ```yaml
 action: flare.turn_off
 data:
   entities: [light.kitchen_1, light.kitchen_2]
   transition: 15
-  room_id: "{{ this.entity_id }}"
 ```
 
 ### Fields
@@ -114,21 +114,22 @@ data:
 | Field | Required | Description |
 |---|---|---|
 | `entities`<br>list of light entity IDs | yes | The lights to turn off. |
-| `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
-| `room_id`<br>text | no | The room to record the turn-off for. Without it, FLARE records nothing. |
 | `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. |
 
 ### Good to know
 
+- When you're turning a whole room off, it makes no difference which you use: once none of a
+  room's lights is on, FLARE sets every light in it again next time anyway.
 - It turns off every light it's given, including lights someone else has changed. To turn off
   only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
-- Use it rather than `light.turn_off`, which records nothing, so FLARE would treat the lights
-  as switched off by someone else.
+- A light FLARE isn't driving is just turned off, as `light.turn_off` would.
 
 ## `flare.compute_lighting_groups`
 
 Use this action to find out what [`apply_lighting`](#flareapply_lighting) would send, without
-sending it. It takes the same fields as `apply_lighting`, except `transition`.
+sending it. It takes the same fields as `apply_lighting`, except `transition` and
+`room_entities`. With `room_id`, lights changed by someone else are left out, as
+`apply_lighting` would leave them alone.
 
 ```yaml
 action: flare.compute_lighting_groups
@@ -207,13 +208,13 @@ brightness. The defaults are the values a new schedule starts with, and
 
 - `phase`: `Morning`, `Day`, `Evening` or `Night`.
 - `brightness`: The brightness, 0–255.
-- `kelvin`: The colour temperature, in Kelvin.
+- `color_temp_kelvin`: The colour temperature, in Kelvin.
 - `rgb_color`: The colour temperature converted to RGB, as `[r, g, b]`.
 
 ```yaml
 phase: Evening
 brightness: 150
-kelvin: 3200
+color_temp_kelvin: 3200
 rgb_color: [255, 184, 123]
 ```
 
@@ -281,10 +282,6 @@ data:
 | `room_id`<br>text | yes | The room to record the claim for, usually your automation: `{{ this.entity_id }}`. |
 | `targets`<br>map of entity ID to values | no | What you're about to send each entity: `brightness` and either `color_temp_kelvin` or `rgb_color`. |
 
-### Response data
-
-Optional. `recorded` lists the entities a claim was recorded for.
-
 ### Good to know
 
 - Without `targets`, FLARE can only match the change by its context, which Home Assistant
@@ -344,10 +341,6 @@ data:
 | `room_entities`<br>list of light entity IDs | no | The room's lights, as for `apply_lighting`. |
 | `room_id`<br>text | yes | The room that releases them once it's dark, usually the automation driving them. |
 
-### Response data
-
-Optional. `overridden` lists the entities passed in.
-
 ## `flare.compute_scene_coverage`
 
 Use this action to find out which of a set of lights a scene sets, so you can apply the scene
@@ -373,13 +366,11 @@ response_variable: coverage
 ### Response data
 
 - `scene_valid`: `true` if the scene exists and every entity it sets is in `scope_entities`.
-- `scene_active`: The same as `scene_valid`.
 - `covered_entities`: The entities the scene sets.
 - `uncovered_entities`: The entries in `target_entities` that the scene doesn't set. If
   `scene_valid` is `false`, this is all of them.
 
 ```yaml
-scene_active: true
 scene_valid: true
 covered_entities: [light.kitchen_1]
 uncovered_entities: [light.kitchen_2]

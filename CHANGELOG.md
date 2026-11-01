@@ -123,12 +123,26 @@ After updating:
 ### If you use FLARE's services or events yourself
 
 - `zone_device_id` is replaced by `room_id`, usually `{{ this.entity_id }}`, and an optional
-  `room_entities`, on `flare.apply_lighting`, `flare.turn_off`,
-  `flare.compute_lighting_groups`, `flare.claims_record` and `flare.claims_override`.
+  `room_entities`, on `flare.apply_lighting`, `flare.claims_record` and
+  `flare.claims_override`. `flare.compute_lighting_groups` takes `room_id` only, and rejects
+  `room_entities`.
+- `flare.turn_off` takes no room, and rejects `zone_device_id`, `room_id` and `room_entities`.
+  It keeps the lights FLARE is driving as FLARE's, whichever automation set them, and turns
+  any other light off as `light.turn_off` would.
   `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
   returns `rooms` instead of `zone`. A call that still passes `zone_device_id` is rejected.
 - `flare.claims_clear`'s `cleared` lists only the entities that had a claim, not every one
-  passed in.
+  passed in. `flare.claims_record` and `flare.claims_override` no longer return anything.
+- **The schedule sensor's colour temperature is now `color_temp_kelvin`**, not `color_temp`,
+  and `flare.compute_curve` returns `color_temp_kelvin` instead of `kelvin`, the same name
+  `flare.apply_lighting` takes. A template reading
+  `state_attr('sensor.home_flare', 'color_temp')` needs changing to `'color_temp_kelvin'`.
+- `flare.compute_scene_coverage` no longer returns `scene_active`, which was always the same
+  as `scene_valid`.
+- `two_step_label` is gone from `flare.apply_lighting` and `flare.compute_lighting_groups`; a
+  call that passes it is rejected. Label a bulb `no_combined_transition`, or add its model under
+  **FLARE → Settings → Configure**, instead.
+- `flare.apply_lighting`'s `transition` is optional, defaulting to `0`.
 - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
 - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
   `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under

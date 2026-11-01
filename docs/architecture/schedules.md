@@ -68,7 +68,7 @@ flowchart TB
 
 | Entity | Shows |
 |---|---|
-| `sensor.<slug>_flare` | the phase as state; `brightness`, `color_temp`, `rgb_color`, today's boundaries, `points` |
+| `sensor.<slug>_flare` | the phase as state; `brightness`, `color_temp_kelvin`, `rgb_color`, today's boundaries, `points` |
 | `event.<slug>_flare_phase` | fires once per phase change, carrying the phase |
 | `select.<slug>_flare_phase` | the manual override, which clears itself at the next natural boundary |
 
@@ -177,7 +177,7 @@ The blueprint reads a schedule two ways:
   can't look up a device's entities, which is why it's an event entity on
   the schedule's device and not a template.
 - **the schedule sensor's attributes**, read in `variables:` for
-  `brightness`, `color_temp` and `rgb_color`.
+  `brightness`, `color_temp_kelvin` and `rgb_color`.
 
 Between phase changes, the curve still moves within a phase, so rooms also
 update on their area's [tick]({{ site.baseurl }}/architecture/event-loop/#timers).

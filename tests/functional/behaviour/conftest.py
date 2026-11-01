@@ -48,7 +48,7 @@ async def schedule(stub_entry_setup, frozen_time, sunset, hass: HomeAssistant):
     sunset(today_at(SUNSET))
     entry = await setup_schedule(hass)
     state = hass.states.get(SCHEDULE_SENSOR)
-    assert (state.state, state.attributes["brightness"], state.attributes["color_temp"]) == (
+    assert (state.state, state.attributes["brightness"], state.attributes["color_temp_kelvin"]) == (
         "Evening",
         CURVE_BRIGHTNESS,
         CURVE_KELVIN,

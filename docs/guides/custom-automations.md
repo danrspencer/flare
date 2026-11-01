@@ -47,7 +47,7 @@ actions:
     data:
       entities: "{{ area_entities('kitchen') | select('match', '^light\\.') | select('is_state', 'on') | list }}"
       brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
-      color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp') }}"
+      color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp_kelvin') }}"
       transition: 5
       room_id: "{{ this.entity_id }}"
       room_entities: "{{ area_entities('kitchen') | select('match', '^light\\.') | list }}"
@@ -95,8 +95,9 @@ FLARE checks the light against it later, so a light running an effect that keeps
 colour won't be recognised. For that, use a scene or hand the light over with a `null`
 brightness in the blueprint instead.
 
-To turn lights off, use `flare.turn_off` rather than `light.turn_off`: it records the turn-off
-too, so it isn't mistaken for someone switching the lights off by hand.
+To turn off some of a room's lights while the rest stay on, use `flare.turn_off` rather than
+`light.turn_off`. The lights stay FLARE's and come back on with the room; with `light.turn_off`
+they'd count as switched off by hand, and FLARE would leave them off until the room is dark.
 
 `flare.compute_lighting_groups` gives you what `apply_lighting` would send, grouped, without
 sending it, if you want a starting point for sending it yourself.

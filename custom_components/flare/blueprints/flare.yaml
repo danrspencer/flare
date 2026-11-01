@@ -609,7 +609,7 @@ action:
         {% endfor %}
         {{ ns.items }}
       brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
-      color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp') }}"
+      color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp_kelvin') }}"
       # None while the sensor is unavailable.
       rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
       # Up here because the turn-off lists below exclude idle lights. Empty
@@ -765,7 +765,7 @@ action:
       # tick never does.
       scene_recheck_due: "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}"
       # No scene until flare.compute_scene_coverage says otherwise, in default:.
-      scene_coverage: "{{ {'scene_active': false, 'covered_entities': []} }}"
+      scene_coverage: "{{ {'scene_valid': false, 'covered_entities': []} }}"
   # Never checks occupancy: an already-on light should follow the curve
   # regardless. allow_turn_on decides whether lights may come on.
   #
@@ -796,15 +796,13 @@ action:
             alias: "Every occupancy sensor has been clear for the full Wait time"
             value_template: "{{ occupancy_clear_for_wait }}"
         sequence:
-          # flare.turn_off records the turn-off as ours, so it isn't read as an
-          # override.
+          # flare.turn_off keeps them FLARE's, so they aren't read as overridden
+          # while idle lights keep the room lit.
           - alias: "Turn off the light(s)"
             action: flare.turn_off
             data:
               entities: "{{ turn_off_entities }}"
               transition: !input motion_off_transition
-              room_id: "{{ room_id }}"
-              room_entities: "{{ resolved_entities }}"
           # Idle lights are dimmed instead. Does nothing with no idle brightness.
           - alias: "Leave the idle-brightness lights dimly lit"
             if:
@@ -850,8 +848,6 @@ action:
             data:
               entities: "{{ entities_still_on }}"
               transition: !input motion_off_transition
-              room_id: "{{ room_id }}"
-              room_entities: "{{ resolved_entities }}"
     default:
       - alias: "Work out which lights the scene takes, if there is one"
         if:
@@ -869,20 +865,20 @@ action:
       # The scene counts only if it exists and everything it covers is in
       # scope; otherwise FLARE drives every light.
       - variables:
-          scene_active: "{{ scene_coverage.scene_active }}"
+          scene_valid: "{{ scene_coverage.scene_valid }}"
           # Lights handed off this run - to an active scene, or via a
           # null/false level. They're never written, so their claims are
           # released instead of going stale into "overridden". Lights only: a
           # scene can set other domains, which hold no claims.
           handed_off_entities: >
-            {{ ((scene_coverage.covered_entities if scene_active else []) + hands_off_entities)
+            {{ ((scene_coverage.covered_entities if scene_valid else []) + hands_off_entities)
                | select('match', 'light[.]') | unique | list }}
           # No off-light filter: the step using it is already behind
           # allow_turn_on. Off lights are dropped while the room is too
           # bright, so the call updates the ones already on and leaves the
           # rest dark.
           target_entities: >
-            {{ (scene_coverage.uncovered_entities if scene_active else resolved_entities)
+            {{ (scene_coverage.uncovered_entities if scene_valid else resolved_entities)
                | reject('in', lux_blocked_entities) | list }}
       # Everything that can switch a light on is under this gate (see
       # allow_turn_on). An empty room settles to its idle brightness, outside
@@ -920,7 +916,7 @@ action:
                 # bright only once they're all on already. Its lights stay the
                 # scene's either way.
                 value_template: >
-                  {{ scene_active and scene_recheck_due
+                  {{ scene_valid and scene_recheck_due
                      and (not too_bright
                           or scene_coverage.covered_entities | select('match', 'light[.]')
                              | reject('is_state', 'on') | list | count == 0) }}

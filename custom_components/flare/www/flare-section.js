@@ -147,7 +147,7 @@ export function sectionConfig({ title, entities }, hass) {
           {
             type: 'entity',
             entity: sensor,
-            state_content: 'color_temp',
+            state_content: 'color_temp_kelvin',
             icon: KELVIN_ICON,
             name: t('schedule.badge_colour'),
           },

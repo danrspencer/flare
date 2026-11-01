@@ -256,8 +256,8 @@ Twelve, all tested. Field contracts are in `services.yaml` and
 - `apply_lighting` takes `brightness`/`color_temp_kelvin`/`rgb_color` as
   **plain values**, not a sensor, so any source works; don't move the
   sensor read into the service.
-- `turn_off` records `{"state": "off"}`, THEN calls `light.turn_off`, as
-  one operation, with **no** override protection (a room emptying takes
+- `turn_off` records `{"state": "off"}` on lights already claimed, THEN
+  calls `light.turn_off`, as one operation, with **no** override protection (a room emptying takes
   hand-set lights too). The order and that private encoding are why it
   exists; **don't split it back into two steps in a caller.**
 - `resolve_target`, `export_schedule` and `import_schedule` are registered
@@ -335,7 +335,9 @@ passes `this.entity_id`) and `room_entities` (its picker's lights,
 `resolved_entities`). No `room_id` means "write, track nothing", and such
 a call doesn't read claims either: it's the opt-out (the blueprint's
 **Override Protection** input). `claims_record` / `claims_override`
-require a room; `claims_check` / `claims_clear` take none. A room is keyed
+require a room; `claims_check` / `claims_clear` take none, and neither
+does `turn_off`, which only updates claims lights already have (a claimed
+light is already in its rooms; an off one needs no claim to be taken on). A room is keyed
 by its entity's registry id (`room_key()`), so renaming the automation
 keeps it. A room's lights are the latest `room_entities`, plus what it
 wrote and any light it still claims (`_join`), so every claim it made can
@@ -851,7 +853,7 @@ would switch off every light turned on there.
 - **Override Protection** (`override_protection`, default on, at the
   user's request): the escape hatch for a room whose bulbs report
   something other than what they show. Off makes `room_id` none, which
-  `apply_lighting`/`turn_off` take as "track nothing", and skips the
+  `apply_lighting` takes as "track nothing", and skips the
   `claims_clear` step.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
@@ -966,7 +968,7 @@ Other blueprint facts:
   `allow_turn_on` would freeze a lit room. `lux_blocked_entities` is subtracted
   from `target_entities` and from `idle_entities` instead. While it's too
   bright a scene is activated only if every light it covers is already on, so
-  a phase change still moves a lit scene on; `scene_active` isn't touched, so
+  a phase change still moves a lit scene on; `scene_valid` isn't touched, so
   its lights stay the scene's, or the next tick would take an already-lit scene
   onto the curve. A manual run bypasses the check by definition. The `lux_dark`
   trigger expands the target in Jinja like `recovered`, as a wake-up only;

@@ -76,7 +76,7 @@ class TestRoomTargetResolution:
             hass, room_target={"entity_id": "light.s"}, evening_scene="scene.sibling_scene"
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls and scene_turn_on_calls[-1].data["entity_id"] == ["scene.sibling_scene"]
@@ -219,7 +219,7 @@ class TestOverrideDetection:
         await hass.async_block_till_done()
         await setup_room_automation(hass, room_target={"area_id": kitchen.id})
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
