@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -255,10 +255,10 @@ Nothing here is needed to use FLARE.</p>
 caller, not the only one, so each service is written as a standalone tool.
 The field contracts live in <code class="language-plaintext highlighter-rouge">services.yaml</code> and
 <a href="/flare/beta/reference/services/">the services reference</a>. This page is about what happens inside them.</p>
-<h2 id="the-twelve-services">
+<h2 id="the-eleven-services">
   
   
-    <a href="#the-twelve-services" class="anchor-heading" aria-labelledby="the-twelve-services"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The twelve services
+    <a href="#the-eleven-services" class="anchor-heading" aria-labelledby="the-eleven-services"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The eleven services
   
   
 </h2>
@@ -276,12 +276,6 @@ The field contracts live in <code class="language-plaintext highlighter-rouge">s
   <tbody>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">compute_curve</code></td>
-      <td>pure planner</td>
-      <td>Settings entry</td>
-      <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">compute_lighting_groups</code></td>
       <td>pure planner</td>
       <td>Settings entry</td>
       <td><code class="language-plaintext highlighter-rouge">services/handlers.py</code></td>
@@ -466,11 +460,15 @@ can cancel the run mid-sleep.</p>
 </h2>
     
 
-<p><code class="language-plaintext highlighter-rouge">flare.turn_off</code> records <code class="language-plaintext highlighter-rouge">{"state": "off"}</code> as each light’s target, then
-calls <code class="language-plaintext highlighter-rouge">light.turn_off</code>, as one operation and with <strong>no</strong> override
-protection: a room emptying takes hand-set lights too. The off target is
-what tells FLARE’s off from anyone else’s once the context has expired.
-Callers mustn’t split it back into a claim and a bare <code class="language-plaintext highlighter-rouge">light.turn_off</code>.</p>
+<p><code class="language-plaintext highlighter-rouge">flare.turn_off</code> records <code class="language-plaintext highlighter-rouge">{"state": "off"}</code> as the target of each light
+that already has a claim (<code class="language-plaintext highlighter-rouge">ClaimRegistry.async_record_off</code>), then calls
+<code class="language-plaintext highlighter-rouge">light.turn_off</code>, as one operation and with <strong>no</strong> override protection: a
+room emptying takes hand-set lights too. The off target is what tells
+FLARE’s off from anyone else’s once the context has expired, which matters
+only while the room stays lit; a dark room releases its claims anyway. It
+takes no room, since a claimed light is already in its rooms, and it
+claims nothing new. Callers mustn’t split it back into a claim and a bare
+<code class="language-plaintext highlighter-rouge">light.turn_off</code>.</p>
 <h2 id="unclaimed-lights">
   
   

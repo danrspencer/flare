@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -328,7 +328,7 @@ the value.</p>
   <tbody>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">sensor.&lt;slug&gt;_flare</code></td>
-      <td>the phase as state; <code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp</code>, <code class="language-plaintext highlighter-rouge">rgb_color</code>, today’s boundaries, <code class="language-plaintext highlighter-rouge">points</code></td>
+      <td>the phase as state; <code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp_kelvin</code>, <code class="language-plaintext highlighter-rouge">rgb_color</code>, today’s boundaries, <code class="language-plaintext highlighter-rouge">points</code></td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">event.&lt;slug&gt;_flare_phase</code></td>
@@ -522,7 +522,7 @@ phase at startup as its baseline.</p>
 can’t look up a device’s entities, which is why it’s an event entity on
 the schedule’s device and not a template.</li>
   <li><strong>the schedule sensor’s attributes</strong>, read in <code class="language-plaintext highlighter-rouge">variables:</code> for
-<code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp</code> and <code class="language-plaintext highlighter-rouge">rgb_color</code>.</li>
+<code class="language-plaintext highlighter-rouge">brightness</code>, <code class="language-plaintext highlighter-rouge">color_temp_kelvin</code> and <code class="language-plaintext highlighter-rouge">rgb_color</code>.</li>
 </ul>
 
 <p>Between phase changes, the curve still moves within a phase, so rooms also

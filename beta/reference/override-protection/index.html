@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -250,16 +250,16 @@
 else’s and leave alone a light you’ve changed yourself. Its entities and options are under
 <strong>Settings → Devices &amp; Services → FLARE → Settings</strong>.</p>
 
+<p>This page lists what you can set and use. For what override protection does and how it works,
+with examples, see <a href="../../guides/overrides/">Override protection explained</a>.</p>
+
 <details open="">
   <summary class="text-delta">On this page</summary>
 <ol id="markdown-toc">
   <li><a href="#flares-entities" id="markdown-toc-flares-entities">FLARE’s entities</a></li>
   <li><a href="#how-it-works" id="markdown-toc-how-it-works">How it works</a>    <ol>
       <li><a href="#rooms" id="markdown-toc-rooms">Rooms</a></li>
-      <li><a href="#the-two-claims" id="markdown-toc-the-two-claims">The two claims</a></li>
       <li><a href="#how-close-counts-as-a-match" id="markdown-toc-how-close-counts-as-a-match">How close counts as a match</a></li>
-      <li><a href="#turning-a-light-off-counts" id="markdown-toc-turning-a-light-off-counts">Turning a light off counts</a></li>
-      <li><a href="#when-flare-sets-a-light-again" id="markdown-toc-when-flare-sets-a-light-again">When FLARE sets a light again</a></li>
     </ol>
   </li>
   <li><a href="#flares-events" id="markdown-toc-flares-events">FLARE’s events</a></li>
@@ -336,13 +336,12 @@ again on its next update.</p>
 </h2>
     
 
-<p>When <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> or <code class="language-plaintext highlighter-rouge">flare.turn_off</code> changes a light, it records a <strong>claim</strong> on the
-light. On the next update, FLARE compares the light with its claim. If the light still shows
-what FLARE set, FLARE carries on setting it. If it doesn’t, something else has changed it, and
-FLARE leaves it alone.</p>
+<p><a href="../../guides/overrides/">Override protection explained</a> explains what override protection
+does and how claims work, with examples. This section is the detail for calling FLARE’s services yourself.</p>
 
-<p>Claims are FLARE’s, not any one automation’s: a light one automation set is FLARE’s to every
-other automation too. A light that’s on and has no claim is always sent what
+<p><code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> records a claim on each light it sets, and <code class="language-plaintext highlighter-rouge">flare.turn_off</code> sets the
+claim of each light it switches off to off. Claims belong to the lights, not to any one
+automation. A light that’s on and has no claim is always sent what
 <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> would set, even if it already shows it, and that write claims it. After a
 <strong>Clear</strong>, for example, a room’s lights are claimed again on their next update. Without a
 <code class="language-plaintext highlighter-rouge">room_id</code>, a light already showing the values isn’t sent anything.</p>
@@ -370,8 +369,10 @@ room’s lights. The blueprint passes its own automation as <code class="languag
 </code></pre></div></div>
 
 <ul>
-  <li>Without <code class="language-plaintext highlighter-rouge">room_id</code>, <code class="language-plaintext highlighter-rouge">apply_lighting</code>, <code class="language-plaintext highlighter-rouge">turn_off</code> and <code class="language-plaintext highlighter-rouge">compute_lighting_groups</code> set the lights
-but record nothing, and don’t leave any light alone.</li>
+  <li>Without <code class="language-plaintext highlighter-rouge">room_id</code>, <code class="language-plaintext highlighter-rouge">apply_lighting</code> sets the lights but records nothing, and doesn’t leave any
+light alone.</li>
+  <li><code class="language-plaintext highlighter-rouge">turn_off</code> doesn’t take a room: it updates the claims of the lights FLARE already has, which
+already belong to their rooms.</li>
   <li><code class="language-plaintext highlighter-rouge">claims_record</code> and <code class="language-plaintext highlighter-rouge">claims_override</code> require <code class="language-plaintext highlighter-rouge">room_id</code>. <code class="language-plaintext highlighter-rouge">claims_check</code> and <code class="language-plaintext highlighter-rouge">claims_clear</code>
 don’t take one.</li>
   <li>Without <code class="language-plaintext highlighter-rouge">room_entities</code>, a room’s lights are the ones its calls have set.</li>
@@ -383,30 +384,6 @@ to one isn’t left alone unless you mark it with
 
 <p>If an automation is renamed, its room carries on: FLARE keeps rooms by the automation’s entity
 registry entry, not its entity ID.</p>
-<h3 id="the-two-claims">
-  
-  
-    <a href="#the-two-claims" class="anchor-heading" aria-labelledby="the-two-claims"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> The two claims
-  
-  
-</h3>
-    
-
-<p>Each tracked light has two claims:</p>
-
-<ul>
-  <li><strong><code class="language-plaintext highlighter-rouge">latest</code></strong>: the last change FLARE sent to the light.</li>
-  <li><strong><code class="language-plaintext highlighter-rouge">observed</code></strong>: a change FLARE has seen the light report. On its next update, if the light
-reports <code class="language-plaintext highlighter-rouge">latest</code>’s context, FLARE promotes <code class="language-plaintext highlighter-rouge">latest</code> to <code class="language-plaintext highlighter-rouge">observed</code>.</li>
-</ul>
-
-<p>A light matching either claim is FLARE’s. So a change that never reaches the light, such as a
-dropped Zigbee command, doesn’t make FLARE treat the light as changed by someone else; the light
-still matches <code class="language-plaintext highlighter-rouge">observed</code>.</p>
-
-<p>A light matches a claim if it reports the context of that claim’s change, or the values in it.
-Values are needed because Home Assistant drops a change’s context after five seconds, and some
-bulbs take longer than that to report back.</p>
 <h3 id="how-close-counts-as-a-match">
   
   
@@ -448,50 +425,6 @@ anything.</p>
 
 <p>If lights are marked overridden when nobody has changed them, raise the one that matches the
 difference shown on the <a href="../../dashboard/">dashboard</a>. Lower them to catch smaller changes.</p>
-
-<p>Claims are kept across a restart. After a restart every light has a new context, so restored
-claims are matched by values only: a light still showing what FLARE set is FLARE’s, and any
-other light is left alone.</p>
-<h3 id="turning-a-light-off-counts">
-  
-  
-    <a href="#turning-a-light-off-counts" class="anchor-heading" aria-labelledby="turning-a-light-off-counts"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Turning a light off counts
-  
-  
-</h3>
-    
-
-<p>Turning a light off yourself counts as changing it, so FLARE doesn’t turn it back on. FLARE’s own
-turn-offs record a claim of <code class="language-plaintext highlighter-rouge">{"state": "off"}</code>, which is how FLARE tells them apart from yours.</p>
-<h3 id="when-flare-sets-a-light-again">
-  
-  
-    <a href="#when-flare-sets-a-light-again" class="anchor-heading" aria-labelledby="when-flare-sets-a-light-again"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> When FLARE sets a light again
-  
-  
-</h3>
-    
-
-<p><strong>A room discards its claims when none of its claimed lights are on.</strong> This is what normally
-ends an override: once the room is dark, FLARE sets every light in it again.</p>
-
-<ul>
-  <li>A light FLARE has no claim on doesn’t count, so a lamp in the room that something else runs
-can’t keep the room’s claims.</li>
-  <li>A light that’s unavailable counts as off, so one dead bulb can’t either.</li>
-  <li>After a restart, a room whose claimed lights are all off once they’ve reported in discards its
-claims too, so a room switched off while Home Assistant was restarting comes on again as
-usual.</li>
-  <li>A light in two rooms loses its claim when either of them goes dark.</li>
-</ul>
-
-<p>A light also loses its claim when it goes unavailable, and you can discard claims by hand with
-<strong>Clear</strong>, the dashboard’s <strong>Clear</strong> for an area, or
-<a href="../services/#flareclaims_clear"><code class="language-plaintext highlighter-rouge">flare.claims_clear</code></a>.</p>
-
-<p>A light that has just come back online, say switched on at the wall, starts at whatever it
-powers up as, and misses a command sent while it boots. So when a room’s lights come back
-online together, FLARE waits a few seconds before setting them.</p>
 <h2 id="flares-events">
   
   

@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -454,16 +454,15 @@ the pendants lose power:</p>
       <span class="pi">-</span> <span class="s">light.living_room_pendant_2</span>
     <span class="na">to</span><span class="pi">:</span> <span class="s">unavailable</span>
 <span class="na">actions</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">action</span><span class="pi">:</span> <span class="s">flare.turn_off</span>
-    <span class="na">data</span><span class="pi">:</span>
-      <span class="na">entities</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">action</span><span class="pi">:</span> <span class="s">light.turn_off</span>
+    <span class="na">target</span><span class="pi">:</span>
+      <span class="na">entity_id</span><span class="pi">:</span>
         <span class="pi">-</span> <span class="s">light.living_room_lamp_1</span>
         <span class="pi">-</span> <span class="s">light.living_room_lamp_2</span>
 </code></pre></div></div>
 
-<p><code class="language-plaintext highlighter-rouge">flare.turn_off</code> turns the lamps off even if you’ve dimmed one yourself. If you’d rather leave
-the lamps to another automation or a voice assistant, so FLARE never switches them on or
-off, hand them over with a <code class="language-plaintext highlighter-rouge">null</code> level, as in
+<p>If you’d rather leave the lamps to another automation or a voice assistant, so FLARE never
+switches them on or off, hand them over with a <code class="language-plaintext highlighter-rouge">null</code> level, as in
 <a href="../templates/#leaving-a-light-to-another-automation">Leaving a light to another automation</a>.</p>
 <h2 id="something-else-at-a-phase-change">
   

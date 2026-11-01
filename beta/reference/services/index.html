@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -263,11 +263,7 @@ blueprint is built on them. <strong>Developer Tools → Actions</strong> shows t
     </tr>
     <tr>
       <td><a href="#flareturn_off"><code class="language-plaintext highlighter-rouge">flare.turn_off</code></a></td>
-      <td>Turns lights off, recording that FLARE did it</td>
-    </tr>
-    <tr>
-      <td><a href="#flarecompute_lighting_groups"><code class="language-plaintext highlighter-rouge">flare.compute_lighting_groups</code></a></td>
-      <td>Works out what <code class="language-plaintext highlighter-rouge">apply_lighting</code> would send, without sending it</td>
+      <td>Turns lights off for now, so FLARE turns them on again later</td>
     </tr>
     <tr>
       <td><a href="#flarecompute_curve"><code class="language-plaintext highlighter-rouge">flare.compute_curve</code></a></td>
@@ -323,53 +319,48 @@ schedule. A room is passed as <code class="language-plaintext highlighter-rouge"
     </ol>
   </li>
   <li><a href="#flareturn_off" id="markdown-toc-flareturn_off"><code class="language-plaintext highlighter-rouge">flare.turn_off</code></a>    <ol>
+      <li><a href="#flareturn_off-or-lightturn_off" id="markdown-toc-flareturn_off-or-lightturn_off"><code class="language-plaintext highlighter-rouge">flare.turn_off</code> or <code class="language-plaintext highlighter-rouge">light.turn_off</code>?</a></li>
       <li><a href="#fields-1" id="markdown-toc-fields-1">Fields</a></li>
       <li><a href="#good-to-know" id="markdown-toc-good-to-know">Good to know</a></li>
     </ol>
   </li>
-  <li><a href="#flarecompute_lighting_groups" id="markdown-toc-flarecompute_lighting_groups"><code class="language-plaintext highlighter-rouge">flare.compute_lighting_groups</code></a>    <ol>
-      <li><a href="#response-data-1" id="markdown-toc-response-data-1">Response data</a></li>
-    </ol>
-  </li>
   <li><a href="#flarecompute_curve" id="markdown-toc-flarecompute_curve"><code class="language-plaintext highlighter-rouge">flare.compute_curve</code></a>    <ol>
       <li><a href="#fields-2" id="markdown-toc-fields-2">Fields</a></li>
-      <li><a href="#response-data-2" id="markdown-toc-response-data-2">Response data</a></li>
+      <li><a href="#response-data-1" id="markdown-toc-response-data-1">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareclaims_check" id="markdown-toc-flareclaims_check"><code class="language-plaintext highlighter-rouge">flare.claims_check</code></a>    <ol>
       <li><a href="#fields-3" id="markdown-toc-fields-3">Fields</a></li>
-      <li><a href="#response-data-3" id="markdown-toc-response-data-3">Response data</a></li>
+      <li><a href="#response-data-2" id="markdown-toc-response-data-2">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareclaims_record" id="markdown-toc-flareclaims_record"><code class="language-plaintext highlighter-rouge">flare.claims_record</code></a>    <ol>
       <li><a href="#fields-4" id="markdown-toc-fields-4">Fields</a></li>
-      <li><a href="#response-data-4" id="markdown-toc-response-data-4">Response data</a></li>
       <li><a href="#good-to-know-1" id="markdown-toc-good-to-know-1">Good to know</a></li>
     </ol>
   </li>
   <li><a href="#flareclaims_clear" id="markdown-toc-flareclaims_clear"><code class="language-plaintext highlighter-rouge">flare.claims_clear</code></a>    <ol>
       <li><a href="#fields-5" id="markdown-toc-fields-5">Fields</a></li>
-      <li><a href="#response-data-5" id="markdown-toc-response-data-5">Response data</a></li>
+      <li><a href="#response-data-3" id="markdown-toc-response-data-3">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareclaims_override" id="markdown-toc-flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>    <ol>
       <li><a href="#fields-6" id="markdown-toc-fields-6">Fields</a></li>
-      <li><a href="#response-data-6" id="markdown-toc-response-data-6">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flarecompute_scene_coverage" id="markdown-toc-flarecompute_scene_coverage"><code class="language-plaintext highlighter-rouge">flare.compute_scene_coverage</code></a>    <ol>
       <li><a href="#fields-7" id="markdown-toc-fields-7">Fields</a></li>
-      <li><a href="#response-data-7" id="markdown-toc-response-data-7">Response data</a></li>
+      <li><a href="#response-data-4" id="markdown-toc-response-data-4">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareresolve_target" id="markdown-toc-flareresolve_target"><code class="language-plaintext highlighter-rouge">flare.resolve_target</code></a>    <ol>
       <li><a href="#fields-8" id="markdown-toc-fields-8">Fields</a></li>
-      <li><a href="#response-data-8" id="markdown-toc-response-data-8">Response data</a></li>
+      <li><a href="#response-data-5" id="markdown-toc-response-data-5">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareexport_schedule" id="markdown-toc-flareexport_schedule"><code class="language-plaintext highlighter-rouge">flare.export_schedule</code></a>    <ol>
       <li><a href="#fields-9" id="markdown-toc-fields-9">Fields</a></li>
-      <li><a href="#response-data-9" id="markdown-toc-response-data-9">Response data</a></li>
+      <li><a href="#response-data-6" id="markdown-toc-response-data-6">Response data</a></li>
     </ol>
   </li>
   <li><a href="#flareimport_schedule" id="markdown-toc-flareimport_schedule"><code class="language-plaintext highlighter-rouge">flare.import_schedule</code></a>    <ol>
@@ -398,7 +389,7 @@ something else (see <a href="../override-protection/">override protection</a>).<
 <span class="na">data</span><span class="pi">:</span>
   <span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
   <span class="na">brightness</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">state_attr('sensor.home_flare',</span><span class="nv"> </span><span class="s">'brightness')</span><span class="nv"> </span><span class="s">}}"</span>
-  <span class="na">color_temp_kelvin</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">state_attr('sensor.home_flare',</span><span class="nv"> </span><span class="s">'color_temp')</span><span class="nv"> </span><span class="s">}}"</span>
+  <span class="na">color_temp_kelvin</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">state_attr('sensor.home_flare',</span><span class="nv"> </span><span class="s">'color_temp_kelvin')</span><span class="nv"> </span><span class="s">}}"</span>
   <span class="na">transition</span><span class="pi">:</span> <span class="m">2</span>
   <span class="na">brightness_levels</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">light.kitchen_2</span><span class="pi">:</span> <span class="nv">60</span> <span class="pi">}</span>
   <span class="na">room_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">this.entity_id</span><span class="nv"> </span><span class="s">}}"</span>
@@ -450,6 +441,11 @@ something else (see <a href="../override-protection/">override protection</a>).<
       <td>Sets every light, including ones someone else has changed. The change is still recorded as FLARE’s.</td>
     </tr>
     <tr>
+      <td><code class="language-plaintext highlighter-rouge">dry_run</code><br />boolean; default <code class="language-plaintext highlighter-rouge">false</code></td>
+      <td>no</td>
+      <td>Works out what would be sent and returns it, without sending anything or recording claims.</td>
+    </tr>
+    <tr>
       <td><code class="language-plaintext highlighter-rouge">min_brightness_change</code><br />percent, 0–25; default from <strong>FLARE → Settings → Configure</strong></td>
       <td>no</td>
       <td>A light within this percentage of the target brightness, or 2 if that’s more, isn’t sent anything, and still matches its claim. See <a href="../override-protection/#how-close-counts-as-a-match">tolerances</a>.</td>
@@ -480,14 +476,9 @@ something else (see <a href="../override-protection/">override protection</a>).<
       <td>The room to record the change for, usually the calling automation: <code class="language-plaintext highlighter-rouge">{{ this.entity_id }}</code>. Without it, FLARE records nothing and doesn’t leave any light alone. See <a href="../override-protection/#rooms">rooms</a>.</td>
     </tr>
     <tr>
-      <td><code class="language-plaintext highlighter-rouge">transition</code><br />seconds, 0–300</td>
-      <td>yes</td>
-      <td>How long the change takes. Two-step bulbs spend half of it on brightness and half on colour.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">two_step_label</code><br />label ID; default <code class="language-plaintext highlighter-rouge">no_combined_transition</code></td>
+      <td><code class="language-plaintext highlighter-rouge">transition</code><br />seconds, 0–300; default <code class="language-plaintext highlighter-rouge">0</code></td>
       <td>no</td>
-      <td>Lights or devices with this label are sent two commands. See <a href="#two-step-bulbs">two-step bulbs</a>.</td>
+      <td>How long the change takes. <a href="#two-step-bulbs">Two-step bulbs</a> spend half of it on brightness and half on colour.</td>
     </tr>
   </tbody>
 </table></div>
@@ -531,111 +522,8 @@ something else (see <a href="../override-protection/">override protection</a>).<
 </h3>
     
 
-<p>Optional. With <code class="language-plaintext highlighter-rouge">response_variable</code>, the response is what was sent, in the same shape as
-<a href="#flarecompute_lighting_groups"><code class="language-plaintext highlighter-rouge">compute_lighting_groups</code></a> returns.</p>
-<h2 id="flareturn_off">
-  
-  
-    <a href="#flareturn_off" class="anchor-heading" aria-labelledby="flareturn_off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">flare.turn_off</code>
-  
-  
-</h2>
-    
-
-<p>Use this action to turn lights off and record that FLARE did it, so FLARE doesn’t treat them
-as changed by someone else.</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.turn_off</span>
-<span class="na">data</span><span class="pi">:</span>
-  <span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
-  <span class="na">transition</span><span class="pi">:</span> <span class="m">15</span>
-  <span class="na">room_id</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">this.entity_id</span><span class="nv"> </span><span class="s">}}"</span>
-</code></pre></div></div>
-<h3 id="fields-1">
-  
-  
-    <a href="#fields-1" class="anchor-heading" aria-labelledby="fields-1"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
-  
-  
-</h3>
-    
-
-<div class="table-wrapper"><table>
-  <thead>
-    <tr>
-      <th>Field</th>
-      <th>Required</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
-      <td>yes</td>
-      <td>The lights to turn off.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">room_entities</code><br />list of light entity IDs</td>
-      <td>no</td>
-      <td>The room’s lights, as for <code class="language-plaintext highlighter-rouge">apply_lighting</code>.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">room_id</code><br />text</td>
-      <td>no</td>
-      <td>The room to record the turn-off for. Without it, FLARE records nothing.</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">transition</code><br />seconds, 0–300; default <code class="language-plaintext highlighter-rouge">0</code></td>
-      <td>no</td>
-      <td>How long the change takes.</td>
-    </tr>
-  </tbody>
-</table></div>
-<h3 id="good-to-know">
-  
-  
-    <a href="#good-to-know" class="anchor-heading" aria-labelledby="good-to-know"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Good to know
-  
-  
-</h3>
-    
-
-<ul>
-  <li>It turns off every light it’s given, including lights someone else has changed. To turn off
-only the lights FLARE is still setting, call <a href="#flareclaims_check"><code class="language-plaintext highlighter-rouge">claims_check</code></a> first.</li>
-  <li>Use it rather than <code class="language-plaintext highlighter-rouge">light.turn_off</code>, which records nothing, so FLARE would treat the lights
-as switched off by someone else.</li>
-</ul>
-<h2 id="flarecompute_lighting_groups">
-  
-  
-    <a href="#flarecompute_lighting_groups" class="anchor-heading" aria-labelledby="flarecompute_lighting_groups"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">flare.compute_lighting_groups</code>
-  
-  
-</h2>
-    
-
-<p>Use this action to find out what <a href="#flareapply_lighting"><code class="language-plaintext highlighter-rouge">apply_lighting</code></a> would send, without
-sending it. It takes the same fields as <code class="language-plaintext highlighter-rouge">apply_lighting</code>, except <code class="language-plaintext highlighter-rouge">transition</code>.</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.compute_lighting_groups</span>
-<span class="na">data</span><span class="pi">:</span>
-  <span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
-  <span class="na">brightness</span><span class="pi">:</span> <span class="m">200</span>
-  <span class="na">color_temp_kelvin</span><span class="pi">:</span> <span class="m">3200</span>
-  <span class="na">brightness_levels</span><span class="pi">:</span> <span class="pi">{</span> <span class="nv">light.kitchen_2</span><span class="pi">:</span> <span class="nv">100</span> <span class="pi">}</span>
-<span class="na">response_variable</span><span class="pi">:</span> <span class="s">plan</span>
-</code></pre></div></div>
-<h3 id="response-data-1">
-  
-  
-    <a href="#response-data-1" class="anchor-heading" aria-labelledby="response-data-1"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
-  
-  
-</h3>
-    
-
-<p><code class="language-plaintext highlighter-rouge">groups</code> is a list with one entry for each brightness being sent, and each entry has these
+<p>Optional. With <code class="language-plaintext highlighter-rouge">response_variable</code>, the response is what was sent, or with <code class="language-plaintext highlighter-rouge">dry_run</code>, what
+would be sent. <code class="language-plaintext highlighter-rouge">groups</code> is a list with one entry for each brightness, and each entry has these
 fields:</p>
 
 <ul>
@@ -664,6 +552,115 @@ in any list.</p>
     <span class="na">combined_rgb</span><span class="pi">:</span> <span class="pi">[]</span>
     <span class="na">two_step_rgb</span><span class="pi">:</span> <span class="pi">[]</span>
 </code></pre></div></div>
+<h2 id="flareturn_off">
+  
+  
+    <a href="#flareturn_off" class="anchor-heading" aria-labelledby="flareturn_off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">flare.turn_off</code>
+  
+  
+</h2>
+    
+
+<p>Use this action to turn lights off while keeping them <code class="language-plaintext highlighter-rouge">controlled</code>. It sets each light’s claim
+to off before turning it off, so the light still matches its claim and comes on with the rest
+of the room next time.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.turn_off</span>
+<span class="na">data</span><span class="pi">:</span>
+  <span class="na">entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">,</span> <span class="nv">light.kitchen_2</span><span class="pi">]</span>
+  <span class="na">transition</span><span class="pi">:</span> <span class="m">15</span>
+</code></pre></div></div>
+<h3 id="flareturn_off-or-lightturn_off">
+  
+  
+    <a href="#flareturn_off-or-lightturn_off" class="anchor-heading" aria-labelledby="flareturn_off-or-lightturn_off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> <code class="language-plaintext highlighter-rouge">flare.turn_off</code> or <code class="language-plaintext highlighter-rouge">light.turn_off</code>?
+  
+  
+</h3>
+    
+
+<p>Both turn the light off, but they leave its <a href="../../guides/overrides/#claims">claim</a>
+saying different things:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th> </th>
+      <th><code class="language-plaintext highlighter-rouge">light.turn_off</code></th>
+      <th><code class="language-plaintext highlighter-rouge">flare.turn_off</code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>The light’s claim</td>
+      <td>Still says what FLARE last set, such as on at 180</td>
+      <td>Says off</td>
+    </tr>
+    <tr>
+      <td>The light’s status</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code>, once it has been off for 30 seconds, since it doesn’t match its claim</td>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code>, since it matches its claim</td>
+    </tr>
+    <tr>
+      <td>The next time the room’s lights are turned on</td>
+      <td>It’s left off</td>
+      <td>It’s set with the rest, so it comes on</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Either way, once none of the room’s claimed lights is on, the room deletes its claims, and every
+light is set the next time the room’s lights are turned on. So if you’re turning the whole room
+off, it makes no difference which you use.</p>
+
+<p>Use <code class="language-plaintext highlighter-rouge">light.turn_off</code> when you want a light to stay off while the rest of the room is on, such as
+a lamp switched off for the evening. Use <code class="language-plaintext highlighter-rouge">flare.turn_off</code> when a room has emptied but a
+nightlight stays on, so the other lights come on again when someone returns. In a room that’s
+still in use, a light turned off with <code class="language-plaintext highlighter-rouge">flare.turn_off</code> comes back on at the next update.</p>
+<h3 id="fields-1">
+  
+  
+    <a href="#fields-1" class="anchor-heading" aria-labelledby="fields-1"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Fields
+  
+  
+</h3>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Required</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">entities</code><br />list of light entity IDs</td>
+      <td>yes</td>
+      <td>The lights to turn off.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">transition</code><br />seconds, 0–300; default <code class="language-plaintext highlighter-rouge">0</code></td>
+      <td>no</td>
+      <td>How long the change takes.</td>
+    </tr>
+  </tbody>
+</table></div>
+<h3 id="good-to-know">
+  
+  
+    <a href="#good-to-know" class="anchor-heading" aria-labelledby="good-to-know"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Good to know
+  
+  
+</h3>
+    
+
+<ul>
+  <li>It turns off every light it’s given, including lights someone else has changed. To turn off
+only the lights FLARE is still setting, call <a href="#flareclaims_check"><code class="language-plaintext highlighter-rouge">claims_check</code></a> first.</li>
+  <li>A light FLARE isn’t driving is just turned off, as <code class="language-plaintext highlighter-rouge">light.turn_off</code> would.</li>
+</ul>
 <h2 id="flarecompute_curve">
   
   
@@ -740,10 +737,10 @@ start times and curve settings you give it, without needing a schedule.</p>
 <p><code class="language-plaintext highlighter-rouge">&lt;phase&gt;</code> is <code class="language-plaintext highlighter-rouge">morning</code>, <code class="language-plaintext highlighter-rouge">day</code>, <code class="language-plaintext highlighter-rouge">evening</code> or <code class="language-plaintext highlighter-rouge">night</code>, so <code class="language-plaintext highlighter-rouge">evening_brightness</code> is Evening’s
 brightness. The defaults are the values a new schedule starts with, and
 <a href="../schedules/#transitions">transitions</a> explains how a transition shapes the curve.</p>
-<h3 id="response-data-2">
+<h3 id="response-data-1">
   
   
-    <a href="#response-data-2" class="anchor-heading" aria-labelledby="response-data-2"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-1" class="anchor-heading" aria-labelledby="response-data-1"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -752,13 +749,13 @@ brightness. The defaults are the values a new schedule starts with, and
 <ul>
   <li><code class="language-plaintext highlighter-rouge">phase</code>: <code class="language-plaintext highlighter-rouge">Morning</code>, <code class="language-plaintext highlighter-rouge">Day</code>, <code class="language-plaintext highlighter-rouge">Evening</code> or <code class="language-plaintext highlighter-rouge">Night</code>.</li>
   <li><code class="language-plaintext highlighter-rouge">brightness</code>: The brightness, 0–255.</li>
-  <li><code class="language-plaintext highlighter-rouge">kelvin</code>: The colour temperature, in Kelvin.</li>
+  <li><code class="language-plaintext highlighter-rouge">color_temp_kelvin</code>: The colour temperature, in Kelvin.</li>
   <li><code class="language-plaintext highlighter-rouge">rgb_color</code>: The colour temperature converted to RGB, as <code class="language-plaintext highlighter-rouge">[r, g, b]</code>.</li>
 </ul>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">phase</span><span class="pi">:</span> <span class="s">Evening</span>
 <span class="na">brightness</span><span class="pi">:</span> <span class="m">150</span>
-<span class="na">kelvin</span><span class="pi">:</span> <span class="m">3200</span>
+<span class="na">color_temp_kelvin</span><span class="pi">:</span> <span class="m">3200</span>
 <span class="na">rgb_color</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">255</span><span class="pi">,</span> <span class="nv">184</span><span class="pi">,</span> <span class="nv">123</span><span class="pi">]</span>
 </code></pre></div></div>
 <h2 id="flareclaims_check">
@@ -813,10 +810,10 @@ yourself with <a href="../override-protection/">override protection</a>. It chan
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-3">
+<h3 id="response-data-2">
   
   
-    <a href="#response-data-3" class="anchor-heading" aria-labelledby="response-data-3"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-2" class="anchor-heading" aria-labelledby="response-data-2"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -900,16 +897,6 @@ the entities, with the values you’re about to send.</p>
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-4">
-  
-  
-    <a href="#response-data-4" class="anchor-heading" aria-labelledby="response-data-4"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
-  
-  
-</h3>
-    
-
-<p>Optional. <code class="language-plaintext highlighter-rouge">recorded</code> lists the entities a claim was recorded for.</p>
 <h3 id="good-to-know-1">
   
   
@@ -920,9 +907,9 @@ the entities, with the values you’re about to send.</p>
     
 
 <ul>
-  <li>Without <code class="language-plaintext highlighter-rouge">targets</code>, FLARE can only match the change by its context, which Home Assistant
-drops after five seconds. A bulb that’s slower than that to report back is then treated as
-changed by someone else.</li>
+  <li>Without <code class="language-plaintext highlighter-rouge">targets</code>, the claim holds only the change’s context, which Home Assistant drops
+after five seconds. A bulb that’s slower than that to report back doesn’t match its claim,
+so it becomes <code class="language-plaintext highlighter-rouge">overridden</code>.</li>
   <li>A light running an effect that keeps changing its colour won’t match its claim. Use a scene
 for it instead, or hand it over with a <code class="language-plaintext highlighter-rouge">null</code> brightness in the blueprint.</li>
 </ul>
@@ -968,10 +955,10 @@ does the same for every light.</p>
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-5">
+<h3 id="response-data-3">
   
   
-    <a href="#response-data-5" class="anchor-heading" aria-labelledby="response-data-5"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-3" class="anchor-heading" aria-labelledby="response-data-3"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -989,11 +976,10 @@ does the same for every light.</p>
 
 <p>Use this action to mark lights as changed by someone else, so FLARE leaves them alone.</p>
 
-<p>You don’t usually need it. When something other than FLARE changes a light that FLARE is
-driving, FLARE notices on its own and leaves the light alone. It’s for lights FLARE isn’t
-driving yet, such as when your automation turns lights on in a dark room and you want FLARE to
-leave them as they are. Without it, the room’s FLARE automation sets those lights back to the
-curve on its next update.</p>
+<p>You don’t usually need it. A light with a claim becomes <code class="language-plaintext highlighter-rouge">overridden</code> by itself once something
+else changes it and it stops matching its claim. It’s for lights with no claim yet, such as
+when your automation turns lights on in a dark room and you want FLARE to leave them as they
+are. Without it, they’re <code class="language-plaintext highlighter-rouge">untracked</code>, so the room’s next update sets them to the curve.</p>
 
 <p>It marks each entity whether it’s on or off. A light marked this way stays overridden until its
 room goes dark, its claims are cleared, or a forced <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> takes it back.
@@ -1039,16 +1025,6 @@ Flares call it before turning a room off or setting it to a brightness or colour
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-6">
-  
-  
-    <a href="#response-data-6" class="anchor-heading" aria-labelledby="response-data-6"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
-  
-  
-</h3>
-    
-
-<p>Optional. <code class="language-plaintext highlighter-rouge">overridden</code> lists the entities passed in.</p>
 <h2 id="flarecompute_scene_coverage">
   
   
@@ -1103,10 +1079,10 @@ and set the other lights yourself.</p>
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-7">
+<h3 id="response-data-4">
   
   
-    <a href="#response-data-7" class="anchor-heading" aria-labelledby="response-data-7"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-4" class="anchor-heading" aria-labelledby="response-data-4"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -1114,14 +1090,12 @@ and set the other lights yourself.</p>
 
 <ul>
   <li><code class="language-plaintext highlighter-rouge">scene_valid</code>: <code class="language-plaintext highlighter-rouge">true</code> if the scene exists and every entity it sets is in <code class="language-plaintext highlighter-rouge">scope_entities</code>.</li>
-  <li><code class="language-plaintext highlighter-rouge">scene_active</code>: The same as <code class="language-plaintext highlighter-rouge">scene_valid</code>.</li>
   <li><code class="language-plaintext highlighter-rouge">covered_entities</code>: The entities the scene sets.</li>
   <li><code class="language-plaintext highlighter-rouge">uncovered_entities</code>: The entries in <code class="language-plaintext highlighter-rouge">target_entities</code> that the scene doesn’t set. If
 <code class="language-plaintext highlighter-rouge">scene_valid</code> is <code class="language-plaintext highlighter-rouge">false</code>, this is all of them.</li>
 </ul>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">scene_active</span><span class="pi">:</span> <span class="kc">true</span>
-<span class="na">scene_valid</span><span class="pi">:</span> <span class="kc">true</span>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">scene_valid</span><span class="pi">:</span> <span class="kc">true</span>
 <span class="na">covered_entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_1</span><span class="pi">]</span>
 <span class="na">uncovered_entities</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">light.kitchen_2</span><span class="pi">]</span>
 </code></pre></div></div>
@@ -1153,10 +1127,10 @@ the lights in an area.</p>
 
 <p>It takes a target, as an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> does: any mix of <code class="language-plaintext highlighter-rouge">entity_id</code>,
 <code class="language-plaintext highlighter-rouge">device_id</code>, <code class="language-plaintext highlighter-rouge">area_id</code>, <code class="language-plaintext highlighter-rouge">floor_id</code> and <code class="language-plaintext highlighter-rouge">label_id</code>.</p>
-<h3 id="response-data-8">
+<h3 id="response-data-5">
   
   
-    <a href="#response-data-8" class="anchor-heading" aria-labelledby="response-data-8"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-5" class="anchor-heading" aria-labelledby="response-data-5"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>
@@ -1218,10 +1192,10 @@ configuration or diagnostic entity. If a label is on the entity itself, it’s k
     </tr>
   </tbody>
 </table></div>
-<h3 id="response-data-9">
+<h3 id="response-data-6">
   
   
-    <a href="#response-data-9" class="anchor-heading" aria-labelledby="response-data-9"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
+    <a href="#response-data-6" class="anchor-heading" aria-labelledby="response-data-6"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Response data
   
   
 </h3>

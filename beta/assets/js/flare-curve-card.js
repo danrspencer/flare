@@ -351,7 +351,7 @@ class FlareCurveCard extends HTMLElement {
 
     const pointsRaw = phase.attributes.points;
     const brightnessNowValue = Number(phase.attributes.brightness);
-    const kelvinNowValue = Number(phase.attributes.color_temp);
+    const kelvinNowValue = Number(phase.attributes.color_temp_kelvin);
 
     // "now" is in the key because the card reads the clock itself; without it
     // a flat stretch of curve would freeze the marker. Bucketed to the render
