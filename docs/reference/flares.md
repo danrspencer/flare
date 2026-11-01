@@ -10,7 +10,7 @@ permalink: /reference/flares/
 
 A flare is a light entity that sits over an automation. Flares are under **Settings → Devices
 & Services → FLARE → Flares**. For setting one up for a voice assistant, see
-[Voice assistants and HomeKit](../../guides/flares/).
+[Voice assistants](../../guides/flares/).
 
 <details open markdown="block">
   <summary>On this page</summary>

@@ -1,5 +1,5 @@
 ---
-title: Voice assistants and HomeKit
+title: Voice assistants
 parent: Guides
 nav_order: 5
 permalink: /guides/flares/
@@ -9,7 +9,7 @@ render_with_liquid: false
 # as empty strings and nothing errors - see tests/checks/test_docs_site.py.
 ---
 
-# Voice assistants and HomeKit
+# Voice assistants
 {: .no_toc }
 
 If you say "Hey Siri, turn on the kitchen", Siri switches the kitchen's bulbs on directly. They

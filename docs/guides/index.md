@@ -18,12 +18,10 @@ How to do more with FLARE once a room is running.
   FLARE: a weekend lie-in, a holiday schedule, movie night, and more.
 - **[Templates]({{ site.baseurl }}/guides/templates/)** — the blueprint's Brightness, Idle
   Brightness and Scene templates, with worked examples.
-- **[Override protection explained]({{ site.baseurl }}/guides/overrides/)** — what happens
-  to a light you change yourself, and how FLARE tells.
+- **[Override protection]({{ site.baseurl }}/guides/overrides/)** — what happens to a light
+  you change yourself, and how it goes back to the curve.
 - **[Scenes]({{ site.baseurl }}/guides/scenes/)** — handing a room to a scene, and getting it
   back.
-- **[Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/)** — so "turn on the
+- **[Voice assistants]({{ site.baseurl }}/guides/flares/)** — so "turn on the
   kitchen" from Siri, Alexa, Google or HomeKit lights the room for the time of day, and FLARE
   keeps running it.
-- **[Building without the blueprint]({{ site.baseurl }}/guides/custom-automations/)** —
-  driving FLARE from your own automations instead.

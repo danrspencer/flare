@@ -25,8 +25,8 @@ curve settings around and watch the day's lighting change.
 
 - **[Quickstart](https://danrspencer.github.io/flare/installation/)** — installing FLARE and setting up your rooms
 - **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the ready-made dashboard, and its views for a dashboard of your own
-- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, override protection, scenes, voice assistants and HomeKit, and building your own automations
-- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and flare entity, override protection, and service
+- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, override protection, scenes and voice assistants
+- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and flare entity, override protection, and services, with examples of using them in your own automations
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
 
 ## Why four phases, not a continuous curve

@@ -21,4 +21,4 @@ creates.
 - **[Flares]({{ site.baseurl }}/reference/flares/)** — a flare's settings, and what each
   light command does.
 - **[Services]({{ site.baseurl }}/reference/services/)** — each service, its fields and what it
-  returns.
+  returns, and using them in your own automations instead of the blueprint.

@@ -6,6 +6,9 @@ permalink: /reference/services/
 redirect_from:
   - /reference/integration/
   - /advanced/reference/
+  - /guides/custom-automations/
+  - /reference/custom-automations/
+  - /advanced/custom-automations/
 render_with_liquid: false
 # Liquid is off for this page: it contains Home Assistant Jinja, which
 # shares Liquid's {{ }} delimiters. With Liquid on, those examples render
@@ -137,7 +140,7 @@ data:
 
 ### `flare.turn_off` or `light.turn_off`?
 
-Both turn the light off, but they leave its [claim](../../guides/overrides/#claims)
+Both turn the light off, but they leave its [claim](../override-protection/#claims)
 saying different things:
 
 | | `light.turn_off` | `flare.turn_off` |
@@ -470,3 +473,82 @@ then colour, each taking half the transition. It recognises them in two ways:
 Once you've saved your own list, a later FLARE release that adds a pattern won't change it,
 so you'll need to add new bulbs yourself. Keep patterns specific, because a bulb that doesn't
 need two commands transitions less smoothly when it gets them.
+
+## In your own automations
+
+If your lights already run on automations of your own, or in Node-RED or AppDaemon, you don't
+have to replace them with the blueprint to get the curve and have hand-set lights left alone:
+anything that can call a Home Assistant action can call these services. The blueprint is one
+automation built on them.
+
+### Keeping a room on the curve
+
+You need a [schedule](../schedules/) for the values. If you want FLARE to leave
+hand-set lights alone, pass the automation itself as the
+[room](../override-protection/#rooms). This keeps the kitchen on the curve:
+
+```yaml
+alias: Kitchen lighting
+triggers:
+  - trigger: event
+    event_type: flare_tick
+    event_data:
+      area_id: kitchen
+conditions:
+  - condition: template
+    value_template: "{{ area_entities('kitchen') | select('match', '^light\\.') | select('is_state', 'on') | list | count > 0 }}"
+actions:
+  - action: flare.apply_lighting
+    data:
+      entities: "{{ area_entities('kitchen') | select('match', '^light\\.') | select('is_state', 'on') | list }}"
+      brightness: "{{ state_attr('sensor.home_flare', 'brightness') }}"
+      color_temp_kelvin: "{{ state_attr('sensor.home_flare', 'color_temp_kelvin') }}"
+      transition: 5
+      room_id: "{{ this.entity_id }}"
+      room_entities: "{{ area_entities('kitchen') | select('match', '^light\\.') | list }}"
+```
+
+It runs on the kitchen's [tick](../override-protection/#when-rooms-update) and only passes
+lights that are on, since `apply_lighting` turns on everything it's given. Turning the room on and off is left to you.
+
+### Sending the commands yourself
+
+If you want to send `light.turn_on` yourself and still have FLARE leave hand-set lights alone:
+
+1. `flare.claims_check` to find out whether someone else has changed the light.
+2. `flare.claims_record` with what you're about to send, so FLARE recognises it next time.
+3. Your own `light.turn_on`.
+
+For example, this script sets the porch light to a warm 60%, unless someone has changed it
+since the script last set it:
+
+```yaml
+alias: Porch light warm
+sequence:
+  - action: flare.claims_check
+    data:
+      entities: [light.porch]
+    response_variable: check
+  - condition: template
+    value_template: "{{ not check.results['light.porch'].blocked }}"
+  - action: flare.claims_record
+    data:
+      entities: [light.porch]
+      room_id: "{{ this.entity_id }}"
+      targets:
+        light.porch: { brightness: 153, color_temp_kelvin: 2200 }
+  - action: light.turn_on
+    target:
+      entity_id: light.porch
+    data:
+      brightness: 153
+      color_temp_kelvin: 2200
+```
+
+`targets` needs the brightness and either `color_temp_kelvin` or `rgb_color` you're sending.
+FLARE checks the light against it later, so a light running an effect that keeps changing its
+colour won't be recognised. For that, use a scene or hand the light over with a `null`
+brightness in the blueprint instead.
+
+If your automation turns lights off while some of the room's lights stay on, use
+`flare.turn_off`; see [`flare.turn_off` or `light.turn_off`?](#flareturn_off-or-lightturn_off).

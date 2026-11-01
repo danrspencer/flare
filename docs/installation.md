@@ -101,4 +101,4 @@ The other buttons there add one thing at a time: **Add schedule** and **Add flar
 - Want it to behave differently — a weekend lie-in, a holiday schedule?
   [Examples]({{ site.baseurl }}/guides/examples/).
 - Using HomeKit, Alexa or Google Assistant? Expose the flares instead of your bulbs:
-  [Voice assistants and HomeKit]({{ site.baseurl }}/guides/flares/#exposing-flares-instead-of-your-bulbs).
+  [Voice assistants]({{ site.baseurl }}/guides/flares/#exposing-flares-instead-of-your-bulbs).
