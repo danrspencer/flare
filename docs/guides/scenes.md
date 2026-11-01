@@ -1,5 +1,5 @@
 ---
-title: Scenes
+title: Scene handoff
 parent: Guides
 nav_order: 4
 permalink: /guides/scenes/
@@ -12,7 +12,7 @@ render_with_liquid: false
 # as empty strings and nothing errors - see tests/checks/test_docs_site.py.
 ---
 
-# Scenes
+# Scene handoff
 {: .no_toc }
 
 If you've already made a scene for how a room should look at night, or while you're watching a

@@ -152,4 +152,4 @@ the per-phase scene pickers whenever it returns a scene that exists.
 {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }}
 ```
 
-Return `''` for no scene. See [Scenes](../scenes/) for how a room shares itself with a scene.
+Return `''` for no scene. See [Scene handoff](../scenes/) for how a room shares itself with a scene.
