@@ -21,7 +21,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | Service | Description |
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
-| [`flare.turn_off`](#flareturn_off) | Turns lights off, keeping them FLARE's |
+| [`flare.turn_off`](#flareturn_off) | Turns lights off as FLARE, so FLARE turns them on again later |
 | [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
@@ -124,10 +124,13 @@ groups:
 
 ## `flare.turn_off`
 
-Use this action to turn off some of a room's lights while FLARE carries on running the room.
-The lights stay FLARE's, so they come back on with the room next time. Turned off with
-`light.turn_off`, they'd count as switched off by someone, and FLARE would leave them off until
-the whole room is dark.
+Use this action to turn lights off as FLARE rather than by hand. FLARE leaves a light that's
+switched off by hand alone, so with `light.turn_off` the light stays off until the whole room
+is dark. A light switched off with `flare.turn_off` is turned back on the next time FLARE sets
+the room.
+
+It's for turning off some of a room's lights while the rest stay on, such as everything but
+a nightlight.
 
 ```yaml
 action: flare.turn_off
@@ -146,7 +149,7 @@ data:
 ### Good to know
 
 - When you're turning a whole room off, it makes no difference which you use: once none of a
-  room's lights is on, FLARE sets every light in it again next time anyway.
+  room's lights is on, FLARE turns any of them on again next time.
 - It turns off every light it's given, including lights someone else has changed. To turn off
   only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
 - A light FLARE isn't driving is just turned off, as `light.turn_off` would.

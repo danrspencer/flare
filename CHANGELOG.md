@@ -126,8 +126,8 @@ After updating:
   `room_entities`, on `flare.apply_lighting`, `flare.claims_record` and
   `flare.claims_override`.
 - `flare.turn_off` takes no room, and rejects `zone_device_id`, `room_id` and `room_entities`.
-  It keeps the lights FLARE is driving as FLARE's, whichever automation set them, and turns
-  any other light off as `light.turn_off` would.
+  A light it switches off is turned back on the next time FLARE sets the room, whichever
+  automation set it before, rather than left off as one switched off by hand would be.
   `flare.claims_check` and `flare.claims_clear` take no room, and `flare.claims_check`
   returns `rooms` instead of `zone`. A call that still passes `zone_device_id` is rejected.
 - `flare.claims_clear`'s `cleared` lists only the entities that had a claim, not every one

@@ -96,5 +96,6 @@ colour won't be recognised. For that, use a scene or hand the light over with a 
 brightness in the blueprint instead.
 
 To turn off some of a room's lights while the rest stay on, use `flare.turn_off` rather than
-`light.turn_off`. The lights stay FLARE's and come back on with the room; with `light.turn_off`
-they'd count as switched off by hand, and FLARE would leave them off until the room is dark.
+`light.turn_off`. FLARE turns them back on the next time it sets the room. With
+`light.turn_off` they'd count as switched off by hand, and FLARE would leave them off until the
+room is dark.
