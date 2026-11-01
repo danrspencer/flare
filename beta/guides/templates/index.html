@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -246,9 +246,10 @@
 </h1>
     
 
-<p>The blueprint’s three template inputs cover what its other settings can’t: a light that
-depends on something other than the phase, or a single light treated differently from the
-rest of the room. This page covers how each one works, with examples. The
+<p>The blueprint’s settings work per phase and for the whole room, so on their own they can’t dim
+the lights while the TV is on, keep one lamp as the nightlight, or leave a light to another
+automation. The three template inputs cover cases like these, because each one is a Home
+Assistant template that can depend on anything and set each light separately. The
 <a href="../../reference/blueprint/">Blueprint</a> page lists what each one accepts.</p>
 
 <details open="">
@@ -257,7 +258,7 @@ rest of the room. This page covers how each one works, with examples. The
   <li><a href="#brightness-template" id="markdown-toc-brightness-template">Brightness Template</a>    <ol>
       <li><a href="#dimming-a-light-while-the-tv-is-on" id="markdown-toc-dimming-a-light-while-the-tv-is-on">Dimming a light while the TV is on</a></li>
       <li><a href="#dimming-some-lights-in-the-evening" id="markdown-toc-dimming-some-lights-in-the-evening">Dimming some lights in the evening</a></li>
-      <li><a href="#leaving-a-light-to-another-automation" id="markdown-toc-leaving-a-light-to-another-automation">Leaving a light to another automation</a></li>
+      <li><a href="#leaving-a-light-alone" id="markdown-toc-leaving-a-light-alone">Leaving a light alone</a></li>
       <li><a href="#one-level-for-the-whole-room" id="markdown-toc-one-level-for-the-whole-room">One level for the whole room</a></li>
       <li><a href="#a-level-that-follows-the-curve" id="markdown-toc-a-level-that-follows-the-curve">A level that follows the curve</a></li>
       <li><a href="#0-or-null" id="markdown-toc-0-or-null"><code class="language-plaintext highlighter-rouge">0</code> or <code class="language-plaintext highlighter-rouge">null</code>?</a></li>
@@ -344,10 +345,10 @@ or stops, rather than at the next update.</p>
 </code></pre></div></div>
 
 <p>The rest of the kitchen follows the curve; these two sit lower once Evening starts.</p>
-<h3 id="leaving-a-light-to-another-automation">
+<h3 id="leaving-a-light-alone">
   
   
-    <a href="#leaving-a-light-to-another-automation" class="anchor-heading" aria-labelledby="leaving-a-light-to-another-automation"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Leaving a light to another automation
+    <a href="#leaving-a-light-alone" class="anchor-heading" aria-labelledby="leaving-a-light-alone"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Leaving a light alone
   
   
 </h3>

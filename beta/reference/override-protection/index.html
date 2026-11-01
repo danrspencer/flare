@@ -169,7 +169,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection explained</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/beta/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -250,14 +250,21 @@
 else’s and leave alone a light you’ve changed yourself. Its entities and options are under
 <strong>Settings → Devices &amp; Services → FLARE → Settings</strong>.</p>
 
-<p>This page lists what you can set and use. For what override protection does and how it works,
-with examples, see <a href="../../guides/overrides/">Override protection explained</a>.</p>
+<p>For what override protection means for your lights day to day, see the
+<a href="../../guides/overrides/">Override protection</a> guide.</p>
 
 <details open="">
   <summary class="text-delta">On this page</summary>
 <ol id="markdown-toc">
   <li><a href="#flares-entities" id="markdown-toc-flares-entities">FLARE’s entities</a></li>
   <li><a href="#how-it-works" id="markdown-toc-how-it-works">How it works</a>    <ol>
+      <li><a href="#claims" id="markdown-toc-claims">Claims</a></li>
+      <li><a href="#example-dimming-a-lamp" id="markdown-toc-example-dimming-a-lamp">Example: dimming a lamp</a></li>
+      <li><a href="#example-switching-a-lamp-off" id="markdown-toc-example-switching-a-lamp-off">Example: switching a lamp off</a></li>
+      <li><a href="#lights-flare-switches-off" id="markdown-toc-lights-flare-switches-off">Lights FLARE switches off</a></li>
+      <li><a href="#back-to-the-curve" id="markdown-toc-back-to-the-curve">Back to the curve</a></li>
+      <li><a href="#two-claims-not-one" id="markdown-toc-two-claims-not-one">Two claims, not one</a></li>
+      <li><a href="#what-the-services-record" id="markdown-toc-what-the-services-record">What the services record</a></li>
       <li><a href="#rooms" id="markdown-toc-rooms">Rooms</a></li>
       <li><a href="#how-close-counts-as-a-match" id="markdown-toc-how-close-counts-as-a-match">How close counts as a match</a></li>
     </ol>
@@ -336,12 +343,268 @@ again on its next update.</p>
 </h2>
     
 
-<p><a href="../../guides/overrides/">Override protection explained</a> explains what override protection
-does and how claims work, with examples. This section is the detail for calling FLARE’s services yourself.</p>
+<p>FLARE tells a light you’ve changed from one it set by keeping a record of what it last asked
+each light for, and comparing the light with it.</p>
+<h3 id="claims">
+  
+  
+    <a href="#claims" class="anchor-heading" aria-labelledby="claims"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Claims
+  
+  
+</h3>
+    
+
+<p>Each time FLARE sets a light, it records a <strong>claim</strong> for the light: what it asked the light
+for. On every update, FLARE compares each light with its claim, and that comparison gives the
+light a status:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>The light</th>
+      <th>Status</th>
+      <th>What FLARE’s updates do</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Matches its claim</td>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code></td>
+      <td>Keep setting it to the curve.</td>
+    </tr>
+    <tr>
+      <td>Has stopped matching its claim, for less than 30 seconds</td>
+      <td><code class="language-plaintext highlighter-rouge">mismatched</code></td>
+      <td>Leave it alone for now.</td>
+    </tr>
+    <tr>
+      <td>Hasn’t matched its claim for 30 seconds</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+      <td>Leave it alone.</td>
+    </tr>
+    <tr>
+      <td>Has no claim</td>
+      <td><code class="language-plaintext highlighter-rouge">untracked</code></td>
+      <td>Set it, which gives it a claim.</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>“Matches” means within a tolerance, since bulbs rarely report back exactly what they were sent:
+5% of the brightness and 5 mireds of the colour temperature by default. See
+<a href="#how-close-counts-as-a-match">how close counts as a match</a>.</p>
+
+<p>The 30 seconds give a slow bulb time to report back, so a light that’s only catching up isn’t
+counted as overridden.</p>
+<h3 id="example-dimming-a-lamp">
+  
+  
+    <a href="#example-dimming-a-lamp" class="anchor-heading" aria-labelledby="example-dimming-a-lamp"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Example: dimming a lamp
+  
+  
+</h3>
+    
+
+<p>The living room has a ceiling light and a lamp, and someone’s in the room.</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>What happens</th>
+      <th>The lamp’s claim</th>
+      <th>The lamp</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>19:00</td>
+      <td>FLARE sets the room</td>
+      <td>on, 180, 3000 K</td>
+      <td>on, 180, 3000 K</td>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code></td>
+    </tr>
+    <tr>
+      <td>19:20</td>
+      <td>You dim the lamp in the Home app</td>
+      <td>on, 180, 3000 K</td>
+      <td>on, 60, 3000 K</td>
+      <td><code class="language-plaintext highlighter-rouge">mismatched</code></td>
+    </tr>
+    <tr>
+      <td>19:20:30</td>
+      <td> </td>
+      <td>on, 180, 3000 K</td>
+      <td>on, 60, 3000 K</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+    </tr>
+    <tr>
+      <td>19:21</td>
+      <td>FLARE’s next update</td>
+      <td>on, 180, 3000 K</td>
+      <td>on, 60, 3000 K</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+    </tr>
+    <tr>
+      <td>23:00</td>
+      <td>You switch both lights off</td>
+      <td>deleted</td>
+      <td>off</td>
+      <td><code class="language-plaintext highlighter-rouge">off</code></td>
+    </tr>
+    <tr>
+      <td>07:00</td>
+      <td>Motion in the morning</td>
+      <td>on, 255, 6667 K</td>
+      <td>on, 255, 6667 K</td>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>From 19:21 the update keeps setting the ceiling light to the curve, but leaves the lamp out,
+because it’s overridden. So the lamp stays at 60 all evening.</p>
+
+<p>At 23:00 none of the room’s lights is on, so the room deletes their claims (see
+<a href="#back-to-the-curve">how a light goes back to the curve</a>). In the morning the
+lamp has no claim, so it’s <code class="language-plaintext highlighter-rouge">untracked</code>, and the update sets it with the rest of the room.</p>
+<h3 id="example-switching-a-lamp-off">
+  
+  
+    <a href="#example-switching-a-lamp-off" class="anchor-heading" aria-labelledby="example-switching-a-lamp-off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Example: switching a lamp off
+  
+  
+</h3>
+    
+
+<p>Switching a light off counts as changing it, the same as dimming it. With the same room:</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Time</th>
+      <th>What happens</th>
+      <th>The lamp’s claim</th>
+      <th>The lamp</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>19:00</td>
+      <td>FLARE sets the room</td>
+      <td>on, 180, 3000 K</td>
+      <td>on, 180, 3000 K</td>
+      <td><code class="language-plaintext highlighter-rouge">controlled</code></td>
+    </tr>
+    <tr>
+      <td>20:00</td>
+      <td>You switch the lamp off</td>
+      <td>on, 180, 3000 K</td>
+      <td>off</td>
+      <td><code class="language-plaintext highlighter-rouge">mismatched</code></td>
+    </tr>
+    <tr>
+      <td>20:00:30</td>
+      <td> </td>
+      <td>on, 180, 3000 K</td>
+      <td>off</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+    </tr>
+    <tr>
+      <td>20:01</td>
+      <td>FLARE’s next update</td>
+      <td>on, 180, 3000 K</td>
+      <td>off</td>
+      <td><code class="language-plaintext highlighter-rouge">overridden</code></td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>The ceiling light is still on, so the room keeps its claims, and every update leaves the lamp
+off. Once you switch the ceiling light off too, the room deletes both claims, and both lights
+come on next time.</p>
+<h3 id="lights-flare-switches-off">
+  
+  
+    <a href="#lights-flare-switches-off" class="anchor-heading" aria-labelledby="lights-flare-switches-off"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lights FLARE switches off
+  
+  
+</h3>
+    
+
+<p>When FLARE switches a light off itself, it sets the light’s claim to off first. The light then
+matches its claim, so it’s <code class="language-plaintext highlighter-rouge">controlled</code> rather than overridden, and it comes on again with the
+rest of the room. That happens when:</p>
+
+<ul>
+  <li>a light’s brightness level is 0, such as a light excluded in the current phase,</li>
+  <li>a room empties and Idle Brightness leaves a nightlight on, and the room’s other lights are
+switched off.</li>
+</ul>
+
+<p>In that second case the nightlight keeps the room from going dark, so the room keeps its
+claims. Because the other lights’ claims say off, they come on when someone walks back in.</p>
+
+<p>If your own automation switches lights off, the
+<a href="../services/#flareturn_off-or-lightturn_off"><code class="language-plaintext highlighter-rouge">flare.turn_off</code> or <code class="language-plaintext highlighter-rouge">light.turn_off</code></a>
+comparison shows which to use.</p>
+<h3 id="back-to-the-curve">
+  
+  
+    <a href="#back-to-the-curve" class="anchor-heading" aria-labelledby="back-to-the-curve"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Back to the curve
+  
+  
+</h3>
+    
+
+<p>An overridden light goes back to the curve once its claim is gone, or once FLARE sets it
+regardless:</p>
+
+<ul>
+  <li><strong>The room goes dark.</strong> Once none of the room’s claimed lights is on, the room deletes all
+their claims. A light that’s unavailable counts as off, so one dead bulb can’t hold a room’s
+claims forever. A light in the room that FLARE has no claim on, such as a lamp another
+automation runs, doesn’t count either way.</li>
+  <li><strong>You press Clear.</strong> <strong>Clear</strong> under <strong>FLARE → Settings</strong>, or an area’s <strong>Clear</strong> on the
+<a href="../../dashboard/">dashboard</a>, deletes claims, so FLARE sets those lights at its next update.</li>
+  <li><strong>You run the room’s automation yourself</strong>, or turn on the room’s
+<a href="../../guides/flares/">flare</a> with no brightness or colour. That sets every light, overridden ones
+included, and records new claims.</li>
+  <li><strong>The light goes unavailable.</strong> Its claim is deleted, so it’s <code class="language-plaintext highlighter-rouge">untracked</code> when it comes back.</li>
+</ul>
+
+<p>A restart doesn’t send a light back: claims are kept across restarts, and a light still showing
+what its claim says is still <code class="language-plaintext highlighter-rouge">controlled</code>.</p>
+
+<p>When a room’s lights come back online together, such as when they’re switched on at the wall,
+FLARE waits a few seconds before setting them. A bulb starts up at whatever it powers up as and
+misses a command sent while it boots, which would leave it not matching its claim.</p>
+<h3 id="two-claims-not-one">
+  
+  
+    <a href="#two-claims-not-one" class="anchor-heading" aria-labelledby="two-claims-not-one"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Two claims, not one
+  
+  
+</h3>
+    
+
+<p>Each light actually has two claims: the last thing FLARE sent it, and the last thing FLARE saw it
+show. A light matching either one is <code class="language-plaintext highlighter-rouge">controlled</code>. So if a command never reaches a bulb, such as
+a dropped Zigbee message, the bulb still matches the older claim and isn’t counted as
+overridden. FLARE sends the command again at its next update.</p>
+<h3 id="what-the-services-record">
+  
+  
+    <a href="#what-the-services-record" class="anchor-heading" aria-labelledby="what-the-services-record"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> What the services record
+  
+  
+</h3>
+    
 
 <p><code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> records a claim on each light it sets, and <code class="language-plaintext highlighter-rouge">flare.turn_off</code> sets the
-claim of each light it switches off to off. Claims belong to the lights, not to any one
-automation. A light that’s on and has no claim is always sent what
+claim of each light it switches off to off. A light that’s on and has no claim is always sent what
 <code class="language-plaintext highlighter-rouge">flare.apply_lighting</code> would set, even if it already shows it, and that write claims it. After a
 <strong>Clear</strong>, for example, a room’s lights are claimed again on their next update. Without a
 <code class="language-plaintext highlighter-rouge">room_id</code>, a light already showing the values isn’t sent anything.</p>
@@ -353,6 +616,11 @@ automation. A light that’s on and has no claim is always sent what
   
 </h3>
     
+
+<p>Claims belong to the lights, not to any one automation, so two automations setting the same
+light don’t count each other’s changes as overrides. Each room automation names its lights,
+and that’s what decides which claims are deleted together when the room goes dark. If a light
+is in two rooms, its claim is deleted when either room goes dark.</p>
 
 <p>Each call that records claims names a <strong>room</strong>, usually the automation making it, and the
 room’s lights. The blueprint passes its own automation as <code class="language-plaintext highlighter-rouge">room_id</code> and its
