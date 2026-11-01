@@ -18,6 +18,9 @@ FLARE records what it last asked each light for, so it can tell its own changes 
 else's and leave alone a light you've changed yourself. Its entities and options are under
 **Settings → Devices & Services → FLARE → Settings**.
 
+This page lists what you can set and use. For what override protection does and how it works,
+with examples, see [Override protection explained](../../guides/overrides/).
+
 <details open markdown="block">
   <summary>On this page</summary>
   {: .text-delta }
@@ -61,8 +64,8 @@ again on its next update.
 
 ## How it works
 
-[Lights you change yourself](../../guides/overrides/) explains claims and overrides, with
-examples. This section is the detail for calling FLARE's services yourself.
+[Override protection explained](../../guides/overrides/) explains what override protection
+does and how claims work, with examples. This section is the detail for calling FLARE's services yourself.
 
 `flare.apply_lighting` records a claim on each light it sets, and `flare.turn_off` sets the
 claim of each light it switches off to off. Claims belong to the lights, not to any one
