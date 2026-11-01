@@ -188,16 +188,15 @@ triggers:
       - light.living_room_pendant_2
     to: unavailable
 actions:
-  - action: flare.turn_off
-    data:
-      entities:
+  - action: light.turn_off
+    target:
+      entity_id:
         - light.living_room_lamp_1
         - light.living_room_lamp_2
 ```
 
-`flare.turn_off` turns the lamps off even if you've dimmed one yourself. If you'd rather leave
-the lamps to another automation or a voice assistant, so FLARE never switches them on or
-off, hand them over with a `null` level, as in
+If you'd rather leave the lamps to another automation or a voice assistant, so FLARE never
+switches them on or off, hand them over with a `null` level, as in
 [Leaving a light to another automation](../templates/#leaving-a-light-to-another-automation).
 
 ## Something else at a phase change
