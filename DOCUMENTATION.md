@@ -154,6 +154,24 @@ uses the defaults again."
 Short sentences are fine. A paragraph made only of them, each one
 starting from scratch, is not.
 
+**17. FLARE doesn't think; it compares lights with their claims.** Never
+write that FLARE thinks, knows, believes, assumes, notices, remembers or
+treats a light as something, nor "FLARE thinks it did it itself" or
+"treated as switched off by someone". Say what the claim records, how the
+light compares with it, and the status that gives (`controlled`,
+`overridden`, `untracked`). Then, if it isn't obvious, say what that status
+leads to.
+
+Don't write: "With `light.turn_off`, FLARE treats the light as switched off
+by someone else and leaves it off." Write: "With `light.turn_off`, the
+light's claim still says on, so once the light has been off for 30 seconds
+it doesn't match and is `overridden`. FLARE's updates leave overridden
+lights alone, so it stays off."
+
+On the pages where the lexicon keeps "claim" out, describe only what
+happens to the light ("FLARE leaves it off"), still without a thinking
+verb.
+
 ## Lexicon
 
 **External** terms are what users see and say; they may appear anywhere.

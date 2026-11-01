@@ -96,7 +96,7 @@ colour won't be recognised. For that, use a scene or hand the light over with a 
 brightness in the blueprint instead.
 
 When your automation turns lights off, such as when the room empties, use `flare.turn_off`
-rather than `light.turn_off` if any of the room's lights stay on. FLARE then turns them on again
-the next time it turns the room's lights on. With `light.turn_off` they'd count as switched off
-by someone else, and FLARE would leave them off until the whole room has been dark. See
+rather than `light.turn_off` if any of the room's lights stay on. It sets the lights' claims to
+off, so they still match and come on with the room next time. With `light.turn_off` their claims
+still say on, so they're `overridden` and stay off until the whole room has been dark. See
 [`flare.turn_off` or `light.turn_off`?](../../reference/services/#flareturn_off-or-lightturn_off).

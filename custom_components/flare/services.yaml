@@ -115,8 +115,8 @@ apply_lighting:
       name: Room
       description: >-
         Usually the calling automation, `{{ this.entity_id }}`. The change is
-        recorded for this room. Leave unset to set the lights without
-        recording anything, so no light is treated as overridden.
+        recorded for this room. Leave unset to set the lights without recording
+        or checking claims, so no light is left out as overridden.
       example: automation.kitchen_lighting
       selector:
         text:
@@ -133,11 +133,11 @@ apply_lighting:
 turn_off:
   name: Turn off lights
   description: >-
-    Turns lights off for now: FLARE turns them on again the next time it
-    turns the room's lights on. Lights turned off with light.turn_off are
-    treated as switched off by someone else, and FLARE leaves them off until
-    the whole room has been dark. Turns off every light it's given,
-    including ones someone else has changed.
+    Sets the lights' claims to off, then turns them off, so they still match
+    their claims and come on with the rest of the room next time. A light
+    turned off with light.turn_off keeps a claim that says on, so it's
+    overridden and stays off until none of the room's claimed lights is on.
+    Turns off every light it's given, including overridden ones.
   fields:
     entities:
       name: Entities
@@ -496,8 +496,9 @@ claims_record:
       description: >-
         Map of entity ID to the values you're about to send: {"brightness":
         ..., "color_temp_kelvin": ...} or {"brightness": ..., "rgb_color":
-        [...]}. Without it, a light that's slow to report back is treated as
-        overridden.
+        [...]}. Without it, the claim holds no values to compare, so a light
+        that reports back after Home Assistant has dropped the change's
+        context doesn't match its claim and becomes overridden.
       example: '{"light.lamp": {"brightness": 200, "color_temp_kelvin": 3000}}'
       selector:
         object:
@@ -523,9 +524,9 @@ claims_override:
   description: >-
     Marks entities as changed by someone else, so FLARE leaves them alone until
     the room goes dark, their claims are cleared, or a forced write takes them
-    back. Usually unnecessary, since FLARE notices changes to lights it's
-    driving; it's for lights it isn't driving yet, such as ones your automation
-    turns on in a dark room.
+    back. Usually unnecessary: a light with a claim becomes overridden by
+    itself once it stops matching that claim. It's for lights with no claim
+    yet, such as ones your automation turns on in a dark room.
   fields:
     entities:
       name: Entities

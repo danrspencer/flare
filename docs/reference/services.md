@@ -124,8 +124,9 @@ groups:
 
 ## `flare.turn_off`
 
-Use this action to turn lights off for now, so FLARE turns them on again the next time it turns
-the room's lights on.
+Use this action to turn lights off while keeping them `controlled`. It sets each light's claim
+to off before turning it off, so the light still matches its claim and comes on with the rest
+of the room next time.
 
 ```yaml
 action: flare.turn_off
@@ -136,20 +137,23 @@ data:
 
 ### `flare.turn_off` or `light.turn_off`?
 
-Both turn the light off. The difference is what FLARE does afterwards:
+Both turn the light off, but they leave its [claim](../override-protection/#how-it-works)
+saying different things:
 
 | | `light.turn_off` | `flare.turn_off` |
 |---|---|---|
-| FLARE treats the light as | Switched off by someone else | Switched off by FLARE |
-| The next time FLARE turns the room's lights on | It leaves the light off, until the whole room has been dark | It turns the light on with the rest |
+| The light's claim | Still says what FLARE last set, such as on at 180 | Says off |
+| The light's status | `overridden`, once it has been off for 30 seconds, since it doesn't match its claim | `controlled`, since it matches its claim |
+| The next time the room's lights are turned on | It's left off | It's set with the rest, so it comes on |
 
-Use `light.turn_off` when you want a light to stay off, such as a lamp you don't want on this
-evening. Use `flare.turn_off` in an automation that runs the room itself, such as one that turns
-the lights off when the room empties but leaves a nightlight on, so they come back when someone
-returns. In a room someone is still in, FLARE turns the lights on again at its next update.
+Either way, once none of the room's claimed lights is on, the room deletes its claims, and every
+light is set the next time the room's lights are turned on. So if you're turning the whole room
+off, it makes no difference which you use.
 
-If none of the room's lights is left on, the two make no difference: FLARE turns them all on
-the next time either way.
+Use `light.turn_off` when you want a light to stay off while the rest of the room is on, such as
+a lamp switched off for the evening. Use `flare.turn_off` when a room has emptied but a
+nightlight stays on, so the other lights come on again when someone returns. In a room that's
+still in use, a light turned off with `flare.turn_off` comes back on at the next update.
 
 ### Fields
 
@@ -276,9 +280,9 @@ data:
 
 ### Good to know
 
-- Without `targets`, FLARE can only match the change by its context, which Home Assistant
-  drops after five seconds. A bulb that's slower than that to report back is then treated as
-  changed by someone else.
+- Without `targets`, the claim holds only the change's context, which Home Assistant drops
+  after five seconds. A bulb that's slower than that to report back doesn't match its claim,
+  so it becomes `overridden`.
 - A light running an effect that keeps changing its colour won't match its claim. Use a scene
   for it instead, or hand it over with a `null` brightness in the blueprint.
 
@@ -308,11 +312,10 @@ Optional. `cleared` lists the entities that had a claim to discard.
 
 Use this action to mark lights as changed by someone else, so FLARE leaves them alone.
 
-You don't usually need it. When something other than FLARE changes a light that FLARE is
-driving, FLARE notices on its own and leaves the light alone. It's for lights FLARE isn't
-driving yet, such as when your automation turns lights on in a dark room and you want FLARE to
-leave them as they are. Without it, the room's FLARE automation sets those lights back to the
-curve on its next update.
+You don't usually need it. A light with a claim becomes `overridden` by itself once something
+else changes it and it stops matching its claim. It's for lights with no claim yet, such as
+when your automation turns lights on in a dark room and you want FLARE to leave them as they
+are. Without it, they're `untracked`, so the room's next update sets them to the curve.
 
 It marks each entity whether it's on or off. A light marked this way stays overridden until its
 room goes dark, its claims are cleared, or a forced `flare.apply_lighting` takes it back.
