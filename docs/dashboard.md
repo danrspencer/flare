@@ -30,7 +30,7 @@ name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
 ![A schedule's view: the day's curve, a phase override, the schedule times, and
 the curve and transition values for each phase]({{ '/assets/img/dashboard-section.png' | relative_url }})
 
-## Adding the views to another dashboard
+## In your own dashboard
 
 The same views can go in a dashboard of your own. Open it, then **Edit dashboard** → the
 three-dot menu → **Raw configuration editor**, and add:

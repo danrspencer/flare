@@ -199,7 +199,7 @@ actions:
 
 If you'd rather leave the lamps to another automation or a voice assistant, so FLARE never
 switches them on or off, hand them over with a `null` level, as in
-[Leaving a light to another automation](../templates/#leaving-a-light-to-another-automation).
+[Leaving a light alone](../templates/#leaving-a-light-alone).
 
 ## Something else at a phase change
 

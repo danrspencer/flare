@@ -63,7 +63,7 @@ or stops, rather than at the next update.
 
 The rest of the kitchen follows the curve; these two sit lower once Evening starts.
 
-### Leaving a light to another automation
+### Leaving a light alone
 
 ```yaml
 {{ {'light.kitchen_strip': none} if states('sensor.home_flare') in ['Evening', 'Night'] else {} }}
