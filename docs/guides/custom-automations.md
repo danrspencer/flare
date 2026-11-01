@@ -95,7 +95,8 @@ FLARE checks the light against it later, so a light running an effect that keeps
 colour won't be recognised. For that, use a scene or hand the light over with a `null`
 brightness in the blueprint instead.
 
-To turn off some of a room's lights while the rest stay on, use `flare.turn_off` rather than
-`light.turn_off`. FLARE turns them back on the next time it sets the room. With
-`light.turn_off` they'd count as switched off by hand, and FLARE would leave them off until the
-room is dark.
+When your automation turns lights off, such as when the room empties, use `flare.turn_off`
+rather than `light.turn_off` if any of the room's lights stay on. FLARE then turns them on again
+the next time it turns the room's lights on. With `light.turn_off` they'd count as switched off
+by someone else, and FLARE would leave them off until the whole room has been dark. See
+[`flare.turn_off` or `light.turn_off`?](../../reference/services/#flareturn_off-or-lightturn_off).

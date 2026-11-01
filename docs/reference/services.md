@@ -21,7 +21,7 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | Service | Description |
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
-| [`flare.turn_off`](#flareturn_off) | Turns lights off as FLARE, so FLARE turns them on again later |
+| [`flare.turn_off`](#flareturn_off) | Turns lights off for now, so FLARE turns them on again later |
 | [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
@@ -124,13 +124,8 @@ groups:
 
 ## `flare.turn_off`
 
-Use this action to turn lights off as FLARE rather than by hand. FLARE leaves a light that's
-switched off by hand alone, so with `light.turn_off` the light stays off until the whole room
-is dark. A light switched off with `flare.turn_off` is turned back on the next time FLARE sets
-the room.
-
-It's for turning off some of a room's lights while the rest stay on, such as everything but
-a nightlight.
+Use this action to turn lights off for now, so FLARE turns them on again the next time it turns
+the room's lights on.
 
 ```yaml
 action: flare.turn_off
@@ -138,6 +133,23 @@ data:
   entities: [light.kitchen_1, light.kitchen_2]
   transition: 15
 ```
+
+### `flare.turn_off` or `light.turn_off`?
+
+Both turn the light off. The difference is what FLARE does afterwards:
+
+| | `light.turn_off` | `flare.turn_off` |
+|---|---|---|
+| FLARE treats the light as | Switched off by someone else | Switched off by FLARE |
+| The next time FLARE turns the room's lights on | It leaves the light off, until the whole room has been dark | It turns the light on with the rest |
+
+Use `light.turn_off` when you want a light to stay off, such as a lamp you don't want on this
+evening. Use `flare.turn_off` in an automation that runs the room itself, such as one that turns
+the lights off when the room empties but leaves a nightlight on, so they come back when someone
+returns. In a room someone is still in, FLARE turns the lights on again at its next update.
+
+If none of the room's lights is left on, the two make no difference: FLARE turns them all on
+the next time either way.
 
 ### Fields
 
@@ -148,8 +160,6 @@ data:
 
 ### Good to know
 
-- When you're turning a whole room off, it makes no difference which you use: once none of a
-  room's lights is on, FLARE turns any of them on again next time.
 - It turns off every light it's given, including lights someone else has changed. To turn off
   only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
 - A light FLARE isn't driving is just turned off, as `light.turn_off` would.
