@@ -145,7 +145,7 @@ and other variations.
 
 A scene is only used if every entity it sets is in the room; otherwise the whole room follows
 the schedule. When a scene is used, any light in the room that the scene doesn't set still
-follows the schedule. See [Scenes](../../guides/scenes/).
+follows the schedule. See [Scene handoff](../../guides/scenes/).
 
 ## Transitions
 

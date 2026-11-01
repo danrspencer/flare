@@ -20,7 +20,7 @@ How to do more with FLARE once a room is running.
   Brightness and Scene templates, with worked examples.
 - **[Override protection]({{ site.baseurl }}/guides/overrides/)** — what happens to a light
   you change yourself, and how it goes back to the curve.
-- **[Scenes]({{ site.baseurl }}/guides/scenes/)** — handing a room to a scene, and getting it
+- **[Scene handoff]({{ site.baseurl }}/guides/scenes/)** — handing a room to a scene, and getting it
   back.
 - **[Voice assistants]({{ site.baseurl }}/guides/flares/)** — so "turn on the
   kitchen" from Siri, Alexa, Google or HomeKit lights the room for the time of day, and FLARE
