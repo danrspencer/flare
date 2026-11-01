@@ -36,7 +36,7 @@
   },"5": {
     "doc": "Blueprint",
     "title": "Scenes",
-    "content": "| Input | Default | Description | . | Morning / Day / Evening / Night Scene | none | A scene the room uses instead of the schedule during that phase. | . | Scene Template | none | A template returning a scene’s entity ID, or '' for none. Overrides the per-phase scenes when it returns a scene that exists. | . A scene is only used if every entity it sets is in the room; otherwise the whole room follows the schedule. When a scene is used, any light in the room that the scene doesn’t set still follows the schedule. See Scenes. ",
+    "content": "| Input | Default | Description | . | Morning / Day / Evening / Night Scene | none | A scene the room uses instead of the schedule during that phase. | . | Scene Template | none | A template returning a scene’s entity ID, or '' for none. Overrides the per-phase scenes when it returns a scene that exists. | . A scene is only used if every entity it sets is in the room; otherwise the whole room follows the schedule. When a scene is used, any light in the room that the scene doesn’t set still follows the schedule. See Scene handoff. ",
     "url": "/flare/beta/reference/blueprint/#scenes",
     
     "relUrl": "/reference/blueprint/#scenes"
@@ -463,21 +463,21 @@
   },"66": {
     "doc": "Guides",
     "title": "Guides",
-    "content": "How to do more with FLARE once a room is running. | Examples — automations that change or build on FLARE: a weekend lie-in, a holiday schedule, movie night, and more. | Templates — the blueprint’s Brightness, Idle Brightness and Scene templates, with worked examples. | Override protection — what happens to a light you change yourself, and how it goes back to the curve. | Scenes — handing a room to a scene, and getting it back. | Voice assistants — so “turn on the kitchen” from Siri, Alexa, Google or HomeKit lights the room for the time of day, and FLARE keeps running it. | . ",
+    "content": "How to do more with FLARE once a room is running. | Examples — automations that change or build on FLARE: a weekend lie-in, a holiday schedule, movie night, and more. | Templates — the blueprint’s Brightness, Idle Brightness and Scene templates, with worked examples. | Override protection — what happens to a light you change yourself, and how it goes back to the curve. | Scene handoff — handing a room to a scene, and getting it back. | Voice assistants — so “turn on the kitchen” from Siri, Alexa, Google or HomeKit lights the room for the time of day, and FLARE keeps running it. | . ",
     "url": "/flare/beta/guides/",
     
     "relUrl": "/guides/"
   },"67": {
     "doc": "Home",
     "title": "FLARE",
-    "content": "Flexible Lighting Automation &amp; Reconciliation Engine — lighting for Home Assistant that follows your day, by default from bright and cool in the morning to warm and low at night, and leaves alone any light you change yourself. Quickstart (5 mins) Curve playground GitHub . ",
+    "content": "Flexible Lighting Automation &amp; Reconciliation Engine — phase-based circadian lighting for Home Assistant, with scene handoff and override protection built in. Quickstart (5 mins) Curve playground GitHub . ",
     "url": "/flare/beta/#flare",
     
     "relUrl": "/#flare"
   },"68": {
     "doc": "Home",
     "title": "What it does",
-    "content": "FLARE sets your lights through the day, and leaves alone any light you change yourself. | It lights the room when you walk in. With a motion or occupancy sensor, the room comes on at the right brightness and colour for the time of day, or in the scene you’ve picked for it, and turns off once it’s empty. | It works with lights on a physical wall switch. If you cut the power to a room and restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home Assistant again, instead of leaving it at whatever it powered up as. | It keeps every light on the curve. Every minute it checks each light, and corrects any that have drifted or missed a command. | Each room can be different. Give a light its own brightness, hand the room to a scene in any phase, or use a template when a fixed value isn’t enough. | It can leave a nightlight on. When a room empties it can dim to a low level instead of going dark. | It leaves your changes alone. If you change a light yourself, from an app, a wall switch or another automation, FLARE stops setting it until the room next goes dark. | It works with Siri, Alexa and Google. Asking a voice assistant to turn on your bulbs brings them up at whatever they were last set to, and FLARE then leaves them there. Each room can have a single light to expose instead, so “turn on the kitchen” lights the kitchen for the time of day and FLARE keeps adjusting it. If you ask for a brightness or colour, FLARE leaves it alone. | It’s gentle on your Zigbee network. Rooms update one after another rather than all at once, and changes too small to see aren’t sent. | . ",
+    "content": "FLARE sets your lights through the day, and leaves alone any light you change yourself. | It lights the room when you walk in. With a motion or occupancy sensor, the room comes on at the right brightness and colour for the time of day, or in the scene you’ve picked for it, and turns off once it’s empty. | It works with lights on a physical wall switch. If you cut the power to a room and restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home Assistant again, instead of leaving it at whatever it powered up as. | It keeps every light on the curve. Every minute it checks each light, and corrects any that have drifted or missed a command. | Each room can be different. Give a light its own brightness, hand the room to a scene in any phase, or use a template when a fixed value isn’t enough. | It can leave a nightlight on. When a room empties it can dim to a low level instead of going dark. | It leaves your changes alone. If you change a light yourself, from an app, a wall switch or another automation, FLARE stops setting it until the room next goes dark. | It works with Siri, Alexa and Google. Each room gets a single light to expose to them, so “turn on the kitchen” lights the kitchen the way FLARE would, rather than at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it alone. | It’s gentle on your Zigbee network. Rooms update one after another rather than all at once, and changes too small to see aren’t sent. | . ",
     "url": "/flare/beta/#what-it-does",
     
     "relUrl": "/#what-it-does"
@@ -720,21 +720,21 @@
     
     "relUrl": "/architecture/room-automation/#occupancy-briefly"
   },"103": {
-    "doc": "Scenes",
-    "title": "Scenes",
+    "doc": "Scene handoff",
+    "title": "Scene handoff",
     "content": "If you’ve already made a scene for how a room should look at night, or while you’re watching a film, a room can follow it instead of the curve, either one scene per phase or one chosen by a template. FLARE applies the scene, lights anything it doesn’t cover from the curve, and takes the room back when the scene no longer applies. On this page . | Handing a room to a scene | When the scene is applied | . ",
     "url": "/flare/beta/guides/scenes/",
     
     "relUrl": "/guides/scenes/"
   },"104": {
-    "doc": "Scenes",
+    "doc": "Scene handoff",
     "title": "Handing a room to a scene",
     "content": "If you pick a scene in the blueprint’s Night Scene (or whichever phase), the room uses it instead of the curve during that phase. For anything a phase can’t express — a different scene while the TV is on — use Scene Template, which wins over the per-phase pickers whenever it returns a scene. A scene is only used if every entity it touches is in the room. A scene that reaches into another room, or doesn’t exist, is ignored and the room follows the curve. Lights in the room that the scene doesn’t cover carry on following the curve, so a scene naming half the room leaves the other half to FLARE. ",
     "url": "/flare/beta/guides/scenes/#handing-a-room-to-a-scene",
     
     "relUrl": "/guides/scenes/#handing-a-room-to-a-scene"
   },"105": {
-    "doc": "Scenes",
+    "doc": "Scene handoff",
     "title": "When the scene is applied",
     "content": "The scene is applied when the room’s automation runs for a phase change, for motion, for an Additional Trigger, when you run it by hand, or when a light comes back online — but not on the regular update. Re-applying it every minute would undo anything you changed by hand while it was on. Like the curve, a scene never lights an empty room. If the phase changes while nobody’s there, the scene is applied when someone next walks in. ",
     "url": "/flare/beta/guides/scenes/#when-the-scene-is-applied",
@@ -1051,7 +1051,7 @@
   },"150": {
     "doc": "Templates",
     "title": "Scene Template",
-    "content": "Returns a scene’s entity ID, to hand the room to that scene instead of the curve. It wins over the per-phase scene pickers whenever it returns a scene that exists. {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }} . Return '' for no scene. See Scenes for how a room shares itself with a scene. ",
+    "content": "Returns a scene’s entity ID, to hand the room to that scene instead of the curve. It wins over the per-phase scene pickers whenever it returns a scene that exists. {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }} . Return '' for no scene. See Scene handoff for how a room shares itself with a scene. ",
     "url": "/flare/beta/guides/templates/#scene-template",
     
     "relUrl": "/guides/templates/#scene-template"

@@ -166,7 +166,7 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/beta/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/beta/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/beta/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/beta/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/beta/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/beta/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/guides/scenes/" class="nav-list-link">Scene handoff</a></li><li class="nav-list-item"><a href="/flare/beta/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
       </button><a href="/flare/beta/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/beta/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/beta/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/beta/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/beta/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/beta/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
@@ -236,9 +236,9 @@
 </h1>
     
 
-<p class="fs-6 fw-300"><strong>F</strong>lexible <strong>L</strong>ighting <strong>A</strong>utomation &amp; <strong>R</strong>econciliation <strong>E</strong>ngine — lighting for
-Home Assistant that follows your day, by default from bright and cool in the morning to warm and low at
-night, and leaves alone any light you change yourself.</p>
+<p class="fs-6 fw-300"><strong>F</strong>lexible <strong>L</strong>ighting <strong>A</strong>utomation &amp; <strong>R</strong>econciliation <strong>E</strong>ngine — <a href="#four-phases-not-one-curve">phase-based</a>
+circadian lighting for Home Assistant, with <a href="/flare/beta/guides/scenes/">scene handoff</a>
+and <a href="/flare/beta/guides/overrides/">override protection</a> built in.</p>
 
 <p><a href="/flare/beta/installation/" class="btn btn-primary mr-2">Quickstart (5 mins)</a>
 <a href="/flare/beta/playground/" class="btn mr-2">Curve playground</a>
@@ -272,11 +272,10 @@ hand the room to a <a href="/flare/beta/guides/scenes/">scene</a> in any phase, 
   <li><strong>It leaves your changes alone.</strong> If you change a light yourself, from an app, a wall
 switch or another automation, FLARE <a href="/flare/beta/reference/override-protection/">stops setting it</a>
 until the room next goes dark.</li>
-  <li><strong>It works with Siri, Alexa and Google.</strong> Asking a voice assistant to turn on your bulbs
-brings them up at whatever they were last set to, and FLARE then leaves them there. Each room
-can have <a href="/flare/beta/guides/flares/">a single light</a> to expose instead, so “turn on the
-kitchen” lights the kitchen for the time of day and FLARE keeps adjusting it. If you ask for a
-brightness or colour, FLARE leaves it alone.</li>
+  <li><strong>It works with Siri, Alexa and Google.</strong> Each room gets <a href="/flare/beta/guides/flares/">a single light</a>
+to expose to them, so “turn on the kitchen” lights the kitchen the way FLARE would, rather than
+at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
+alone.</li>
   <li><strong>It’s gentle on your Zigbee network.</strong> Rooms update <a href="/flare/beta/reference/override-protection/#when-rooms-update">one after another</a>
 rather than all at once, and <a href="/flare/beta/reference/blueprint/#why-didnt-my-light-change">changes too small to see</a>
 aren’t sent.</li>
