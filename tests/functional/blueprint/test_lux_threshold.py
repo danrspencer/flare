@@ -249,7 +249,7 @@ class TestLuxThreshold:
         )
 
         hass.states.async_set(
-            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000}
         )
         await hass.async_block_till_done()
 
@@ -269,7 +269,7 @@ class TestLuxThreshold:
             {"entity_id": ["light.a", "light.b"]},
         )
         hass.states.async_set(
-            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000}
         )
         await hass.async_block_till_done()
         await setup_room_automation(
@@ -299,7 +299,7 @@ class TestLuxThreshold:
                 scene, "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a", "light.b"]}
             )
         hass.states.async_set(
-            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000}
         )
         await hass.async_block_till_done()
         await setup_room_automation(
@@ -311,7 +311,7 @@ class TestLuxThreshold:
         )
 
         hass.states.async_set(
-            "sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700}
+            "sensor.test_adaptive", "Night", {"brightness": 80, "color_temp_kelvin": 2700}
         )
         await hass.async_block_till_done()
 
@@ -452,7 +452,7 @@ class TestLuxThresholdAtDusk:
             "scene.evening_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a"]}
         )
         hass.states.async_set(
-            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000}
+            "sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000}
         )
         await self._bright_room_with_someone_in_it(hass, evening_scene="scene.evening_scene")
         assert scene_turn_on_calls == []

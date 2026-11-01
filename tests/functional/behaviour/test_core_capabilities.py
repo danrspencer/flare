@@ -233,6 +233,34 @@ async def test_motion_brightens_a_room_sitting_at_its_idle_level(
     )
 
 
+async def test_lights_switched_off_beside_a_nightlight_come_back_on_with_the_room(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """The lamp keeps the room lit, so the rest keep their claims while off."""
+    lamp = "light.hall_lamp"
+    bulbs = await lit_room(
+        hass,
+        add_bulbs,
+        setup_room,
+        area,
+        no_motion_wait=0,
+        idle_brightness_template=f"{{{{ {{'{lamp}': 25}} }}}}",
+    )
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+    expected = {b.entity_id: "off" for b in bulbs}
+    expected[lamp] = 25
+    assert room_brightness(hass, bulbs) == expected
+
+    occupancy(hass, HALL_SENSOR, "on")
+    await hass.async_block_till_done()
+
+    assert room_brightness(hass, bulbs) == {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}, (
+        "lights FLARE switched off beside a nightlight should come back on with the room"
+    )
+
+
 async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
     hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:

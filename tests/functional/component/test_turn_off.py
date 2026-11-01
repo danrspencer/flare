@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import pytest
+import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
 from pytest_homeassistant_custom_component.common import async_mock_service
 
-from custom_components.flare.const import DOMAIN
 from tests.functional.component.harness import (
     apply_lighting,
     CT,
     claim_registry,
     claims_check,
+    ROOM,
     set_light,
     turn_off,
 )
@@ -73,15 +75,46 @@ async def test_turn_off_does_no_override_protection(setup_integration: HomeAssis
     assert [c.data["entity_id"] for c in off_calls] == [["light.a"]]
 
 
-async def test_turn_off_without_a_room_turns_off_and_records_nothing(setup_integration: HomeAssistant):
+async def test_turn_off_leaves_a_light_flare_has_no_claim_on_unclaimed(setup_integration: HomeAssistant):
     hass = setup_integration
     off_calls = async_mock_service(hass, "light", "turn_off")
     set_light(hass, "light.a", "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000)
 
-    await hass.services.async_call(DOMAIN, "turn_off", {"entities": ["light.a"], "room_id": None}, blocking=True)
+    await turn_off(hass, ["light.a"])
 
     assert len(off_calls) == 1
     assert claim_registry(hass).all_records() == {}
+
+
+async def test_a_light_turned_off_stays_in_the_room_that_claimed_it(setup_integration: HomeAssistant):
+    """Its room releases it with the rest once the room goes dark."""
+    hass = setup_integration
+    async_mock_service(hass, "light", "turn_on")
+    async_mock_service(hass, "light", "turn_off")
+    our_context = Context()
+    for entity in ("light.a", "light.sibling"):
+        set_light(hass, entity, "off", supported_color_modes=CT)
+    await apply_lighting(hass, ["light.a", "light.sibling"], context=our_context)
+    for entity in ("light.a", "light.sibling"):
+        set_light(
+            hass, entity, "on", supported_color_modes=CT, brightness=200, color_temp_kelvin=3000, context=our_context
+        )
+
+    await turn_off(hass, ["light.a"])
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+    set_light(hass, "light.sibling", "off", supported_color_modes=CT)
+    await hass.async_block_till_done()
+
+    assert claim_registry(hass).all_records() == {}
+
+
+@pytest.mark.parametrize("field", ["room_id", "room_entities"])
+async def test_turn_off_takes_no_room(setup_integration: HomeAssistant, field: str):
+    hass = setup_integration
+    async_mock_service(hass, "light", "turn_off")
+
+    with pytest.raises(vol.Invalid):
+        await turn_off(hass, ["light.a"], **{field: ROOM if field == "room_id" else ["light.a"]})
 
 
 async def test_turn_off_with_no_entities_does_nothing(setup_integration: HomeAssistant):

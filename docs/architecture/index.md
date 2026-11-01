@@ -28,7 +28,7 @@ the repository.
 | [The event loop]({{ site.baseurl }}/architecture/event-loop/) | Every place FLARE hooks into Home Assistant: setup order, listeners, timers, storage, contexts |
 | [Schedules and the curve]({{ site.baseurl }}/architecture/schedules/) | How a schedule becomes a phase, a brightness and a colour |
 | [The room automation]({{ site.baseurl }}/architecture/room-automation/) | The blueprint: triggers, the variables chain, the one gate that switches lights on |
-| [Services and grouping]({{ site.baseurl }}/architecture/services/) | `flare.apply_lighting` from call to bulb, and the other eleven services |
+| [Services and grouping]({{ site.baseurl }}/architecture/services/) | `flare.apply_lighting` from call to bulb, and the other ten services |
 | [Claims and override protection]({{ site.baseurl }}/architecture/claims/) | How FLARE tells its own writes from anyone else's |
 | [Flares]({{ site.baseurl }}/architecture/flares/) | The light that fronts a room automation |
 | [Setup and upgrades]({{ site.baseurl }}/architecture/setup/) | Config flows, area setup, the blueprint repairs, migrations |

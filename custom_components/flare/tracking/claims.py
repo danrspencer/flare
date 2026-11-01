@@ -381,10 +381,31 @@ class ClaimRegistry:
         key = self.room_key(room_id)
         if not entity_ids or key is None:
             return
+        self._write(entity_ids, context_id, targets or {}, secondary_context_ids or {}, context_id_overrides or {})
+        self._join(key, entity_ids, room_entities)
+        self._notify()
+
+    @callback
+    def async_record_off(self, entity_ids: list[str], context_id: str) -> None:
+        """Records a turn-off, before it's dispatched, for the lights already
+        claimed; the rest stay unclaimed. Their rooms are the ones that
+        already hold them."""
+        claimed = [entity_id for entity_id in entity_ids if entity_id in self.claims]
+        if not claimed:
+            return
+        self._write(claimed, context_id, {entity_id: {"state": STATE_OFF} for entity_id in claimed}, {}, {})
+        self._notify()
+
+    @callback
+    def _write(
+        self,
+        entity_ids: list[str],
+        context_id: str,
+        targets: dict[str, dict],
+        secondary_context_ids: dict[str, str],
+        context_id_overrides: dict[str, str],
+    ) -> None:
         claims = self.claims
-        targets = targets or {}
-        secondary_context_ids = secondary_context_ids or {}
-        context_id_overrides = context_id_overrides or {}
         for entity_id in entity_ids:
             state = self._hass.states.get(entity_id)
             live_context = state.context.id if state is not None else None
@@ -418,8 +439,6 @@ class ClaimRegistry:
             }
             # A new write starts afresh: a mismatch now is the write landing.
             self.note_mismatch(entity_id)
-        self._join(key, entity_ids, room_entities)
-        self._notify()
 
     def _claimed_lights(self, key: str) -> list[str]:
         lights = self.rooms.get(key, {}).get("lights", ())

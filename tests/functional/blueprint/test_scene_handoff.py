@@ -35,7 +35,7 @@ class TestSceneHandoff:
             evening_scene="scene.evening_scene",
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls and scene_turn_on_calls[-1].data["entity_id"] == ["scene.evening_scene"]
@@ -60,7 +60,7 @@ class TestSceneHandoff:
             room_target={"entity_id": ["light.covered", "light.uncovered"]},
             evening_scene="scene.evening_scene",
         )
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert claims_clear_calls
@@ -85,7 +85,7 @@ class TestSceneHandoff:
             room_target={"entity_id": ["light.covered", "light.uncovered", "switch.fan"]},
             evening_scene="scene.evening_scene",
         )
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls
@@ -107,7 +107,7 @@ class TestSceneHandoff:
         await setup_room_automation(
             hass, room_target={"entity_id": "light.a"}, evening_scene="scene.reaches_out"
         )
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls == []
@@ -127,7 +127,7 @@ class TestSceneHandoff:
             hass, room_target={"entity_id": "light.covered"}, evening_scene="scene.evening_scene"
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
         assert len(scene_turn_on_calls) == 1
 
@@ -150,7 +150,7 @@ class TestSceneHandoff:
             hass, room_target={"entity_id": "light.a"}, scene_template="{{ {} }}"
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
         await hass.async_block_till_done()
 
@@ -163,12 +163,12 @@ class TestSceneHandoff:
     ):
         light(hass, "light.covered", "on")
         hass.states.async_set("scene.day_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.covered"]})
-        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700})
+        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp_kelvin": 2700})
         await hass.async_block_till_done()
 
         await setup_room_automation(hass, room_target={"entity_id": "light.covered"}, day_scene="scene.day_scene")
 
-        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp": 4000})
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
         await hass.async_block_till_done()
 
         assert scene_turn_on_calls and scene_turn_on_calls[-1].data["entity_id"] == ["scene.day_scene"]
@@ -181,7 +181,7 @@ class TestSceneHandoff:
         light(hass, "light.a", "off")
         occupancy(hass, "binary_sensor.occ", "off")
         hass.states.async_set("scene.night_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a"]})
-        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp": 3000})
+        hass.states.async_set("sensor.test_adaptive", "Evening", {"brightness": 150, "color_temp_kelvin": 3000})
         await hass.async_block_till_done()
 
         await setup_room_automation(
@@ -190,7 +190,7 @@ class TestSceneHandoff:
             night_scene="scene.night_scene",
         )
 
-        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700})
+        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp_kelvin": 2700})
         await hass.async_block_till_done()
 
         assert hass.states.get("automation.room").attributes.get("last_triggered") is not None, (
@@ -207,7 +207,7 @@ class TestSceneHandoff:
         light(hass, "light.a", "off")
         occupancy(hass, "binary_sensor.occ", "off")
         hass.states.async_set("scene.night_scene", "2024-01-01T00:00:00+00:00", {"entity_id": ["light.a"]})
-        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp": 2700})
+        hass.states.async_set("sensor.test_adaptive", "Night", {"brightness": 80, "color_temp_kelvin": 2700})
         await hass.async_block_till_done()
 
         await setup_room_automation(
