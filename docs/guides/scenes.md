@@ -15,7 +15,8 @@ render_with_liquid: false
 # Scenes
 {: .no_toc }
 
-A room can follow a scene of yours instead of the curve: one per phase, or one chosen by a
+If you've already made a scene for how a room should look at night, or while you're watching a
+film, a room can follow it instead of the curve, either one scene per phase or one chosen by a
 template. FLARE applies the scene, lights anything it doesn't cover from the curve, and takes
 the room back when the scene no longer applies.
 

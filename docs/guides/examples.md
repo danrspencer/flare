@@ -13,9 +13,11 @@ render_with_liquid: false
 # Examples
 {: .no_toc }
 
-Almost everything in FLARE is an ordinary Home Assistant entity or event. That means you can
-trigger your own automations from it, or use automations to change it. These are starting
-points: each one is a complete automation to paste in and adjust.
+When you want FLARE to behave differently some of the time, such as a later Morning at the
+weekend, or the house held at Night during a film, you don't need a setting for it. Almost
+everything in FLARE is an ordinary Home Assistant entity or event, so an automation of your own
+can change it or react to it. Each example here is a complete automation to paste in and
+adjust.
 
 They use a schedule called **Home**, so its entities are `time.home_…`, `number.home_…`
 and `sensor.home_flare`. Swap in your own schedule's name, and your own rooms, lights and
@@ -197,7 +199,7 @@ actions:
 
 If you'd rather leave the lamps to another automation or a voice assistant, so FLARE never
 switches them on or off, hand them over with a `null` level, as in
-[Leaving a light to another automation](../templates/#leaving-a-light-to-another-automation).
+[Leaving a light alone](../templates/#leaving-a-light-alone).
 
 ## Something else at a phase change
 

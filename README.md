@@ -11,7 +11,7 @@ every one of those is yours to change.
 Rooms light up as people come in and go dark once they've left, or dim to a nightlight instead of going out.
 Hand a room to a scene and FLARE fills in whatever the scene doesn't cover, and a light you change yourself is
 left alone until the room next goes dark. Each room can also have a light of its own for Siri, Alexa or Google,
-so "turn on the kitchen" brings the kitchen up the way FLARE would.
+so "turn on the kitchen" lights the room for the time of day, not at whatever the bulbs were last set to.
 
 [![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
 
@@ -25,8 +25,8 @@ curve settings around and watch the day's lighting change.
 
 - **[Quickstart](https://danrspencer.github.io/flare/installation/)** — installing FLARE and setting up your rooms
 - **[Dashboard](https://danrspencer.github.io/flare/dashboard/)** — the ready-made dashboard, and its views for a dashboard of your own
-- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, override protection, scenes, voice assistants and HomeKit, and building your own automations
-- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and flare entity, override protection, and service
+- **[Guides](https://danrspencer.github.io/flare/guides/)** — examples, templates, override protection, scenes and voice assistants
+- **[Reference](https://danrspencer.github.io/flare/reference/)** — every blueprint input, schedule and flare entity, override protection, and services, with examples of using them in your own automations
 - **[Contributing](CONTRIBUTING.md)** — repository layout and the test suite
 
 ## Why four phases, not a continuous curve
