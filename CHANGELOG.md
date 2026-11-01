@@ -141,8 +141,9 @@ After updating:
 - `two_step_label` is gone from `flare.apply_lighting`; a call that passes it is rejected. Label a bulb `no_combined_transition`, or add its model under
   **FLARE → Settings → Configure**, instead.
 - `flare.apply_lighting`'s `transition` is optional, defaulting to `0`.
-- **`flare.compute_lighting_groups` is gone.** `flare.apply_lighting` returns the same groups
-  for what it sent, and `flare.claims_check` says whether FLARE would leave a light alone.
+- **`flare.compute_lighting_groups` is gone.** Call `flare.apply_lighting` with `dry_run: true`
+  instead: it returns what it would send, in the same shape, without sending anything or
+  recording claims.
 - `flare_tick` carries an `area_id` instead of a zone's `device_id`.
 - `flare_lights_controlled` and `flare_lights_released` carry `room`, and
   `flare_light_overridden` carries `rooms`, instead of `zone`. They're filed under

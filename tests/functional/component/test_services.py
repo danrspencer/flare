@@ -15,7 +15,9 @@ from custom_components.flare.services.schedules import async_setup_schedule_serv
 from custom_components.flare.services.targets import async_setup_target_services
 from tests.functional.component.harness import (
     CT,
+    ROOM,
     apply_lighting,
+    claim_registry,
     set_light,
 )
 from tests.support import COMPONENT
@@ -216,3 +218,20 @@ async def test_two_step_bulbs_are_not_chosen_per_call(setup_integration: HomeAss
 async def test_the_claim_writers_respond_with_nothing(setup_integration: HomeAssistant, service):
     """Every light passed is marked, so a list back would only repeat it."""
     assert setup_integration.services.supports_response(DOMAIN, service) is SupportsResponse.NONE
+
+
+async def test_a_dry_run_sends_and_records_nothing_but_returns_the_plan(setup_integration: HomeAssistant):
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+    data = {"entities": ["light.a"], "brightness": 200, "color_temp_kelvin": 3200, "room_id": ROOM}
+
+    planned = await hass.services.async_call(
+        DOMAIN, "apply_lighting", {**data, "dry_run": True}, blocking=True, return_response=True
+    )
+
+    assert turn_on == []
+    assert claim_registry(hass).all_records() == {}
+    sent = await hass.services.async_call(DOMAIN, "apply_lighting", data, blocking=True, return_response=True)
+    assert planned == sent
+    assert planned["groups"][0]["combined"] == ["light.a"]

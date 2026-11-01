@@ -147,7 +147,7 @@ class TestOverrideProtection:
         result = await hass.services.async_call(
             DOMAIN,
             "apply_lighting",
-            {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM},
+            {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM, "dry_run": True},
             blocking=True,
             return_response=True,
         )

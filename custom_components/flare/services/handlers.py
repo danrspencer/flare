@@ -71,6 +71,7 @@ APPLY_LIGHTING_SCHEMA = vol.Schema(
         vol.Optional("rgb_color"): vol.Any(None, vol.All(vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3))),
         vol.Optional("transition", default=0): VALID_TRANSITION,
         vol.Optional("force", default=False): cv.boolean,
+        vol.Optional("dry_run", default=False): cv.boolean,
         **TOLERANCE_FIELDS,
         **ROOM_ID_FIELD,
         # The room's lights, which it releases together.
@@ -302,6 +303,8 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         room_id = call.data.get(ATTR_ROOM_ID)
         room_entities = call.data.get(ATTR_ROOM_ENTITIES)
         groups = plan(call)
+        if call.data["dry_run"]:
+            return _groups_response(groups)
         transition = call.data["transition"]
         half_transition = round(transition / 2, 1)
 

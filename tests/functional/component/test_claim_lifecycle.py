@@ -119,6 +119,7 @@ async def test_recovered_light_is_freed_while_an_unrelated_override_stays_protec
             "brightness": 180,
             "color_temp_kelvin": 3200,
             "room_id": ROOM,
+            "dry_run": True,
         },
         blocking=True,
         return_response=True,
@@ -175,6 +176,7 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
             "brightness": 180,
             "color_temp_kelvin": 3200,
             "room_id": ROOM,
+            "dry_run": True,
         },
         blocking=True,
         return_response=True,
@@ -183,13 +185,10 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
 
 
 async def _groups(hass: HomeAssistant) -> list[str]:
-    """What apply_lighting sends to, with the bulbs faked."""
-    if not hass.services.has_service("light", "turn_on"):
-        async_mock_service(hass, "light", "turn_on")
     result = await hass.services.async_call(
         DOMAIN,
         "apply_lighting",
-        {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM},
+        {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM, "dry_run": True},
         blocking=True,
         return_response=True,
     )

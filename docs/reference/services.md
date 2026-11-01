@@ -73,6 +73,7 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `color_temp_kelvin`<br>Kelvin | yes | The colour temperature. |
 | `entities`<br>list of light entity IDs | yes | The lights to set. |
 | `force`<br>boolean; default `false` | no | Sets every light, including ones someone else has changed. The change is still recorded as FLARE's. |
+| `dry_run`<br>boolean; default `false` | no | Works out what would be sent and returns it, without sending anything or recording claims. |
 | `min_brightness_change`<br>percent, 0–25; default from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness, or 2 if that's more, isn't sent anything, and still matches its claim. See [tolerances](../override-protection/#how-close-counts-as-a-match). |
 | `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. For an `rgb_color` target, the channels' differences added together can be up to twice this. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
@@ -91,8 +92,9 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 
 ### Response data
 
-Optional. With `response_variable`, the response is what was sent. `groups` is a list with one
-entry for each brightness, and each entry has these fields:
+Optional. With `response_variable`, the response is what was sent, or with `dry_run`, what
+would be sent. `groups` is a list with one entry for each brightness, and each entry has these
+fields:
 
 - `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
   off.
@@ -102,7 +104,7 @@ entry for each brightness, and each entry has these fields:
 - `combined_rgb`, `two_step_rgb`: The same, for lights sent `rgb_color`.
 
 Lights that are unavailable, already close to the target, or changed by someone else aren't
-in any list, since nothing was sent to them.
+in any list.
 
 ```yaml
 groups:
