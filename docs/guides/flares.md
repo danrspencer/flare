@@ -12,9 +12,16 @@ render_with_liquid: false
 # Voice assistants and HomeKit
 {: .no_toc }
 
-A flare is a light for a whole room. Turning it on runs the room's automation, so "Hey Siri,
-turn on the kitchen" brings the kitchen up the way FLARE would have, at the curve's brightness
-and colour, rather than at whatever the bulbs last had.
+If you say "Hey Siri, turn on the kitchen", Siri switches the kitchen's bulbs on directly. They
+come on at whatever brightness and colour they had last, and because FLARE didn't set them, they
+read as overridden and FLARE leaves them alone until the room goes dark. The same happens with
+Alexa, Google, HomeKit scenes and dashboard buttons.
+
+A flare avoids this. It's a light, `light.kitchen_flare`, that you give to your voice assistant
+or the Home app instead of the bulbs. Turning it on runs the kitchen's FLARE automation, so the
+room comes on at the right brightness and colour for the time of day and FLARE keeps adjusting it
+from there. Dimming it or turning it off sets every light in the room, as the table under
+[What each command does](#what-each-command-does) shows.
 
 <details open markdown="block">
   <summary>On this page</summary>

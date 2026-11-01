@@ -6,9 +6,9 @@ nav_order: 1
 # FLARE
 {: .no_toc }
 
-**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — phase-based
-circadian lighting for Home Assistant, with scene handoff and override protection
-built in.
+**F**lexible **L**ighting **A**utomation & **R**econciliation **E**ngine — lighting for
+Home Assistant that follows your day, by default from bright and cool in the morning to warm and low at
+night, and leaves alone any light you change yourself.
 {: .fs-6 .fw-300 }
 
 [Quickstart (5 mins)]({{ site.baseurl }}/installation/){: .btn .btn-primary .mr-2 }
@@ -38,10 +38,11 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
 - **It leaves your changes alone.** If you change a light yourself, from an app, a wall
   switch or another automation, FLARE [stops setting it]({{ site.baseurl }}/reference/override-protection/)
   until the room next goes dark.
-- **It works with Siri, Alexa and Google.** Each room gets [a single light]({{ site.baseurl }}/guides/flares/)
-  to expose to them, so "turn on the kitchen" lights the kitchen the way FLARE would, rather than
-  at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
-  alone.
+- **It works with Siri, Alexa and Google.** Asking a voice assistant to turn on your bulbs
+  brings them up at whatever they were last set to, and FLARE then leaves them there. Each room
+  can have [a single light]({{ site.baseurl }}/guides/flares/) to expose instead, so "turn on the
+  kitchen" lights the kitchen for the time of day and FLARE keeps adjusting it. If you ask for a
+  brightness or colour, FLARE leaves it alone.
 - **It's gentle on your Zigbee network.** Rooms update [one after another]({{ site.baseurl }}/reference/override-protection/#when-rooms-update)
   rather than all at once, and [changes too small to see]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
   aren't sent.

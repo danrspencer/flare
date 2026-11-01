@@ -154,6 +154,34 @@ uses the defaults again."
 Short sentences are fine. A paragraph made only of them, each one
 starting from scratch, is not.
 
+**17. Open with the reader's problem, not the feature's definition.** The
+first paragraph of a guide or section is where a reader decides whether
+it's for them, so it says what goes wrong without the feature, in terms
+they'd recognise from their own house, and then what the feature does
+about it. How it works comes after that, if at all. Watch for:
+
+- A definition by analogy that points the wrong way. "A flare is a light
+  for a whole room" reads as a light group, which Home Assistant already
+  has, so the reader decides they don't need the page.
+- The mechanism standing in for the benefit: "turning it on runs the
+  room's automation" says how, and leaves the reader to work out why
+  they'd want that.
+- The problem left implied, or only half stated, in a trailing clause.
+- One example standing in for the whole feature (only Siri, only turning
+  on) when the page covers more.
+- A reference to what the reader is assumed to know already: "the way
+  FLARE would have".
+
+Don't write: "A flare is a light for a whole room. Turning it on runs the
+room's automation, so "Hey Siri, turn on the kitchen" brings the kitchen
+up the way FLARE would have." Write: "If you say "Hey Siri, turn on the
+kitchen", Siri switches the bulbs on directly. They come on at whatever
+they had last, and because FLARE didn't set them, they read as overridden
+until the room goes dark. A flare is a light you give to Siri instead
+..."
+
+Reference pages are the exception: they open with the table (rule 3).
+
 ## Lexicon
 
 **External** terms are what users see and say; they may appear anywhere.

@@ -12,9 +12,10 @@ render_with_liquid: false
 # Templates
 {: .no_toc }
 
-The blueprint's three template inputs cover what its other settings can't: a light that
-depends on something other than the phase, or a single light treated differently from the
-rest of the room. This page covers how each one works, with examples. The
+The blueprint's settings work per phase and for the whole room, so on their own they can't dim
+the lights while the TV is on, keep one lamp as the nightlight, or leave a light to another
+automation. The three template inputs cover cases like these, because each one is a Home
+Assistant template that can depend on anything and set each light separately. The
 [Blueprint](../../reference/blueprint/) page lists what each one accepts.
 
 <details open markdown="block">

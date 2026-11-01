@@ -15,9 +15,10 @@ render_with_liquid: false
 # Building without the blueprint
 {: .no_toc }
 
-The blueprint is one way to use FLARE's [services](../../reference/services/). Anything that
-can call a Home Assistant action — an automation, a script, Node-RED, AppDaemon — can use them
-directly.
+If your lights already run on automations of your own, or in Node-RED or AppDaemon, you don't
+have to replace them with the blueprint to get the curve and have hand-set lights left alone.
+FLARE's [services](../../reference/services/) are ordinary Home Assistant actions, so anything
+that can call an action can use them, and the blueprint is just one automation built on them.
 
 <details open markdown="block">
   <summary>On this page</summary>
