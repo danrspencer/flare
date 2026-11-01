@@ -17,12 +17,11 @@ caller, not the only one, so each service is written as a standalone tool.
 The field contracts live in `services.yaml` and
 [the services reference]({{ site.baseurl }}/reference/services/). This page is about what happens inside them.
 
-## The twelve services
+## The eleven services
 
 | Service | Kind | Registered by | Module |
 |---|---|---|---|
 | `compute_curve` | pure planner | Settings entry | `services/handlers.py` |
-| `compute_lighting_groups` | pure planner | Settings entry | `services/handlers.py` |
 | `compute_scene_coverage` | pure planner | Settings entry | `services/handlers.py` |
 | `apply_lighting` | writes | Settings entry | `services/handlers.py` |
 | `turn_off` | writes | Settings entry | `services/handlers.py` |

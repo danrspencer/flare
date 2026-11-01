@@ -250,7 +250,7 @@ instead - don't go back to that. Not translated: errors a card throws from
 
 ### Services
 
-Twelve, all tested. Field contracts are in `services.yaml` and
+Eleven, all tested. Field contracts are in `services.yaml` and
 `docs/reference/services.md`; how they work is `docs/architecture/services.md`.
 
 - `apply_lighting` takes `brightness`/`color_temp_kelvin`/`rgb_color` as

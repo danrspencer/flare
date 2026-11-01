@@ -113,7 +113,7 @@ async def test_recovered_light_is_freed_while_an_unrelated_override_stays_protec
 
     result = await hass.services.async_call(
         DOMAIN,
-        "compute_lighting_groups",
+        "apply_lighting",
         {
             "entities": ["light.recovering", "light.sibling"],
             "brightness": 180,
@@ -169,7 +169,7 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
 
     result = await hass.services.async_call(
         DOMAIN,
-        "compute_lighting_groups",
+        "apply_lighting",
         {
             "entities": ["light.a"],
             "brightness": 180,
@@ -183,9 +183,12 @@ async def test_a_restart_style_unavailable_blip_does_not_clear_an_existing_recor
 
 
 async def _groups(hass: HomeAssistant) -> list[str]:
+    """What apply_lighting sends to, with the bulbs faked."""
+    if not hass.services.has_service("light", "turn_on"):
+        async_mock_service(hass, "light", "turn_on")
     result = await hass.services.async_call(
         DOMAIN,
-        "compute_lighting_groups",
+        "apply_lighting",
         {"entities": ["light.a"], "brightness": 180, "color_temp_kelvin": 3200, "room_id": ROOM},
         blocking=True,
         return_response=True,

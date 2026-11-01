@@ -22,7 +22,6 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 |---|---|
 | [`flare.apply_lighting`](#flareapply_lighting) | Sets lights to a brightness and colour, leaving alone any that someone else has changed |
 | [`flare.turn_off`](#flareturn_off) | Turns lights off, keeping them FLARE's |
-| [`flare.compute_lighting_groups`](#flarecompute_lighting_groups) | Works out what `apply_lighting` would send, without sending it |
 | [`flare.compute_curve`](#flarecompute_curve) | The curve's brightness and colour for any moment |
 | [`flare.claims_check`](#flareclaims_check) | Whether FLARE would leave each light alone |
 | [`flare.claims_record`](#flareclaims_record) | Records a change you're about to make as FLARE's |
@@ -92,8 +91,34 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 
 ### Response data
 
-Optional. With `response_variable`, the response is what was sent, in the same shape as
-[`compute_lighting_groups`](#flarecompute_lighting_groups) returns.
+Optional. With `response_variable`, the response is what was sent. `groups` is a list with one
+entry for each brightness, and each entry has these fields:
+
+- `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
+  off.
+- `needing_off`: Lights that need turning off.
+- `combined`: Lights sent brightness and colour temperature in one command.
+- `two_step`: Lights sent brightness and colour temperature as two commands.
+- `combined_rgb`, `two_step_rgb`: The same, for lights sent `rgb_color`.
+
+Lights that are unavailable, already close to the target, or changed by someone else aren't
+in any list, since nothing was sent to them.
+
+```yaml
+groups:
+  - brightness: 200
+    needing_off: []
+    combined: [light.kitchen_1]
+    two_step: []
+    combined_rgb: []
+    two_step_rgb: []
+  - brightness: 100
+    needing_off: []
+    combined: []
+    two_step: [light.kitchen_2]
+    combined_rgb: []
+    two_step_rgb: []
+```
 
 ## `flare.turn_off`
 
@@ -123,54 +148,6 @@ data:
 - It turns off every light it's given, including lights someone else has changed. To turn off
   only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
 - A light FLARE isn't driving is just turned off, as `light.turn_off` would.
-
-## `flare.compute_lighting_groups`
-
-Use this action to find out what [`apply_lighting`](#flareapply_lighting) would send, without
-sending it. It takes the same fields as `apply_lighting`, except `transition` and
-`room_entities`. With `room_id`, lights changed by someone else are left out, as
-`apply_lighting` would leave them alone.
-
-```yaml
-action: flare.compute_lighting_groups
-data:
-  entities: [light.kitchen_1, light.kitchen_2]
-  brightness: 200
-  color_temp_kelvin: 3200
-  brightness_levels: { light.kitchen_2: 100 }
-response_variable: plan
-```
-
-### Response data
-
-`groups` is a list with one entry for each brightness being sent, and each entry has these
-fields:
-
-- `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
-  off.
-- `needing_off`: Lights that need turning off.
-- `combined`: Lights sent brightness and colour temperature in one command.
-- `two_step`: Lights sent brightness and colour temperature as two commands.
-- `combined_rgb`, `two_step_rgb`: The same, for lights sent `rgb_color`.
-
-Lights that are unavailable, already close to the target, or changed by someone else aren't
-in any list.
-
-```yaml
-groups:
-  - brightness: 200
-    needing_off: []
-    combined: [light.kitchen_1]
-    two_step: []
-    combined_rgb: []
-    two_step_rgb: []
-  - brightness: 100
-    needing_off: []
-    combined: []
-    two_step: [light.kitchen_2]
-    combined_rgb: []
-    two_step_rgb: []
-```
 
 ## `flare.compute_curve`
 

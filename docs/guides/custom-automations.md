@@ -98,6 +98,3 @@ brightness in the blueprint instead.
 To turn off some of a room's lights while the rest stay on, use `flare.turn_off` rather than
 `light.turn_off`. The lights stay FLARE's and come back on with the room; with `light.turn_off`
 they'd count as switched off by hand, and FLARE would leave them off until the room is dark.
-
-`flare.compute_lighting_groups` gives you what `apply_lighting` would send, grouped, without
-sending it, if you want a starting point for sending it yourself.

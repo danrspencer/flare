@@ -1,4 +1,4 @@
-"""FLARE's nine services, registered by the Settings entry: adapters that
+"""FLARE's eight services, registered by the Settings entry: adapters that
 read HA state into the pure planners (grouping.py, scenes.py, curve.py,
 override_protection.py) and dispatch the result. Field contracts are in
 services.yaml."""
@@ -59,7 +59,7 @@ TOLERANCE_FIELDS = {
     vol.Optional(CONF_MIN_COLOR_TEMP_CHANGE): vol.Any(None, cv.positive_float),
 }
 
-COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
+APPLY_LIGHTING_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITIES): LIGHT_IDS,
         vol.Optional("brightness_levels", default=dict): BRIGHTNESS_LEVELS,
@@ -69,9 +69,12 @@ COMPUTE_LIGHTING_GROUPS_SCHEMA = vol.Schema(
         # Accepts an explicit None: a template reading a missing attribute
         # renders None, not an omitted key. Otherwise as light.turn_on takes it.
         vol.Optional("rgb_color"): vol.Any(None, vol.All(vol.Coerce(tuple), vol.ExactSequence((cv.byte,) * 3))),
+        vol.Optional("transition", default=0): VALID_TRANSITION,
         vol.Optional("force", default=False): cv.boolean,
         **TOLERANCE_FIELDS,
         **ROOM_ID_FIELD,
+        # The room's lights, which it releases together.
+        vol.Optional(ATTR_ROOM_ENTITIES): vol.Any(None, cv.entity_ids),
     }
 )
 
@@ -92,15 +95,6 @@ COMPUTE_SCENE_COVERAGE_SCHEMA = vol.Schema(
         vol.Required("scene_entity_id"): cv.entity_id,
         vol.Required("scope_entities"): [cv.entity_id],
         vol.Required("target_entities"): [cv.entity_id],
-    }
-)
-
-# The room's lights, which it releases together. Only a write has a room to
-# join, so the planner doesn't take them.
-APPLY_LIGHTING_SCHEMA = COMPUTE_LIGHTING_GROUPS_SCHEMA.extend(
-    {
-        vol.Optional("transition", default=0): VALID_TRANSITION,
-        vol.Optional(ATTR_ROOM_ENTITIES): vol.Any(None, cv.entity_ids),
     }
 )
 
@@ -262,11 +256,11 @@ async def _two_step_turn_on(
 
 
 def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: ClaimRegistry) -> None:
-    """Registers the nine services for as long as the Settings entry is
+    """Registers the eight services for as long as the Settings entry is
     loaded."""
 
     def plan(call: ServiceCall) -> list[Group]:
-        """build_groups for a compute_lighting_groups or apply_lighting call."""
+        """build_groups for an apply_lighting call."""
         rgb_color = call.data.get("rgb_color")
         return build_groups(
             entities=without_flares(hass, call.data[ATTR_ENTITIES]),
@@ -280,10 +274,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
             force=call.data["force"],
             **_tolerances(registry, call),
         )
-
-    async def compute_lighting_groups(call: ServiceCall) -> ServiceResponse:
-        """flare.compute_lighting_groups - see services.yaml."""
-        return _groups_response(plan(call))
 
     async def compute_curve(call: ServiceCall) -> ServiceResponse:
         """flare.compute_curve - see services.yaml."""
@@ -462,7 +452,6 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         }
 
     services = {
-        "compute_lighting_groups": (compute_lighting_groups, COMPUTE_LIGHTING_GROUPS_SCHEMA, SupportsResponse.ONLY),
         "compute_curve": (compute_curve, COMPUTE_CURVE_SCHEMA, SupportsResponse.ONLY),
         "compute_scene_coverage": (
             compute_scene_coverage_service,

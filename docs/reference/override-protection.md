@@ -90,8 +90,7 @@ data:
 ```
 
 - Without `room_id`, `apply_lighting` sets the lights but records nothing, and doesn't leave any
-  light alone. `compute_lighting_groups` takes `room_id` only to say which lights
-  `apply_lighting` would leave alone, and doesn't take `room_entities`.
+  light alone.
 - `turn_off` doesn't take a room: it updates the claims of the lights FLARE already has, which
   already belong to their rooms.
 - `claims_record` and `claims_override` require `room_id`. `claims_check` and `claims_clear`
