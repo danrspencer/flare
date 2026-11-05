@@ -7,6 +7,15 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.0.1] - Unreleased
+
+### Fixed
+
+- **FLARE loads on Home Assistant 2026.11.** That release moved a constant FLARE imported
+  out of `homeassistant.components.automation`, so the integration failed to set up and every
+  room's automation stopped with `Action flare.resolve_target not found`
+  ([#343](https://github.com/danrspencer/flare/pull/343)).
+
 ## [2.0.0] - Unreleased
 
 FLARE no longer needs zones. It keeps track of the lights it's driving by itself, so there's
@@ -86,9 +95,6 @@ After updating:
 
 ### Fixed
 
-- **FLARE loads again on Home Assistant 2026.11.** That release moved a constant FLARE imported
-  out of `homeassistant.components.automation`, so the integration failed to set up and every
-  room's automation stopped with `Action flare.resolve_target not found`.
 - **Two automations driving the same light no longer treat each other's changes as overrides**,
   so there's no more notification about a light in two zones.
 - **A light you've changed by hand is left alone however long its room stays lit.** It used to
