@@ -264,6 +264,19 @@ DEEP_QUERY = """
 }
 """
 
+# The page's text, shadow roots included.
+DEEP_TEXT = """
+() => {
+  let text = '';
+  const walk = (root) => {
+    text += ' ' + (root.textContent || '');
+    root.querySelectorAll('*').forEach((el) => el.shadowRoot && walk(el.shadowRoot));
+  };
+  walk(document.documentElement);
+  return text;
+}
+"""
+
 # Each schedule slider: whether HA's ha-control-slider inside it is a
 # defined, rendered element.
 SLIDERS = f"""
@@ -339,9 +352,11 @@ def check_dashboard(report: Report) -> None:
             rows = wait_count(page, ACTIVITY, 1)
             report.check("Dashboard: Activity shows FLARE's events", rows > 0, f"{rows} rows")
 
-            broken = count(page, "hui-error-card") + page.evaluate(
-                "() => document.body.innerText.includes('Timeout waiting for strategy')")
-            report.check("Dashboard: no error cards", not broken)
+            text = page.evaluate(DEEP_TEXT)
+            shown = [m for m in ("Configuration error", "Timeout waiting for strategy") if m in text]
+            broken = count(page, "hui-error-card")
+            report.check("Dashboard: no error cards", not broken and not shown,
+                         ", ".join(shown + ([f"{broken} error cards"] if broken else [])))
         except Exception as err:  # noqa: BLE001 - the report shows it
             report.check("Dashboard renders", False, f"{type(err).__name__}: {err}"[:500])
         finally:

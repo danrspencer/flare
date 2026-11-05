@@ -6,6 +6,14 @@ name: ha-prerelease
 # A failure opens one issue labelled ha-compat, commented on when the
 # release or what fails changes; a pass closes it (scripts/ha_check.py).
 on:
+  # A change to the check itself is tried on its pull request, without the issue.
+  pull_request:
+    paths:
+      - .github/workflows/ha-prerelease.yml
+      - scripts/ha_check.py
+      - scripts/sandbox.py
+      - sandbox/**
+      - mise.toml
   schedule:
     - cron: "17 5 * * *"
   workflow_dispatch:
@@ -30,6 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v5
+      # The dashboard pass's browser, and the libraries Chromium needs on Linux.
+      - run: |
+          mise run sandbox:record:install
+          sudo .venv-record/bin/playwright install-deps chromium
 
       - id: version
         env:
@@ -48,7 +60,9 @@ jobs:
           if [ -f report.md ]; then cat report.md; else echo "No report: see the check step's log."; fi >> "$GITHUB_STEP_SUMMARY"
 
       - name: Issue
-        if: always() && !inputs.version && steps.check.outcome != 'skipped'
+        if: >-
+          always() && steps.check.outcome != 'skipped'
+          && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.version))
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

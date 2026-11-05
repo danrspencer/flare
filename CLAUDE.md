@@ -1490,7 +1490,8 @@ test module never imports another.
 - **pytest covers one Home Assistant release, the one
   pytest-homeassistant-custom-component pins.** `mise run ha-check`
   (`scripts/ha_check.py`) sets FLARE up in a throwaway sandbox house on
-  any release, and `ha-prerelease.yml` runs it daily on the newest on
+  any release and opens its dashboard in a headless browser (the frontend
+  internals above ship with each release), and `ha-prerelease.yml` runs it daily on the newest on
   PyPI, betas included, keeping one `ha-compat` issue open while it
   fails. A name imported from a component's package
   (`homeassistant.components.<x>`) can move without a deprecation; prefer
