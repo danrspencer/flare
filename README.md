@@ -15,7 +15,7 @@ so "turn on the kitchen" lights the room for the time of day, not at whatever th
 
 [![Open your Home Assistant instance and open FLARE in the Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=danrspencer&repository=flare&category=integration)
 
-[![Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/setup.gif)](https://danrspencer.github.io/flare/installation/)
+[![Setting FLARE up: installing it from the Marketplace, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/setup.gif)](https://danrspencer.github.io/flare/installation/)
 
 ## 📖 [Read the documentation](https://danrspencer.github.io/flare/)
 

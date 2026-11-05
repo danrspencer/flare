@@ -3,13 +3,17 @@
     mise run sandbox         start it, setting it up on first run
     mise run sandbox:reset   start again from a brand-new house
     mise run sandbox:hacs    a separate house with HACS and no FLARE
+    sandbox.py --store       a house with no FLARE, for the Marketplace
+                             (2026.11+), as sandbox:record uses
 
 mise installs Home Assistant into .venv-sandbox/ first and sets
 SANDBOX_PORT. This runs it from .sandbox/, with FLARE linked in from this
 checkout. On first run onboarding is completed through its own API, so the
 browser lands on a house with no FLARE in it, ready for Add Integration.
 With --hacs it runs from .sandbox-hacs/ instead, with HACS copied in from
-.venv-sandbox/hacs/ and FLARE left for HACS to install.
+.venv-sandbox/hacs/ and FLARE left for HACS to install. With --store it
+runs from .sandbox-store/ with neither, leaving FLARE for the Marketplace
+built into Home Assistant 2026.11 and later.
 See CONTRIBUTING.md ("A sandbox Home Assistant").
 """
 
@@ -37,6 +41,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "sandbox"
 VENV = ROOT / ".venv-sandbox"
 HASS = VENV / "bin" / "hass"
+# Runs hass with the system's nameservers (see the script).
+RUN_HASS = [VENV / "bin" / "python", ROOT / "scripts" / "sandbox_hass.py"]
 HACS = VENV / "hacs" / "hacs"
 HOUSE = SOURCE / "custom_components" / "sandbox_house"
 FLARE = ROOT / "custom_components" / "flare"
@@ -44,9 +50,10 @@ FLARE = ROOT / "custom_components" / "flare"
 # into custom_components/flare, which in the other links to this checkout.
 CONFIG = ROOT / ".sandbox"
 HACS_CONFIG = ROOT / ".sandbox-hacs"
+STORE_CONFIG = ROOT / ".sandbox-store"
 
 
-def prepare(config: Path, reset: bool, hacs: bool) -> None:
+def prepare(config: Path, reset: bool, hacs: bool, flare: bool) -> None:
     if reset and config.exists():
         shutil.rmtree(config)
     config.mkdir(exist_ok=True)
@@ -85,7 +92,7 @@ def prepare(config: Path, reset: bool, hacs: bool) -> None:
             http.write_text(json.dumps(stored))
     components = config / "custom_components"
     components.mkdir(exist_ok=True)
-    links = {"sandbox_house": HOUSE} if hacs else {"flare": FLARE, "sandbox_house": HOUSE}
+    links = {"flare": FLARE, "sandbox_house": HOUSE} if flare else {"sandbox_house": HOUSE}
     for name, target in links.items():
         link = components / name
         if link.is_symlink() or link.exists():
@@ -154,13 +161,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--reset", action="store_true", help="throw away the house's state and start a brand-new one")
     parser.add_argument("--hacs", action="store_true", help="run a separate house with HACS and no FLARE")
+    parser.add_argument("--store", action="store_true", help="run a separate house with no FLARE, for the Marketplace")
     args = parser.parse_args()
     if not PORT or not HASS.exists() or (args.hacs and not HACS.exists()):
         sys.exit("Run the sandbox through mise: mise run sandbox, or mise run sandbox:hacs")
 
-    config = HACS_CONFIG if args.hacs else CONFIG
-    prepare(config, args.reset, args.hacs)
-    hass = subprocess.Popen([HASS, "-c", config])
+    config = HACS_CONFIG if args.hacs else STORE_CONFIG if args.store else CONFIG
+    prepare(config, args.reset, hacs=args.hacs, flare=not (args.hacs or args.store))
+    hass = subprocess.Popen([*RUN_HASS, "-c", config])
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         onboard(hass)
@@ -173,7 +181,7 @@ def main() -> None:
             code = hass.wait()
             print(f"Home Assistant stopped (exit code {code}), starting it again ...", flush=True)
             time.sleep(1)
-            hass = subprocess.Popen([HASS, "-c", config])
+            hass = subprocess.Popen([*RUN_HASS, "-c", config])
     except KeyboardInterrupt:
         pass
     finally:

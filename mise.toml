@@ -8,6 +8,9 @@ _.python.venv = { path = ".venv", create = true }
 # entry repeats it. It runs hacs.json's minimum Home Assistant unless
 # SANDBOX_HA_VERSION is set: SANDBOX_HA_VERSION=2026.11.0 mise run sandbox.
 SANDBOX_PORT = "8124"
+# The Home Assistant `mise run sandbox:record` records on: the first with the
+# Marketplace, which the setup video installs FLARE from.
+SANDBOX_RECORD_HA_VERSION = "2026.11.0"
 # The HACS release `mise run sandbox:hacs` installs.
 SANDBOX_HACS_VERSION = "2.0.5"
 
@@ -118,5 +121,9 @@ echo "$want" > .venv-record/installed
 
 [tasks."sandbox:record"]
 description = "Record the sandbox walkthrough videos into sandbox/recordings/ (stop the sandbox first)"
-depends = ["sandbox:install", "sandbox:record:install"]
-run = ".venv-record/bin/python scripts/sandbox_record.py"
+depends = ["sandbox:record:install"]
+# On SANDBOX_RECORD_HA_VERSION, whose Marketplace the setup video installs from.
+run = """
+SANDBOX_HA_VERSION="$SANDBOX_RECORD_HA_VERSION" mise run sandbox:install \
+  && .venv-record/bin/python scripts/sandbox_record.py
+"""

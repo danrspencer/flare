@@ -251,7 +251,7 @@ def check(report: Report, token: str) -> None:
 def run(args: argparse.Namespace) -> int:
     version = (sandbox.VENV / "installed").read_text().strip()
     report = Report(version)
-    sandbox.prepare(CONFIG, reset=True, hacs=False)
+    sandbox.prepare(CONFIG, reset=True, hacs=False, flare=True)
     hass = subprocess.Popen([sandbox.HASS, "-c", CONFIG], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         token = sandbox.onboard(hass)
