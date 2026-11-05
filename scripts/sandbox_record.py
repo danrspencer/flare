@@ -4,8 +4,10 @@
     mise run sandbox:record -- setup       just the first
     mise run sandbox:record -- customise   the second needs the first's house
 
-Starts a brand-new sandbox (stop any running one first), clears the
-notifications and repairs a new install shows, then plays each scene in
+Starts a brand-new sandbox house with no FLARE in it (stop any running
+sandbox first), on a Home Assistant with the Marketplace, so the first
+scene installs FLARE's latest release from it as a user would. Then it
+clears the notifications and repairs a new install shows, and plays each scene in
 a fresh browser with a visible pointer. Once every scene has recorded,
 the videos and their still frames go to docs/assets/video/ and the
 README's GIF to docs/assets/img/: commit them. Working files, and a
@@ -79,7 +81,7 @@ def start_sandbox() -> subprocess.Popen:
         if probe.connect_ex(("127.0.0.1", PORT)) == 0:
             sys.exit(f"Something is already on port {PORT}: stop the sandbox first.")
     sandbox = subprocess.Popen(
-        [sys.executable, ROOT / "scripts" / "sandbox.py", "--reset"], stdout=subprocess.DEVNULL
+        [sys.executable, ROOT / "scripts" / "sandbox.py", "--store", "--reset"], stdout=subprocess.DEVNULL
     )
     deadline = time.monotonic() + 600
     while not onboarded():
@@ -275,19 +277,34 @@ def tidy(browser) -> None:
 
 
 def setup(d: Director) -> None:
-    """Adding FLARE, one schedule per floor, then its dashboard."""
+    """Installing FLARE from the Marketplace, one schedule per floor, then
+    its dashboard."""
     page = d.page
-    page.goto(f"{URL}/config/integrations/dashboard")
+    page.goto(f"{URL}/config/dashboard")
     ha_ready(page)
-    page.get_by_text("Sandbox House").wait_for()
+    marketplace = page.get_by_role("link", name="Marketplace")
+    marketplace.wait_for()
     action(d)
     d.pause(1.2)
 
-    search = page.get_by_placeholder("Search for a brand name")
-    d.open(page.locator("ha-button", has_text="Add integration"), search)
-    d.type(search, "FLARE")
-    d.click(page.get_by_role("listitem").filter(has_text="FLARE").first, pause=1.5)
-    d.click(page.get_by_text("One per floor:"), pause=0.8)
+    # The Marketplace asks once that its risks are understood.
+    agree = page.get_by_text("I understand the risks and agree")
+    d.open(marketplace, agree, pause=1.5)
+    d.click(agree, pause=0.5)
+    d.click(page.get_by_role("button", name="Continue"), pause=1)
+
+    search = page.locator("input[placeholder$='repositories']")
+    d.type(search, "FLARE", pause=1.2)
+    d.click(page.get_by_text("Flexible Lighting Automation", exact=False).first, pause=2)
+    install = page.get_by_role("button", name="Install", exact=True)
+    d.click(install.first, pause=1.2)
+    # Its confirmation, then the download, then FLARE's own setup opens
+    # with no restart.
+    schedules = page.get_by_text("One per floor:")
+    d.click(install.last, pause=0)
+    schedules.wait_for(timeout=60000)
+    d.pause(1.5)
+    d.click(schedules, pause=0.8)
     d.click(page.get_by_role("button", name="Submit"), pause=1.5)
     d.click(page.get_by_text("Set up room automations", exact=True), pause=1.5)
 

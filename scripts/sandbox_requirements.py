@@ -13,7 +13,7 @@ from pathlib import Path
 import homeassistant.components as components
 
 CONFIGURED = ["frontend", "config", "automation", "blueprint", "history", "logbook",
-              "person", "recorder", "scene", "script", "sun", "onboarding", "group", "repairs"]
+              "person", "recorder", "scene", "script", "sun", "onboarding", "group", "repairs", "marketplace"]
 
 manifests = {
     path.parent.name: json.loads(path.read_text())

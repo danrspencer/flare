@@ -55,7 +55,7 @@ Adding FLARE sets up every room with lights, then the dashboard. The
 
 <video src="{{ '/assets/video/setup.mp4' | relative_url }}" poster="{{ '/assets/video/setup.jpg' | relative_url }}"
   controls muted playsinline preload="none" style="width: 100%"
-  aria-label="Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard"></video>
+  aria-label="Setting FLARE up: installing it from the Marketplace, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard"></video>
 
 ---
 
