@@ -1,0 +1,61 @@
+name: ha-prerelease
+
+# FLARE against the newest Home Assistant on PyPI, betas included, so a
+# change in Home Assistant shows up here before it reaches anyone's house.
+# tests.yml only runs the release pytest-homeassistant-custom-component pins.
+# A failure opens one issue labelled ha-compat, commented on when the
+# release or what fails changes; a pass closes it (scripts/ha_check.py).
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: A Home Assistant release to check instead of the newest (leaves the issue alone)
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ha-prerelease
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v5
+
+      - id: version
+        env:
+          REQUESTED: ${{ inputs.version }}
+        run: echo "version=${REQUESTED:-$(python scripts/ha_check.py latest)}" >> "$GITHUB_OUTPUT"
+
+      - id: check
+        continue-on-error: true
+        env:
+          SANDBOX_HA_VERSION: ${{ steps.version.outputs.version }}
+        run: mise run ha-check -- --report report.md
+
+      - name: Report
+        if: always()
+        run: |
+          if [ -f report.md ]; then cat report.md; else echo "No report: see the check step's log."; fi >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Issue
+        if: always() && !inputs.version && steps.check.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERSION: ${{ steps.version.outputs.version }}
+          OUTCOME: ${{ steps.check.outcome }}
+        run: python scripts/ha_check.py issue --version "$VERSION" --outcome "$OUTCOME" --report report.md
+
+      - name: Fail the run when the check failed
+        if: steps.check.outcome == 'failure'
+        run: exit 1

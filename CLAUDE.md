@@ -1487,6 +1487,15 @@ test module never imports another.
   docs' walkthrough videos and the README's GIF (see CONTRIBUTING.md); the
   GIF is linked by raw `main` URL, since GitHub and HACS show a README's
   images but not video.
+- **pytest covers one Home Assistant release, the one
+  pytest-homeassistant-custom-component pins.** `mise run ha-check`
+  (`scripts/ha_check.py`) sets FLARE up in a throwaway sandbox house on
+  any release, and `ha-prerelease.yml` runs it daily on the newest on
+  PyPI, betas included, keeping one `ha-compat` issue open while it
+  fails. A name imported from a component's package
+  (`homeassistant.components.<x>`) can move without a deprecation; prefer
+  `homeassistant.const` and the helpers, and from a component only names
+  in its `__all__` where it has one.
 - **Use the sandbox by default** whenever a change can be checked there
   cheaply. Each bulb's **Power** switch and each room's **Wall switch**
   make bulbs drop out and come back booting at their default, for anything
