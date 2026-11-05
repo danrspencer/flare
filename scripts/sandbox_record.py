@@ -280,20 +280,19 @@ def setup(d: Director) -> None:
     """Installing FLARE from the Marketplace, one schedule per floor, then
     its dashboard."""
     page = d.page
-    page.goto(f"{URL}/config/dashboard")
+    page.goto(f"{URL}/marketplace")
     ha_ready(page)
-    marketplace = page.get_by_role("link", name="Marketplace")
-    marketplace.wait_for()
+    # Off screen: the warning the Marketplace shows the first time.
+    page.get_by_text("I understand the risks and agree").click()
+    page.get_by_role("button", name="Continue").click()
+    search = page.locator("input[placeholder$='repositories']")
+    search.wait_for()
+    # Its catalog, loaded.
+    page.get_by_role("button", name="Repository name").wait_for()
+    d.pause(1)
     action(d)
     d.pause(1.2)
 
-    # The Marketplace asks once that its risks are understood.
-    agree = page.get_by_text("I understand the risks and agree")
-    d.open(marketplace, agree, pause=1.5)
-    d.click(agree, pause=0.5)
-    d.click(page.get_by_role("button", name="Continue"), pause=1)
-
-    search = page.locator("input[placeholder$='repositories']")
     d.type(search, "FLARE", pause=1.2)
     d.click(page.get_by_text("Flexible Lighting Automation", exact=False).first, pause=2)
     install = page.get_by_role("button", name="Install", exact=True)
