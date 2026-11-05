@@ -134,10 +134,12 @@ def onboarding_steps(hass: subprocess.Popen) -> dict[str, bool]:
     sys.exit("Home Assistant stopped before it was ready")
 
 
-def onboard(hass: subprocess.Popen) -> None:
+def onboard(hass: subprocess.Popen) -> str | None:
+    """Complete onboarding, returning the owner's access token, or None if
+    it was already done."""
     done = onboarding_steps(hass)
     if all(done.values()):
-        return
+        return None
     print("Completing onboarding ...", flush=True)
     code = request("/api/onboarding/users", {**OWNER, "client_id": CLIENT_ID})["auth_code"]
     token = request(
@@ -152,6 +154,7 @@ def onboard(hass: subprocess.Popen) -> None:
         {"client_id": CLIENT_ID, "redirect_uri": f"{URL}/?auth_callback=1"},
         token=token,
     )
+    return token
 
 
 def main() -> None:
