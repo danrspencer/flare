@@ -5,7 +5,7 @@
  * flare-curve-card.js that ships inside the integration,
  * given exactly the shape of state a live Home Assistant would give it
  * (a sensor whose state is the phase name and whose attributes carry
- * brightness/color_temp/the four boundaries/a 289-point `points` array).
+ * brightness/color_temp_kelvin/the four boundaries/a 289-point `points` array).
  * Moving a slider recomputes those points with curve.js - the parity-
  * tested port of the integration's curve.py - and hands the card a fresh
  * `hass` object. So what you see here is what the card would draw in
@@ -192,7 +192,7 @@ function buildHass() {
         attributes: {
           phase,
           brightness: targets.brightness,
-          color_temp: targets.kelvin,
+          color_temp_kelvin: targets.kelvin,
           morning_start: b.morningTs,
           day_start: b.dayStartTs,
           evening_start: b.eveningTs,

@@ -169,9 +169,11 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scene handoff</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/zones/" class="nav-list-link">Zones</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li></ul>
+      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
   
 </nav>
 
@@ -251,16 +253,22 @@ behaves.</p>
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
   <li><a href="#room" id="markdown-toc-room">Room</a></li>
-  <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
-  <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
-  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
-  <li><a href="#triggers" id="markdown-toc-triggers">Triggers</a>    <ul>
-      <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
+  <li><a href="#sensors-and-triggers" id="markdown-toc-sensors-and-triggers">Sensors and triggers</a>    <ul>
+      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
       <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
     </ul>
   </li>
+  <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
+  <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
+  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
   <li><a href="#transitions" id="markdown-toc-transitions">Transitions</a></li>
-  <li><a href="#colour" id="markdown-toc-colour">Colour</a></li>
+  <li><a href="#settings" id="markdown-toc-settings">Settings</a>    <ul>
+      <li><a href="#override-protection" id="markdown-toc-override-protection">Override protection</a></li>
+      <li><a href="#prefer-rgb-during" id="markdown-toc-prefer-rgb-during">Prefer RGB during</a></li>
+      <li><a href="#stored-traces" id="markdown-toc-stored-traces">Stored traces</a></li>
+      <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
+    </ul>
+  </li>
   <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
       <li><a href="#when-the-room-updates" id="markdown-toc-when-the-room-updates">When the room updates</a></li>
       <li><a href="#when-lights-turn-on-and-off" id="markdown-toc-when-lights-turn-on-and-off">When lights turn on and off</a></li>
@@ -296,19 +304,9 @@ behaves.</p>
       <td>The FLARE schedule the room follows.</td>
     </tr>
     <tr>
-      <td><strong>Zone</strong></td>
-      <td>none</td>
-      <td>The FLARE zone the room belongs to. Leave it empty to <a href="#turning-override-protection-off">turn override protection off</a> for the room.</td>
-    </tr>
-    <tr>
       <td><strong>Lights &amp; Occupancy</strong></td>
       <td>required</td>
-      <td>The room’s lights, and the occupancy and motion sensors that turn them on and off.</td>
-    </tr>
-    <tr>
-      <td><strong>Wait time</strong></td>
-      <td>120s</td>
-      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+      <td>The room’s lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives <strong>Lux Threshold</strong>.</td>
     </tr>
   </tbody>
 </table></div>
@@ -332,13 +330,97 @@ label is on the light itself, it’s included.</li>
 <p>Sensors are <code class="language-plaintext highlighter-rouge">binary_sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: occupancy</code> or <code class="language-plaintext highlighter-rouge">device_class: motion</code>;
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
 
-<p>To choose the sensors yourself while still picking an area for the lights, turn off
-<a href="#triggers">Sensors From Areas</a>.</p>
+<p>To pick an area for its lights but leave some of its sensors out, add them with <strong>Exclude
+target</strong> (Home Assistant 2026.11 and later). On earlier versions, turn off
+<a href="#sensors-from-areas">Sensors From Areas</a> and pick the sensors you want by name.</p>
 
 <p>A room with no sensor follows the schedule but never turns its lights on or off.</p>
 
-<p>If a room has two automations, for example one for a lamp and one for the ceiling light, give
-both the same <strong>Zone</strong>.</p>
+<p>A room can have two automations, for example one for a lamp and one for the ceiling light.
+Each releases the lights it drives once they’re all off; a light in both is released when
+either room goes dark.</p>
+<h2 id="sensors-and-triggers">
+  
+  
+    <a href="#sensors-and-triggers" class="anchor-heading" aria-labelledby="sensors-and-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors and triggers
+  
+  
+</h2>
+    
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Wait time</strong></td>
+      <td>120s</td>
+      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+    </tr>
+    <tr>
+      <td><strong>Lux Threshold</strong></td>
+      <td>0 (off)</td>
+      <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux.</td>
+    </tr>
+    <tr>
+      <td><strong>Additional Triggers</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change.</td>
+    </tr>
+  </tbody>
+</table></div>
+<h3 id="lux-threshold">
+  
+  
+    <a href="#lux-threshold" class="anchor-heading" aria-labelledby="lux-threshold"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lux Threshold
+  
+  
+</h3>
+    
+
+<p>Illuminance sensors are the <code class="language-plaintext highlighter-rouge">sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: illuminance</code> in <strong>Lights &amp;
+Occupancy</strong> — picked by name, or included through its area, floor, device or label — that
+aren’t excluded. With <a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by
+name count.</p>
+
+<p>Above <code class="language-plaintext highlighter-rouge">0</code>, the room counts as bright enough while every one of those sensors reads above that
+many lux. A bright room isn’t switched on by:</p>
+
+<ul>
+  <li>a sensor detecting someone,</li>
+  <li>a <a href="#scenes">scene</a>, unless every light it covers is already on,</li>
+  <li><a href="#idle-brightness">idle brightness</a>.</li>
+</ul>
+
+<p>If someone is still in the room when it stops being bright enough, because one of those sensors
+drops to the threshold or below, the lights come on then. Someone counts as in the room if one
+of its occupancy or motion sensors is detecting them, or was within the <strong>Wait time</strong>.</p>
+
+<p>Lights already on carry on as before: following the curve, or left to the phase’s scene. Nothing
+is switched off for being bright. Turning the room on by hand — the automation’s
+<strong>Run</strong>, the <a href="../flares/">flare</a>, or a voice assistant — ignores the threshold.</p>
+
+<p>A sensor that is unavailable, unknown or not numeric can’t say how bright the room is, so it
+doesn’t count either way, and a room with no illuminance sensor never blocks. The check is off
+while <strong>Lux Threshold</strong> is <code class="language-plaintext highlighter-rouge">0</code>, which is the default.</p>
+<h3 id="additional-triggers">
+  
+  
+    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+  
+  
+</h3>
+    
+
+<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
+while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
+on from something else, see
+<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
 <h2 id="brightness">
   
   
@@ -390,7 +472,7 @@ both the same <strong>Zone</strong>.</p>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">null</code></td>
-      <td>FLARE leaves the light alone, including when the room empties.</td>
+      <td>FLARE leaves the light alone, including when the room empties, and its being on doesn’t count as the room being in use.</td>
     </tr>
   </tbody>
 </table></div>
@@ -470,62 +552,7 @@ and other variations.</p>
 
 <p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
 the schedule. When a scene is used, any light in the room that the scene doesn’t set still
-follows the schedule. See <a href="../../guides/scenes/">Scenes</a>.</p>
-<h2 id="triggers">
-  
-  
-    <a href="#triggers" class="anchor-heading" aria-labelledby="triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Triggers
-  
-  
-</h2>
-    
-
-<div class="table-wrapper"><table>
-  <thead>
-    <tr>
-      <th>Input</th>
-      <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Sensors From Areas</strong></td>
-      <td>on</td>
-      <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used.</td>
-    </tr>
-    <tr>
-      <td><strong>Additional Triggers</strong></td>
-      <td>none</td>
-      <td>Entities that make the room update as soon as they change.</td>
-    </tr>
-  </tbody>
-</table></div>
-<h3 id="sensors-from-areas">
-  
-  
-    <a href="#sensors-from-areas" class="anchor-heading" aria-labelledby="sensors-from-areas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors from areas
-  
-  
-</h3>
-    
-
-<p>Turn <strong>Sensors From Areas</strong> off and only the sensors you pick by name in <strong>Lights &amp; Occupancy</strong>
-count, so you can pick an area for its lights and choose the sensors yourself, such as the
-hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
-<h3 id="additional-triggers">
-  
-  
-    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
-  
-  
-</h3>
-    
-
-<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
-<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
 <h2 id="transitions">
   
   
@@ -561,10 +588,10 @@ on from something else, see
     </tr>
   </tbody>
 </table></div>
-<h2 id="colour">
+<h2 id="settings">
   
   
-    <a href="#colour" class="anchor-heading" aria-labelledby="colour"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Colour
+    <a href="#settings" class="anchor-heading" aria-labelledby="settings"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Settings
   
   
 </h2>
@@ -580,15 +607,78 @@ on from something else, see
   </thead>
   <tbody>
     <tr>
+      <td><strong>Override Protection</strong></td>
+      <td>on</td>
+      <td>Leaves a light alone once something else changes it, until all of the room’s lights are off.</td>
+    </tr>
+    <tr>
       <td><strong>Prefer RGB During</strong></td>
       <td>Evening, Night</td>
       <td>Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature.</td>
     </tr>
+    <tr>
+      <td><strong>Stored Traces</strong></td>
+      <td>20</td>
+      <td>How many of the automation’s recent runs keep a trace.</td>
+    </tr>
+    <tr>
+      <td><strong>Sensors From Areas</strong></td>
+      <td>on</td>
+      <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used. Deprecated: use <strong>Exclude target</strong> instead of turning this off.</td>
+    </tr>
   </tbody>
 </table></div>
+<h3 id="override-protection">
+  
+  
+    <a href="#override-protection" class="anchor-heading" aria-labelledby="override-protection"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Override protection
+  
+  
+</h3>
+    
+
+<p>Turn it off for a room <a href="#turning-override-protection-off">whose bulbs misreport</a>.</p>
+<h3 id="prefer-rgb-during">
+  
+  
+    <a href="#prefer-rgb-during" class="anchor-heading" aria-labelledby="prefer-rgb-during"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Prefer RGB during
+  
+  
+</h3>
+    
 
 <p>Many bulbs give richer warm colours in RGB, but their cool whites can look blue, so the default
 leaves Morning and Day on colour temperature.</p>
+<h3 id="stored-traces">
+  
+  
+    <a href="#stored-traces" class="anchor-heading" aria-labelledby="stored-traces"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Stored traces
+  
+  
+</h3>
+    
+
+<p>A room updates every minute, so the default keeps about the last 20 minutes of runs in the
+automation’s <strong>Traces</strong>. Raise it while you’re tracking down something that happened earlier;
+each trace takes memory, so set it back once you’re done.</p>
+<h3 id="sensors-from-areas">
+  
+  
+    <a href="#sensors-from-areas" class="anchor-heading" aria-labelledby="sensors-from-areas"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors from areas
+  
+  
+</h3>
+    
+
+<p>Turn <strong>Sensors From Areas</strong> off and only the sensors you pick by name in <strong>Lights &amp; Occupancy</strong>
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
+
+<p><strong>Sensors From Areas is deprecated, and FLARE 3.0 removes it.</strong> From Home Assistant 2026.11,
+use <strong>Exclude target</strong> in <strong>Lights &amp; Occupancy</strong> instead of turning it off, to leave out the
+sensors you don’t want (see Home Assistant’s
+<a href="https://www.home-assistant.io/docs/automation/targets/#excluding-targets">excluding targets</a>).
+An excluded sensor doesn’t count, whether it came from an area, a device, a floor or a label.</p>
 <h2 id="how-a-room-behaves">
   
   
@@ -606,10 +696,11 @@ leaves Morning and Day on colour temperature.</p>
 </h3>
     
 
-<p>A room updates straight away when the phase changes, a sensor detects someone, an Additional
-Trigger changes, or one of its lights comes back online. Between those, it updates on its zone’s
-<a href="../zones/#when-zones-tick">tick</a>, which is every minute by default. A room without a <strong>Zone</strong>
-updates every minute, on the minute.</p>
+<p>A room updates straight away when the phase changes, a sensor detects someone or an Additional
+Trigger changes, and a few seconds after its lights come back online. Between those, it updates on the
+<a href="../override-protection/#when-rooms-update">tick</a> of the first area in <strong>Lights &amp; Occupancy</strong>,
+which is every minute by default. A room whose <strong>Lights &amp; Occupancy</strong> names no area updates every
+minute, on the minute.</p>
 <h3 id="when-lights-turn-on-and-off">
   
   
@@ -623,9 +714,9 @@ updates every minute, on the minute.</p>
 been clear for the <strong>Wait time</strong>.</p>
 
 <p>While every light in <strong>Lights &amp; Occupancy</strong> is off, the only things that turn any of them on are
-a sensor detecting someone, running the automation by hand, and
-<a href="#idle-brightness">idle brightness</a>. Once at least one light is on, any update can turn on the
-others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
+a sensor detecting someone, running the automation by hand, the room getting dark while someone
+is in it (with a <a href="#lux-threshold">Lux Threshold</a>), and <a href="#idle-brightness">idle brightness</a>. Once
+at least one light is on, any update can turn on the others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.</p>
 
 <p>If a light is still on after the room has been empty for the <strong>Wait time</strong>, the turn-off is sent
@@ -645,11 +736,11 @@ changed.</p>
 <ul>
   <li><strong>Someone else changed it.</strong> A light changed from a wall switch, an app, a voice assistant or
 another automation, including being turned off, is left alone until every light in the room is
-off. See <a href="../zones/#override-protection">override protection</a>.</li>
+off. See <a href="../override-protection/">override protection</a>.</li>
   <li><strong>The room is empty and the light was off.</strong> See
 <a href="#when-lights-turn-on-and-off">when lights turn on and off</a>.</li>
   <li><strong>It’s already close enough.</strong> Changes smaller than 5% of the brightness or 5 mireds of colour
-temperature aren’t sent. You can change both limits under <strong>FLARE → Zones → Configure</strong>.</li>
+temperature aren’t sent. You can change both tolerances under <strong>FLARE → Settings → Configure</strong>.</li>
   <li><strong>It’s unavailable.</strong> FLARE sets it once it comes back online.</li>
   <li><strong>A scene has it</strong>, or <strong>Brightness Template</strong> returns <code class="language-plaintext highlighter-rouge">null</code> for it.</li>
   <li><strong>It’s at its idle brightness.</strong> See <a href="#idle-brightness">idle brightness</a>.</li>
@@ -673,8 +764,8 @@ were sent, and some settle on a colour outside the range they say they support. 
 reports something FLARE didn’t send, it reads as overridden even though nobody touched it, and
 FLARE leaves it alone until every light in the room is off.</p>
 
-<p>If a room’s lights keep getting stuck like this, you can leave <strong>Zone</strong> empty in the room’s
-automation. FLARE then sets the room’s lights on every update without checking what they report,
+<p>If a room’s lights keep getting stuck like this, you can turn off <strong>Override Protection</strong> in the
+room’s automation. FLARE then sets the room’s lights on every update without checking what they report,
 which also means:</p>
 
 <ul>
@@ -686,8 +777,7 @@ voice assistant for 100%, the room goes back to the curve at the next update. Tu
 on and off works as usual.</li>
 </ul>
 
-<p>A room without a zone updates every minute, on the minute, and doesn’t appear in the
-<a href="../../dashboard/">Zones view</a>.</p>
+<p>A room with override protection off isn’t counted in the <a href="../../dashboard/">Overrides view</a>.</p>
 
 <p>If you turn override protection off because of your bulbs, please
 <a href="https://github.com/danrspencer/flare/issues">open an issue</a> with their make and model, so FLARE
@@ -705,6 +795,11 @@ can learn to read them properly.</p>
 System → Repairs</strong> offering the new copy. Press <strong>Fix</strong> to install it; your automations keep
 their settings. If you’ve edited
 your own copy, ignore the repair, because installing replaces the file.</p>
+
+<p>FLARE installs the blueprint in Home Assistant’s language (<strong>Settings → System → General</strong>) when
+it has a translation for it, so far German, and in English otherwise. If you change Home
+Assistant’s language, the same repair offers the blueprint in the new one. Its <strong>Details</strong> links
+lead to this page, in English.</p>
 
 <p>The <a href="../../trace-report/">test trace reports</a> show runs of the blueprint from its tests, with
 each step matched to the line of the blueprint it comes from.</p>
@@ -739,6 +834,28 @@ each step matched to the line of the blueprint it comes from.</p>
 
     
   </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
 
   
 </body>

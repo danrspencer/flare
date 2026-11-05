@@ -166,9 +166,11 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scene handoff</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/zones/" class="nav-list-link">Zones</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li></ul>
+      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
   
 </nav>
 
@@ -234,8 +236,8 @@
 </h1>
     
 
-<p>FLARE comes with a ready-made dashboard: a view for each schedule, and one for your zones. It
-builds itself from your schedules and zones each time it loads, so one you add later appears on
+<p>FLARE comes with a ready-made dashboard: a view for each schedule, and one for your rooms. It
+builds itself from your schedules and rooms each time it loads, so one you add later appears on
 its own.</p>
 
 <p>Add it from <strong>Settings → Dashboards → Add dashboard</strong>: pick <strong>FLARE Lighting</strong>, then give it a
@@ -243,23 +245,26 @@ name and an icon. FLARE’s logo is in the icon picker as <code class="language-
 
 <ul>
   <li><strong>A schedule’s view</strong> shows the day’s curve and every schedule and curve setting.</li>
-  <li><strong>Zones</strong> starts with <strong>All zones</strong>: how many lights FLARE is driving across the house, how
-many something else has taken over, and a <strong>Clear</strong> button for every zone at once. Below that
-is each zone, by floor and area, laid out like Home Assistant’s Lights dashboard: its
-controlled and overridden counts, which lights are overridden, and a <strong>Clear</strong> button to hand
-them back. A zone’s name opens its device page. Beside the zones, <strong>Activity</strong> lists the last
-24 hours of what the zones did, coloured by kind - blue when a zone takes its lights, amber
-when something else overrides one, grey when a zone lets them go - and the buttons at its top
-show one kind at a time. Selecting an entry opens that zone’s device page. On a narrow screen,
-Activity is a separate tab.</li>
+  <li><strong>Overrides</strong> starts with <strong>All lights</strong>: how many lights FLARE is driving across the house, how
+many something else has taken over, and <strong>Clear all</strong> to hand every light back at once. Below
+that is each area with lights a room automation drives, by floor, laid out like Home
+Assistant’s Lights dashboard: a list of the area’s lights, overridden ones first, headed by
+its controlled and overridden counts and <strong>Clear all</strong> to hand them back. Each light shows its
+status, what FLARE last asked it for and what it’s showing, in red where that differs, with its
+own <strong>Clear</strong>; press its name to open the light. Lights FLARE isn’t driving are hidden until
+you press <strong>Show untracked</strong> at the bottom of the list. An area’s name opens its page. Beside
+the areas, <strong>Activity</strong> lists the last 24 hours of what the rooms did, coloured by kind - blue
+when a room takes its lights, amber when something else overrides one, grey when a room lets
+them go - and the buttons at its top show one kind at a time. On a narrow screen, Activity is
+a separate tab.</li>
 </ul>
 
 <p><img src="/flare/assets/img/dashboard-section.png" alt="A schedule's view: the day's curve, a phase override, the schedule times, and
 the curve and transition values for each phase" /></p>
-<h2 id="adding-the-views-to-another-dashboard">
+<h2 id="in-your-own-dashboard">
   
   
-    <a href="#adding-the-views-to-another-dashboard" class="anchor-heading" aria-labelledby="adding-the-views-to-another-dashboard"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Adding the views to another dashboard
+    <a href="#in-your-own-dashboard" class="anchor-heading" aria-labelledby="in-your-own-dashboard"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> In your own dashboard
   
   
 </h2>
@@ -272,9 +277,9 @@ three-dot menu → <strong>Raw configuration editor</strong>, and add:</p>
   <span class="pi">-</span> <span class="na">title</span><span class="pi">:</span> <span class="s">Lighting</span>
     <span class="na">strategy</span><span class="pi">:</span>
       <span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare-schedule</span>
-  <span class="pi">-</span> <span class="na">title</span><span class="pi">:</span> <span class="s">Zones</span>
+  <span class="pi">-</span> <span class="na">title</span><span class="pi">:</span> <span class="s">Overrides</span>
     <span class="na">strategy</span><span class="pi">:</span>
-      <span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare-zone</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare-lights</span>
 </code></pre></div></div>
 
 <p>Like the ready-made dashboard, both views find their own entities each time they load.
@@ -327,7 +332,7 @@ ID, which is what to use if you’ve renamed it.</p>
 <p>Twenty-five near-identical controls is a lot to scan, so two things are colour-coded:</p>
 
 <ul>
-  <li><strong>Colour is the phase</strong> — Morning blue, Day yellow, Evening orange, Night indigo,
+  <li><strong>Colour is the phase</strong> — Morning blue, Day amber, Evening deep orange, Night indigo,
 wherever that phase appears.</li>
   <li><strong>Icon is the channel</strong> — brightness, colour temperature, or an hourglass for
 transitions.</li>
@@ -355,7 +360,7 @@ three-dot menu.</p>
 
 <blockquote class="note">
   <p>Take control is one-way. Once you’ve taken control, the dashboard no longer rebuilds itself,
-so it won’t pick up changes to FLARE’s layout, and schedules or zones you add later won’t
+so it won’t pick up changes to FLARE’s layout, and schedules or rooms you add later won’t
 appear on their own.</p>
 </blockquote>
 
@@ -389,6 +394,28 @@ appear on their own.</p>
 
     
   </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
 
   
 </body>

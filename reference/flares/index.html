@@ -169,9 +169,11 @@
   
     <ul class="nav-list"><li class="nav-list-item"><a href="/flare/" class="nav-list-link">Home</a></li><li class="nav-list-item"><a href="/flare/installation/" class="nav-list-link">Quickstart</a></li><li class="nav-list-item"><a href="/flare/playground/" class="nav-list-link">Curve playground</a></li><li class="nav-list-item"><a href="/flare/dashboard/" class="nav-list-link">Dashboard</a></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Guides submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scenes</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants and HomeKit</a></li><li class="nav-list-item"><a href="/flare/guides/custom-automations/" class="nav-list-link">Building without the blueprint</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
+      </button><a href="/flare/guides/" class="nav-list-link">Guides</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/guides/examples/" class="nav-list-link">Examples</a></li><li class="nav-list-item"><a href="/flare/guides/templates/" class="nav-list-link">Templates</a></li><li class="nav-list-item"><a href="/flare/guides/overrides/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/guides/scenes/" class="nav-list-link">Scene handoff</a></li><li class="nav-list-item"><a href="/flare/guides/flares/" class="nav-list-link">Voice assistants</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Reference submenu" aria-expanded="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/zones/" class="nav-list-link">Zones</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li></ul>
+      </button><a href="/flare/reference/" class="nav-list-link">Reference</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/reference/blueprint/" class="nav-list-link">Blueprint</a></li><li class="nav-list-item"><a href="/flare/reference/schedules/" class="nav-list-link">Schedules</a></li><li class="nav-list-item"><a href="/flare/reference/override-protection/" class="nav-list-link">Override protection</a></li><li class="nav-list-item"><a href="/flare/reference/flares/" class="nav-list-link">Flares</a></li><li class="nav-list-item"><a href="/flare/reference/services/" class="nav-list-link">Services</a></li></ul></li><li class="nav-list-item"><button class="nav-list-expander btn-reset" aria-label="Architecture submenu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+      </button><a href="/flare/architecture/" class="nav-list-link">Architecture</a><ul class="nav-list"><li class="nav-list-item"><a href="/flare/architecture/layout/" class="nav-list-link">Code layout</a></li><li class="nav-list-item"><a href="/flare/architecture/event-loop/" class="nav-list-link">The event loop</a></li><li class="nav-list-item"><a href="/flare/architecture/schedules/" class="nav-list-link">Schedules and the curve</a></li><li class="nav-list-item"><a href="/flare/architecture/room-automation/" class="nav-list-link">The room automation</a></li><li class="nav-list-item"><a href="/flare/architecture/services/" class="nav-list-link">Services and grouping</a></li><li class="nav-list-item"><a href="/flare/architecture/claims/" class="nav-list-link">Claims and override protection</a></li><li class="nav-list-item"><a href="/flare/architecture/flares/" class="nav-list-link">How flares work</a></li><li class="nav-list-item"><a href="/flare/architecture/setup/" class="nav-list-link">Setup and upgrades</a></li><li class="nav-list-item"><a href="/flare/architecture/frontend/" class="nav-list-link">Dashboard internals</a></li></ul></li></ul>
   
 </nav>
 
@@ -246,7 +248,7 @@
 
 <p>A flare is a light entity that sits over an automation. Flares are under <strong>Settings → Devices
 &amp; Services → FLARE → Flares</strong>. For setting one up for a voice assistant, see
-<a href="../../guides/flares/">Voice assistants and HomeKit</a>.</p>
+<a href="../../guides/flares/">Voice assistants</a>.</p>
 
 <details open="">
   <summary class="text-delta">On this page</summary>
@@ -283,10 +285,6 @@
       <td>For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it’s used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is <strong>Lights &amp; Occupancy</strong>.</td>
     </tr>
     <tr>
-      <td><strong>Zone input</strong></td>
-      <td>Optional. For an automation built from a blueprint: the input that holds its FLARE zone, where the flare marks its lights as changed by you. For an automation from the FLARE blueprint this is <strong>Zone</strong>. Without one, FLARE may take over lights it wasn’t already driving.</td>
-    </tr>
-    <tr>
       <td><strong>Lights</strong></td>
       <td>For an automation not built from a blueprint: the lights, picked directly.</td>
     </tr>
@@ -297,12 +295,12 @@
   </tbody>
 </table></div>
 
-<p><strong>Set up area</strong> creates a flare for each area, named after it. Adding flares from <strong>Rooms from
+<p><strong>Set up area</strong> offers a flare for each area it sets up, named after the area. Adding flares from <strong>Rooms from
 the FLARE blueprint</strong> creates one for each room picked, named after its automation. Either way,
 the flare starts in the automation’s area.</p>
 
 <p><strong>Reconfigure</strong> shows which automation the flare runs, and changes the flare’s name and its
-lights, or its lights and zone inputs. It can’t change the automation, so to use a different
+lights, or its lights input. It can’t change the automation, so to use a different
 one, add a new flare.</p>
 <h2 id="the-flares-light">
   
@@ -331,7 +329,7 @@ attribute lists the lights.</p>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">light.turn_on</code> with a brightness, colour or effect</td>
-      <td>Marks every light as overridden in the zone with <a href="../services/#flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>, then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark.</td>
+      <td>Marks every light as overridden, with the automation as its room, with <a href="../services/#flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>, then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">light.turn_off</code></td>
@@ -384,6 +382,28 @@ skip it, even when it sits in the room’s area.</p>
 
     
   </div>
+
+  
+    
+
+
+
+
+
+<script type="module">
+  
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  
+
+  var config = {}
+;
+  mermaid.initialize(config);
+  mermaid.run({
+    querySelector: '.language-mermaid',
+  });
+</script>
+
+
 
   
 </body>
