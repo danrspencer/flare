@@ -10,7 +10,8 @@ permalink: /installation/
 Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.10.0 or newer, and [HACS](https://hacs.xyz) installed.
+> **Prerequisites** — Home Assistant 2026.10.0 or newer. On 2026.10 you also need
+> [HACS](https://hacs.xyz) installed; from 2026.11 it's built in as the Marketplace.
 >
 > It's best to assign your lights and your occupancy and motion sensors to areas first. FLARE
 > works without that, but it sets rooms up area by area, so anything without an area is left out
@@ -21,19 +22,22 @@ Five minutes to a room running on the curve.
 
 ---
 
-## Step 1 — install via HACS
+## Step 1 — install FLARE
 
-[![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
+[![Open your Home Assistant instance and open FLARE in the Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=danrspencer&repository=flare&category=integration)
 
-The button opens FLARE in HACS on your Home Assistant, where you can download it.
+The button opens FLARE on your Home Assistant, in the Marketplace on 2026.11 or newer, or in
+HACS on 2026.10.
 
-Or open HACS, search for **FLARE** and download it.
+**On Home Assistant 2026.11 or newer**, go to **Settings → Marketplace**, search for **FLARE**,
+choose **Install** and confirm. FLARE's setup opens straight away, so carry on with Step 2.
 
-## Step 2 — restart, then add FLARE
+**On Home Assistant 2026.10**, open HACS, search for **FLARE** and download it. Restart Home
+Assistant, then go to **Settings → Devices & Services → Add Integration → FLARE**.
 
-Restart Home Assistant, then **Settings → Devices & Services → Add Integration → FLARE**.
+## Step 2 — set FLARE up
 
-It asks:
+FLARE's setup asks:
 
 - **Your schedules.** A [schedule]({{ site.baseurl }}/reference/schedules/) is the day's
   lighting: when each phase starts, and how bright and warm it is. **One for the whole home**

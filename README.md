@@ -13,7 +13,7 @@ Hand a room to a scene and FLARE fills in whatever the scene doesn't cover, and 
 left alone until the room next goes dark. Each room can also have a light of its own for Siri, Alexa or Google,
 so "turn on the kitchen" lights the room for the time of day, not at whatever the bulbs were last set to.
 
-[![Open your Home Assistant instance and open FLARE in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danrspencer&repository=flare&category=integration)
+[![Open your Home Assistant instance and open FLARE in the Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=danrspencer&repository=flare&category=integration)
 
 [![Setting FLARE up: Add Integration, one schedule per floor, every room with lights set up, then the FLARE Lighting dashboard](https://raw.githubusercontent.com/danrspencer/flare/main/docs/assets/img/setup.gif)](https://danrspencer.github.io/flare/installation/)
 
@@ -49,7 +49,7 @@ FLARE works from your schedule instead, using four named phases. With the defaul
 
 ## How it fits together
 
-Install FLARE from HACS and add it: it sets each room up with an automation from its blueprint. The blueprint covers
+Install FLARE from the Marketplace (or HACS before Home Assistant 2026.11) and add it: it sets each room up with an automation from its blueprint. The blueprint covers
 what most rooms want; if it doesn't do what you need, everything it uses is an ordinary Home Assistant entity or
 action, so you can change it or write your own — see the
 [examples](https://danrspencer.github.io/flare/guides/examples/).

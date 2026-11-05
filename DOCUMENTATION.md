@@ -211,7 +211,7 @@ Reference pages are the exception: they open with the table (rule 3).
 | Term | Scope | Meaning, and what to avoid |
 |---|---|---|
 | FLARE | external | The whole thing. Not "the integration" when you mean the whole thing. |
-| the integration | both | Specifically the HACS-installed half — services, entities, dashboard. |
+| the integration | both | Specifically the half installed from the Marketplace or HACS — services, entities, dashboard. |
 | the blueprint | both | The ready-made room automation. It is a worked example, not "the product". |
 | phase | external | Morning, Day, Evening or Night. Always capitalised when naming one. |
 | the curve | external | The day's brightness and colour over time. Not "the schedule" — see below. |
