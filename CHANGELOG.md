@@ -13,7 +13,7 @@ CI — see `.github/workflows/release.yml`.
 
 - **FLARE loads on Home Assistant 2026.11.** That release moved a constant FLARE imported
   out of `homeassistant.components.automation`, so the integration failed to set up and every
-  room's automation stopped with `Action flare.resolve_target not found`
+  room's automation stopped with `Action flare.resolve_target not found`. Thanks to @sbyx
   ([#343](https://github.com/danrspencer/flare/pull/343)).
 
 ## [2.0.0] - Unreleased
