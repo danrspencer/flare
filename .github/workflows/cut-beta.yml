@@ -64,9 +64,12 @@ jobs:
           TAG: ${{ steps.cut.outputs.tag }}
           # Named explicitly (release.py notes_start).
           PREVIOUS: ${{ steps.cut.outputs.previous }}
+        # The version's changelog section, then GitHub's list of the pull
+        # requests since PREVIOUS, which ends with the compare link.
         run: |
+          python scripts/release.py notes --tag "$TAG" --no-compare > notes.md
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes --prerelease ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --notes-file notes.md --generate-notes --prerelease ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
 
   # The beta's docs. Also when nothing shipped changed and no beta was
   # cut: a docs-only push still updates them, under the newest beta's

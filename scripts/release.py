@@ -14,7 +14,7 @@ Releases from before the zip were a commit on top of their source with
 the version written in, and name that source in their message
 (`Source: <sha>`); source_of() still reads it.
 
-Seven subcommands. The first three tag and package locally and print what
+Eight subcommands. The first three tag and package locally and print what
 they did; `package` only packages; the others only answer a question.
 Pushing the tag and publishing the GitHub release with its zip is the
 workflow's job, because that is the part that needs credentials:
@@ -25,9 +25,10 @@ workflow's job, because that is the part that needs credentials:
     release.py package --tag TAG         what .github/workflows/release.yml runs for a tag pushed by hand
     release.py check --source SHA        what .github/workflows/tests.yml runs on a pull request
     release.py preview --source SHA      what .github/workflows/release-preview.yml comments with
+    release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
+    release.py notes --tag TAG           the release body those workflows publish
 
 `check` and `preview` take `--patch` for a pull request into a release branch.
-    release.py docs-source --head SHA    what .github/workflows/docs.yml builds a release's docs from
 
 Pure functions up top, git at the bottom. Standard library only, so the
 workflows need no install step.
@@ -180,6 +181,80 @@ def notes_start(tag: Tag, tags: list[Tag]) -> Tag | None:
     """
     earlier = [t for t in tags if t < tag and (t.stable or not tag.stable)]
     return max(earlier, default=None)
+
+
+# --- Release notes -----------------------------------------------------
+
+# A line that starts a block of its own rather than continuing the one
+# above: a heading, a list item, a quote or a table row.
+_BLOCK_START = re.compile(r"\s*(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|>|\|)")
+# Blocks nothing may be joined onto: a heading or a table row.
+_UNJOINABLE = re.compile(r"\s*(?:#{1,6}\s|\|)")
+_FENCE = re.compile(r"\s*(`{3,}|~{3,})")
+
+
+def changelog_section(text: str, version: str) -> str | None:
+    """The body of the changelog's `## [version]` section, without its
+    heading, up to the next `## ` heading."""
+    m = re.search(
+        rf"^## \[{re.escape(version)}\][^\n]*\n(.*?)(?=^## |\Z)", text, re.MULTILINE | re.DOTALL
+    )
+    return m.group(1).strip() if m else None
+
+
+def unwrap(text: str) -> str:
+    """Hard-wrapped Markdown with each paragraph and list item on one line.
+
+    GitHub renders every newline in a release body as a line break, so a
+    paragraph wrapped at 100 columns would show broken mid-sentence.
+    Fenced code blocks and hard breaks (two trailing spaces, or `\\`) are
+    kept as written.
+    """
+    out: list[str] = []
+    fence = ""
+    joinable = False
+    hard_break = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if fence:
+            out.append(line.rstrip())
+            if stripped.startswith(fence) and not stripped.strip(fence[0]):
+                fence = ""
+            continue
+        opening = _FENCE.match(line)
+        if opening:
+            fence = opening.group(1)
+            out.append(line.rstrip())
+            joinable = False
+        elif not stripped:
+            out.append("")
+            joinable = False
+        elif joinable and not hard_break and not _BLOCK_START.match(line):
+            out[-1] = f"{out[-1]} {stripped}"
+        else:
+            out.append(line.rstrip())
+            joinable = not _UNJOINABLE.match(line)
+        hard_break = line.endswith(("  ", "\\"))
+    return "\n".join(out)
+
+
+def release_notes(
+    changelog: str, tag: Tag, previous: Tag | None, repo_url: str, *, compare: bool = True
+) -> str:
+    """A release's notes: its version's changelog section, unwrapped, then
+    a link to every change since `previous` (notes_start)."""
+    section = changelog_section(changelog, tag.base_str)
+    if section is None:
+        raise Refuse(f"{CHANGELOG} has no '## [{tag.base_str}]' section for {tag.name}'s notes")
+    notes = unwrap(section)
+    if compare:
+        link = (
+            f"{repo_url}/compare/{previous.name}...{tag.name}"
+            if previous
+            else f"{repo_url}/commits/{tag.name}"
+        )
+        notes += f"\n\n**Full Changelog**: {link}"
+    return notes + "\n"
 
 
 def pick_promotion(
@@ -471,6 +546,15 @@ def preview(repo: Repo, source: str, *, for_patch: bool = False) -> tuple[Tag | 
     return tag, notes_start(tag, tags), ""
 
 
+def notes(repo: Repo, tag: Tag, repo_url: str, *, source: str | None = None, compare: bool = True) -> str:
+    """`tag`'s release notes from the changelog at `source`, by default the
+    tag's own source. A preview passes the commit, since the tag doesn't
+    exist yet."""
+    source = source or repo.source_of(tag)
+    changelog = repo.show(source, CHANGELOG) or ""
+    return release_notes(changelog, tag, notes_start(tag, repo.tags()[0]), repo_url, compare=compare)
+
+
 def _notes_start_name(repo: Repo, tag: Tag) -> str:
     previous = notes_start(tag, repo.tags()[0])
     return previous.name if previous else ""
@@ -510,6 +594,13 @@ def main(argv: list[str] | None = None) -> int:
     pre.add_argument("--source", required=True, help="the commit to preview")
     pre.add_argument("--patch", action="store_true", help="preview it as a patch, for a release branch")
 
+    nts = sub.add_parser("notes", help="a release's notes, from its changelog section")
+    nts.add_argument("--tag", required=True, help="the release tag")
+    nts.add_argument("--source", help="the commit to read the changelog from (default: the tag's source)")
+    nts.add_argument(
+        "--no-compare", action="store_true", help="leave out the Full Changelog link, for --generate-notes to add"
+    )
+
     docs = sub.add_parser("docs-source", help="the commit to build a release's docs from")
     docs.add_argument("--head", required=True, help="the newest commit on main")
     docs.add_argument("--tag", help="the release (default: the newest)")
@@ -526,6 +617,13 @@ def main(argv: list[str] | None = None) -> int:
             _emit(
                 tag=tag.name if tag else "", previous=previous.name if previous else "", reason=reason
             )
+        elif args.command == "notes":
+            tag = Tag.parse(args.tag)
+            if tag is None:
+                raise Refuse(f"{args.tag} is not a release tag")
+            server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+            name = os.environ.get("GITHUB_REPOSITORY", "danrspencer/flare")
+            print(notes(repo, tag, f"{server}/{name}", source=args.source, compare=not args.no_compare), end="")
         elif args.command == "docs-source":
             tag, ref = docs_source(repo, args.head, args.tag)
             _emit(tag=tag.name, ref=ref, follows_head=str(ref != tag.name).lower())
