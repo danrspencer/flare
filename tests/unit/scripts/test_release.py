@@ -688,6 +688,204 @@ def test_a_tag_pushed_by_hand_is_packaged_with_its_own_version(project, monkeypa
         assert json.loads(files.read("manifest.json"))["version"] == "0.16.0"
 
 
+
+# --- Release notes -----------------------------------------------------
+
+CHANGELOG_TEXT = """# Changelog
+
+Intro.
+
+## [0.17.0] - Unreleased
+
+Opening paragraph that was wrapped
+at a hundred columns.
+
+### Updating
+
+1. Update FLARE in HACS and
+   restart Home Assistant.
+2. Open **Repairs** and submit
+   it.
+
+- **A bullet** wrapped over
+  two lines.
+  - A nested bullet, also
+    wrapped.
+
+## [0.16.0] - 2026-09-20
+
+- Older.
+"""
+
+
+def test_a_version_s_section_is_its_body_without_the_heading_up_to_the_next():
+    section = release.changelog_section(CHANGELOG_TEXT, "0.17.0")
+
+    assert section.startswith("Opening paragraph")
+    assert section.endswith("    wrapped.")
+    assert release.changelog_section(CHANGELOG_TEXT, "0.16.0") == "- Older."
+    assert release.changelog_section(CHANGELOG_TEXT, "0.1.0") is None
+
+
+def test_a_version_s_section_is_not_a_longer_version_s():
+    text = "## [1.0.10]\n\nten\n\n## [1.0.1]\n\none\n"
+
+    assert release.changelog_section(text, "1.0.1") == "one"
+
+
+def test_paragraphs_numbered_items_and_nested_bullets_each_become_one_line():
+    unwrapped = release.unwrap(release.changelog_section(CHANGELOG_TEXT, "0.17.0"))
+
+    assert unwrapped.splitlines() == [
+        "Opening paragraph that was wrapped at a hundred columns.",
+        "",
+        "### Updating",
+        "",
+        "1. Update FLARE in HACS and restart Home Assistant.",
+        "2. Open **Repairs** and submit it.",
+        "",
+        "- **A bullet** wrapped over two lines.",
+        "  - A nested bullet, also wrapped.",
+    ]
+
+
+def test_a_heading_is_never_joined_onto_or_continued():
+    assert release.unwrap("### Fixed\n- one\n## Next\ntext") == "### Fixed\n- one\n## Next\ntext"
+
+
+def test_a_code_span_wrapped_across_lines_is_joined_with_a_space():
+    text = "- A template reading\n  `state_attr('sensor.home_flare', 'color_temp')` needs\n  changing."
+
+    assert release.unwrap(text) == (
+        "- A template reading `state_attr('sensor.home_flare', 'color_temp')` needs changing."
+    )
+
+
+def test_fenced_code_and_hard_breaks_are_kept_as_written():
+    text = (
+        "- Update its type:\n"
+        "\n"
+        "  ```yaml\n"
+        "  views:\n"
+        "    - title: Lighting\n"
+        "      strategy:\n"
+        "        type: custom:flare-schedule\n"
+        "  ```\n"
+        "\n"
+        "  Then it\n"
+        "  loads.\n"
+        "\n"
+        "Line one  \n"
+        "line two\\\n"
+        "line three\n"
+        "| a | b |\n"
+        "| 1 | 2 |"
+    )
+
+    assert release.unwrap(text).splitlines() == [
+        "- Update its type:",
+        "",
+        "  ```yaml",
+        "  views:",
+        "    - title: Lighting",
+        "      strategy:",
+        "        type: custom:flare-schedule",
+        "  ```",
+        "",
+        "  Then it loads.",
+        "",
+        "Line one",
+        "line two\\",
+        "line three",
+        "| a | b |",
+        "| 1 | 2 |",
+    ]
+
+
+def _words_outside_fences(text: str) -> list[str]:
+    return re.sub(r"```.*?```", "", text, flags=re.DOTALL).split()
+
+
+def test_every_released_section_unwraps_without_losing_or_moving_a_word():
+    """The real changelog: no line outside a fence is left as a bare
+    continuation, and the words are the same words in the same order."""
+    text = (REPO_ROOT / release.CHANGELOG).read_text()
+    versions = re.findall(r"^## \[(\d+\.\d+\.\d+)\]", text, re.MULTILINE)
+    assert "2.0.0" in versions
+
+    for version in versions:
+        section = release.changelog_section(text, version)
+        unwrapped = release.unwrap(section)
+        assert _words_outside_fences(unwrapped) == _words_outside_fences(section), version
+        in_fence = False
+        for before, line in zip([""] + unwrapped.splitlines(), unwrapped.splitlines()):
+            if line.strip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence or not line.strip() or not before.strip() or before.strip().startswith("```"):
+                continue
+            assert release._BLOCK_START.match(line), f"{version}: {line!r} still continues {before!r}"
+
+
+def test_the_2_0_section_keeps_its_upgrade_steps_and_code_spans_whole():
+    notes = release.release_notes(
+        (REPO_ROOT / release.CHANGELOG).read_text(),
+        Tag.parse("v2.0.0"),
+        Tag.parse("v1.2.1"),
+        "https://github.com/danrspencer/flare",
+    )
+    lines = notes.splitlines()
+
+    assert "### Updating from 1.x" in lines
+    step = next(line for line in lines if line.startswith("2. "))
+    assert "**FLARE blueprint is out of date**" in step and "switch off when a room empties." in step
+    assert any(
+        "`state_attr('sensor.home_flare', 'color_temp')` needs changing to `'color_temp_kelvin'`" in line
+        for line in lines
+    )
+    assert lines[-1] == "**Full Changelog**: https://github.com/danrspencer/flare/compare/v1.2.1...v2.0.0"
+
+
+def test_notes_end_with_a_compare_link_from_where_they_start():
+    url = "https://github.com/o/r"
+    beta = Tag.parse("v0.17.0-beta.2")
+
+    notes = release.release_notes(CHANGELOG_TEXT, beta, Tag.parse("v0.17.0-beta.1"), url)
+    assert notes.endswith("\n\n**Full Changelog**: https://github.com/o/r/compare/v0.17.0-beta.1...v0.17.0-beta.2\n")
+    assert release.release_notes(CHANGELOG_TEXT, beta, None, url).endswith("/o/r/commits/v0.17.0-beta.2\n")
+    assert "Full Changelog" not in release.release_notes(CHANGELOG_TEXT, beta, None, url, compare=False)
+
+
+def test_a_release_without_a_changelog_section_is_refused():
+    with pytest.raises(Refuse, match=r"no '## \[0.18.0\]' section"):
+        release.release_notes(CHANGELOG_TEXT, Tag.parse("v0.18.0"), None, "https://github.com/o/r")
+
+
+def test_a_release_s_notes_are_read_at_its_source_not_the_checkout(project):
+    released(project, "0.16.0")
+    project.edit(release.CHANGELOG, "# Changelog\n\n## [0.17.0]\n\nThe beta's\nnotes.\n", "target 0.17.0")
+    beta = release.cut_beta(project.repo, project.edit(f"{release.COMPONENT}/x.py", "x", "change"))
+    project.edit(release.CHANGELOG, "# Changelog\n\n## [0.17.0]\n\nRewritten later.\n", "later")
+
+    notes = release.notes(project.repo, beta, "https://github.com/o/r")
+
+    assert notes == "The beta's notes.\n\n**Full Changelog**: https://github.com/o/r/compare/v0.16.0...v0.17.0-beta.1\n"
+    preview = release.notes(project.repo, Tag.parse("v0.17.0-beta.2"), "u", source="HEAD", compare=False)
+    assert preview == "Rewritten later.\n"
+
+
+def test_the_notes_command_prints_the_body_for_gh(project, monkeypatch, capsys):
+    released(project, "0.16.0")
+    project.edit(release.CHANGELOG, "# Changelog\n\n## [0.17.0]\n\nNew.\n", "target 0.17.0")
+    release.cut_beta(project.repo, project.edit(f"{release.COMPONENT}/x.py", "x", "change"))
+    monkeypatch.setattr(release, "REPO_ROOT", project.root)
+    monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
+    monkeypatch.delenv("GITHUB_SERVER_URL", raising=False)
+
+    assert release.main(["notes", "--tag", "v0.17.0-beta.1"]) == 0
+    assert capsys.readouterr().out == "New.\n\n**Full Changelog**: https://github.com/o/r/compare/v0.16.0...v0.17.0-beta.1\n"
+
+
 # --- The wiring --------------------------------------------------------
 
 
@@ -706,9 +904,12 @@ def test_the_workflows_call_the_script_the_same_way_these_tests_do():
     tests = (REPO_ROOT / ".github" / "workflows" / "tests.yml").read_text()
     assert "release/*) python scripts/release.py check --source HEAD --patch" in tests
     assert "release/*) python scripts/release.py preview --source HEAD --patch" in preview
+    assert "steps.cut.outputs.previous" in cut, "a beta's pull request list counts from its notes_start"
     for workflow in (cut, promote, patch):
-        assert "steps.cut.outputs.previous" in workflow
         assert f"{release.DIST}/{release.ZIP}" in workflow, "the release has no zip for HACS"
+        assert 'scripts/release.py notes --tag "$TAG"' in workflow
+        assert "--notes-file notes.md" in workflow, "the release's notes aren't its changelog section"
+    assert "scripts/release.py notes --tag \"$TAG\" --source HEAD" in preview
 
 
 def test_hacs_installs_the_zip_the_script_builds():

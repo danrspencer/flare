@@ -78,11 +78,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.cut.outputs.tag }}
-          # The previous release, not the newest beta (release.py notes_start).
-          PREVIOUS: ${{ steps.cut.outputs.previous }}
+        # The version's changelog section, which HACS shows in its update
+        # dialog, ending with a compare link from the previous release.
         run: |
+          python scripts/release.py notes --tag "$TAG" > notes.md
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --notes-file notes.md
 
   # The release's docs become the site's default. In this run, because a
   # tag pushed with GITHUB_TOKEN starts no other workflow.

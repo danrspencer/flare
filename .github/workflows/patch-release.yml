@@ -51,10 +51,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.cut.outputs.tag }}
-          PREVIOUS: ${{ steps.cut.outputs.previous }}
+        # The version's changelog section, which HACS shows in its update
+        # dialog, ending with a compare link from the previous release.
         run: |
+          python scripts/release.py notes --tag "$TAG" > notes.md
           git push origin "refs/tags/$TAG"
-          gh release create "$TAG" dist/flare.zip --title "$TAG" --generate-notes ${PREVIOUS:+--notes-start-tag "$PREVIOUS"}
+          gh release create "$TAG" dist/flare.zip --title "$TAG" --notes-file notes.md
 
   # The patch is the newest release, so its docs become the site's default.
   docs:

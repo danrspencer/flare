@@ -2,7 +2,7 @@ name: release-preview
 
 # Comments on a pull request with the beta it would ship in if merged now,
 # or the patch for one into a release branch, and the release notes it
-# would get. One comment, updated in place
+# would get (release.py notes, and GitHub's pull request list for a beta). One comment, updated in place
 # on every push or retitle.
 #
 # A pull request from a fork gets a read-only token, so it gets no comment.
@@ -77,9 +77,18 @@ jobs:
               # unless its label leaves it out.
               line="* $TITLE by @$AUTHOR in $URL"
               case ",$LABELS," in *,repo,*) line="" ;; esac
-              notes=$(gh api "repos/$REPO/releases/generate-notes" \
-                -f tag_name="$TAG" -f target_commitish="$BASE" \
-                ${PREVIOUS:+-f previous_tag_name="$PREVIOUS"} -q .body)
+              # As the release will get them: the changelog section, and for a
+              # beta GitHub's pull request list under it (cut-beta.yml).
+              case "$BASE" in
+                release/*)
+                  changelog=$(python scripts/release.py notes --tag "$TAG" --source HEAD)
+                  notes="" ;;
+                *)
+                  changelog=$(python scripts/release.py notes --tag "$TAG" --source HEAD --no-compare)
+                  notes=$(gh api "repos/$REPO/releases/generate-notes" \
+                    -f tag_name="$TAG" -f target_commitish="$BASE" \
+                    ${PREVIOUS:+-f previous_tag_name="$PREVIOUS"} -q .body) ;;
+              esac
               case "$BASE" in
                 # A patch merged first takes this number; this one then needs a new section.
                 release/*) echo "Merged now, this ships as **$TAG**, straight to stable." ;;
@@ -88,7 +97,9 @@ jobs:
               echo
               echo "<details><summary>Release notes for $TAG</summary>"
               echo
-              NOTES="$notes" LINE="$line" python3 -c '
+              echo "$changelog"
+              echo
+              [ -z "$notes" ] || NOTES="$notes" LINE="$line" python3 -c '
           import os
           notes, line = os.environ["NOTES"], os.environ["LINE"]
           heading = "## What\x27s Changed\n"
