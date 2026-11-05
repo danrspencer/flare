@@ -14,7 +14,13 @@ import logging
 from typing import Any
 
 from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
-from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED, SERVICE_TRIGGER
+from homeassistant.components.automation import EVENT_AUTOMATION_RELOADED
+
+try:  # Home Assistant 2026.11 moved the service name into automation.const
+    from homeassistant.components.automation.const import SERVICE_TRIGGER
+except ImportError:  # 2026.10 still defines it in the component's __init__
+    from homeassistant.components.automation import SERVICE_TRIGGER
+
 from homeassistant.components.group.light import LightGroup
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.light import ENTITY_ID_FORMAT
