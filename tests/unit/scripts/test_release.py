@@ -768,6 +768,8 @@ def test_fenced_code_and_hard_breaks_are_kept_as_written():
         "  ```yaml\n"
         "  views:\n"
         "    - title: Lighting\n"
+        "      strategy:\n"
+        "        type: custom:flare-schedule\n"
         "  ```\n"
         "\n"
         "  Then it\n"
@@ -786,6 +788,8 @@ def test_fenced_code_and_hard_breaks_are_kept_as_written():
         "  ```yaml",
         "  views:",
         "    - title: Lighting",
+        "      strategy:",
+        "        type: custom:flare-schedule",
         "  ```",
         "",
         "  Then it loads.",
