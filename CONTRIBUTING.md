@@ -411,8 +411,12 @@ Each pull request gets a comment from `release-preview.yml` naming the beta it w
 merged now, with that beta's release notes, or saying why it would ship in none. It's updated
 on every push.
 
-Release notes are GitHub's generated list of merged pull requests, minus any labelled `repo`
-(`.github/release.yml`). That label is applied automatically, from `.github/labeler.yml`, to
+A release's notes are its version's `CHANGELOG.md` section, which HACS shows in its update
+dialog, so that's where upgrade steps go. `scripts/release.py notes` unwraps its paragraphs
+and list items onto one line each, since GitHub shows every newline in a release body as a
+line break, and ends it with a compare link from the previous release. A beta adds GitHub's
+generated list of merged pull requests under it, minus any labelled `repo`
+(`.github/release.yml`); a promotion or patch has the section alone. That label is applied automatically, from `.github/labeler.yml`, to
 a pull request whose every file is repo plumbing - CI, scripts, tests, contributor docs - and
 removed again if it later touches anything else. Docs and README changes stay in. To leave
 out any other pull request, label it once it's merged; before then the next push re-checks it.
