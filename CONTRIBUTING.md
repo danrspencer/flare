@@ -216,6 +216,32 @@ Re-record whenever setup or the dashboard changes, and commit the new files. If 
 and a screenshot of the failed step is left in `sandbox/recordings/` with the working files. The scenes are in `scripts/sandbox_record.py`: re-run it whenever the setup changes. The first run installs
 Playwright, its Chromium and ffmpeg into `.venv-record/`.
 
+### Checking newer Home Assistant releases
+
+The test suite only runs on the Home Assistant release `pytest-homeassistant-custom-component` pins, so a change in
+a newer release can break FLARE without any test failing. To check one, run:
+
+```bash
+SANDBOX_HA_VERSION=2026.12.0b1 mise run ha-check
+```
+
+It starts a brand-new house in `.ha-check/`, on port 8125, and goes through FLARE's setup as someone pressing
+Submit on every step would. Then it runs every room's automation and checks that:
+
+- FLARE's three entries load and all its services register;
+- every room gets its automation and its flare;
+- every bulb comes on and is controlled;
+- nothing from FLARE is logged as a warning or error, including Home Assistant's deprecation warnings about it.
+
+It prints a report and fails if any of these doesn't hold. It shares `.venv-sandbox/` with the sandbox, so a
+different `SANDBOX_HA_VERSION` reinstalls the sandbox's Home Assistant too.
+
+`.github/workflows/ha-prerelease.yml` runs it every morning against the newest release on PyPI, betas included
+(`python scripts/ha_check.py latest` prints it). When it fails, it opens an issue labelled `ha-compat` with the
+report. It comments there when the release or what fails changes, and closes the issue when the check passes again.
+To check a particular release from GitHub, run the workflow by hand with its version; that run leaves the issue
+alone. The issue doesn't block a release: label it `release-blocker` if it should.
+
 ## Translations
 
 FLARE has three sets of text, and a language needs all of them:
