@@ -158,6 +158,69 @@ class TestRgb:
         assert not shows({"brightness": 255, "rgb_color": [255, 255, 252]}, {"brightness": 255, "color_temp_kelvin": 6578})
 
 
+def _rgb_only(brightness, rgb, xy, modes=("rgb",)):
+    """A light that can't show Kelvin, reporting the colour HA sent it."""
+    return {
+        "brightness": brightness,
+        "color_mode": modes[0],
+        "supported_color_modes": list(modes),
+        "color_temp_kelvin": None,
+        "rgb_color": list(rgb),
+        "xy_color": list(xy),
+    }
+
+
+class TestKelvinOnALightWithoutIt:
+    """HA turns a Kelvin target into a colour for a light without colour
+    temperature, and that colour's xy doesn't read back as the Kelvin.
+    Seen live on a flux_led RGB strip (Zengge Controller RGB), overridden on
+    every tick."""
+
+    @pytest.mark.parametrize(
+        ("kelvin", "brightness", "rgb", "xy"),
+        [
+            (2700, 127, (255, 167, 86), (0.526, 0.389)),
+            (6648, 252, (255, 250, 255), (0.325, 0.324)),
+            (3276, 147, (255, 184, 128), (0.473, 0.376)),
+            (1951, 91, (255, 132, 3), (0.606, 0.379)),
+        ],
+        ids=["2700K reads as 1868K", "6648K reads as 5873K", "3276K reads as 2231K", "1951K reads as no white"],
+    )
+    def test_it_shows_the_target_by_the_colour_ha_sent_it(self, kelvin, brightness, rgb, xy):
+        attributes = _rgb_only(brightness, rgb, xy)
+        target = {"brightness": brightness, "color_temp_kelvin": kelvin}
+        assert reported_kelvin(attributes) != kelvin, "precondition: the Kelvin read alone must fail"
+        assert shows(attributes, target, Tolerance(5, 5))
+
+    def test_another_colour_still_differs(self):
+        """2700K is sent as (255, 167, 87); 3000K as (255, 177, 110)."""
+        attributes = _rgb_only(127, (255, 167, 86), (0.526, 0.389))
+        assert differs(attributes, {"brightness": 127, "color_temp_kelvin": 3000}, Tolerance(5, 5)) == ["color"]
+
+    def test_it_follows_the_colour_tolerance(self):
+        """(255, 160, 80) is 14 from 2700K's (255, 167, 87): within 16 at 8
+        mireds, beyond 10 at 5."""
+        attributes = _rgb_only(127, (255, 160, 80), (0.53, 0.39))
+        target = {"brightness": 127, "color_temp_kelvin": 2700}
+        assert shows(attributes, target, Tolerance(5, 8))
+        assert not shows(attributes, target, Tolerance(5, 5))
+
+    @pytest.mark.parametrize("modes", [("hs",), ("xy",), ("rgbw",), ("rgb", "onoff")])
+    def test_any_colour_mode_without_colour_temperature(self, modes):
+        attributes = _rgb_only(127, (255, 167, 86), (0.526, 0.389), modes)
+        assert shows(attributes, {"brightness": 127, "color_temp_kelvin": 2700})
+
+    @pytest.mark.parametrize(
+        "modes",
+        [("rgb", "color_temp"), ("rgbww",), None, ()],
+        ids=["shows Kelvin itself", "sent rgbww instead", "modes unknown", "no modes"],
+    )
+    def test_only_a_light_ha_sends_the_colour_to(self, modes):
+        """Anything that shows Kelvin itself is read as Kelvin, never by RGB."""
+        attributes = {**_rgb_only(127, (255, 167, 86), (0.526, 0.389)), "supported_color_modes": modes}
+        assert not shows(attributes, {"brightness": 127, "color_temp_kelvin": 2700})
+
+
 class TestShown:
     """What a light shows, as a target - what the override event reports."""
 

@@ -151,10 +151,13 @@ anything else calls `classify()`.
 | near mired | within the Settings entry's tolerance (5 mireds by default), about the smallest change anyone notices |
 | out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
 | RGB | `rgb_color`, only against an RGB target: the channels' differences summed, within twice the colour tolerance (10 at the default), never less than 4 |
+| Kelvin on a light without it | a light with colour but neither colour temperature nor RGBWW (an RGB strip) also matches a Kelvin target if its `rgb_color` matches, by the RGB rule, what HA's `light.turn_on` sent it (`color_temperature_to_hs`) |
 
 Never Kelvin by way of RGB: HA's Kelvin→RGB and xy→RGB conversions differ
 by about 13 in red at 6500K, so a bulb showing exactly what was asked would
-read as something else.
+read as something else. The exception is a light that can't show Kelvin,
+where HA does that conversion itself and the light shows its result: its xy
+reads 2700K back as about 1870K.
 
 ## A light's life
 

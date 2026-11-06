@@ -5,6 +5,7 @@ network. Each is a documented behaviour, proven through a real bulb."""
 from homeassistant.core import HomeAssistant
 
 from custom_components.flare.schedule.curve import kelvin_to_rgb
+from custom_components.flare.tracking.matching import reported_kelvin
 from tests.functional.behaviour.harness import (
     CURVE_BRIGHTNESS,
     CURVE_KELVIN,
@@ -47,6 +48,41 @@ async def test_a_bulb_reporting_colour_via_rgb_instead_of_kelvin_is_not_treated_
     assert hass.states.get(bulb.entity_id).attributes.get("brightness") == NIGHT_BRIGHTNESS, (
         "a bulb that merely echoed its colour via rgb instead of kelvin, under an "
         "unrelated context, was wrongly excluded as if something else had taken it"
+    )
+
+
+async def test_an_rgb_only_strip_sent_kelvin_is_not_treated_as_overridden(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """An RGB strip has no colour temperature, so HA converts the Kelvin it's
+    sent into RGB, whose xy reads back as a far warmer Kelvin (3200K as
+    ~2100K). Seen live on a flux_led strip, overridden on every tick."""
+    (strip,) = await add_bulbs("strip", area_id=area, strip={"rgb_only": True})
+    occupancy(hass, SENSOR, "off")
+    # No RGB phases, so FLARE sends Kelvin, as it does by day.
+    await setup_room(lights=[strip], occupancy_sensors=[SENSOR], rgb_phases=[])
+
+    occupancy(hass, SENSOR, "on")
+    await hass.async_block_till_done()
+
+    state = hass.states.get(strip.entity_id)
+    assert state.attributes.get("color_mode") == "rgb" and state.attributes.get("rgb_color") is not None, (
+        "precondition: HA must have converted the Kelvin to RGB for the strip"
+    )
+    assert reported_kelvin(state.attributes) != CURVE_KELVIN, (
+        "precondition: the strip's colour must not read back as the Kelvin it was sent, "
+        "or this test can't tell a real fix from a no-op"
+    )
+
+    # The strip's own poll: the same colour under an unrelated context.
+    await strip.async_echo(is_on=True, brightness=strip.brightness - 1, rgb_color=strip.rgb_color)
+    await hass.async_block_till_done()
+
+    await move_to_phase(hass, frozen_time, "Night")
+
+    assert hass.states.get(strip.entity_id).attributes.get("brightness") == NIGHT_BRIGHTNESS, (
+        "an RGB strip showing exactly the colour HA converted its Kelvin target to was "
+        "wrongly excluded as if something else had taken it"
     )
 
 

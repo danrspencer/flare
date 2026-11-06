@@ -24,6 +24,14 @@ Reading a light:
   counts as much as one in a single channel. Never in COLOR_TEMP mode,
   where HA works `rgb_color` out from the Kelvin: 3200K reports exactly the
   curve's RGB for 3200K, which a bulb in a colour mode shows far warmer.
+- The one exception: a light with colour but neither colour temperature
+  nor RGBWW (an RGB LED strip) can't show Kelvin, so HA's light.turn_on
+  turns a Kelvin target into a colour itself (`color_temperature_to_hs`),
+  and the light shows that. HA's conversion isn't colorimetric - 2700K is
+  sent as RGB whose xy reads as ~1870K, and warmer targets land off the
+  line of whites altogether - so such a light also shows a Kelvin target
+  when its `rgb_color` matches what HA sent it, by the RGB rule. (RGBWW is
+  sent `color_temperature_to_rgbww` and stays on the Kelvin read.)
 
 Comparing, for a Kelvin target:
 
@@ -55,8 +63,11 @@ from homeassistant.components.light import (
     ATTR_SUPPORTED_COLOR_MODES,
     ATTR_XY_COLOR,
     ColorMode,
+    color_supported,
 )
+from homeassistant.util.color import color_hs_to_RGB as _hs_to_rgb
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
+from homeassistant.util.color import color_temperature_to_hs as _kelvin_to_hs
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
 # Brightness points a bulb's report can be off by rounding, whatever the
@@ -108,14 +119,29 @@ def _color_matches(attributes: Mapping, target: Mapping, tolerance: Tolerance) -
         )
     if target.get(ATTR_COLOR_TEMP_KELVIN) is None:
         return False
+    asked = int(target[ATTR_COLOR_TEMP_KELVIN])
+    if _kelvin_sent_as_colour(attributes) and _rgb_matches(
+        attributes.get(ATTR_RGB_COLOR), _hs_to_rgb(*_kelvin_to_hs(asked)), tolerance
+    ):
+        return True
     current = reported_kelvin(attributes)
     if current is None:
         return False
-    asked = int(target[ATTR_COLOR_TEMP_KELVIN])
     reachable = _clamp(asked, attributes.get(ATTR_MIN_COLOR_TEMP_KELVIN), attributes.get(ATTR_MAX_COLOR_TEMP_KELVIN))
     return _kelvin_matches(current, asked, tolerance) or (
         reachable != asked and _kelvin_matches(current, reachable, tolerance)
     )
+
+
+def _kelvin_sent_as_colour(attributes: Mapping) -> bool:
+    """Whether HA's light.turn_on sends this light a Kelvin target as the
+    colour `color_temperature_to_hs` gives (`light/helper.py`): it has a
+    colour mode, but neither colour temperature nor RGBWW."""
+    modes = attributes.get(ATTR_SUPPORTED_COLOR_MODES)
+    if not modes:
+        return False
+    modes = {str(mode) for mode in modes}
+    return ColorMode.COLOR_TEMP not in modes and ColorMode.RGBWW not in modes and color_supported(modes)
 
 
 def shown(attributes: Mapping) -> dict:
