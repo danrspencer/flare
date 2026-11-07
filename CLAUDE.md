@@ -299,7 +299,8 @@ Facts verified against HA core:
   (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
   Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
   only against an RGB target; the target as asked or clamped to the
-  advertised range. Separate copies had drifted (the bathroom spots read
+  advertised range; only what the light can show (no colour on a dimmer,
+  no brightness on an on/off light, since HA's light.turn_on drops them). Separate copies had drifted (the bathroom spots read
   as overridden while showing 6575K for 6578K).
   `tests/checks/test_one_value_matcher.py` fails if anything else reads a
   light's colour or imports `homeassistant.util.color` (the curve's
