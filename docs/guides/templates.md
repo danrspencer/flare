@@ -45,8 +45,8 @@ template has nothing to change.
 ```
 
 While the TV plays, the ceiling light sits at 40 and the rest of the room follows the curve.
-Add `media_player.tv` to **Additional Triggers** so the room changes as soon as the TV starts
-or stops, rather than at the next update.
+Add a **State** trigger on `media_player.tv` to **Additional Triggers** so the room changes as
+soon as the TV starts or stops, rather than at the next update.
 
 ### Dimming some lights in the evening
 
@@ -139,7 +139,7 @@ whenever it's dark outside, leave the four phase settings at `0` and use the sun
 ```
 
 `{}` means "no opinion", so the hall goes fully dark while the sun is up. The hall picks up the
-change at the next update after sunset, which can be up to a minute later. Don't add `sun.sun` to
+change at the next update after sunset, which can be up to a minute later. Don't add a trigger on `sun.sun` to
 **Additional Triggers** to make it immediate: at sunrise that would bring the lights up to
 the curve instead of turning them off.
 

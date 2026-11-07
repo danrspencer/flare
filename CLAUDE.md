@@ -77,8 +77,12 @@ HA's trace UI.
   they can see `is_hidden_entity` but not `entity_category`, and
   `device_entities()` misses child devices. So the action's first step
   calls the service, and everything built from the room's entities is an
-  action-level `variables:` step after it. The one top-level
-  `condition:` reads only inputs (Sensors From Areas, below). The `recovered` trigger keeps a plain Jinja expansion (it
+  action-level `variables:` step after it. The top-level `condition:`
+  reads only inputs (Sensors From Areas, below) and holds the user's
+  **Conditions** (`conditions`), which pause the whole room: they can only stop runs,
+  never widen `allow_turn_on`, and `automation.trigger` skips them, so a
+  manual run and a flare still get through. It isn't a pet filter: a
+  room left lit when the pause starts stays lit. The `recovered` trigger keeps a plain Jinja expansion (it
   only makes a room catch up early, so close enough is fine - user's
   call).
 - Scene coverage is the `compute_scene_coverage` service, called in
@@ -97,14 +101,15 @@ HA's trace UI.
 Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
-  name for `!input`, so regrouping isn't breaking. Only what's required is
-  at the top level (Schedule, Lights & Occupancy); everything optional is
-  collapsed, so input names carry no "(Optional)" (user's call). Sections
-  hold what a room may want tweaked (**Sensors & Triggers**: Wait time,
-  Lux Threshold, Additional Triggers; then Brightness, Idle Brightness, Scenes,
-  Transitions); **Settings**, last, holds what most rooms never touch
+  name for `!input`, so regrouping isn't breaking. The top level holds
+  what's required (Schedule, Lights & Occupancy) and then Additional
+  Triggers and Conditions, the two that make a room work like an ordinary
+  automation (user's call); everything else optional is collapsed, so
+  input names carry no "(Optional)" (user's call). Sections hold what a
+  room may want tweaked (**Sensors**: Wait time, Lux Threshold; then
+  Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces, then the
-  deprecated Sensors From Areas).
+  deprecated Sensors From Areas and Additional Trigger Entities).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
@@ -862,6 +867,23 @@ would switch off every light turned on there.
   something other than what they show. Off makes `room_id` none, which
   `apply_lighting` takes as "track nothing", and skips the
   `claims_clear` step.
+- **Additional Triggers is a trigger picker, told apart by position,
+  never by id** (`trigger_id`). It's flattened in last (`- triggers:
+  !input additional_triggers`), so a trigger at position 10 or later is the
+  user's and reads as `additional` whatever id they gave it; otherwise one
+  named `motion_on` would light a dark room, a new way for `allow_turn_on`
+  to become true. Everything reads `trigger_id`, not `trigger.id`, and the
+  native "triggered by" conditions are templates on it for the same
+  reason. `tests/checks/test_blueprint_triggers.py` pins the position and
+  that nothing else reads `trigger.id`. The old entity list is
+  `extra_triggers` (`extra`), deprecated under Settings.
+- **The trigger IDs are public**: the reference page's Trigger IDs table
+  documents them for **Triggered by** conditions in Conditions (user's
+  call), so renaming or splitting one breaks rooms that check it, silently
+  (the condition just stops matching). `test_blueprint_triggers.py` holds
+  the table to the blueprint's IDs. A trigger condition matches
+  `trigger.id`, not `trigger_id`, so it sees a user trigger's own ID:
+  that's the user's to choose, and it can't light anything.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
 - `recovered` arms on "at least one of our lights is reachable". The
@@ -1072,6 +1094,18 @@ say so); remove it in 3.0 and raise the blueprint's `min_version` and
 - **A room with it off then reads every sensor its target reaches.** It
   only differs where the target names an area, device, floor or label;
   3.0's changelog needs to say so.
+- **Additional Trigger Entities (`extra_triggers`) goes too**, with its
+  `extra` trigger. A room still listing entities then stops updating on
+  them until they're added as State triggers; 3.0's changelog needs to
+  say so.
+- **Hiding a deprecated input isn't a soft step before removing it.**
+  Verified in the sandbox: on 2026.10 a `visible:` key fails the whole
+  blueprint (every room unavailable, `validation_failed_blueprint`). On
+  2026.11 a hidden input's stored value is replaced by its default when
+  the automation is built (`BlueprintInputs.inputs_with_default`), so
+  hiding silently resets it. It can only be hidden where it's at its
+  default, e.g. `visible: {field: use_area_sensors, value: false}`;
+  `visible:` can't test for an empty list.
 
 ### Parked: scene handling in `apply_lighting`
 

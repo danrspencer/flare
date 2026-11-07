@@ -55,11 +55,15 @@ flowchart LR
 | `phase_change` | the schedule's Phase `event` entity | a real phase change, and once after setup |
 | `tick` | `flare_tick` with this room's `tick_area` | the curve moves within a phase |
 | `tick` | `time_pattern` every minute | only when the room names no area, chosen by `enabled:` |
-| `extra` | Additional Triggers | any state change of entities the user picked |
+| `extra` | Additional Trigger Entities (deprecated) | any state change of entities the user picked |
 | `motion_on` | `occupancy.detected`, `motion.detected` | native triggers over `room_target` |
 | `motion_off` | `occupancy.cleared`, `motion.cleared`, held for Wait time | per sensor |
 | `recovered` | template: some room light reachable, held 5 s | all the room's lights were unreachable and one is back |
 | `lux_dark` | template: the room stops reading too bright (some illuminance sensor at or below Lux Threshold) | a wake-up only; the action re-checks |
+| `additional` | Additional Triggers, the user's own, last | by position: `trigger_id` is `additional` for any trigger at position 10 or later, whatever its own id |
+
+The blueprint reads which trigger ran from `trigger_id`, never `trigger.id`: a user's trigger can
+carry any id, `motion_on` included, and must never count as one of the blueprint's own.
 
 `trigger_variables:` are the only variables a trigger can see. `tick_area`
 is computed there, as the first `area_id` in `room_target`. Trigger

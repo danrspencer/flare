@@ -30,18 +30,18 @@ room_target:
     wann. Mit „Ziel ausnehmen“ lässt du Sensoren weg, die du nicht willst.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
 
-sensors_triggers:
-  source: a3349ab7
-  name: Sensoren & Auslöser
+sensors:
+  source: a4ed6c4f
+  name: Sensoren
 
 no_motion_wait:
-  source: 3926d95b
+  source: 11f81193
   name: Wartezeit
   description: >-
     Nur für Räume mit Anwesenheits- oder Bewegungssensoren: wie lange alle
     frei sein müssen, bevor der Raum als leer gilt und seine Lampen
     ausgehen.
-    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-and-triggers).
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors).
   unit: Sekunden
 
 lux_threshold:
@@ -56,13 +56,13 @@ lux_threshold:
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
   unit: lx
 
-extra_triggers:
-  source: 5ed8d791
+additional_triggers:
+  source: dc610fdb
   name: Zusätzliche Auslöser
   description: >-
-    Entitäten, bei deren Änderung der Raum sofort aktualisiert wird, etwa
-    eine Entität, von der die Szenen- oder Helligkeitsvorlage abhängt. Sie
-    passen nur Lampen an, die schon an sind, und schalten nie eine ein.
+    Auslöser, bei denen der Raum sofort aktualisiert wird, etwa wenn der
+    Fernseher zu spielen beginnt und die Helligkeitsvorlage von ihm abhängt.
+    Sie passen nur Lampen an, die schon an sind, und schalten nie eine ein.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
 
 brightness_exclusions:
@@ -200,6 +200,18 @@ settings:
   source: 3b0b2c95
   name: Einstellungen
 
+conditions:
+  source: ccc038f6
+  name: Bedingungen
+  description: >-
+    Wie bei einer gewöhnlichen Automation müssen alle erfüllt sein, damit der
+    Raum überhaupt läuft. Solange sie es nicht sind, ist der Raum pausiert: Die Lampen
+    bleiben, wie sie sind, nichts geht an oder aus, und dem Zeitplan wird
+    nicht gefolgt. Sind sie wieder erfüllt, holt er das bei seiner nächsten
+    Aktualisierung nach. Den Raum von Hand auszuführen funktioniert
+    weiterhin.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
+
 override_protection:
   source: 85e6124a
   name: Schutz vor Überschreiben
@@ -241,3 +253,12 @@ use_area_sensors:
     Veraltet und wird in FLARE 3.0 als Option entfernt. Ab Home Assistant
     2026.11 nutze „Ziel ausnehmen“, statt dies abzuschalten.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+
+extra_triggers:
+  source: d4804085
+  name: Zusätzliche Auslöser-Entitäten (veraltet)
+  description: >-
+    Veraltet und wird in FLARE 3.0 als Option entfernt: füge stattdessen
+    einen Zustandsauslöser zu „Zusätzliche Auslöser“ hinzu. Entitäten, bei
+    deren Änderung der Raum sofort aktualisiert wird.
+    [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-trigger-entities).
