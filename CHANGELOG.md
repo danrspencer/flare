@@ -11,9 +11,9 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
-- **Run Only When**, a new blueprint setting: conditions that must all be met for the room to
-  run, as an ordinary automation's conditions are. While they aren't, the room is paused, for
-  a vacation or guest mode. Running the automation by hand still works.
+- **Run When**, a new blueprint setting: conditions, as in an ordinary automation, that must all
+  be met for the room to run. While they aren't, the room is paused, for a vacation or guest
+  mode. Running the automation by hand still works.
 
 ### Fixed
 
