@@ -307,68 +307,68 @@
     
     "relUrl": "/reference/flares/#flares-and-the-rooms-automation"
   },"44": {
-    "doc": "How flares work",
-    "title": "How flares work",
-    "content": "Part of Architecture, for contributors and the curious. Nothing here is needed to use FLARE. A flare (light.&lt;name&gt;_flare) is a light that fronts a room automation, so a voice assistant, HomeKit or a dashboard can switch a room without going around it. Saying “turn the kitchen on” to Siri goes to the flare, and the flare runs the kitchen’s automation. Siri’s own “on” sent straight to the bulbs would read as an override, and the room would be left at whatever the bulbs restored to. ",
-    "url": "/flare/architecture/flares/",
-    
-    "relUrl": "/architecture/flares/"
-  },"45": {
-    "doc": "How flares work",
-    "title": "What it is in code",
-    "content": "FlareLight (light.py) subclasses HA’s own LightGroup, so state, brightness and colour are the group’s, worked out from its members. Two things differ from a plain light group: who its members are, and what “on” means. flowchart LR sub[\"Flares entry subentry&lt;br/&gt;{automation: registry id,&lt;br/&gt;lights_input: room_target}\"] --&gt; inst[\"FlareInstance\"] inst --&gt; fl[\"FlareLight&lt;br/&gt;(LightGroup)\"] auto[\"automation entity&lt;br/&gt;_blueprint_inputs\"] --&gt;|\"lights_target()\"| tgt[\"target&lt;br/&gt;{area_id: kitchen}\"] tgt --&gt;|\"async_track_target_selector_&lt;br/&gt;state_change_event\"| mem[\"members:&lt;br/&gt;the room's lights, minus flares\"] mem --&gt; fl . Membership . A flare stores two things: its automation, by entity-registry id so a rename doesn’t orphan it, and the name of the input holding the room’s lights (room_target for our blueprint). It reads the input’s value live. A plain automation, not made from a blueprint, stores a target instead. | The inputs come from the automation entity’s private _blueprint_inputs (flares/automation.py:blueprint_inputs). Its raw_config is the substituted config, so it doesn’t have them. This is an accepted risk, kept to that one function, and the behaviour tests break if HA changes it. | Members are tracked with async_track_target_selector_state_change_event, HA’s own target resolution: the same rule as flare.resolve_target, so a flare’s members are exactly its room’s lights. | It re-resolves on automation_reloaded, on entity-registry changes to automations, and once at homeassistant_started (automations load after integrations). | A flare is never one of a room’s lights. The room’s tick would send it the curve, and the flare would pass that on to every bulb as an override. Three layers stop it: the blueprint rejects integration_entities('flare'), the services drop flare lights (flares/identity.without_flares), and a flare’s own member filter drops other flares. Without the last, a flare could contain itself and recurse forever. | . On and off . flowchart TB on[\"light.turn_on on the flare\"] --&gt; bare{\"bare?&lt;br/&gt;(no keys but transition)\"} bare --&gt;|\"yes\"| trig[\"automation.trigger&lt;br/&gt;→ manual run: allow_turn_on, force\"] bare --&gt;|\"no, values given\"| mark1[\"flare.claims_override(members, room)\"] mark1 --&gt; grp1[\"LightGroup.turn_on(values)\"] off[\"light.turn_off on the flare\"] --&gt; mark2[\"flare.claims_override(members, room)\"] mark2 --&gt; grp2[\"LightGroup.turn_off&lt;br/&gt;(a plain light.turn_off)\"] . | A bare “on” runs the automation. How a room comes on is the automation’s decision. A manual run passes allow_turn_on and force, so “on” also takes back a room that was overridden. | “On” with values, and “off”, mark the lights overridden first, with the automation as the room, then send as any light group does. Without that, an unclaimed light (every light, once a room goes dark) would read untracked, and the run the change itself triggers would take it straight back to the curve. That’s how Siri’s “100 %” got dimmed back down. The override claim has a fresh context and no target, so it never matches; the room going dark hands the lights back. | Off is a plain light.turn_off, never flare.turn_off. A flare’s off is the user’s. Recording it as FLARE’s off would let a run landing while the room was half-off switch it back on. | . It reaches flare.claims_override as a service call because that’s the Settings entry’s, which may not be loaded. has_service checks first. ",
-    "url": "/flare/architecture/flares/#what-it-is-in-code",
-    
-    "relUrl": "/architecture/flares/#what-it-is-in-code"
-  },"46": {
-    "doc": "How flares work",
-    "title": "The light platform only loads with flares",
-    "content": "The Flares entry forwards the light platform only when it has at least one flare, and remembers whether it did in entry.runtime_data so unload matches. An empty entry has nothing to put on it, and setting light up that early interfered with the behaviour tests’ fake bulbs. ",
-    "url": "/flare/architecture/flares/#the-light-platform-only-loads-with-flares",
-    
-    "relUrl": "/architecture/flares/#the-light-platform-only-loads-with-flares"
-  },"47": {
-    "doc": "How flares work",
-    "title": "Adding flares",
-    "content": ". | Add Flare lists only automations made from our blueprint. Any other automation goes through a custom path offering only inputs that can hold lights (lights_input_kinds). | Area setup adds them in bulk, one subentry each, and the entry’s update listener coalesces the reloads into one (_async_reload_entry). | Nothing creates a flare on its own except area setup, where the user ticks the rooms. A HomeKit bridge including light, or a voice assistant exposing new entities, would otherwise put every room in the Home app after an update. | A new flare’s device goes in its automation’s area once, at creation (_place_in_area). After that, the area is the user’s. | . ",
-    "url": "/flare/architecture/flares/#adding-flares",
-    
-    "relUrl": "/architecture/flares/#adding-flares"
-  },"48": {
     "doc": "Voice assistants",
     "title": "Voice assistants",
     "content": "If you say “Hey Siri, turn on the kitchen”, Siri switches the kitchen’s bulbs on directly. They come on at whatever brightness and colour they had last, and because FLARE didn’t set them, they read as overridden and FLARE leaves them alone until the room goes dark. The same happens with Alexa, Google, HomeKit scenes and dashboard buttons. A flare avoids this. It’s a light, light.kitchen_flare, that you give to your voice assistant or the Home app instead of the bulbs. Turning it on runs the kitchen’s FLARE automation, so the room comes on at the right brightness and colour for the time of day and FLARE keeps adjusting it from there. Dimming it or turning it off sets every light in the room, as the table under What each command does shows. On this page . | Adding flares for your rooms . | Name it the way you’ll say it | . | What each command does | Exposing flares instead of your bulbs . | HomeKit | Alexa and Google Assistant | Assist | . | A flare for your own automation | . ",
     "url": "/flare/guides/flares/",
     
     "relUrl": "/guides/flares/"
-  },"49": {
+  },"45": {
     "doc": "Voice assistants",
     "title": "Adding flares for your rooms",
     "content": "After setting up areas with Set up area, including when you first add FLARE, choose Pick rooms for flares. Every room you just set up is listed and ticked, and each one you keep gets a flare named after its area. For a room automation you made yourself, go to Settings → Devices &amp; Services → FLARE → Add flare and choose Rooms from the FLARE blueprint. Every room automation that doesn’t have a flare yet is listed and ticked, so you can add a flare for every room at once, or untick the ones you don’t want. Each one is named after its automation. A flare is placed in its automation’s area. It appears as light.&lt;name&gt;_flare and always has the same lights as its room’s automation, so if you add a bulb to the room’s area, it joins the flare too. Name it the way you’ll say it . A flare’s name is what Siri, Alexa and Google hear. Automations often have names like “Kitchen lighting” or “Garden Lights Adaptive”, which nobody says out loud, so rename a flare named after one to the room’s plain name, “Kitchen” or “Garden”, with Reconfigure in the flare’s three-dot menu. Renaming a flare doesn’t change its entity ID. If the flare is already in the Home app or the Alexa app, rename it there too, because they can keep the name they first saw. ",
     "url": "/flare/guides/flares/#adding-flares-for-your-rooms",
     
     "relUrl": "/guides/flares/#adding-flares-for-your-rooms"
-  },"50": {
+  },"46": {
     "doc": "Voice assistants",
     "title": "What each command does",
     "content": "| You say or tap | What happens | . | “Turn on the kitchen” | The room’s automation runs, and the room comes on the way it normally would. | . | “Set the kitchen to 30%”, or a colour | Every light in the room is set to that. FLARE leaves them there until the room is empty and dark. | . | “Turn on the kitchen” again | The room goes back to FLARE: the automation runs, and every light returns to the curve. | . | “Turn off the kitchen” | Every light in the room turns off, and stays off until the room’s sensors next detect motion. | . ",
     "url": "/flare/guides/flares/#what-each-command-does",
     
     "relUrl": "/guides/flares/#what-each-command-does"
-  },"51": {
+  },"47": {
     "doc": "Voice assistants",
     "title": "Exposing flares instead of your bulbs",
     "content": "Expose each room’s flare and stop exposing its bulbs. If you expose both, every room shows up twice, and “turn on the kitchen” may go to the bulbs, which come on at whatever they last had instead of following the room. The bulbs keep working in Home Assistant either way. HomeKit . FLARE names every flare light.&lt;name&gt;_flare, so if your HomeKit Bridge is set up in YAML, one pattern exports every flare, including ones you add later: . homekit: filter: include_entity_globs: - light.*_flare . Leave out include_domains: light if you have it, or the bulbs are exported as well. Home Assistant reads this when it starts, so restart after changing it. If you set the bridge up from the UI instead, use Configure on the HomeKit Bridge integration, choose to include entities, and pick the flares. HomeKit doesn’t use Home Assistant’s areas, so put each flare in its room in the Home app. If the bridge used to export your bulbs, they stay in the Home app as “Not Responding” until you remove the bridge from the Home app and pair it again. Alexa and Google Assistant . With Home Assistant Cloud, go to Settings → Voice assistants → Expose, expose the flares and un-expose the bulbs. If Expose new entities is on, the flares are already exposed, but so is every bulb. Google Assistant puts each flare in the room matching its Home Assistant area. Alexa doesn’t use areas, so put each flare in a group for its room in the Alexa app. If you set up exposure in YAML instead, the same include_entity_globs pattern works in the filter: under cloud: alexa:, cloud: google_actions: and a manual alexa: smart_home:. A manual google_assistant: setup has no filter, so expose the flares there with entity_config instead. Assist . Assist uses the same Expose list. Expose the flares and un-expose the bulbs, and “turn on the kitchen” turns on the flare. If you’d rather keep the flare’s name as it is, add the room’s name as an alias on the flare instead, under Voice assistants in its settings. ",
     "url": "/flare/guides/flares/#exposing-flares-instead-of-your-bulbs",
     
     "relUrl": "/guides/flares/#exposing-flares-instead-of-your-bulbs"
-  },"52": {
+  },"48": {
     "doc": "Voice assistants",
     "title": "A flare for your own automation",
     "content": "Any automation can have a flare. Choose Another automation when adding one: . | If the automation is built from a blueprint, pick the input that holds its lights. | A brightness or colour you set from the flare is only protected if the automation passes itself as its room, room_id: \"{{ this.entity_id }}\". Otherwise, if FLARE wasn’t already driving a light, the automation’s next update can set it back. | If it isn’t, pick its lights directly. | . Turning the flare on runs that automation. The other commands work the same as above. The Flares reference lists every setting. ",
     "url": "/flare/guides/flares/#a-flare-for-your-own-automation",
     
     "relUrl": "/guides/flares/#a-flare-for-your-own-automation"
+  },"49": {
+    "doc": "How flares work",
+    "title": "How flares work",
+    "content": "Part of Architecture, for contributors and the curious. Nothing here is needed to use FLARE. A flare (light.&lt;name&gt;_flare) is a light that fronts a room automation, so a voice assistant, HomeKit or a dashboard can switch a room without going around it. Saying “turn the kitchen on” to Siri goes to the flare, and the flare runs the kitchen’s automation. Siri’s own “on” sent straight to the bulbs would read as an override, and the room would be left at whatever the bulbs restored to. ",
+    "url": "/flare/architecture/flares/",
+    
+    "relUrl": "/architecture/flares/"
+  },"50": {
+    "doc": "How flares work",
+    "title": "What it is in code",
+    "content": "FlareLight (light.py) subclasses HA’s own LightGroup, so state, brightness and colour are the group’s, worked out from its members. Two things differ from a plain light group: who its members are, and what “on” means. flowchart LR sub[\"Flares entry subentry&lt;br/&gt;{automation: registry id,&lt;br/&gt;lights_input: room_target}\"] --&gt; inst[\"FlareInstance\"] inst --&gt; fl[\"FlareLight&lt;br/&gt;(LightGroup)\"] auto[\"automation entity&lt;br/&gt;_blueprint_inputs\"] --&gt;|\"lights_target()\"| tgt[\"target&lt;br/&gt;{area_id: kitchen}\"] tgt --&gt;|\"async_track_target_selector_&lt;br/&gt;state_change_event\"| mem[\"members:&lt;br/&gt;the room's lights, minus flares\"] mem --&gt; fl . Membership . A flare stores two things: its automation, by entity-registry id so a rename doesn’t orphan it, and the name of the input holding the room’s lights (room_target for our blueprint). It reads the input’s value live. A plain automation, not made from a blueprint, stores a target instead. | The inputs come from the automation entity’s private _blueprint_inputs (flares/automation.py:blueprint_inputs). Its raw_config is the substituted config, so it doesn’t have them. This is an accepted risk, kept to that one function, and the behaviour tests break if HA changes it. | Members are tracked with async_track_target_selector_state_change_event, HA’s own target resolution: the same rule as flare.resolve_target, so a flare’s members are exactly its room’s lights. | It re-resolves on automation_reloaded, on entity-registry changes to automations, and once at homeassistant_started (automations load after integrations). | A flare is never one of a room’s lights. The room’s tick would send it the curve, and the flare would pass that on to every bulb as an override. Three layers stop it: the blueprint rejects integration_entities('flare'), the services drop flare lights (flares/identity.without_flares), and a flare’s own member filter drops other flares. Without the last, a flare could contain itself and recurse forever. | . On and off . flowchart TB on[\"light.turn_on on the flare\"] --&gt; bare{\"bare?&lt;br/&gt;(no keys but transition)\"} bare --&gt;|\"yes\"| trig[\"automation.trigger&lt;br/&gt;→ manual run: allow_turn_on, force\"] bare --&gt;|\"no, values given\"| mark1[\"flare.claims_override(members, room)\"] mark1 --&gt; grp1[\"LightGroup.turn_on(values)\"] off[\"light.turn_off on the flare\"] --&gt; mark2[\"flare.claims_override(members, room)\"] mark2 --&gt; grp2[\"LightGroup.turn_off&lt;br/&gt;(a plain light.turn_off)\"] . | A bare “on” runs the automation. How a room comes on is the automation’s decision. A manual run passes allow_turn_on and force, so “on” also takes back a room that was overridden. | “On” with values, and “off”, mark the lights overridden first, with the automation as the room, then send as any light group does. Without that, an unclaimed light (every light, once a room goes dark) would read untracked, and the run the change itself triggers would take it straight back to the curve. That’s how Siri’s “100 %” got dimmed back down. The override claim has a fresh context and no target, so it never matches; the room going dark hands the lights back. | Off is a plain light.turn_off, never flare.turn_off. A flare’s off is the user’s. Recording it as FLARE’s off would let a run landing while the room was half-off switch it back on. | . It reaches flare.claims_override as a service call because that’s the Settings entry’s, which may not be loaded. has_service checks first. ",
+    "url": "/flare/architecture/flares/#what-it-is-in-code",
+    
+    "relUrl": "/architecture/flares/#what-it-is-in-code"
+  },"51": {
+    "doc": "How flares work",
+    "title": "The light platform only loads with flares",
+    "content": "The Flares entry forwards the light platform only when it has at least one flare, and remembers whether it did in entry.runtime_data so unload matches. An empty entry has nothing to put on it, and setting light up that early interfered with the behaviour tests’ fake bulbs. ",
+    "url": "/flare/architecture/flares/#the-light-platform-only-loads-with-flares",
+    
+    "relUrl": "/architecture/flares/#the-light-platform-only-loads-with-flares"
+  },"52": {
+    "doc": "How flares work",
+    "title": "Adding flares",
+    "content": ". | Add Flare lists only automations made from our blueprint. Any other automation goes through a custom path offering only inputs that can hold lights (lights_input_kinds). | Area setup adds them in bulk, one subentry each, and the entry’s update listener coalesces the reloads into one (_async_reload_entry). | Nothing creates a flare on its own except area setup, where the user ticks the rooms. A HomeKit bridge including light, or a voice assistant exposing new entities, would otherwise put every room in the Home app after an update. | A new flare’s device goes in its automation’s area once, at creation (_place_in_area). After that, the area is the user’s. | . ",
+    "url": "/flare/architecture/flares/#adding-flares",
+    
+    "relUrl": "/architecture/flares/#adding-flares"
   },"53": {
     "doc": "Dashboard internals",
     "title": "Dashboard internals",
@@ -426,47 +426,47 @@
     
     "relUrl": "/reference/"
   },"61": {
-    "doc": "Architecture",
-    "title": "How FLARE works inside",
-    "content": "Nobody needs to read this to use FLARE. This section is for people who want to change FLARE’s code, or who just like to know how things work. Installing, setting up and using FLARE are all covered without it: start at Installation. What runs where, how FLARE hooks into Home Assistant, and how the pieces talk to each other. These pages describe the system as it is. The reasons behind its decisions are in CLAUDE.md, in the repository. ",
-    "url": "/flare/architecture/#how-flare-works-inside",
-    
-    "relUrl": "/architecture/#how-flare-works-inside"
-  },"62": {
-    "doc": "Architecture",
-    "title": "Reading order",
-    "content": "| Page | What it covers | . | The big picture (below) | The two halves, and what happens when a room updates | . | Code layout | Packages, the dependency rule, config entries, devices and entities | . | The event loop | Every place FLARE hooks into Home Assistant: setup order, listeners, timers, storage, contexts | . | Schedules and the curve | How a schedule becomes a phase, a brightness and a colour | . | The room automation | The blueprint: triggers, the variables chain, the one gate that switches lights on | . | Services and grouping | flare.apply_lighting from call to bulb, and the other ten services | . | Claims and override protection | How FLARE tells its own writes from anyone else’s | . | Flares | The light that fronts a room automation | . | Setup and upgrades | Config flows, area setup, the blueprint repairs, migrations | . | The dashboard | How the JavaScript gets into the page, the strategies and the cards | . ",
-    "url": "/flare/architecture/#reading-order",
-    
-    "relUrl": "/architecture/#reading-order"
-  },"63": {
-    "doc": "Architecture",
-    "title": "The big picture",
-    "content": "FLARE is two pieces, and the dependency runs one way. | The integration (custom_components/flare/) is Python running inside Home Assistant. It works out what lights should look like (the schedule and its curve), sends that to bulbs efficiently, and remembers which writes were its own (claims) so it can leave a light alone once someone else changes it. Everything it does is an entity or a service. | The blueprint (custom_components/flare/blueprints/flare.yaml) is the room automation built on those services. It decides when a room updates and whether a light may come on. Each room is one automation made from it. | . flowchart TB subgraph BP[\"Room automation\"] direction LR T[\"Triggers:&lt;br/&gt;phase change, area tick,&lt;br/&gt;motion, lights back online\"] --&gt; V[\"Variables:&lt;br/&gt;the room's lights, occupancy,&lt;br/&gt;levels, allow_turn_on\"] --&gt; A[\"Action:&lt;br/&gt;turn off, idle, scene,&lt;br/&gt;apply the curve\"] end subgraph INT[\"Integration (Python)\"] direction LR S[\"Schedule:&lt;br/&gt;coordinator + entities\"] TK[\"Area ticker\"] SV[\"Services: flare.*\"] C[\"Claim registry\"] end L[\"Bulbs (light.*)\"] S -- \"Phase event,&lt;br/&gt;schedule sensor\" --&gt; T TK -- \"flare_tick\" --&gt; T A -- \"resolve_target,&lt;br/&gt;apply_lighting, turn_off\" --&gt; SV SV -- \"records claims\" --&gt; C SV -- \"light.turn_on / turn_off\" --&gt; L L -- \"state_changed\" --&gt; C . One room update, end to end . The commonest path: an area’s tick fires, and the room drifts with the curve. sequenceDiagram autonumber participant TK as TickScheduler participant AU as Room automation participant SV as flare services participant CR as ClaimRegistry participant B as Bulbs TK-&gt;&gt;AU: flare_tick {area_id: kitchen} AU-&gt;&gt;SV: flare.resolve_target(room_target) SV--&gt;&gt;AU: room entities Note over AU: variables render once:&lt;br/&gt;levels, occupancy, allow_turn_on AU-&gt;&gt;SV: flare.apply_lighting(lights, brightness, kelvin, room_id) SV-&gt;&gt;CR: classify each light (claims vs live state) Note over SV: build_groups: bucket by brightness,&lt;br/&gt;drop overridden lights, skip claimed lights&lt;br/&gt;already close enough, split two-step SV-&gt;&gt;CR: async_record (before sending) SV-&gt;&gt;B: light.turn_on, one call per group B--&gt;&gt;CR: state_changed under the call's context Note over CR: context matches the claim:&lt;br/&gt;the light stays \"controlled\" . Every other path is a variation on this one. Motion uses a shorter transition and may switch lights on. A room emptying calls flare.turn_off. A phase change also moves scenes on. Someone changing a light by hand shows up at step 10 as a context and values that match no claim, and from then on step 5 leaves that light out. ",
-    "url": "/flare/architecture/#the-big-picture",
-    
-    "relUrl": "/architecture/#the-big-picture"
-  },"64": {
-    "doc": "Architecture",
-    "title": "Words used here",
-    "content": "These pages use the code’s own terms. The rest of this site doesn’t; the lexicon in DOCUMENTATION.md lists the ones it keeps out. | Term | Meaning | . | schedule | One “sensor” subentry of the Schedules entry: five boundary times and sixteen curve values, each its own entity. | . | phase | Morning, Day, Evening or Night. | . | curve | Brightness and Kelvin over the day, easing between phases. | . | room | Who’s writing, for override protection: a room_id (the automation) and its lights. | . | claim | A record of FLARE’s write to one light: the context it used and what it asked for. | . | tick | flare_tick, a plain bus event fired for each area once per interval. | . | flare | A light entity fronting a room automation, for voice assistants and HomeKit. | . | context | Home Assistant’s Context: every state change carries the id of whatever caused it. | . | group | One build_groups output: lights sharing a brightness, split by how they’re sent. | . ",
-    "url": "/flare/architecture/#words-used-here",
-    
-    "relUrl": "/architecture/#words-used-here"
-  },"65": {
-    "doc": "Architecture",
-    "title": "Architecture",
-    "content": " ",
-    "url": "/flare/architecture/",
-    
-    "relUrl": "/architecture/"
-  },"66": {
     "doc": "Guides",
     "title": "Guides",
     "content": "How to do more with FLARE once a room is running. | Examples — automations that change or build on FLARE: a weekend lie-in, a holiday schedule, movie night, and more. | Templates — the blueprint’s Brightness, Idle Brightness and Scene templates, with worked examples. | Override protection — what happens to a light you change yourself, and how it goes back to the curve. | Scene handoff — handing a room to a scene, and getting it back. | Voice assistants — so “turn on the kitchen” from Siri, Alexa, Google or HomeKit lights the room for the time of day, and FLARE keeps running it. | . ",
     "url": "/flare/guides/",
     
     "relUrl": "/guides/"
+  },"62": {
+    "doc": "Architecture",
+    "title": "How FLARE works inside",
+    "content": "Nobody needs to read this to use FLARE. This section is for people who want to change FLARE’s code, or who just like to know how things work. Installing, setting up and using FLARE are all covered without it: start at Installation. What runs where, how FLARE hooks into Home Assistant, and how the pieces talk to each other. These pages describe the system as it is. The reasons behind its decisions are in CLAUDE.md, in the repository. ",
+    "url": "/flare/architecture/#how-flare-works-inside",
+    
+    "relUrl": "/architecture/#how-flare-works-inside"
+  },"63": {
+    "doc": "Architecture",
+    "title": "Reading order",
+    "content": "| Page | What it covers | . | The big picture (below) | The two halves, and what happens when a room updates | . | Code layout | Packages, the dependency rule, config entries, devices and entities | . | The event loop | Every place FLARE hooks into Home Assistant: setup order, listeners, timers, storage, contexts | . | Schedules and the curve | How a schedule becomes a phase, a brightness and a colour | . | The room automation | The blueprint: triggers, the variables chain, the one gate that switches lights on | . | Services and grouping | flare.apply_lighting from call to bulb, and the other ten services | . | Claims and override protection | How FLARE tells its own writes from anyone else’s | . | Flares | The light that fronts a room automation | . | Setup and upgrades | Config flows, area setup, the blueprint repairs, migrations | . | The dashboard | How the JavaScript gets into the page, the strategies and the cards | . ",
+    "url": "/flare/architecture/#reading-order",
+    
+    "relUrl": "/architecture/#reading-order"
+  },"64": {
+    "doc": "Architecture",
+    "title": "The big picture",
+    "content": "FLARE is two pieces, and the dependency runs one way. | The integration (custom_components/flare/) is Python running inside Home Assistant. It works out what lights should look like (the schedule and its curve), sends that to bulbs efficiently, and remembers which writes were its own (claims) so it can leave a light alone once someone else changes it. Everything it does is an entity or a service. | The blueprint (custom_components/flare/blueprints/flare.yaml) is the room automation built on those services. It decides when a room updates and whether a light may come on. Each room is one automation made from it. | . flowchart TB subgraph BP[\"Room automation\"] direction LR T[\"Triggers:&lt;br/&gt;phase change, area tick,&lt;br/&gt;motion, lights back online\"] --&gt; V[\"Variables:&lt;br/&gt;the room's lights, occupancy,&lt;br/&gt;levels, allow_turn_on\"] --&gt; A[\"Action:&lt;br/&gt;turn off, idle, scene,&lt;br/&gt;apply the curve\"] end subgraph INT[\"Integration (Python)\"] direction LR S[\"Schedule:&lt;br/&gt;coordinator + entities\"] TK[\"Area ticker\"] SV[\"Services: flare.*\"] C[\"Claim registry\"] end L[\"Bulbs (light.*)\"] S -- \"Phase event,&lt;br/&gt;schedule sensor\" --&gt; T TK -- \"flare_tick\" --&gt; T A -- \"resolve_target,&lt;br/&gt;apply_lighting, turn_off\" --&gt; SV SV -- \"records claims\" --&gt; C SV -- \"light.turn_on / turn_off\" --&gt; L L -- \"state_changed\" --&gt; C . One room update, end to end . The commonest path: an area’s tick fires, and the room drifts with the curve. sequenceDiagram autonumber participant TK as TickScheduler participant AU as Room automation participant SV as flare services participant CR as ClaimRegistry participant B as Bulbs TK-&gt;&gt;AU: flare_tick {area_id: kitchen} AU-&gt;&gt;SV: flare.resolve_target(room_target) SV--&gt;&gt;AU: room entities Note over AU: variables render once:&lt;br/&gt;levels, occupancy, allow_turn_on AU-&gt;&gt;SV: flare.apply_lighting(lights, brightness, kelvin, room_id) SV-&gt;&gt;CR: classify each light (claims vs live state) Note over SV: build_groups: bucket by brightness,&lt;br/&gt;drop overridden lights, skip claimed lights&lt;br/&gt;already close enough, split two-step SV-&gt;&gt;CR: async_record (before sending) SV-&gt;&gt;B: light.turn_on, one call per group B--&gt;&gt;CR: state_changed under the call's context Note over CR: context matches the claim:&lt;br/&gt;the light stays \"controlled\" . Every other path is a variation on this one. Motion uses a shorter transition and may switch lights on. A room emptying calls flare.turn_off. A phase change also moves scenes on. Someone changing a light by hand shows up at step 10 as a context and values that match no claim, and from then on step 5 leaves that light out. ",
+    "url": "/flare/architecture/#the-big-picture",
+    
+    "relUrl": "/architecture/#the-big-picture"
+  },"65": {
+    "doc": "Architecture",
+    "title": "Words used here",
+    "content": "These pages use the code’s own terms. The rest of this site doesn’t; the lexicon in DOCUMENTATION.md lists the ones it keeps out. | Term | Meaning | . | schedule | One “sensor” subentry of the Schedules entry: five boundary times and sixteen curve values, each its own entity. | . | phase | Morning, Day, Evening or Night. | . | curve | Brightness and Kelvin over the day, easing between phases. | . | room | Who’s writing, for override protection: a room_id (the automation) and its lights. | . | claim | A record of FLARE’s write to one light: the context it used and what it asked for. | . | tick | flare_tick, a plain bus event fired for each area once per interval. | . | flare | A light entity fronting a room automation, for voice assistants and HomeKit. | . | context | Home Assistant’s Context: every state change carries the id of whatever caused it. | . | group | One build_groups output: lights sharing a brightness, split by how they’re sent. | . ",
+    "url": "/flare/architecture/#words-used-here",
+    
+    "relUrl": "/architecture/#words-used-here"
+  },"66": {
+    "doc": "Architecture",
+    "title": "Architecture",
+    "content": " ",
+    "url": "/flare/architecture/",
+    
+    "relUrl": "/architecture/"
   },"67": {
     "doc": "Home",
     "title": "FLARE",
