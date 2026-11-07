@@ -89,15 +89,15 @@ blueprint:
           selector:
             entity:
               multiple: true
-        run_when:
-          name: Run When
+        conditions:
+          name: Conditions
           description: >
-            Conditions, as in an ordinary automation, every one of which must
-            be met for the room to run at all. While they aren't, the room is paused: lights stay
+            As in an ordinary automation, every one must be met for the room
+            to run at all. While they aren't, the room is paused: lights stay
             as they are, nothing turns on or off, and the schedule isn't
             followed. It catches up on its next update once they're met
             again. Running the room by hand still works.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#run-when).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
           default: []
           selector:
             condition: {}
@@ -533,9 +533,9 @@ condition:
   # `and`, as an automation's own conditions are, so an empty list is met.
   # automation.trigger skips conditions by default, so a manual run and a
   # flare still get through.
-  - alias: "Run When is met"
+  - alias: "The room's Conditions are met"
     condition: and
-    conditions: !input run_when
+    conditions: !input conditions
 
 action:
   # Room Target as Home Assistant resolves it for an action, which is how a

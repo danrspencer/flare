@@ -79,7 +79,7 @@ HA's trace UI.
   calls the service, and everything built from the room's entities is an
   action-level `variables:` step after it. The top-level `condition:`
   reads only inputs (Sensors From Areas, below) and holds the user's
-  **Run When** conditions (`run_when`), which pause the whole room: they can only stop runs,
+  **Conditions** (`conditions`), which pause the whole room: they can only stop runs,
   never widen `allow_turn_on`, and `automation.trigger` skips them, so a
   manual run and a flare still get through. It isn't a pet filter: a
   room left lit when the pause starts stays lit. The `recovered` trigger keeps a plain Jinja expansion (it
@@ -105,7 +105,7 @@ Blueprint input mechanics:
   at the top level (Schedule, Lights & Occupancy); everything optional is
   collapsed, so input names carry no "(Optional)" (user's call). Sections
   hold what a room may want tweaked (**Sensors & Triggers**: Wait time,
-  Lux Threshold, Additional Triggers, Run When; then Brightness, Idle Brightness, Scenes,
+  Lux Threshold, Additional Triggers, Conditions; then Brightness, Idle Brightness, Scenes,
   Transitions); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces, then the
   deprecated Sensors From Areas).

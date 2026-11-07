@@ -1,4 +1,4 @@
-"""Run When: the room runs only while every condition is met."""
+"""Conditions: the room runs only while every one is met."""
 
 from __future__ import annotations
 
@@ -27,15 +27,15 @@ async def tick(hass, frozen_time) -> None:
     await hass.async_block_till_done()
 
 
-class TestRunWhen:
-    """docs/reference/blueprint.md#run-when"""
+class TestConditions:
+    """docs/reference/blueprint.md#conditions"""
 
     async def _room(self, hass, *, lights: str, sensor: str, state: str, **inputs):
         occupancy(hass, "binary_sensor.occ", sensor)
         light(hass, "light.a", lights)
         active(hass, state)
         await hass.async_block_till_done()
-        await setup_room_automation(hass, room_target=ROOM, run_when=ACTIVE, no_motion_wait=0, **inputs)
+        await setup_room_automation(hass, room_target=ROOM, conditions=ACTIVE, no_motion_wait=0, **inputs)
 
     async def test_a_sensor_lights_the_room_while_the_conditions_are_met(self, hass, apply_lighting_calls):
         await self._room(hass, lights="off", sensor="off", state="on")

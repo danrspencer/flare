@@ -66,7 +66,7 @@ either room goes dark.
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 | **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
 | **Additional Triggers** | none | Entities that make the room update as soon as they change. |
-| **Run When** | none | Conditions, as in an ordinary automation, that must all be met for the room to run. While they aren't, the room is paused. |
+| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 ### Lux Threshold
 
@@ -101,9 +101,9 @@ while it's playing. An additional trigger only adjusts lights that are already o
 on from something else, see
 [lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
 
-### Run when
+### Conditions
 
-While anything in **Run When** isn't met, the room does nothing at all: its lights stay as
+While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
 they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
 guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
 the room catches up on its next tick: lights that are on move to the schedule, and an empty
