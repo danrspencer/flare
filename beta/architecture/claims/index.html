@@ -469,6 +469,10 @@ anything else calls <code class="language-plaintext highlighter-rouge">classify(
       <td>Kelvin on a light without it</td>
       <td>a light with colour but neither colour temperature nor RGBWW (an RGB strip) is compared with the RGB HA’s <code class="language-plaintext highlighter-rouge">light.turn_on</code> sends it for the Kelvin (<code class="language-plaintext highlighter-rouge">color_temperature_to_hs</code>), by the RGB rule, and shows its <code class="language-plaintext highlighter-rouge">rgb_color</code></td>
     </tr>
+    <tr>
+      <td>only what it can show</td>
+      <td>no colour for a light without colour or colour temperature (a dimmer), no brightness for an on/off light, as HA’s <code class="language-plaintext highlighter-rouge">light.turn_on</code> drops them; a light whose colour modes aren’t known is compared on everything</td>
+    </tr>
   </tbody>
 </table></div>
 
