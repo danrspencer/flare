@@ -7,7 +7,7 @@ from unittest.mock import ANY
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed, async_mock_service
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed, async_mock_service
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.diagnostics import async_get_config_entry_diagnostics

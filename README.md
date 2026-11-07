@@ -59,7 +59,7 @@ action, so you can change it or write your own — see the
 | | |
 |---|---|
 | [Home Assistant](https://www.home-assistant.io) | The whole platform. FLARE has no runtime dependencies beyond it, and uses its colour utilities for the Kelvin→RGB and mired conversions. |
-| [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component) | Runs the integration tests against a real Home Assistant. |
+| [pytest-homeassistant](https://pypi.org/project/pytest-homeassistant/) | Runs the integration tests against a real Home Assistant. |
 | [just-the-docs](https://just-the-docs.com) | The documentation site's Jekyll theme. |
 | [He et al., 2023](https://pubmed.ncbi.nlm.nih.gov/36058557/) | The morning-light research cited above. |
 

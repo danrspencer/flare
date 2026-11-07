@@ -8,7 +8,7 @@ from datetime import timedelta
 from freezegun import freeze_time
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant.common import async_mock_service
 
 from custom_components.flare.const import DOMAIN
 from tests.support.claims import after_the_grace

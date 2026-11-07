@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_capture_events, async_fire_time_changed
+from pytest_homeassistant.common import MockConfigEntry, async_capture_events, async_fire_time_changed
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SCHEDULES, SUBENTRY_TYPE_SENSOR
 from custom_components.flare.schedule.coordinator import CURVE_KEYS, TIME_KEYS

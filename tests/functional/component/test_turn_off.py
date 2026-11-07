@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import voluptuous as vol
 from homeassistant.core import Context, HomeAssistant
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant.common import async_mock_service
 
 from tests.functional.component.harness import (
     apply_lighting,

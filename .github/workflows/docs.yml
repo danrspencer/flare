@@ -98,13 +98,13 @@ jobs:
       # The blueprint trace report, a page with no nav entry and no link
       # from anywhere else - reachable only to someone who already has the
       # URL (/trace-report/). Beta builds only, so a pull request doesn't
-      # pay for a full pytest-homeassistant-custom-component install.
+      # pay for a full pytest-homeassistant install.
       - if: steps.what.outputs.channel == 'beta'
         uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - if: steps.what.outputs.channel == 'beta'
-        run: pip install pytest pytest-homeassistant-custom-component
+        run: pip install pytest pytest-homeassistant
       - if: steps.what.outputs.channel == 'beta'
         name: Capture a fresh blueprint trace for this commit
         run: pytest tests/functional/behaviour -q
