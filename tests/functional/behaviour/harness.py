@@ -64,7 +64,8 @@ class FakeBulb(LightEntity):
     supports_rgb; reports_via_rgb (translates Kelvin commands and reports
     rgb_color, like IKEA TRADFRI spots); rgb_only (no colour temperature,
     like an RGB LED strip, so HA's light.turn_on converts a Kelvin target to
-    the rgb_color it receives); needs_two_step (a call that
+    the rgb_color it receives); dims_only (brightness and no colour,
+    like a dimmer module, so HA drops the colour it's sent); needs_two_step (a call that
     changes brightness and sets a colour applies only the brightness);
     supports_transition (HA drops `transition` for a light without it);
     reports_off_late (switches off, but only reports it on
@@ -82,6 +83,7 @@ class FakeBulb(LightEntity):
         supports_rgb=False,
         reports_via_rgb=False,
         rgb_only=False,
+        dims_only=False,
         needs_two_step=False,
         supports_transition=False,
         reports_off_late=False,
@@ -98,11 +100,19 @@ class FakeBulb(LightEntity):
             modes.add(ColorMode.RGB)
         if rgb_only:
             modes = {ColorMode.RGB}
+        if dims_only:
+            modes = {ColorMode.BRIGHTNESS}
         self._attr_supported_color_modes = modes
         if supports_transition:
             self._attr_supported_features = LightEntityFeature.TRANSITION
         self._reports_off_late = reports_off_late
-        self._attr_color_mode = ColorMode.RGB if rgb_only else ColorMode.COLOR_TEMP
+        if dims_only:
+            mode = ColorMode.BRIGHTNESS
+        elif rgb_only:
+            mode = ColorMode.RGB
+        else:
+            mode = ColorMode.COLOR_TEMP
+        self._attr_color_mode = mode
         self._reports_via_rgb = reports_via_rgb
         # Gated on brightness *changing*: two-step's second call re-sends
         # the same brightness with the colour, and must land.

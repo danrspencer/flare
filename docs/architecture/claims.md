@@ -154,6 +154,7 @@ anything else calls `classify()`.
 | out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
 | RGB | `rgb_color`, only against an RGB target: the channels' differences summed, within twice the colour tolerance (10 at the default), never less than 4 |
 | Kelvin on a light without it | a light with colour but neither colour temperature nor RGBWW (an RGB strip) is compared with the RGB HA's `light.turn_on` sends it for the Kelvin (`color_temperature_to_hs`), by the RGB rule, and shows its `rgb_color` |
+| only what it can show | no colour for a light without colour or colour temperature (a dimmer), no brightness for an on/off light, as HA's `light.turn_on` drops them; a light whose colour modes aren't known is compared on everything |
 
 Never Kelvin by way of RGB: HA's Kelvin→RGB and xy→RGB conversions differ
 by about 13 in red at 6500K, so a bulb showing exactly what was asked would

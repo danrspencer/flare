@@ -24,6 +24,10 @@ Reading a light:
   counts as much as one in a single channel. Never in COLOR_TEMP mode,
   where HA works `rgb_color` out from the Kelvin: 3200K reports exactly the
   curve's RGB for 3200K, which a bulb in a colour mode shows far warmer.
+- Only what the light can show: HA's light.turn_on drops a brightness for
+  a light without one (on/off) and a colour for one without colour or
+  colour temperature (a dimmer), so neither is compared there. A light
+  whose colour modes aren't known is compared on everything.
 
 A target is compared as HA sends it (`sent()`). A light with colour but
 neither colour temperature nor RGBWW (an RGB LED strip) can't show Kelvin,
@@ -64,7 +68,9 @@ from homeassistant.components.light import (
     ATTR_SUPPORTED_COLOR_MODES,
     ATTR_XY_COLOR,
     ColorMode,
+    brightness_supported,
     color_supported,
+    color_temp_supported,
 )
 from homeassistant.util.color import color_hs_to_RGB as _hs_to_rgb
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
@@ -106,10 +112,17 @@ def differs(attributes: Mapping, target: Mapping, tolerance: Tolerance = Toleran
     show: "brightness", "color", both or neither."""
     target = sent(attributes, target)
     values = []
+    modes = attributes.get(ATTR_SUPPORTED_COLOR_MODES)
     brightness = target.get(ATTR_BRIGHTNESS)
-    if brightness is not None and not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), brightness, tolerance):
+    if (
+        brightness is not None
+        and (not modes or brightness_supported(modes))
+        and not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), brightness, tolerance)
+    ):
         values.append("brightness")
-    if not _color_matches(attributes, target, tolerance):
+    if (not modes or color_supported(modes) or color_temp_supported(modes)) and not _color_matches(
+        attributes, target, tolerance
+    ):
         values.append("color")
     return values
 

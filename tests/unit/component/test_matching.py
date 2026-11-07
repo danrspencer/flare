@@ -243,6 +243,29 @@ class TestSent:
         assert sent(attributes, target) == target
 
 
+class TestOnlyWhatALightCanShow:
+    """HA drops a colour for a light without one and a brightness for an
+    on/off light, so neither is compared there."""
+
+    DIMMER = {"brightness": 127, "color_mode": "brightness", "supported_color_modes": ["brightness"]}
+    ON_OFF = {"brightness": None, "color_mode": "onoff", "supported_color_modes": ["onoff"]}
+
+    def test_a_dimmer_shows_a_kelvin_target_by_its_brightness(self):
+        assert shows(self.DIMMER, {"brightness": 127, "color_temp_kelvin": 2700})
+        assert shows(self.DIMMER, {"brightness": 127, "rgb_color": [255, 0, 0]})
+
+    def test_a_dimmer_still_differs_in_brightness(self):
+        assert differs(self.DIMMER, {"brightness": 200, "color_temp_kelvin": 2700}, Tolerance(5, 5)) == ["brightness"]
+
+    def test_an_on_off_light_shows_any_target(self):
+        assert shows(self.ON_OFF, {"brightness": 127, "color_temp_kelvin": 2700})
+
+    @pytest.mark.parametrize("modes", [None, []], ids=["modes unknown", "no modes"])
+    def test_a_light_whose_modes_arent_known_is_compared_on_everything(self, modes):
+        attributes = {**self.DIMMER, "supported_color_modes": modes}
+        assert differs(attributes, {"brightness": 127, "color_temp_kelvin": 2700}) == ["color"]
+
+
 class TestShown:
     """What a light shows, as a target - what the override event reports."""
 

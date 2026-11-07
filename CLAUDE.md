@@ -299,7 +299,9 @@ Facts verified against HA core:
   (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
   Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
   only against an RGB target; the target as asked or clamped to the
-  advertised range. **A target is kept and compared as HA sends it**
+  advertised range; only what the light can show (no colour on a dimmer,
+  no brightness on an on/off light, since HA's light.turn_on drops them).
+  **A target is kept and compared as HA sends it**
   (`sent()`): a light with colour but neither colour temperature nor RGBWW
   is sent a Kelvin target as `color_temperature_to_hs`'s RGB, so its claim
   holds that RGB and it's read by `rgb_color` (an RGB strip's xy reads
