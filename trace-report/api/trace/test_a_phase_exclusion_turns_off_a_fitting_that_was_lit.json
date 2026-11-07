@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "d43b508b9c0bb50252d38896aa2d92cf",
+      "run_id": "723eaa43ae09023d19f7b79dc18c0486",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-11-08T03:00:02+00:00",
                 "last_updated": "2026-11-08T03:00:02+00:00",
                 "context": {
-                  "id": "01M6WHJFTG5J2JVHPHC2YG5KR6",
+                  "id": "01M6WHJFTGA41556X1TK83A029",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-11-08T03:00:02+00:00",
                   "last_updated": "2026-11-08T03:00:02+00:00",
                   "context": {
-                    "id": "01M6WHJFTG2DNH14VS9MP800FG",
+                    "id": "01M6WHJFTG1X1B1X4YSG89SWVQ",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-11-08T03:00:02+00:00",
                   "last_updated": "2026-11-08T03:00:02+00:00",
                   "context": {
-                    "id": "01M6WHJFTGQDZM4DFZRNK3FD11",
+                    "id": "01M6WHJFTG1H54WJF7WZDMPEX5",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -92,7 +92,8 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+              "trigger_id": "motion_on",
+              "schedule": "490fc7d1122651b6f08b59498168b4d2",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -130,14 +131,23 @@
             }
           }
         ],
+        "condition/1": [
+          {
+            "path": "condition/1",
+            "timestamp": "2026-11-08T03:00:02+00:00",
+            "result": {
+              "result": true
+            }
+          }
+        ],
         "action/0": [
           {
             "path": "action/0",
             "timestamp": "2026-11-08T03:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M6WHJFTG2CRDBR19HZV16TEX",
-                "parent_id": "01M6WHJFTGQDZM4DFZRNK3FD11",
+                "id": "01M6WHJFTGBPP5W9HVQP1HVVR0",
+                "parent_id": "01M6WHJFTG1H54WJF7WZDMPEX5",
                 "user_id": null
               },
               "room": {
@@ -293,7 +303,8 @@
             "path": "action/2/if/condition/0",
             "timestamp": "2026-11-08T03:00:02+00:00",
             "result": {
-              "result": true
+              "result": true,
+              "entities": []
             }
           }
         ],
@@ -304,11 +315,11 @@
             "result": {
               "result": false,
               "entities": [
+                "light.hall_pendant",
                 "light.hall_spot_1",
-                "light.hall_spot_2",
                 "light.hall_spot_3",
                 "light.hall_lamp",
-                "light.hall_pendant",
+                "light.hall_spot_2",
                 "light.hall_spot_4"
               ]
             }
@@ -349,7 +360,8 @@
             "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-11-08T03:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -367,7 +379,8 @@
             "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-11-08T03:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -613,7 +626,8 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+          "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
+          "schedule": "490fc7d1122651b6f08b59498168b4d2",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -628,7 +642,7 @@
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger_id in ['phase_change', 'tick', 'extra', 'additional', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -637,7 +651,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "c12dc7922c0b7976a1a5451c2f0ae297"
+              "device_id": "490fc7d1122651b6f08b59498168b4d2"
             },
             "options": {
               "event_type": [
@@ -750,6 +764,9 @@
             "id": "lux_dark",
             "platform": "template",
             "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
+          },
+          {
+            "triggers": []
           }
         ],
         "actions": [
@@ -807,7 +824,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything it runs is already on. #} {{ resolved_entities | reject('in', hands_off_entities)\n   | select('is_state', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
+              "allow_turn_on": "{{ manual_run\n   or trigger_id == 'motion_on'\n   or occupied\n   or (trigger_id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -816,7 +833,7 @@
               "night_scene": null,
               "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
               "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_recheck_due": "{{ trigger_id != 'tick' }}",
               "scene_coverage": "{{ {'scene_valid': false, 'covered_entities': []} }}"
             }
           },
@@ -824,9 +841,9 @@
             "alias": "Stop a motion_on run with nothing to turn on",
             "if": [
               {
-                "condition": "trigger",
+                "condition": "template",
                 "alias": "Triggered by motion_on",
-                "id": "motion_on"
+                "value_template": "{{ trigger_id == 'motion_on' }}"
               },
               {
                 "condition": "template",
@@ -846,9 +863,9 @@
                 "alias": "Motion timed out and the room is confirmed empty",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by motion_off",
-                    "id": "motion_off"
+                    "value_template": "{{ trigger_id == 'motion_off' }}"
                   },
                   {
                     "condition": "template",
@@ -896,12 +913,9 @@
                 "alias": "Self-heal: retry an earlier turn-off that didn't land",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by the periodic tick or a phase change",
-                    "id": [
-                      "tick",
-                      "phase_change"
-                    ]
+                    "value_template": "{{ trigger_id in ['tick', 'phase_change'] }}"
                   },
                   {
                     "condition": "template",
@@ -1074,7 +1088,12 @@
           {
             "alias": "Not a sensor that Sensors From Areas leaves out",
             "condition": "template",
-            "value_template": "{{ use_area_sensors or manual_run\n   or trigger.id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+            "value_template": "{{ use_area_sensors or manual_run\n   or trigger_id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+          },
+          {
+            "alias": "The room's Conditions are met",
+            "condition": "and",
+            "conditions": []
           }
         ],
         "id": "room",
@@ -1086,7 +1105,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+            "schedule": "490fc7d1122651b6f08b59498168b4d2",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -1105,14 +1124,14 @@
         }
       },
       "context": {
-        "id": "01M6WHJFTG2CRDBR19HZV16TEX",
-        "parent_id": "01M6WHJFTGQDZM4DFZRNK3FD11",
+        "id": "01M6WHJFTGBPP5W9HVQP1HVVR0",
+        "parent_id": "01M6WHJFTG1H54WJF7WZDMPEX5",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "6b5efd23bad4b6bdabde4dcbe67313e5",
+      "run_id": "b6645b3a2ba77094068a24fd5dc92c7d",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1142,8 +1161,8 @@
                 "last_reported": "2026-11-08T03:00:02+00:00",
                 "last_updated": "2026-11-08T03:00:02+00:00",
                 "context": {
-                  "id": "01M6WHJFTG2CRDBR19HZV16TEX",
-                  "parent_id": "01M6WHJFTGQDZM4DFZRNK3FD11",
+                  "id": "01M6WHJFTGBPP5W9HVQP1HVVR0",
+                  "parent_id": "01M6WHJFTG1H54WJF7WZDMPEX5",
                   "user_id": null
                 }
               },
@@ -1169,7 +1188,8 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+              "trigger_id": "tick",
+              "schedule": "490fc7d1122651b6f08b59498168b4d2",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -1207,13 +1227,22 @@
             }
           }
         ],
+        "condition/1": [
+          {
+            "path": "condition/1",
+            "timestamp": "2026-11-08T06:00:02+00:00",
+            "result": {
+              "result": true
+            }
+          }
+        ],
         "action/0": [
           {
             "path": "action/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M6WVW2PG7KPM3D97WKD6EECG",
+                "id": "01M6WVW2PGQEJ7A790F33KCKBQ",
                 "parent_id": null,
                 "user_id": null
               },
@@ -1377,7 +1406,8 @@
             "path": "action/2/if/condition/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -1416,7 +1446,8 @@
             "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -1434,7 +1465,8 @@
             "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": true
+              "result": true,
+              "entities": []
             }
           }
         ],
@@ -1700,7 +1732,8 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+          "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
+          "schedule": "490fc7d1122651b6f08b59498168b4d2",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -1715,7 +1748,7 @@
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger_id in ['phase_change', 'tick', 'extra', 'additional', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -1724,7 +1757,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "c12dc7922c0b7976a1a5451c2f0ae297"
+              "device_id": "490fc7d1122651b6f08b59498168b4d2"
             },
             "options": {
               "event_type": [
@@ -1837,6 +1870,9 @@
             "id": "lux_dark",
             "platform": "template",
             "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
+          },
+          {
+            "triggers": []
           }
         ],
         "actions": [
@@ -1894,7 +1930,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything it runs is already on. #} {{ resolved_entities | reject('in', hands_off_entities)\n   | select('is_state', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
+              "allow_turn_on": "{{ manual_run\n   or trigger_id == 'motion_on'\n   or occupied\n   or (trigger_id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -1903,7 +1939,7 @@
               "night_scene": null,
               "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
               "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_recheck_due": "{{ trigger_id != 'tick' }}",
               "scene_coverage": "{{ {'scene_valid': false, 'covered_entities': []} }}"
             }
           },
@@ -1911,9 +1947,9 @@
             "alias": "Stop a motion_on run with nothing to turn on",
             "if": [
               {
-                "condition": "trigger",
+                "condition": "template",
                 "alias": "Triggered by motion_on",
-                "id": "motion_on"
+                "value_template": "{{ trigger_id == 'motion_on' }}"
               },
               {
                 "condition": "template",
@@ -1933,9 +1969,9 @@
                 "alias": "Motion timed out and the room is confirmed empty",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by motion_off",
-                    "id": "motion_off"
+                    "value_template": "{{ trigger_id == 'motion_off' }}"
                   },
                   {
                     "condition": "template",
@@ -1983,12 +2019,9 @@
                 "alias": "Self-heal: retry an earlier turn-off that didn't land",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by the periodic tick or a phase change",
-                    "id": [
-                      "tick",
-                      "phase_change"
-                    ]
+                    "value_template": "{{ trigger_id in ['tick', 'phase_change'] }}"
                   },
                   {
                     "condition": "template",
@@ -2161,7 +2194,12 @@
           {
             "alias": "Not a sensor that Sensors From Areas leaves out",
             "condition": "template",
-            "value_template": "{{ use_area_sensors or manual_run\n   or trigger.id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+            "value_template": "{{ use_area_sensors or manual_run\n   or trigger_id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+          },
+          {
+            "alias": "The room's Conditions are met",
+            "condition": "and",
+            "conditions": []
           }
         ],
         "id": "room",
@@ -2173,7 +2211,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+            "schedule": "490fc7d1122651b6f08b59498168b4d2",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -2192,14 +2230,14 @@
         }
       },
       "context": {
-        "id": "01M6WVW2PG7KPM3D97WKD6EECG",
+        "id": "01M6WVW2PGQEJ7A790F33KCKBQ",
         "parent_id": null,
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "b0149ed059e67510cf6c860e354f2eae",
+      "run_id": "a4cb5f2577c8fec4ba2b2778e3486fe8",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -2229,7 +2267,7 @@
                 "last_reported": "2026-11-08T06:00:02+00:00",
                 "last_updated": "2026-11-08T06:00:02+00:00",
                 "context": {
-                  "id": "01M6WVW2PG7KPM3D97WKD6EECG",
+                  "id": "01M6WVW2PGQEJ7A790F33KCKBQ",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -2259,7 +2297,7 @@
                   "last_reported": "2026-11-08T03:00:02+00:00",
                   "last_updated": "2026-11-08T03:00:02+00:00",
                   "context": {
-                    "id": "01M6WHJFTGQZ89BZFGW09Y5TFG",
+                    "id": "01M6WHJFTG9FGB21VV126F5DNR",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2282,7 +2320,7 @@
                   "last_reported": "2026-11-08T06:00:02+00:00",
                   "last_updated": "2026-11-08T06:00:02+00:00",
                   "context": {
-                    "id": "01M6WVW2PGH7YYA44MW0BA7MY9",
+                    "id": "01M6WVW2PGRABME9BXPQC2999B",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -2303,7 +2341,8 @@
               "use_area_sensors": true,
               "lux_threshold": 0,
               "tick_area": null,
-              "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+              "trigger_id": "phase_change",
+              "schedule": "490fc7d1122651b6f08b59498168b4d2",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -2341,14 +2380,23 @@
             }
           }
         ],
+        "condition/1": [
+          {
+            "path": "condition/1",
+            "timestamp": "2026-11-08T06:00:02+00:00",
+            "result": {
+              "result": true
+            }
+          }
+        ],
         "action/0": [
           {
             "path": "action/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M6WVW2PG87G6Y43B9B35JECZ",
-                "parent_id": "01M6WVW2PGH7YYA44MW0BA7MY9",
+                "id": "01M6WVW2PG715Y8GVP1M62R833",
+                "parent_id": "01M6WVW2PGRABME9BXPQC2999B",
                 "user_id": null
               },
               "room": {
@@ -2515,7 +2563,8 @@
             "path": "action/2/if/condition/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -2554,7 +2603,8 @@
             "path": "action/3/choose/0/conditions/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": false
+              "result": false,
+              "entities": []
             }
           }
         ],
@@ -2572,7 +2622,8 @@
             "path": "action/3/choose/1/conditions/0",
             "timestamp": "2026-11-08T06:00:02+00:00",
             "result": {
-              "result": true
+              "result": true,
+              "entities": []
             }
           }
         ],
@@ -2840,7 +2891,8 @@
           "tick_area": "{% set areas = room_target.area_id if room_target is mapping and room_target.area_id is defined else [] %} {% set areas = [areas] if areas is string else (areas or []) %} {{ areas | first if areas | length > 0 else none }}"
         },
         "variables": {
-          "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+          "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
+          "schedule": "490fc7d1122651b6f08b59498168b4d2",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -2855,7 +2907,7 @@
           ],
           "phase": "{{ states(adaptive_sensor) }}",
           "prefer_rgb_color": "{{ phase in rgb_phases }}",
-          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
+          "script_transition": "{# Slow for background updates; quick for motion or a manual run. #} {% if trigger_id in ['phase_change', 'tick', 'extra', 'additional', 'recovered', 'lux_dark'] %}\n  {{ background_transition }}\n{% else %}\n  {{ motion_on_transition }}\n{% endif %}\n",
           "manual_run": "{{ not (trigger is defined and trigger.id is defined) }}",
           "named_entities": "{% set v = room_target.get('entity_id', []) %} {{ [v] if v is string else v }}\n"
         },
@@ -2864,7 +2916,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "c12dc7922c0b7976a1a5451c2f0ae297"
+              "device_id": "490fc7d1122651b6f08b59498168b4d2"
             },
             "options": {
               "event_type": [
@@ -2977,6 +3029,9 @@
             "id": "lux_dark",
             "platform": "template",
             "value_template": "{% set threshold = lux_threshold | float(0) %} {% set ns = namespace(entities=[], devices=[], areas=[]) %} {% for key in ['entity_id', 'device_id', 'area_id', 'floor_id', 'label_id'] %}\n  {% set v = room_target.get(key, []) %}\n  {% set ids = [v] if v is string else v %}\n  {% if key == 'entity_id' %}{% set ns.entities = ns.entities + ids %}\n  {% elif not use_area_sensors %}\n  {% elif key == 'device_id' %}{% set ns.devices = ns.devices + ids %}\n  {% elif key == 'area_id' %}{% set ns.areas = ns.areas + ids %}\n  {% elif key == 'floor_id' %}\n    {% for f in ids %}{% set ns.areas = ns.areas + floor_areas(f) %}{% endfor %}\n  {% else %}\n    {% for l in ids %}\n      {% set ns.entities = ns.entities + label_entities(l) %}\n      {% set ns.devices = ns.devices + label_devices(l) %}\n      {% set ns.areas = ns.areas + label_areas(l) %}\n    {% endfor %}\n  {% endif %}\n{% endfor %} {% for d in ns.devices %}{% set ns.entities = ns.entities + device_entities(d) %}{% endfor %} {% for a in ns.areas %}{% set ns.entities = ns.entities + area_entities(a) %}{% endfor %} {% set lux = ns.entities | select('match', '^sensor\\\\.')\n     | select('is_state_attr', 'device_class', 'illuminance') | unique\n     | map('states') | select('is_number') | map('float') | list %}\n{{ threshold > 0\n   and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}\n"
+          },
+          {
+            "triggers": []
           }
         ],
         "actions": [
@@ -3034,7 +3089,7 @@
               "occupancy_clear_for_wait": "{% set ns = namespace(all_clear=true) %} {% for e in room_occupancy_entities %}\n  {% if is_state(e, 'on') or\n        (now() - states[e].last_changed).total_seconds() < (no_motion_wait | int) %}\n    {% set ns.all_clear = false %}\n  {% endif %}\n{% endfor %} {{ ns.all_clear }}\n",
               "room_is_idle": "{{ idle_entities | length > 0\n   and room_occupancy_entities | length > 0\n   and occupancy_clear_for_wait }}\n",
               "occupied": "{# The room is in use if anything it runs is already on. #} {{ resolved_entities | reject('in', hands_off_entities)\n   | select('is_state', 'on') | list | count > 0 }}\n",
-              "allow_turn_on": "{{ manual_run\n   or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')\n   or occupied\n   or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
+              "allow_turn_on": "{{ manual_run\n   or trigger_id == 'motion_on'\n   or occupied\n   or (trigger_id == 'lux_dark'\n       and not too_bright\n       and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}\n",
               "entities_still_on": "{{ resolved_entities | select('is_state', 'on')\n   | reject('in', hands_off_entities) | reject('in', idle_entities) | list }}\n",
               "scope_entities": "{% set ns = namespace(entities=room_entities) %} {% for e in resolved_entities %}\n  {% set did = device_id(e) %}\n  {% set ns.entities = ns.entities + (device_entities(did) if did else [e]) %}\n{% endfor %} {{ ns.entities | unique | list }}\n",
               "morning_scene": null,
@@ -3043,7 +3098,7 @@
               "night_scene": null,
               "phase_scene": "{% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %} {{ m.get(phase) }}\n",
               "desired_scene": "{% set candidate = (scene_template | trim) %} {% if candidate and candidate is match('^[a-z0-9_]+\\\\.[a-z0-9_]+$') and states[candidate] is not none %}\n  {{ candidate }}\n{% elif phase_scene and states[phase_scene] is not none %}\n  {{ phase_scene }}\n{% else %}\n  {{ '' }}\n{% endif %}\n",
-              "scene_recheck_due": "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}",
+              "scene_recheck_due": "{{ trigger_id != 'tick' }}",
               "scene_coverage": "{{ {'scene_valid': false, 'covered_entities': []} }}"
             }
           },
@@ -3051,9 +3106,9 @@
             "alias": "Stop a motion_on run with nothing to turn on",
             "if": [
               {
-                "condition": "trigger",
+                "condition": "template",
                 "alias": "Triggered by motion_on",
-                "id": "motion_on"
+                "value_template": "{{ trigger_id == 'motion_on' }}"
               },
               {
                 "condition": "template",
@@ -3073,9 +3128,9 @@
                 "alias": "Motion timed out and the room is confirmed empty",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by motion_off",
-                    "id": "motion_off"
+                    "value_template": "{{ trigger_id == 'motion_off' }}"
                   },
                   {
                     "condition": "template",
@@ -3123,12 +3178,9 @@
                 "alias": "Self-heal: retry an earlier turn-off that didn't land",
                 "conditions": [
                   {
-                    "condition": "trigger",
+                    "condition": "template",
                     "alias": "Triggered by the periodic tick or a phase change",
-                    "id": [
-                      "tick",
-                      "phase_change"
-                    ]
+                    "value_template": "{{ trigger_id in ['tick', 'phase_change'] }}"
                   },
                   {
                     "condition": "template",
@@ -3301,7 +3353,12 @@
           {
             "alias": "Not a sensor that Sensors From Areas leaves out",
             "condition": "template",
-            "value_template": "{{ use_area_sensors or manual_run\n   or trigger.id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+            "value_template": "{{ use_area_sensors or manual_run\n   or trigger_id not in ['motion_on', 'motion_off']\n   or trigger.entity_id in named_entities }}\n"
+          },
+          {
+            "alias": "The room's Conditions are met",
+            "condition": "and",
+            "conditions": []
           }
         ],
         "id": "room",
@@ -3313,7 +3370,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "c12dc7922c0b7976a1a5451c2f0ae297",
+            "schedule": "490fc7d1122651b6f08b59498168b4d2",
             "room_target": {
               "entity_id": [
                 "light.hall_pendant",
@@ -3332,8 +3389,8 @@
         }
       },
       "context": {
-        "id": "01M6WVW2PG87G6Y43B9B35JECZ",
-        "parent_id": "01M6WVW2PGH7YYA44MW0BA7MY9",
+        "id": "01M6WVW2PG715Y8GVP1M62R833",
+        "parent_id": "01M6WVW2PGRABME9BXPQC2999B",
         "user_id": null
       }
     }

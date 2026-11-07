@@ -252,10 +252,14 @@ behaves.</p>
 <details open="">
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
-  <li><a href="#room" id="markdown-toc-room">Room</a></li>
-  <li><a href="#sensors-and-triggers" id="markdown-toc-sensors-and-triggers">Sensors and triggers</a>    <ul>
-      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
+  <li><a href="#room" id="markdown-toc-room">Room</a>    <ul>
       <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
+      <li><a href="#conditions" id="markdown-toc-conditions">Conditions</a></li>
+      <li><a href="#trigger-ids" id="markdown-toc-trigger-ids">Trigger IDs</a></li>
+    </ul>
+  </li>
+  <li><a href="#sensors" id="markdown-toc-sensors">Sensors</a>    <ul>
+      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
     </ul>
   </li>
   <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
@@ -267,6 +271,7 @@ behaves.</p>
       <li><a href="#prefer-rgb-during" id="markdown-toc-prefer-rgb-during">Prefer RGB during</a></li>
       <li><a href="#stored-traces" id="markdown-toc-stored-traces">Stored traces</a></li>
       <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
+      <li><a href="#additional-trigger-entities" id="markdown-toc-additional-trigger-entities">Additional trigger entities</a></li>
     </ul>
   </li>
   <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
@@ -308,6 +313,16 @@ behaves.</p>
       <td>required</td>
       <td>The room’s lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives <strong>Lux Threshold</strong>.</td>
     </tr>
+    <tr>
+      <td><strong>Additional Triggers</strong></td>
+      <td>none</td>
+      <td>Triggers that make the room update as soon as they fire.</td>
+    </tr>
+    <tr>
+      <td><strong>Conditions</strong></td>
+      <td>none</td>
+      <td>As in an ordinary automation: all must be met for the room to run. While they aren’t, the room is paused.</td>
+    </tr>
   </tbody>
 </table></div>
 
@@ -339,10 +354,120 @@ target</strong> (Home Assistant 2026.11 and later). On earlier versions, turn of
 <p>A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they’re all off; a light in both is released when
 either room goes dark.</p>
-<h2 id="sensors-and-triggers">
+<h3 id="additional-triggers">
   
   
-    <a href="#sensors-and-triggers" class="anchor-heading" aria-labelledby="sensors-and-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors and triggers
+    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+  
+  
+</h3>
+    
+
+<p>Add a trigger for anything a template depends on, such as a <strong>State</strong> trigger on the TV for a
+Brightness Template that dims the room while it’s playing. They’re the same triggers as an
+ordinary automation’s, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
+<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+<h3 id="conditions">
+  
+  
+    <a href="#conditions" class="anchor-heading" aria-labelledby="conditions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Conditions
+  
+  
+</h3>
+    
+
+<p>While any of the <strong>Conditions</strong> isn’t met, the room does nothing at all: its lights stay as
+they are, sensors don’t turn it on or off, and the schedule isn’t followed. For a vacation or
+guest mode, add a <strong>State</strong> condition on an <code class="language-plaintext highlighter-rouge">input_boolean</code>. Once every condition is met again,
+the room catches up on its next tick: lights that are on move to the schedule, and an empty
+room turns off. If a condition reads an entity, add a trigger for it to
+<a href="#additional-triggers">Additional Triggers</a> so the room catches up as soon as it changes.</p>
+
+<p>Running the automation by hand, or turning on its <a href="../flares/">flare</a>, still works while the
+room is paused.</p>
+
+<p>A room left on when the pause starts stays on until it ends. To stop only some runs, make a
+condition about what started the run, with a <strong>Triggered by</strong> condition on one of the
+<a href="#trigger-ids">trigger IDs</a>. For example, so a pet walking through at night doesn’t light the
+room, while everything else carries on (turning off, following the schedule):</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">condition</span><span class="pi">:</span> <span class="s">not</span>
+<span class="na">conditions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">and</span>
+    <span class="na">conditions</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">trigger</span>
+        <span class="na">id</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s">motion_on</span>
+          <span class="pi">-</span> <span class="s">lux_dark</span>
+      <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">time</span>
+        <span class="na">after</span><span class="pi">:</span> <span class="s2">"</span><span class="s">23:00:00"</span>
+        <span class="na">before</span><span class="pi">:</span> <span class="s2">"</span><span class="s">06:00:00"</span>
+</code></pre></div></div>
+<h3 id="trigger-ids">
+  
+  
+    <a href="#trigger-ids" class="anchor-heading" aria-labelledby="trigger-ids"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Trigger IDs
+  
+  
+</h3>
+    
+
+<p>Each of the room’s triggers has an ID, which a <strong>Triggered by</strong> condition in <strong>Conditions</strong> can
+check. Home Assistant’s editor can’t list a blueprint’s triggers, so the condition shows a
+warning and no choices: use <strong>⋮ → Edit in YAML</strong> and type the ID, as in the example above.</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Fires when</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">phase_change</code></td>
+      <td>the schedule moves to another phase</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tick</code></td>
+      <td>the room’s regular update, about once a minute</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_on</code></td>
+      <td>an occupancy or motion sensor detects someone</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_off</code></td>
+      <td>a sensor has been clear for the <strong>Wait time</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">lux_dark</code></td>
+      <td>the room stops being too bright for <strong>Lux Threshold</strong>, with someone there</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">recovered</code></td>
+      <td>one of the room’s lights comes back online</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">extra</code></td>
+      <td>an entity in <strong>Additional Trigger Entities</strong> changes (deprecated)</td>
+    </tr>
+    <tr>
+      <td>your own</td>
+      <td>one of your <strong>Additional Triggers</strong> fires: the ID you give it, or its position if it has none</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<p>Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
+you give one, it’s still an additional trigger: one named <code class="language-plaintext highlighter-rouge">motion_on</code> doesn’t light the room.
+Running the automation by hand has no trigger, and skips <strong>Conditions</strong> anyway.</p>
+<h2 id="sensors">
+  
+  
+    <a href="#sensors" class="anchor-heading" aria-labelledby="sensors"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors
   
   
 </h2>
@@ -366,11 +491,6 @@ either room goes dark.</p>
       <td><strong>Lux Threshold</strong></td>
       <td>0 (off)</td>
       <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux.</td>
-    </tr>
-    <tr>
-      <td><strong>Additional Triggers</strong></td>
-      <td>none</td>
-      <td>Entities that make the room update as soon as they change.</td>
     </tr>
   </tbody>
 </table></div>
@@ -408,19 +528,6 @@ is switched off for being bright. Turning the room on by hand — the automation
 <p>A sensor that is unavailable, unknown or not numeric can’t say how bright the room is, so it
 doesn’t count either way, and a room with no illuminance sensor never blocks. The check is off
 while <strong>Lux Threshold</strong> is <code class="language-plaintext highlighter-rouge">0</code>, which is the default.</p>
-<h3 id="additional-triggers">
-  
-  
-    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
-  
-  
-</h3>
-    
-
-<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
-<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
 <h2 id="brightness">
   
   
@@ -626,6 +733,11 @@ follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
       <td>on</td>
       <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used. Deprecated: use <strong>Exclude target</strong> instead of turning this off.</td>
     </tr>
+    <tr>
+      <td><strong>Additional Trigger Entities</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change. Deprecated: use <strong>Additional Triggers</strong> instead.</td>
+    </tr>
   </tbody>
 </table></div>
 <h3 id="override-protection">
@@ -679,6 +791,20 @@ use <strong>Exclude target</strong> in <strong>Lights &amp; Occupancy</strong> i
 sensors you don’t want (see Home Assistant’s
 <a href="https://www.home-assistant.io/docs/automation/targets/#excluding-targets">excluding targets</a>).
 An excluded sensor doesn’t count, whether it came from an area, a device, a floor or a label.</p>
+<h3 id="additional-trigger-entities">
+  
+  
+    <a href="#additional-trigger-entities" class="anchor-heading" aria-labelledby="additional-trigger-entities"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional trigger entities
+  
+  
+</h3>
+    
+
+<p>The list of entities <strong>Additional Triggers</strong> used to be: any change to one updates the room,
+as a <strong>State</strong> trigger on it in <a href="#additional-triggers">Additional Triggers</a> does.</p>
+
+<p><strong>Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.</strong> Move each entity to
+<strong>Additional Triggers</strong> as a <strong>State</strong> trigger, then clear this list.</p>
 <h2 id="how-a-room-behaves">
   
   
