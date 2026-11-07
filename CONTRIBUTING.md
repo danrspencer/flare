@@ -234,16 +234,22 @@ Submit on every step would. Then it runs every room's automation and checks that
 - FLARE's three entries load and all its services register;
 - every room gets its automation and its flare;
 - every bulb comes on and is controlled;
-- nothing from FLARE is logged as a warning or error, including Home Assistant's deprecation warnings about it.
+- nothing from FLARE is logged as a warning or error, including Home Assistant's deprecation warnings about it;
+- its dashboard renders in a headless Chromium: the schedule's sliders and curve, the Overrides view's rooms and
+  Activity rows, with no error cards and no browser errors from FLARE. The dashboard uses parts of Home
+  Assistant's frontend that it doesn't promise to keep (`ha-control-slider`, `ha-logbook-entry`), and each
+  release ships its own frontend.
 
-It prints a report and fails if any of these doesn't hold. It shares `.venv-sandbox/` with the sandbox, so a
+It prints a report and fails if any of these doesn't hold. It runs with `.venv-record/`'s Playwright, which
+`sandbox:record` also uses. It shares `.venv-sandbox/` with the sandbox, so a
 different `SANDBOX_HA_VERSION` reinstalls the sandbox's Home Assistant too.
 
 `.github/workflows/ha-prerelease.yml` runs it every morning against the newest release on PyPI, betas included
 (`python scripts/ha_check.py latest` prints it). When it fails, it opens an issue labelled `ha-compat` with the
 report. It comments there when the release or what fails changes, and closes the issue when the check passes again.
-To check a particular release from GitHub, run the workflow by hand with its version; that run leaves the issue
-alone. The issue doesn't block a release: label it `release-blocker` if it should.
+To check a particular release from GitHub, run the workflow by hand with its version. A pull request that changes
+the check (the workflow, `scripts/ha_check.py`, the sandbox or `mise.toml`) runs it too. Neither touches the
+issue. The issue doesn't block a release: label it `release-blocker` if it should.
 
 ## Translations
 

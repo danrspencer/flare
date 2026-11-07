@@ -73,10 +73,11 @@ run = "python scripts/sandbox.py --reset"
 
 [tasks.ha-check]
 description = "Check FLARE sets up and runs on SANDBOX_HA_VERSION's Home Assistant, in a throwaway house"
-depends = ["sandbox:install"]
+depends = ["sandbox:install", "sandbox:record:install"]
 # Its own port, so it can run beside the sandbox (on the same release).
 env = { SANDBOX_PORT = "8125" }
-run = "python scripts/ha_check.py run"
+# .venv-record's Python, for Playwright's pass over the dashboard.
+run = ".venv-record/bin/python scripts/ha_check.py run"
 
 [tasks."sandbox:hacs:install"]
 description = "Download HACS into .venv-sandbox/hacs/ and install its requirements"

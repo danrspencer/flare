@@ -8,8 +8,10 @@
 .ha-check/, goes through FLARE's setup as someone pressing Submit on every
 step would, runs every room's automation, and checks that FLARE's entries
 load, its services register, every bulb ends up on and controlled, and the
-log holds nothing from FLARE above INFO. It prints a Markdown report and
-exits 1 if anything failed.
+log holds nothing from FLARE above INFO. Then it opens FLARE's dashboard
+in a headless Chromium and checks its sliders, Overrides and Activity
+render, since they use frontend internals HA ships with each release. It
+prints a Markdown report and exits 1 if anything failed.
 
 .github/workflows/ha-prerelease.yml runs it daily against the newest release.
 See CONTRIBUTING.md ("Checking newer Home Assistant releases").
@@ -248,6 +250,121 @@ def check(report: Report, token: str) -> None:
                  ", ".join(f"{b}: {status[b]}" for b in uncontrolled))
 
 
+# Every element matching a selector, through every shadow root: the
+# dashboard's cards and HA's own elements all render in shadow DOM.
+DEEP_QUERY = """
+(selector) => {
+  const found = [];
+  const walk = (root) => root.querySelectorAll('*').forEach((el) => {
+    if (el.matches(selector)) found.push(el);
+    if (el.shadowRoot) walk(el.shadowRoot);
+  });
+  walk(document);
+  return found;
+}
+"""
+
+# The page's text, shadow roots included.
+DEEP_TEXT = """
+() => {
+  let text = '';
+  const walk = (root) => {
+    text += ' ' + (root.textContent || '');
+    root.querySelectorAll('*').forEach((el) => el.shadowRoot && walk(el.shadowRoot));
+  };
+  walk(document.documentElement);
+  return text;
+}
+"""
+
+# Each schedule slider: whether HA's ha-control-slider inside it is a
+# defined, rendered element.
+SLIDERS = f"""
+() => ({DEEP_QUERY})('flare-kelvin-feature, flare-brightness-feature').map((feature) => {{
+  const slider = feature.shadowRoot?.querySelector('ha-control-slider');
+  const box = slider?.getBoundingClientRect();
+  return Boolean(slider && customElements.get('ha-control-slider') && slider.shadowRoot && box.width > 0);
+}})
+"""
+
+# The Activity card's rows: HA's ha-logbook-entry, rendered with text.
+ACTIVITY = f"""
+() => ({DEEP_QUERY})('ha-logbook-entry')
+  .filter((entry) => entry.shadowRoot && entry.shadowRoot.textContent.trim()).length
+"""
+
+
+def count(page, selector: str) -> int:
+    return page.evaluate(f"(s) => ({DEEP_QUERY})(s).length", selector)
+
+
+def wait_count(page, js: str, at_least: int, timeout: float = 30) -> object:
+    """js's result once it reaches at_least (a count, or a list's length), or
+    its last result."""
+    deadline = time.monotonic() + timeout
+    while True:
+        result = page.evaluate(js)
+        size = len(result) if isinstance(result, list) else result
+        if size >= at_least or time.monotonic() > deadline:
+            return result
+        page.wait_for_timeout(1000)
+
+
+def check_dashboard(report: Report) -> None:
+    """FLARE's dashboard as a browser shows it: its strategy, the schedule
+    view's sliders and the Overrides view's cards, which lean on frontend
+    internals (ha-control-slider, ha-logbook-entry, loadCardHelpers)."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        report.check("Dashboard renders", False, "Playwright isn't installed: run the check through mise")
+        return
+
+    errors: list[str] = []
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 1000})
+        page.on("pageerror", lambda err: errors.append(f"{err}"))
+        page.on("console", lambda msg: msg.type == "error" and errors.append(msg.text))
+        try:
+            page.goto(sandbox.URL)
+            sandbox_ready = "() => document.querySelector('home-assistant')?.hass?.connected"
+            page.wait_for_function(sandbox_ready, timeout=120000)
+            # The first load reloads itself once the service worker is in.
+            page.wait_for_timeout(3000)
+            page.wait_for_function(sandbox_ready, timeout=120000)
+            ws = "(m) => document.querySelector('home-assistant').hass.callWS(m)"
+            page.evaluate(ws, {"type": "lovelace/dashboards/create", "url_path": "dashboard-flare",
+                               "title": "FLARE", "mode": "storage", "show_in_sidebar": True})
+            page.evaluate(ws, {"type": "lovelace/config/save", "url_path": "dashboard-flare",
+                               "config": {"strategy": {"type": "custom:flare"}}})
+
+            page.goto(f"{sandbox.URL}/dashboard-flare/0")
+            sliders = wait_count(page, SLIDERS, 1)
+            report.check("Dashboard: schedule sliders render", bool(sliders) and all(sliders),
+                         f"{sum(sliders)} of {len(sliders)}")
+            curve = count(page, "flare-curve-card")
+            report.check("Dashboard: the schedule's curve renders", curve > 0, f"{curve} cards")
+
+            page.goto(f"{sandbox.URL}/dashboard-flare/overrides")
+            areas = wait_count(page, f"() => ({DEEP_QUERY})('flare-area-lights-card').length", 1)
+            report.check("Dashboard: Overrides lists the rooms", areas > 0, f"{areas} areas")
+            rows = wait_count(page, ACTIVITY, 1)
+            report.check("Dashboard: Activity shows FLARE's events", rows > 0, f"{rows} rows")
+
+            text = page.evaluate(DEEP_TEXT)
+            shown = [m for m in ("Configuration error", "Timeout waiting for strategy") if m in text]
+            broken = count(page, "hui-error-card")
+            report.check("Dashboard: no error cards", not broken and not shown,
+                         ", ".join(shown + ([f"{broken} error cards"] if broken else [])))
+        except Exception as err:  # noqa: BLE001 - the report shows it
+            report.check("Dashboard renders", False, f"{type(err).__name__}: {err}"[:500])
+        finally:
+            browser.close()
+    flare_errors = [e for e in errors if MENTIONS_FLARE.search(e)]
+    report.check("Dashboard: no browser errors from FLARE", not flare_errors, "; ".join(flare_errors)[:1000])
+
+
 def run(args: argparse.Namespace) -> int:
     version = (sandbox.VENV / "installed").read_text().strip()
     report = Report(version)
@@ -259,6 +376,7 @@ def run(args: argparse.Namespace) -> int:
         if token:
             wait_running(hass, token)
             check(report, token)
+            check_dashboard(report)
             # Anything a run logs as it finishes.
             time.sleep(5)
     except Exception as err:  # noqa: BLE001 - any failure is the report's to show
