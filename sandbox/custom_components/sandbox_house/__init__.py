@@ -19,6 +19,8 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
+from .bulbs import KINDS
+
 DOMAIN = "sandbox_house"
 PLATFORMS = [
     Platform.LIGHT,
@@ -32,6 +34,8 @@ PLATFORMS = [
 ROOM_SCHEMA = vol.Schema(
     {
         vol.Required("bulbs"): cv.positive_int,
+        # Odd bulbs, by kind (bulbs.KINDS), after the plain ones.
+        vol.Optional("odd_bulbs", default=[]): [vol.In([kind for kind in KINDS if kind != "plain"])],
         vol.Optional("icon"): cv.icon,
         vol.Optional("tv", default=False): cv.boolean,
     }
@@ -46,12 +50,26 @@ CONFIG_SCHEMA = vol.Schema({DOMAIN: {cv.string: FLOOR_SCHEMA}}, extra=vol.ALLOW_
 class Room:
     name: str
     area_id: str
-    bulbs: int
+    plain_bulbs: int
+    odd_bulbs: tuple[str, ...] = ()
     tv: bool = False
 
     @property
     def slug(self) -> str:
         return slugify(self.name)
+
+    @property
+    def bulbs(self) -> int:
+        return self.plain_bulbs + len(self.odd_bulbs)
+
+    def kind(self, number: int) -> str:
+        """Bulb `number`'s kind: plain, then the odd ones in order."""
+        return "plain" if number <= self.plain_bulbs else self.odd_bulbs[number - self.plain_bulbs - 1]
+
+    def bulb_name(self, number: int) -> str:
+        if number <= self.plain_bulbs:
+            return f"Bulb {number}"
+        return KINDS[self.kind(number)].label
 
     def bulb_device(self, number: int) -> DeviceInfo:
         return DeviceInfo(identifiers={(DOMAIN, f"{self.slug}_{number}")})
@@ -90,7 +108,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     floor_id=area.floor_id or floor.floor_id,
                     icon=area.icon or room.get("icon"),
                 )
-            rooms.append(Room(name, area.id, room["bulbs"], room["tv"]))
+            rooms.append(Room(name, area.id, room["bulbs"], tuple(room["odd_bulbs"]), room["tv"]))
     hass.data[DOMAIN] = rooms
 
     if not hass.config_entries.async_entries(DOMAIN):
@@ -105,8 +123,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     devices = dr.async_get(hass)
     for room in hass.data[DOMAIN]:
         # Home Assistant puts the area in front of these in entity IDs:
-        # light.kitchen_bulb_1, switch.kitchen_sensor_presence.
-        wanted = [(f"Bulb {n}", "Bulb", room.bulb_device(n)) for n in range(1, room.bulbs + 1)]
+        # light.kitchen_bulb_1, light.workshop_rgb_strip, switch.kitchen_sensor_presence.
+        wanted = [
+            (room.bulb_name(n), KINDS[room.kind(n)].label, room.bulb_device(n)) for n in range(1, room.bulbs + 1)
+        ]
         wanted.append(("Sensor", "Presence sensor", room.sensor_device()))
         wanted.append(("Wall switch", "Wall switch", room.wall_switch_device()))
         if room.tv:

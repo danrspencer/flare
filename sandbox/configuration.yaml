@@ -44,6 +44,8 @@ logger:
 
 # Floors, then each floor's rooms: how many bulbs each has, its icon, and
 # whether it has a TV (a media_player that only turns on and off).
+# `odd_bulbs` adds bulbs that behave like awkward real ones, by kind (see
+# sandbox_house/bulbs.py).
 # A room with 0 bulbs is an area with no lights. Each room also gets a
 # sensor device: an occupancy binary_sensor and a Presence switch driving it,
 # and an illuminance sensor and a Daylight number driving that.
@@ -56,6 +58,20 @@ sandbox_house:
       Dining Room: {bulbs: 2, icon: mdi:silverware-fork-knife}
       Study: {bulbs: 1, icon: mdi:desk}
       Garage: {bulbs: 0, icon: mdi:garage}
+      Workshop:
+        bulbs: 1
+        icon: mdi:hammer-wrench
+        odd_bulbs:
+          - rgb_strip
+          - rgbw_strip
+          - rgbww_strip
+          - hs_bulb
+          - xy_bulb
+          - colour_bulb
+          - lying_spot
+          - coarse_bulb
+          - dimmer
+          - on_off
   Upstairs:
     icon: mdi:home-floor-1
     rooms:
