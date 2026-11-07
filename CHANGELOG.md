@@ -9,6 +9,12 @@ CI — see `.github/workflows/release.yml`.
 
 ## [2.1.0] - Unreleased
 
+### Added
+
+- **Run Only When**, a new blueprint setting: conditions that must all be met for the room to
+  run, as an ordinary automation's conditions are. While they aren't, the room is paused, for
+  a vacation or guest mode. Running the automation by hand still works.
+
 ### Fixed
 
 - **RGB LED strips are no longer marked overridden when nobody has touched them.** A light
@@ -16,8 +22,7 @@ CI — see `.github/workflows/release.yml`.
   temperature FLARE asks for, and FLARE read that colour back as a much warmer white (2700 K as
   about 1870 K), so the strip was marked overridden a minute after every update. FLARE now
   compares such a light's colour with the RGB Home Assistant sent it, and the Overrides
-  dashboard shows that RGB as what was asked, beside the RGB the strip reports. Thanks to
-  @LotharMadsson ([#350](https://github.com/danrspencer/flare/pull/350)).
+  dashboard shows that RGB as what was asked, beside the RGB the strip reports.
 
 ## [2.0.1] - Unreleased
 

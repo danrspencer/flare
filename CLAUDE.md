@@ -77,8 +77,12 @@ HA's trace UI.
   they can see `is_hidden_entity` but not `entity_category`, and
   `device_entities()` misses child devices. So the action's first step
   calls the service, and everything built from the room's entities is an
-  action-level `variables:` step after it. The one top-level
-  `condition:` reads only inputs (Sensors From Areas, below). The `recovered` trigger keeps a plain Jinja expansion (it
+  action-level `variables:` step after it. The top-level `condition:`
+  reads only inputs (Sensors From Areas, below) and holds the user's
+  **Run Only When**, which pauses the whole room: it can only stop runs,
+  never widen `allow_turn_on`, and `automation.trigger` skips it, so a
+  manual run and a flare still get through. It isn't a pet filter: a
+  room left lit when the pause starts stays lit. The `recovered` trigger keeps a plain Jinja expansion (it
   only makes a room catch up early, so close enough is fine - user's
   call).
 - Scene coverage is the `compute_scene_coverage` service, called in

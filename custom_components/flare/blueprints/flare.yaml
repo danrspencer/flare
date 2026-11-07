@@ -287,6 +287,18 @@ blueprint:
       icon: mdi:cog-outline
       collapsed: true
       input:
+        run_only_when:
+          name: Run Only When
+          description: >
+            Conditions every one of which must be met for the room to run at
+            all. While they aren't, the room is paused: lights stay as they
+            are, nothing turns on or off, and the schedule isn't followed.
+            It catches up on its next update once they're met again. Running
+            the room by hand still works.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#pausing-a-room).
+          default: []
+          selector:
+            condition: {}
         override_protection:
           name: Override Protection
           description: >
@@ -518,6 +530,12 @@ condition:
       {{ use_area_sensors or manual_run
          or trigger.id not in ['motion_on', 'motion_off']
          or trigger.entity_id in named_entities }}
+  # `and`, as an automation's own conditions are, so an empty list is met.
+  # automation.trigger skips conditions by default, so a manual run and a
+  # flare still get through.
+  - alias: "Run Only When is met"
+    condition: and
+    conditions: !input run_only_when
 
 action:
   # Room Target as Home Assistant resolves it for an action, which is how a
