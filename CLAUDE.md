@@ -299,7 +299,12 @@ Facts verified against HA core:
   (within `MAX_WHITE_DUV` of the locus), never by RGB, since HA's
   Kelvin->RGB and xy->RGB conversions differ by ~13 in red at 6500K; RGB
   only against an RGB target; the target as asked or clamped to the
-  advertised range. Separate copies had drifted (the bathroom spots read
+  advertised range. **A target is kept and compared as HA sends it**
+  (`sent()`): a light with colour but neither colour temperature nor RGBWW
+  is sent a Kelvin target as `color_temperature_to_hs`'s RGB, so its claim
+  holds that RGB and it's read by `rgb_color` (an RGB strip's xy reads
+  2700K as ~1870K). Claims recorded before this still hold Kelvin, which
+  `sent()` converts when comparing. Separate copies had drifted (the bathroom spots read
   as overridden while showing 6575K for 6578K).
   `tests/checks/test_one_value_matcher.py` fails if anything else reads a
   light's colour or imports `homeassistant.util.color` (the curve's
