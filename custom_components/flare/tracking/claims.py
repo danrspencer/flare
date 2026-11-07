@@ -75,7 +75,7 @@ from ..const import (
     DEFAULT_MIN_COLOR_TEMP_CHANGE,
     is_reachable,
 )
-from .matching import Tolerance, differs, reported, shown
+from .matching import Tolerance, differs, reported, sent, shown
 from .override_protection import (
     MISMATCH_GRACE,
     _context_matches,
@@ -374,7 +374,8 @@ class ClaimRegistry:
         room records nothing. Each light's live context is read here, before
         the write it's recording is dispatched.
 
-        targets: what each write asked for.
+        targets: what each write asked for, kept as HA sends it to the light
+        (`matching.sent`).
         secondary_context_ids / context_id_overrides: two-step lights only -
         the brightness and colour steps' contexts.
         room_entities: the room's lights, which it releases together."""
@@ -434,7 +435,7 @@ class ClaimRegistry:
                     "context_id": context_id_overrides.get(entity_id, context_id),
                     "secondary_context_id": secondary_context_ids.get(entity_id),
                     "recorded_at": dt_util.utcnow().isoformat(),
-                    "target": targets.get(entity_id),
+                    "target": sent(state.attributes, targets.get(entity_id)) if state is not None else targets.get(entity_id),
                 },
             }
             # A new write starts afresh: a mismatch now is the write landing.

@@ -24,14 +24,15 @@ Reading a light:
   counts as much as one in a single channel. Never in COLOR_TEMP mode,
   where HA works `rgb_color` out from the Kelvin: 3200K reports exactly the
   curve's RGB for 3200K, which a bulb in a colour mode shows far warmer.
-- The one exception: a light with colour but neither colour temperature
-  nor RGBWW (an RGB LED strip) can't show Kelvin, so HA's light.turn_on
-  turns a Kelvin target into a colour itself (`color_temperature_to_hs`),
-  and the light shows that. HA's conversion isn't colorimetric - 2700K is
-  sent as RGB whose xy reads as ~1870K, and warmer targets land off the
-  line of whites altogether - so such a light also shows a Kelvin target
-  when its `rgb_color` matches what HA sent it, by the RGB rule. (RGBWW is
-  sent `color_temperature_to_rgbww` and stays on the Kelvin read.)
+
+A target is compared as HA sends it (`sent()`). A light with colour but
+neither colour temperature nor RGBWW (an RGB LED strip) can't show Kelvin,
+so HA's light.turn_on turns a Kelvin target into a colour itself
+(`color_temperature_to_hs`), and the light shows that colour, not the
+Kelvin: its xy reads 2700K back as ~1870K. For such a light a Kelvin target
+is the RGB HA sends it, compared by the RGB rule, and what it shows is its
+`rgb_color`. (RGBWW is sent `color_temperature_to_rgbww` and stays on the
+Kelvin read.)
 
 Comparing, for a Kelvin target:
 
@@ -103,6 +104,7 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
 def differs(attributes: Mapping, target: Mapping, tolerance: Tolerance = Tolerance()) -> list[str]:
     """Which of a target's values a light reporting `attributes` doesn't
     show: "brightness", "color", both or neither."""
+    target = sent(attributes, target)
     values = []
     brightness = target.get(ATTR_BRIGHTNESS)
     if brightness is not None and not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), brightness, tolerance):
@@ -119,14 +121,10 @@ def _color_matches(attributes: Mapping, target: Mapping, tolerance: Tolerance) -
         )
     if target.get(ATTR_COLOR_TEMP_KELVIN) is None:
         return False
-    asked = int(target[ATTR_COLOR_TEMP_KELVIN])
-    if _kelvin_sent_as_colour(attributes) and _rgb_matches(
-        attributes.get(ATTR_RGB_COLOR), _hs_to_rgb(*_kelvin_to_hs(asked)), tolerance
-    ):
-        return True
     current = reported_kelvin(attributes)
     if current is None:
         return False
+    asked = int(target[ATTR_COLOR_TEMP_KELVIN])
     reachable = _clamp(asked, attributes.get(ATTR_MIN_COLOR_TEMP_KELVIN), attributes.get(ATTR_MAX_COLOR_TEMP_KELVIN))
     return _kelvin_matches(current, asked, tolerance) or (
         reachable != asked and _kelvin_matches(current, reachable, tolerance)
@@ -144,11 +142,22 @@ def _kelvin_sent_as_colour(attributes: Mapping) -> bool:
     return ColorMode.COLOR_TEMP not in modes and ColorMode.RGBWW not in modes and color_supported(modes)
 
 
+def sent(attributes: Mapping, target: Optional[Mapping]) -> Optional[Mapping]:
+    """`target` as HA's light.turn_on sends it to a light reporting
+    `attributes`: a Kelvin target becomes the RGB `color_temperature_to_hs`
+    gives, for a light that can't show Kelvin. Anything else as it is."""
+    if not target or target.get(ATTR_COLOR_TEMP_KELVIN) is None or not _kelvin_sent_as_colour(attributes):
+        return target
+    as_sent = {key: value for key, value in target.items() if key != ATTR_COLOR_TEMP_KELVIN}
+    as_sent[ATTR_RGB_COLOR] = list(_hs_to_rgb(*_kelvin_to_hs(int(target[ATTR_COLOR_TEMP_KELVIN]))))
+    return as_sent
+
+
 def shown(attributes: Mapping) -> dict:
     """What a light shows, as a target: its brightness and Kelvin, or its
-    rgb_color if it isn't showing a white."""
+    rgb_color if it isn't showing a white or can't show Kelvin."""
     target = {ATTR_BRIGHTNESS: attributes.get(ATTR_BRIGHTNESS)}
-    kelvin = reported_kelvin(attributes)
+    kelvin = None if _kelvin_sent_as_colour(attributes) else reported_kelvin(attributes)
     if kelvin is not None:
         target[ATTR_COLOR_TEMP_KELVIN] = kelvin
     elif attributes.get(ATTR_RGB_COLOR) is not None:

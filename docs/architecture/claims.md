@@ -81,7 +81,9 @@ way the light is still FLARE's, so a dropped write can't lock FLARE out,
 even if the light reports the same state again under a new context.
 
 **A target** is what a write asked for: `{brightness, color_temp_kelvin}`,
-`{brightness, rgb_color}`, or `{state: off}` for a turn-off. A light
+`{brightness, rgb_color}`, or `{state: off}` for a turn-off, kept as HA
+sends it to the light (`matching.sent()`): a Kelvin target for a light that
+can't show Kelvin is kept as the RGB HA sends it instead. A light
 reported under a stranger's context is still FLARE's if it shows the
 target. That covers a bulb reporting after HA has forgotten the write's
 context, which happens 5 seconds after the call.
@@ -151,13 +153,13 @@ anything else calls `classify()`.
 | near mired | within the Settings entry's tolerance (5 mireds by default), about the smallest change anyone notices |
 | out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
 | RGB | `rgb_color`, only against an RGB target: the channels' differences summed, within twice the colour tolerance (10 at the default), never less than 4 |
-| Kelvin on a light without it | a light with colour but neither colour temperature nor RGBWW (an RGB strip) also matches a Kelvin target if its `rgb_color` matches, by the RGB rule, what HA's `light.turn_on` sent it (`color_temperature_to_hs`) |
+| Kelvin on a light without it | a light with colour but neither colour temperature nor RGBWW (an RGB strip) is compared with the RGB HA's `light.turn_on` sends it for the Kelvin (`color_temperature_to_hs`), by the RGB rule, and shows its `rgb_color` |
 
 Never Kelvin by way of RGB: HA's Kelvin→RGB and xy→RGB conversions differ
 by about 13 in red at 6500K, so a bulb showing exactly what was asked would
 read as something else. The exception is a light that can't show Kelvin,
 where HA does that conversion itself and the light shows its result: its xy
-reads 2700K back as about 1870K.
+reads 2700K back as about 1870K, so its target is the RGB HA sends.
 
 ## A light's life
 

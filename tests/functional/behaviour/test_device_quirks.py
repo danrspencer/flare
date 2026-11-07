@@ -56,7 +56,7 @@ async def test_an_rgb_only_strip_sent_kelvin_is_not_treated_as_overridden(
 ) -> None:
     """An RGB strip has no colour temperature, so HA converts the Kelvin it's
     sent into RGB, whose xy reads back as a far warmer Kelvin (3200K as
-    ~2100K). Seen live on a flux_led strip, overridden on every tick."""
+    ~2100K). Its claim holds that RGB, so its status shows what it was sent."""
     (strip,) = await add_bulbs("strip", area_id=area, strip={"rgb_only": True})
     occupancy(hass, SENSOR, "off")
     # No RGB phases, so FLARE sends Kelvin, as it does by day.
@@ -72,6 +72,11 @@ async def test_an_rgb_only_strip_sent_kelvin_is_not_treated_as_overridden(
     assert reported_kelvin(state.attributes) != CURVE_KELVIN, (
         "precondition: the strip's colour must not read back as the Kelvin it was sent, "
         "or this test can't tell a real fix from a no-op"
+    )
+
+    status = hass.states.get(f"sensor.{strip.entity_id.split('.', 1)[1]}_flare_status")
+    assert status.attributes["asked"] == {"brightness": strip.brightness, "rgb_color": list(strip.rgb_color)}, (
+        "the strip's claim should hold the RGB HA sent it, not the Kelvin FLARE asked for"
     )
 
     # The strip's own poll: the same colour under an unrelated context.

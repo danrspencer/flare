@@ -15,7 +15,8 @@ CI — see `.github/workflows/release.yml`.
   with no colour temperature of its own is set by Home Assistant to the RGB for the colour
   temperature FLARE asks for, and FLARE read that colour back as a much warmer white (2700 K as
   about 1870 K), so the strip was marked overridden a minute after every update. FLARE now
-  compares such a light's colour with the RGB Home Assistant sent it.
+  compares such a light's colour with the RGB Home Assistant sent it, and the Overrides
+  dashboard shows that RGB as what was asked, beside the RGB the strip reports.
 
 ## [2.0.1] - Unreleased
 

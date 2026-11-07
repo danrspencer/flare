@@ -4,7 +4,7 @@ docstring."""
 
 import pytest
 
-from custom_components.flare.tracking.matching import Tolerance, differs, reported_kelvin, shown, shows
+from custom_components.flare.tracking.matching import Tolerance, differs, reported_kelvin, sent, shown, shows
 
 KELVIN = {"brightness": 200, "color_temp_kelvin": 3000}
 RGB = {"brightness": 200, "rgb_color": [255, 120, 10]}
@@ -172,9 +172,7 @@ def _rgb_only(brightness, rgb, xy, modes=("rgb",)):
 
 class TestKelvinOnALightWithoutIt:
     """HA turns a Kelvin target into a colour for a light without colour
-    temperature, and that colour's xy doesn't read back as the Kelvin.
-    Seen live on a flux_led RGB strip (Zengge Controller RGB), overridden on
-    every tick."""
+    temperature, and that colour's xy doesn't read back as the Kelvin."""
 
     @pytest.mark.parametrize(
         ("kelvin", "brightness", "rgb", "xy"),
@@ -221,6 +219,30 @@ class TestKelvinOnALightWithoutIt:
         assert not shows(attributes, {"brightness": 127, "color_temp_kelvin": 2700})
 
 
+class TestSent:
+    """A target as HA's light.turn_on sends it to the light."""
+
+    def test_kelvin_becomes_the_rgb_ha_sends_a_light_without_colour_temperature(self):
+        attributes = _rgb_only(127, (255, 167, 86), (0.526, 0.389))
+        assert sent(attributes, {"brightness": 127, "color_temp_kelvin": 2700}) == {
+            "brightness": 127,
+            "rgb_color": [255, 167, 87],
+        }
+
+    @pytest.mark.parametrize(
+        "target",
+        [{"brightness": 127, "rgb_color": [255, 0, 0]}, {"state": "off"}, None],
+        ids=["rgb", "off", "none"],
+    )
+    def test_anything_but_kelvin_is_sent_as_it_is(self, target):
+        assert sent(_rgb_only(127, (255, 167, 86), (0.526, 0.389)), target) == target
+
+    def test_a_light_with_colour_temperature_is_sent_kelvin(self):
+        attributes = {"supported_color_modes": ["color_temp", "rgb"], "color_mode": "color_temp"}
+        target = {"brightness": 127, "color_temp_kelvin": 2700}
+        assert sent(attributes, target) == target
+
+
 class TestShown:
     """What a light shows, as a target - what the override event reports."""
 
@@ -231,8 +253,19 @@ class TestShown:
     def test_a_colour_is_its_rgb(self):
         assert shown(_xy(0.17, 0.7, rgb_color=[0, 255, 0])) == {"brightness": 255, "rgb_color": [0, 255, 0]}
 
+    def test_a_light_without_colour_temperature_is_its_rgb_even_showing_a_white(self):
+        """6648K is sent as (255, 250, 255), whose xy reads as a 5873K white."""
+        attributes = _rgb_only(252, (255, 250, 255), (0.325, 0.324))
+        assert reported_kelvin(attributes) is not None, "precondition: its xy must read as a white"
+        assert shown(attributes) == {"brightness": 252, "rgb_color": [255, 250, 255]}
+
     def test_it_shows_itself(self):
-        for attributes in (_ct(200, 3000), _xy(0.3124, 0.3226), _xy(0.17, 0.7, rgb_color=[0, 255, 0])):
+        for attributes in (
+            _ct(200, 3000),
+            _xy(0.3124, 0.3226),
+            _xy(0.17, 0.7, rgb_color=[0, 255, 0]),
+            _rgb_only(252, (255, 250, 255), (0.325, 0.324)),
+        ):
             assert shows(attributes, shown(attributes))
 
 
