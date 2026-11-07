@@ -7,6 +7,15 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.0.2] - Unreleased
+
+### Fixed
+
+- **Dimmers and on/off lights are no longer marked overridden when nobody has touched them.**
+  Home Assistant drops the colour FLARE sends a light that can't show one, and the brightness it
+  sends an on/off light, but FLARE still expected the light to show them, so the first report it
+  made of its own marked it overridden. FLARE now compares only what a light can show.
+
 ## [2.0.1] - Unreleased
 
 ### Fixed
