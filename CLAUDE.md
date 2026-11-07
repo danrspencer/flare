@@ -111,7 +111,18 @@ Blueprint input mechanics:
   (Override Protection, Prefer RGB During, Stored Traces, then the
   deprecated Sensors From Areas and Additional Trigger Entities).
   `docs/reference/blueprint.md` follows the same grouping.
-- `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
+- `homeassistant.min_version: 2026.11.0`, with `hacs.json` (user's
+  call): inputs take `visible:` from 2026.11, which a 2026.10 house
+  rejects, failing every room.
+- **A deprecated input hides only while it's at its default**
+  (`visible:` on its own value, user's call). HA builds the automation
+  from a hidden input's default, not its stored value
+  (`BlueprintInputs.inputs_with_default`; the editor drops it too), so
+  that's the only hiding that can't change a room.
+  `tests/checks/test_blueprint_visibility.py` holds every `visible:` to
+  it. Sensors From Areas hides while on. A list input can't: `visible:`
+  counts only `None` and `""` as empty, and a State trigger's `entity_id`
+  takes neither.
 - **Schedule is a device selector** (`integration: flare`,
   `model: Schedule`). The blueprint finds the schedule's
   sensor in `variables:`. Triggers can't do that lookup, hence the
@@ -1070,11 +1081,11 @@ having switched it on and left.
   would leave a forgotten lamp in an empty room on forever.
   Presence (mmWave) sensors remove the cause, but that's hardware.
 
-### Planned for 3.0: Sensors From Areas goes, the floor goes to 2026.11
+### Planned for 3.0: Sensors From Areas goes
 
 Deprecated in 2.0 (its description, the reference page and the changelog
-say so); remove it in 3.0 and raise the blueprint's `min_version` and
-`hacs.json` to 2026.11.0 together (user's call).
+say so), hidden while on since 2.1 raised the floor to 2026.11; remove it
+in 3.0.
 
 - **Exclude replaces it.** From 2026.11 a target takes an `exclude`
   block, the target selector offers it in blueprint forms, and
@@ -1086,11 +1097,7 @@ say so); remove it in 3.0 and raise the blueprint's `min_version` and
   narrowed) and the `use_area_sensors` branches in `room_lux_entities`,
   `room_occupancy_entities` and the `lux_dark` trigger. That trigger's
   Jinja ignores exclusions, like `recovered`'s: a wake-up only.
-- **Not done in 2.0 because** HA before 2026.11 rejects a blueprint input
-  with an unknown key (`BLUEPRINT_INPUT_SCHEMA` is closed), so hiding it
-  with `visible:` would stop the blueprint, and every room, loading there.
-  With the floor at 2026.11 it can simply go: a stored input that no
-  longer exists is ignored.
+- **It can simply go**: a stored input that no longer exists is ignored.
 - **A room with it off then reads every sensor its target reaches.** It
   only differs where the target names an area, device, floor or label;
   3.0's changelog needs to say so.
@@ -1245,11 +1252,11 @@ files, and a symlink once wrote junk blueprints into the repo.
   releases. That's deliberate; don't "fix" it with a PAT.
 - **`git push origin dev:main` must be a fast-forward**: `main` requires
   linear history.
-- **The integration needs HA 2026.10.0** (`hacs.json`'s `homeassistant`):
+- **The integration needs HA 2026.11.0** (`hacs.json`'s `homeassistant`),
+  the blueprint's floor (`visible:`). Before that it needed 2026.10.0:
   earlier releases make every subentry's Add button ask which entry type
   first, a frontend bug that would read as ours, and the Activity card
-  needs 2026.10's `ha-logbook-entry`. The blueprint's own floor stays at
-  what it needs.
+  needs 2026.10's `ha-logbook-entry`.
 - `tests/checks/test_versions.py` pins the placeholders and a parseable
   changelog heading. Full flow in CONTRIBUTING.md.
 

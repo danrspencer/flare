@@ -52,8 +52,7 @@ Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_c
 other binary sensors in the target are ignored. A room can mix both kinds.
 
 To pick an area for its lights but leave some of its sensors out, add them with **Exclude
-target** (Home Assistant 2026.11 and later). On earlier versions, turn off
-[Sensors From Areas](#sensors-from-areas) and pick the sensors you want by name.
+target**.
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
@@ -242,9 +241,9 @@ Turn **Sensors From Areas** off and only the sensors you pick by name in **Light
 count, so you can pick an area for its lights and choose the sensors yourself, such as the
 hallway's for a landing. Pick none for a room that only follows the schedule.
 
-**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** From Home Assistant 2026.11,
-use **Exclude target** in **Lights & Occupancy** instead of turning it off, to leave out the
-sensors you don't want (see Home Assistant's
+**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** It only shows in a room that
+has it turned off. Use **Exclude target** in **Lights & Occupancy** instead of turning it off,
+to leave out the sensors you don't want (see Home Assistant's
 [excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
 An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
 

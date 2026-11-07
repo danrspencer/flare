@@ -18,6 +18,10 @@ CI — see `.github/workflows/release.yml`.
 
 ### Changed
 
+- **FLARE needs Home Assistant 2026.11.0 or newer**, for both the integration and the blueprint.
+  On 2026.10, stay on FLARE 2.0 until you update Home Assistant.
+- **Sensors From Areas only shows in a room that has it turned off.** Rooms with it on (the
+  default) don't see it any more; use **Exclude target** in **Lights & Occupancy** instead.
 - **Additional Triggers takes triggers, as an ordinary automation does**, so a room can update
   on something specific: the TV changing to playing, an attribute, a button press. They still
   only adjust lights that are already on, and never switch one on. Rooms keep the entities they
