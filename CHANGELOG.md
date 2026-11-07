@@ -7,7 +7,7 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
-## [2.0.2] - Unreleased
+## [2.1.0] - Unreleased
 
 ### Fixed
 
