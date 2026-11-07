@@ -89,6 +89,18 @@ blueprint:
           selector:
             entity:
               multiple: true
+        run_when:
+          name: Run When
+          description: >
+            Conditions, as in an ordinary automation, every one of which must
+            be met for the room to run at all. While they aren't, the room is paused: lights stay
+            as they are, nothing turns on or off, and the schedule isn't
+            followed. It catches up on its next update once they're met
+            again. Running the room by hand still works.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#run-when).
+          default: []
+          selector:
+            condition: {}
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
@@ -287,18 +299,6 @@ blueprint:
       icon: mdi:cog-outline
       collapsed: true
       input:
-        run_when:
-          name: Run When
-          description: >
-            Conditions, as in an ordinary automation, every one of which must
-            be met for the room to run at all. While they aren't, the room is paused: lights stay
-            as they are, nothing turns on or off, and the schedule isn't
-            followed. It catches up on its next update once they're met
-            again. Running the room by hand still works.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#run-when).
-          default: []
-          selector:
-            condition: {}
         override_protection:
           name: Override Protection
           description: >

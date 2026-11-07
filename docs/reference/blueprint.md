@@ -66,6 +66,7 @@ either room goes dark.
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 | **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
 | **Additional Triggers** | none | Entities that make the room update as soon as they change. |
+| **Run When** | none | Conditions, as in an ordinary automation, that must all be met for the room to run. While they aren't, the room is paused. |
 
 ### Lux Threshold
 
@@ -99,6 +100,21 @@ Add any entity a template depends on, such as the TV in a Brightness Template th
 while it's playing. An additional trigger only adjusts lights that are already on. To turn a room
 on from something else, see
 [lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+
+### Run when
+
+While anything in **Run When** isn't met, the room does nothing at all: its lights stay as
+they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
+guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
+the room catches up on its next tick: lights that are on move to the schedule, and an empty
+room turns off. If a condition reads an entity, add that entity to
+[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
+
+Running the automation by hand, or turning on its [flare](../flares/), still works while the
+room is paused.
+
+A room left on when the pause starts stays on until it ends, so a pause isn't the way to stop
+a sensor lighting a room at night.
 
 ## Brightness
 
@@ -159,26 +175,10 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 
 | Input | Default | Description |
 |---|---|---|
-| **Run When** | none | Conditions, as in an ordinary automation, that must all be met for the room to run. While they aren't, the room is paused. |
 | **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
 | **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
-
-### Run when
-
-While anything in **Run When** isn't met, the room does nothing at all: its lights stay as
-they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
-guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
-the room catches up on its next tick: lights that are on move to the schedule, and an empty
-room turns off. If a condition reads an entity, add that entity to
-[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
-
-Running the automation by hand, or turning on its [flare](../flares/), still works while the
-room is paused.
-
-A room left on when the pause starts stays on until it ends, so a pause isn't the way to stop
-a sensor lighting a room at night.
 
 ### Override protection
 
