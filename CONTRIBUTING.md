@@ -224,7 +224,7 @@ screenshot of the failed step is left in `sandbox/recordings/` with the working 
 
 ### Checking newer Home Assistant releases
 
-The test suite only runs on the Home Assistant release `pytest-homeassistant-custom-component` pins, so a change in
+The test suite only runs on the Home Assistant release `pytest-homeassistant` pins, so a change in
 a newer release can break FLARE without any test failing. To check one, run:
 
 ```bash
@@ -336,7 +336,7 @@ Two things about it are less obvious than they look:
   a live server. It carries no nav entry, isn't in the search index, and nothing else on the site links to
   it — reachable only to someone who already has the URL. Beta builds only, so a PR's docs build doesn't pay
   for a full
-  `pytest-homeassistant-custom-component` install just to produce a page that build never serves anyway.
+  `pytest-homeassistant` install just to produce a page that build never serves anyway.
 
 Every page needs front matter — Jekyll only renders a file as a *page* if it has a literal front matter block,
 and copies it through verbatim otherwise. `tests/checks/test_docs_site.py` checks that (`docs/trace-report/` is
@@ -347,7 +347,7 @@ excluded from that check the same way `_site`/`_preview`/etc. are — it's delib
 Via [mise](https://mise.jdx.dev) (`mise.toml` pins Python 3.14 and manages a `.venv`):
 
 ```bash
-mise run install   # pip install pytest pytest-homeassistant-custom-component, into .venv
+mise run install   # pip install pytest pytest-homeassistant, into .venv
 mise run test              # everything
 mise run test:unit         # tests/unit and tests/checks - fast, no Home Assistant instance
 mise run test:functional   # tests/functional
@@ -358,9 +358,12 @@ mise run traces      # render captured traces (run test:behaviour first)
 Without mise:
 
 ```bash
-pip install pytest pytest-homeassistant-custom-component
+pip install pytest pytest-homeassistant
 pytest
 ```
+
+An environment that still has the old `pytest-homeassistant-custom-component` needs it uninstalled first: the two
+register the same fixtures.
 
 Three layers under `tests/`:
 
@@ -370,15 +373,15 @@ Three layers under `tests/`:
 - `checks/` - the repository agreeing with itself: docs pages and anchors, versions, services.yaml, the
   static imports and the package layering.
 - `functional/` - a real Home Assistant, via
-  [pytest-homeassistant-custom-component](https://github.com/MatthewFlamm/pytest-homeassistant-custom-component).
+  [pytest-homeassistant](https://pypi.org/project/pytest-homeassistant/).
   `component/` covers the integration (services, claims, rooms, schedules, config flows, repairs);
   `blueprint/` runs the real blueprint with FLARE's services mocked, to test what it decides to call;
   `behaviour/` runs the real blueprint, schedule and services end to end on a pinned day, with only the bulbs
   faked, and asserts on the state the bulbs end up in.
 
-This is also why `pyproject.toml`'s `requires-python` floor is 3.14, not something lower: pytest-homeassistant-
-custom-component pins a specific Home Assistant release, which itself pins the Python it needs — since this repo
-only ever runs inside a real HA install, tracking that floor is the right target, not a separate, broader
+This is also why `pyproject.toml`'s `requires-python` floor is 3.14, not something lower: pytest-homeassistant
+pins a specific Home Assistant release, which itself pins the Python it needs — since this repo only ever runs
+inside a real HA install, tracking that floor is the right target, not a separate, broader
 compatibility matrix. CI (`.github/workflows/tests.yml`) runs the full suite on push and PR.
 
 ## Status

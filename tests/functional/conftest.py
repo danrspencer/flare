@@ -1,5 +1,5 @@
 """Functional tests run against a real Home Assistant instance, via
-pytest-homeassistant-custom-component."""
+pytest-homeassistant."""
 
 import shutil
 from pathlib import Path
@@ -9,7 +9,7 @@ from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import mock_component
+from pytest_homeassistant.common import mock_component
 
 from tests.support import BLUEPRINT_FILE, BLUEPRINT_PATH, REPO_ROOT
 
@@ -45,11 +45,6 @@ def sunset(monkeypatch):
 
     pin.asked = pinned["asked"]
     return pin
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 @pytest.fixture

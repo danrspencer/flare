@@ -8,7 +8,7 @@ import voluptuous as vol
 import yaml
 from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant.common import MockConfigEntry, async_mock_service
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.services.schedules import async_setup_schedule_services

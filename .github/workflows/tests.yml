@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           # Matches pyproject.toml's requires-python floor - tracks
-          # whatever Python pytest-homeassistant-custom-component's
+          # whatever Python pytest-homeassistant's
           # pinned Home Assistant release itself needs, not a separate,
           # broader compatibility target (this repo only ever runs
           # inside a real HA install, so there's nothing else to target).
@@ -32,7 +32,7 @@ jobs:
       # directly, blueprint included). pyproject.toml's
       # dev extra is a versions reference, not something installed
       # as-is.
-      - run: pip install pytest pytest-homeassistant-custom-component
+      - run: pip install pytest pytest-homeassistant
       - run: pytest -v --junitxml=junit.xml
 
       # Renders on the run page itself, so "what ran" doesn't mean

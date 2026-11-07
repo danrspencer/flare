@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant.common import async_fire_time_changed
 
 from tests.functional.blueprint.harness import light, occupancy, setup_room_automation
 

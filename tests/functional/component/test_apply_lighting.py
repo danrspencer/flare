@@ -4,7 +4,7 @@ real claims, two-step transitions and force."""
 from __future__ import annotations
 
 from homeassistant.core import Context, HomeAssistant
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant.common import async_mock_service
 
 from custom_components.flare.const import (
     CONF_MIN_BRIGHTNESS_CHANGE,

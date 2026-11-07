@@ -13,7 +13,7 @@ from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.flare.button import async_setup_entry as button_setup
 from custom_components.flare.const import (

@@ -5,7 +5,7 @@ compute_scene_coverage and resolve_target are FLARE's own."""
 
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
+from pytest_homeassistant.common import MockConfigEntry, async_mock_service
 
 from custom_components.flare.const import DOMAIN
 from custom_components.flare.services.handlers import async_setup_services

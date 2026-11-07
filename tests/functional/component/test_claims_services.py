@@ -11,7 +11,7 @@ from custom_components.flare.const import (
     CONF_MIN_COLOR_TEMP_CHANGE,
     DOMAIN,
 )
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant.common import async_mock_service
 from tests.support.claims import after_the_grace
 from tests.functional.component.harness import (
     CT,

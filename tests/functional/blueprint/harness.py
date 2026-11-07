@@ -8,7 +8,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 from homeassistant.setup import async_setup_component
-from pytest_homeassistant_custom_component.common import MockConfigEntry, MockEntity, MockEntityPlatform
+from pytest_homeassistant.common import MockConfigEntry, MockEntity, MockEntityPlatform
 
 from custom_components.flare.services.grouping import target_brightness
 from tests.support import BLUEPRINT_PATH

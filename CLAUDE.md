@@ -1494,10 +1494,18 @@ each light's timeline.
 
 ## Testing
 
-`pip install pytest pytest-homeassistant-custom-component && pytest` from
+`pip install pytest pytest-homeassistant && pytest` from
 the repo root (see CONTRIBUTING.md). Python 3.14, the floor of the HA
-release pytest-homeassistant-custom-component pins. `pip install -e .`
+release pytest-homeassistant pins. `pip install -e .`
 doesn't work and isn't needed: nothing is distributed as a Python package.
+
+The harness is Home Assistant's own `pytest-homeassistant`, built from
+core, versioned as HA and released with it; it registers itself as a
+plugin, so there's no root `conftest.py`. It replaced
+`pytest-homeassistant-custom-component`, which stopped at HA 2026.10.4.
+Both are plugins defining the same fixtures, so `mise run install` removes the old
+one. FLARE's minimum HA can't run ahead of the newest release it
+publishes, or the tests can't load the blueprint.
 
 Three layers: `tests/unit/` (no Home Assistant), `tests/checks/` (the repo
 agreeing with itself) and `tests/functional/` (a real HA). Shared helpers
@@ -1529,7 +1537,7 @@ test module never imports another.
   GIF is linked by raw `main` URL, since GitHub and HACS show a README's
   images but not video.
 - **pytest covers one Home Assistant release, the one
-  pytest-homeassistant-custom-component pins.** `mise run ha-check`
+  pytest-homeassistant pins.** `mise run ha-check`
   (`scripts/ha_check.py`) sets FLARE up in a throwaway sandbox house on
   any release and opens its dashboard in a headless browser (the frontend
   internals above ship with each release), and `ha-prerelease.yml` runs it daily on the newest on
