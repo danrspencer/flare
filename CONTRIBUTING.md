@@ -459,6 +459,11 @@ a pull request whose every file is repo plumbing - CI, scripts, tests, contribut
 removed again if it later touches anything else. Docs and README changes stay in. To leave
 out any other pull request, label it once it's merged; before then the next push re-checks it.
 
+**Every entry credits the people behind it**: whoever submitted the fix, and whoever raised
+the issue it answers, as "Thanks to @user ([#123](link))" at the end of the entry, linking the
+pull request or issue. A fix someone else's pull request started still credits them when it was
+reworked or finished by someone else.
+
 ### Promoting a beta
 
 Nothing to do. `.github/workflows/promote.yml` runs daily and releases the newest beta
