@@ -25,6 +25,15 @@ Reading a light:
   where HA works `rgb_color` out from the Kelvin: 3200K reports exactly the
   curve's RGB for 3200K, which a bulb in a colour mode shows far warmer.
 
+A target is compared as HA sends it (`sent()`). A light with colour but
+neither colour temperature nor RGBWW (an RGB LED strip) can't show Kelvin,
+so HA's light.turn_on turns a Kelvin target into a colour itself
+(`color_temperature_to_hs`), and the light shows that colour, not the
+Kelvin: its xy reads 2700K back as ~1870K. For such a light a Kelvin target
+is the RGB HA sends it, compared by the RGB rule, and what it shows is its
+`rgb_color`. (RGBWW is sent `color_temperature_to_rgbww` and stays on the
+Kelvin read.)
+
 Comparing, for a Kelvin target:
 
 - Within the Kelvin tolerance, or the same mired: Zigbee bulbs speak
@@ -55,8 +64,11 @@ from homeassistant.components.light import (
     ATTR_SUPPORTED_COLOR_MODES,
     ATTR_XY_COLOR,
     ColorMode,
+    color_supported,
 )
+from homeassistant.util.color import color_hs_to_RGB as _hs_to_rgb
 from homeassistant.util.color import color_temperature_kelvin_to_mired as _kelvin_to_mired
+from homeassistant.util.color import color_temperature_to_hs as _kelvin_to_hs
 from homeassistant.util.color import color_xy_to_temperature as _xy_to_kelvin
 
 # Brightness points a bulb's report can be off by rounding, whatever the
@@ -92,6 +104,7 @@ def shows(attributes: Mapping, target: Optional[Mapping], tolerance: Tolerance =
 def differs(attributes: Mapping, target: Mapping, tolerance: Tolerance = Tolerance()) -> list[str]:
     """Which of a target's values a light reporting `attributes` doesn't
     show: "brightness", "color", both or neither."""
+    target = sent(attributes, target)
     values = []
     brightness = target.get(ATTR_BRIGHTNESS)
     if brightness is not None and not _brightness_matches(attributes.get(ATTR_BRIGHTNESS), brightness, tolerance):
@@ -118,11 +131,33 @@ def _color_matches(attributes: Mapping, target: Mapping, tolerance: Tolerance) -
     )
 
 
+def _kelvin_sent_as_colour(attributes: Mapping) -> bool:
+    """Whether HA's light.turn_on sends this light a Kelvin target as the
+    colour `color_temperature_to_hs` gives (`light/helper.py`): it has a
+    colour mode, but neither colour temperature nor RGBWW."""
+    modes = attributes.get(ATTR_SUPPORTED_COLOR_MODES)
+    if not modes:
+        return False
+    modes = {str(mode) for mode in modes}
+    return ColorMode.COLOR_TEMP not in modes and ColorMode.RGBWW not in modes and color_supported(modes)
+
+
+def sent(attributes: Mapping, target: Optional[Mapping]) -> Optional[Mapping]:
+    """`target` as HA's light.turn_on sends it to a light reporting
+    `attributes`: a Kelvin target becomes the RGB `color_temperature_to_hs`
+    gives, for a light that can't show Kelvin. Anything else as it is."""
+    if not target or target.get(ATTR_COLOR_TEMP_KELVIN) is None or not _kelvin_sent_as_colour(attributes):
+        return target
+    as_sent = {key: value for key, value in target.items() if key != ATTR_COLOR_TEMP_KELVIN}
+    as_sent[ATTR_RGB_COLOR] = list(_hs_to_rgb(*_kelvin_to_hs(int(target[ATTR_COLOR_TEMP_KELVIN]))))
+    return as_sent
+
+
 def shown(attributes: Mapping) -> dict:
     """What a light shows, as a target: its brightness and Kelvin, or its
-    rgb_color if it isn't showing a white."""
+    rgb_color if it isn't showing a white or can't show Kelvin."""
     target = {ATTR_BRIGHTNESS: attributes.get(ATTR_BRIGHTNESS)}
-    kelvin = reported_kelvin(attributes)
+    kelvin = None if _kelvin_sent_as_colour(attributes) else reported_kelvin(attributes)
     if kelvin is not None:
         target[ATTR_COLOR_TEMP_KELVIN] = kelvin
     elif attributes.get(ATTR_RGB_COLOR) is not None:
