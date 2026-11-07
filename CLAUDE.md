@@ -101,12 +101,13 @@ HA's trace UI.
 Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
-  name for `!input`, so regrouping isn't breaking. Only what's required is
-  at the top level (Schedule, Lights & Occupancy); everything optional is
-  collapsed, so input names carry no "(Optional)" (user's call). Sections
-  hold what a room may want tweaked (**Sensors & Triggers**: Wait time,
-  Lux Threshold, Additional Triggers, Conditions; then Brightness, Idle Brightness, Scenes,
-  Transitions); **Settings**, last, holds what most rooms never touch
+  name for `!input`, so regrouping isn't breaking. The top level holds
+  what's required (Schedule, Lights & Occupancy) and then Additional
+  Triggers and Conditions, the two that make a room work like an ordinary
+  automation (user's call); everything else optional is collapsed, so
+  input names carry no "(Optional)" (user's call). Sections hold what a
+  room may want tweaked (**Sensors**: Wait time, Lux Threshold; then
+  Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces, then the
   deprecated Sensors From Areas and Additional Trigger Entities).
   `docs/reference/blueprint.md` follows the same grouping.
@@ -874,6 +875,13 @@ would switch off every light turned on there.
   reason. `tests/checks/test_blueprint_triggers.py` pins the position and
   that nothing else reads `trigger.id`. The old entity list is
   `extra_triggers` (`extra`), deprecated under Settings.
+- **The trigger IDs are public**: the reference page's Trigger IDs table
+  documents them for **Triggered by** conditions in Conditions (user's
+  call), so renaming or splitting one breaks rooms that check it, silently
+  (the condition just stops matching). `test_blueprint_triggers.py` holds
+  the table to the blueprint's IDs. A trigger condition matches
+  `trigger.id`, not `trigger_id`, so it sees a user trigger's own ID:
+  that's the user's to choose, and it can't light anything.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
 - `recovered` arms on "at least one of our lights is reachable". The

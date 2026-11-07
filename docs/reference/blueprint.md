@@ -31,6 +31,8 @@ behaves.
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives **Lux Threshold**. |
+| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
+| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -59,14 +61,74 @@ A room can have two automations, for example one for a lamp and one for the ceil
 Each releases the lights it drives once they're all off; a light in both is released when
 either room goes dark.
 
-## Sensors and triggers
+### Additional triggers
+
+Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
+Brightness Template that dims the room while it's playing. They're the same triggers as an
+ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
+[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+
+### Conditions
+
+While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
+they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
+guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
+the room catches up on its next tick: lights that are on move to the schedule, and an empty
+room turns off. If a condition reads an entity, add a trigger for it to
+[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
+
+Running the automation by hand, or turning on its [flare](../flares/), still works while the
+room is paused.
+
+A room left on when the pause starts stays on until it ends. To stop only some runs, make a
+condition about what started the run, with a **Triggered by** condition on one of the
+[trigger IDs](#trigger-ids). For example, so a pet walking through at night doesn't light the
+room, while everything else carries on (turning off, following the schedule):
+
+```yaml
+condition: not
+conditions:
+  - condition: and
+    conditions:
+      - condition: trigger
+        id:
+          - motion_on
+          - lux_dark
+      - condition: time
+        after: "23:00:00"
+        before: "06:00:00"
+```
+
+### Trigger IDs
+
+Each of the room's triggers has an ID, which a **Triggered by** condition in **Conditions** can
+check. Home Assistant's editor can't list a blueprint's triggers, so the condition shows a
+warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the example above.
+
+| ID | Fires when |
+|---|---|
+| `phase_change` | the schedule moves to another phase |
+| `tick` | the room's regular update, about once a minute |
+| `motion_on` | an occupancy or motion sensor detects someone |
+| `motion_off` | a sensor has been clear for the **Wait time** |
+| `lux_dark` | the room stops being too bright for **Lux Threshold**, with someone there |
+| `recovered` | one of the room's lights comes back online |
+| `extra` | an entity in **Additional Trigger Entities** changes (deprecated) |
+| your own | one of your **Additional Triggers** fires: the ID you give it, or its position if it has none |
+
+Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
+you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
+Running the automation by hand has no trigger, and skips **Conditions** anyway.
+
+
+## Sensors
 
 | Input | Default | Description |
 |---|---|---|
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 | **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
-| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
-| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 ### Lux Threshold
 
@@ -93,30 +155,6 @@ is switched off for being bright. Turning the room on by hand — the automation
 A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
 doesn't count either way, and a room with no illuminance sensor never blocks. The check is off
 while **Lux Threshold** is `0`, which is the default.
-
-### Additional triggers
-
-Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
-Brightness Template that dims the room while it's playing. They're the same triggers as an
-ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
-attribute, a button press, a time. An additional trigger only adjusts lights that are already
-on, and never switches one on. To turn a room on from something else, see
-[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
-
-### Conditions
-
-While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
-they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
-guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
-the room catches up on its next tick: lights that are on move to the schedule, and an empty
-room turns off. If a condition reads an entity, add a trigger for it to
-[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
-
-Running the automation by hand, or turning on its [flare](../flares/), still works while the
-room is paused.
-
-A room left on when the pause starts stays on until it ends, so a pause isn't the way to stop
-a sensor lighting a room at night.
 
 ## Brightness
 

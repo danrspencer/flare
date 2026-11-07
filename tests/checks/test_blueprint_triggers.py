@@ -27,3 +27,15 @@ def test_nothing_but_trigger_id_and_manual_run_reads_trigger_id_directly():
     variables = {key: value for key, value in blueprint["variables"].items() if key not in ("trigger_id", "manual_run")}
     rest = {**blueprint, "variables": variables}
     assert "trigger.id" not in yaml.safe_dump(rest)
+
+
+def test_the_reference_page_lists_exactly_the_trigger_ids():
+    """The IDs are public: conditions in rooms check them, so renaming one
+    breaks those rooms. The reference page's table is the list."""
+    from tests.support import REPO_ROOT
+
+    page = (REPO_ROOT / "docs" / "reference" / "blueprint.md").read_text()
+    table = page.split("### Trigger IDs", 1)[1].split("\n## ", 1)[0]
+    documented = set(re.findall(r"^\| `([a-z_]+)` \|", table, re.M))
+    own = {trigger["id"] for trigger in load_blueprint()["trigger"] if "id" in trigger}
+    assert documented == own

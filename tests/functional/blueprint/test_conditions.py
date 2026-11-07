@@ -88,3 +88,45 @@ class TestConditions:
         await hass.async_block_till_done()
 
         assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]
+
+
+NOT_MOTION_AT_NIGHT = [
+    {
+        "condition": "not",
+        "conditions": [
+            {
+                "condition": "and",
+                "conditions": [
+                    {"condition": "trigger", "id": ["motion_on", "lux_dark"]},
+                    {"condition": "state", "entity_id": "input_boolean.night", "state": "on"},
+                ],
+            }
+        ],
+    }
+]
+
+
+class TestTriggerIds:
+    """docs/reference/blueprint.md#trigger-ids"""
+
+    async def _room(self, hass, *, lights: str, sensor: str):
+        occupancy(hass, "binary_sensor.occ", sensor)
+        light(hass, "light.a", lights)
+        hass.states.async_set("input_boolean.night", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target=ROOM, conditions=NOT_MOTION_AT_NIGHT)
+
+    async def test_a_condition_on_motion_on_stops_a_sensor_lighting_the_room(self, hass, apply_lighting_calls):
+        await self._room(hass, lights="off", sensor="off")
+
+        occupancy(hass, "binary_sensor.occ", "on")
+        await hass.async_block_till_done()
+
+        assert lit(apply_lighting_calls) == []
+
+    async def test_other_runs_carry_on(self, hass, apply_lighting_calls, frozen_time):
+        await self._room(hass, lights="on", sensor="on")
+
+        await tick(hass, frozen_time)
+
+        assert lit(apply_lighting_calls)[-1].data["entities"] == ["light.a"]

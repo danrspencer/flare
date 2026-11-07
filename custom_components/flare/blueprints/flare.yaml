@@ -44,8 +44,31 @@ blueprint:
               device_class: motion
             - domain: sensor
               device_class: illuminance
-    sensors_triggers:
-      name: Sensors & Triggers
+    additional_triggers:
+      name: Additional Triggers
+      description: >
+        Triggers that make the room update as soon as they fire, such as
+        the TV starting to play when a Brightness Template depends on it.
+        They only adjust lights that are already on, and never switch one
+        on.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+      default: []
+      selector:
+        trigger: {}
+    conditions:
+      name: Conditions
+      description: >
+        As in an ordinary automation, every one must be met for the room
+        to run at all. While they aren't, the room is paused: lights stay
+        as they are, nothing turns on or off, and the schedule isn't
+        followed. It catches up on its next update once they're met
+        again. Running the room by hand still works.
+        [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
+      default: []
+      selector:
+        condition: {}
+    sensors:
+      name: Sensors
       icon: mdi:motion-sensor
       collapsed: true
       input:
@@ -55,7 +78,7 @@ blueprint:
             Only used when the room has occupancy or motion sensors: how long
             every one must be clear before the room counts as empty and its
             lights turn off.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-and-triggers).
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors).
           default: 120
           selector:
             number:
@@ -78,29 +101,6 @@ blueprint:
               max: 2000
               step: 10
               unit_of_measurement: lx
-        additional_triggers:
-          name: Additional Triggers
-          description: >
-            Triggers that make the room update as soon as they fire, such as
-            the TV starting to play when a Brightness Template depends on it.
-            They only adjust lights that are already on, and never switch one
-            on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            trigger: {}
-        conditions:
-          name: Conditions
-          description: >
-            As in an ordinary automation, every one must be met for the room
-            to run at all. While they aren't, the room is paused: lights stay
-            as they are, nothing turns on or off, and the schedule isn't
-            followed. It catches up on its next update once they're met
-            again. Running the room by hand still works.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
-          default: []
-          selector:
-            condition: {}
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
