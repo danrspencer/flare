@@ -108,7 +108,7 @@ Blueprint input mechanics:
   Lux Threshold, Additional Triggers, Conditions; then Brightness, Idle Brightness, Scenes,
   Transitions); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces, then the
-  deprecated Sensors From Areas).
+  deprecated Sensors From Areas and Additional Trigger Entities).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
@@ -864,6 +864,16 @@ would switch off every light turned on there.
   something other than what they show. Off makes `room_id` none, which
   `apply_lighting` takes as "track nothing", and skips the
   `claims_clear` step.
+- **Additional Triggers is a trigger picker, told apart by position,
+  never by id** (`trigger_id`). It's flattened in last (`- triggers:
+  !input additional_triggers`), so a trigger at position 10 or later is the
+  user's and reads as `additional` whatever id they gave it; otherwise one
+  named `motion_on` would light a dark room, a new way for `allow_turn_on`
+  to become true. Everything reads `trigger_id`, not `trigger.id`, and the
+  native "triggered by" conditions are templates on it for the same
+  reason. `tests/checks/test_blueprint_triggers.py` pins the position and
+  that nothing else reads `trigger.id`. The old entity list is
+  `extra_triggers` (`extra`), deprecated under Settings.
 - `tick` exists because the curve ramps within a phase while
   `phase_change` only fires at boundaries.
 - `recovered` arms on "at least one of our lights is reachable". The
@@ -1074,6 +1084,18 @@ say so); remove it in 3.0 and raise the blueprint's `min_version` and
 - **A room with it off then reads every sensor its target reaches.** It
   only differs where the target names an area, device, floor or label;
   3.0's changelog needs to say so.
+- **Additional Trigger Entities (`extra_triggers`) goes too**, with its
+  `extra` trigger. A room still listing entities then stops updating on
+  them until they're added as State triggers; 3.0's changelog needs to
+  say so.
+- **Hiding a deprecated input isn't a soft step before removing it.**
+  Verified in the sandbox: on 2026.10 a `visible:` key fails the whole
+  blueprint (every room unavailable, `validation_failed_blueprint`). On
+  2026.11 a hidden input's stored value is replaced by its default when
+  the automation is built (`BlueprintInputs.inputs_with_default`), so
+  hiding silently resets it. It can only be hidden where it's at its
+  default, e.g. `visible: {field: use_area_sensors, value: false}`;
+  `visible:` can't test for an empty list.
 
 ### Parked: scene handling in `apply_lighting`
 

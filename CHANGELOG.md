@@ -15,6 +15,18 @@ CI — see `.github/workflows/release.yml`.
   room to run. While they aren't, the room is paused, for a vacation or guest mode. Running the
   automation by hand still works.
 
+### Changed
+
+- **Additional Triggers takes triggers, as an ordinary automation does**, so a room can update
+  on something specific: the TV changing to playing, an attribute, a button press. They still
+  only adjust lights that are already on, and never switch one on. Rooms keep the entities they
+  listed: they're now under **Settings** as **Additional Trigger Entities** and still work.
+
+### Deprecated
+
+- **Additional Trigger Entities** (the old Additional Triggers list) will be removed in FLARE 3.0.
+  Add a **State** trigger for each of its entities to **Additional Triggers** instead.
+
 ### Fixed
 
 - **RGB LED strips are no longer marked overridden when nobody has touched them.** A light

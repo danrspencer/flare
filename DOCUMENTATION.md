@@ -247,7 +247,8 @@ Reference pages are the exception: they open with the table (rule 3).
 Never paraphrase these. They are what the user types or clicks.
 
 - **Blueprint inputs** — the UI labels, verbatim: Schedule, Override Protection,
-  Lights & Occupancy, Additional Triggers, Prefer RGB During,
+  Lights & Occupancy, Additional Triggers, Conditions, Prefer RGB During,
+  Additional Trigger Entities (Deprecated),
   Scene Template, Morning/Day/Evening/Night Scene,
   Brightness Template, Lights Off During Morning/Day/Evening/Night,
   Idle Brightness Template, Morning/Day/Evening/Night Idle Brightness,

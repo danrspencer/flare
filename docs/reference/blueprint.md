@@ -65,7 +65,7 @@ either room goes dark.
 |---|---|---|
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 | **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
-| **Additional Triggers** | none | Entities that make the room update as soon as they change. |
+| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
 | **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 ### Lux Threshold
@@ -96,9 +96,11 @@ while **Lux Threshold** is `0`, which is the default.
 
 ### Additional triggers
 
-Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it's playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
+Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
+Brightness Template that dims the room while it's playing. They're the same triggers as an
+ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
 [lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
 
 ### Conditions
@@ -107,7 +109,7 @@ While any of the **Conditions** isn't met, the room does nothing at all: its lig
 they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
 guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
 the room catches up on its next tick: lights that are on move to the schedule, and an empty
-room turns off. If a condition reads an entity, add that entity to
+room turns off. If a condition reads an entity, add a trigger for it to
 [Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
 
 Running the automation by hand, or turning on its [flare](../flares/), still works while the
@@ -179,6 +181,7 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
 | **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
+| **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Override protection
 
@@ -206,6 +209,14 @@ use **Exclude target** in **Lights & Occupancy** instead of turning it off, to l
 sensors you don't want (see Home Assistant's
 [excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
 An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
+
+### Additional trigger entities
+
+The list of entities **Additional Triggers** used to be: any change to one updates the room,
+as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
+
+**Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
+**Additional Triggers** as a **State** trigger, then clear this list.
 
 ## How a room behaves
 

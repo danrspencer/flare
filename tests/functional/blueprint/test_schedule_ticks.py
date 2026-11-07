@@ -262,8 +262,81 @@ class TestRgbColour:
         assert calls[-1].data["prefer_rgb_color"] is False
 
 
+def tv_trigger(**extra) -> list[dict]:
+    return [{"trigger": "state", "entity_id": "input_boolean.tv", "to": "on", **extra}]
+
+
 class TestAdditionalTriggers:
     """docs/reference/blueprint.md#additional-triggers"""
+
+    async def test_an_additional_trigger_updates_lit_lights_at_the_background_transition(
+        self, hass, apply_lighting_calls
+    ):
+        light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)
+        hass.states.async_set("input_boolean.tv", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": "light.a"},
+            additional_triggers=tv_trigger(),
+            background_transition=45,
+            motion_on_transition=2,
+        )
+
+        hass.states.async_set("input_boolean.tv", "on")
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls[-1].data["entities"] == ["light.a"]
+        assert apply_lighting_calls[-1].data["transition"] == 45
+
+    async def test_an_additional_trigger_never_lights_a_dark_room(self, hass, apply_lighting_calls):
+        light(hass, "light.a", "off")
+        hass.states.async_set("input_boolean.tv", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(hass, room_target={"entity_id": "light.a"}, additional_triggers=tv_trigger())
+
+        hass.states.async_set("input_boolean.tv", "on")
+        await hass.async_block_till_done()
+
+        assert [call for call in apply_lighting_calls if call.data["entities"]] == []
+
+    async def test_one_named_motion_on_still_cant_light_a_dark_room(self, hass, apply_lighting_calls):
+        """An Additional Trigger is told apart by position, never by its id."""
+        occupancy(hass, "binary_sensor.occ", "on")
+        light(hass, "light.a", "off")
+        hass.states.async_set("input_boolean.tv", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            additional_triggers=tv_trigger(id="motion_on"),
+        )
+
+        hass.states.async_set("input_boolean.tv", "on")
+        await hass.async_block_till_done()
+
+        assert [call for call in apply_lighting_calls if call.data["entities"]] == []
+
+    async def test_one_named_motion_off_does_not_turn_the_room_off(self, hass, turn_off_calls):
+        occupancy(hass, "binary_sensor.occ", "off")
+        light(hass, "light.a", "on")
+        hass.states.async_set("input_boolean.tv", "off")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            additional_triggers=tv_trigger(id="motion_off"),
+            no_motion_wait=0,
+        )
+
+        hass.states.async_set("input_boolean.tv", "on")
+        await hass.async_block_till_done()
+
+        assert turn_off_calls == []
+
+
+class TestAdditionalTriggerEntities:
+    """docs/reference/blueprint.md#additional-trigger-entities"""
 
     async def test_extra_trigger_entity_change_causes_immediate_reevaluation(self, hass, apply_lighting_calls):
         light(hass, "light.a", "on", brightness=190, color_temp_kelvin=4000)

@@ -78,17 +78,17 @@ blueprint:
               max: 2000
               step: 10
               unit_of_measurement: lx
-        extra_triggers:
+        additional_triggers:
           name: Additional Triggers
           description: >
-            Entities that make the room update as soon as they change, such as
-            an entity Scene Template or Brightness Template depends on. They
-            only adjust lights that are already on, and never switch one on.
+            Triggers that make the room update as soon as they fire, such as
+            the TV starting to play when a Brightness Template depends on it.
+            They only adjust lights that are already on, and never switch one
+            on.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
           default: []
           selector:
-            entity:
-              multiple: true
+            trigger: {}
         conditions:
           name: Conditions
           description: >
@@ -347,6 +347,17 @@ blueprint:
           default: true
           selector:
             boolean: {}
+        extra_triggers:
+          name: Additional Trigger Entities (Deprecated)
+          description: >
+            Deprecated and will be removed as an option in FLARE 3.0: add a
+            State trigger to Additional Triggers instead. Entities that make
+            the room update as soon as they change.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-trigger-entities).
+          default: []
+          selector:
+            entity:
+              multiple: true
 
 mode: restart
 max_exceeded: silent
@@ -489,7 +500,19 @@ trigger:
       {{ threshold > 0
          and not (lux | length > 0 and lux | select('le', threshold) | list | count == 0) }}
 
+  # The user's own triggers, last: one at position 10 or later is theirs,
+  # whatever its id (trigger_id below).
+  - triggers: !input additional_triggers
+
 variables:
+  # Which trigger ran, by position for the user's own: an Additional Trigger
+  # is `additional` whatever id it was given, so one named motion_on can't
+  # light the room. 10 is how many triggers precede `additional_triggers`
+  # (tests/checks/test_blueprint_triggers.py). None for a manual run.
+  trigger_id: >-
+    {% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional
+    {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }}
+    {%- else %}{{ none }}{% endif %}
   schedule: !input schedule
   # Who's writing, for override protection: this automation, or no one.
   # The room's lights, released together, are resolved_entities.
@@ -508,7 +531,7 @@ variables:
   prefer_rgb_color: "{{ phase in rgb_phases }}"
   script_transition: >
     {# Slow for background updates; quick for motion or a manual run. #}
-    {% if trigger is defined and trigger.id is defined and trigger.id in ['phase_change', 'tick', 'extra', 'recovered', 'lux_dark'] %}
+    {% if trigger_id in ['phase_change', 'tick', 'extra', 'additional', 'recovered', 'lux_dark'] %}
       {{ background_transition }}
     {% else %}
       {{ motion_on_transition }}
@@ -528,7 +551,7 @@ condition:
     condition: template
     value_template: >
       {{ use_area_sensors or manual_run
-         or trigger.id not in ['motion_on', 'motion_off']
+         or trigger_id not in ['motion_on', 'motion_off']
          or trigger.entity_id in named_entities }}
   # `and`, as an automation's own conditions are, so an empty list is met.
   # automation.trigger skips conditions by default, so a manual run and a
@@ -742,9 +765,9 @@ action:
       # on `occupied`, which an idle light makes true.
       allow_turn_on: >
         {{ manual_run
-           or (trigger is defined and trigger.id is defined and trigger.id == 'motion_on')
+           or trigger_id == 'motion_on'
            or occupied
-           or (trigger is defined and trigger.id is defined and trigger.id == 'lux_dark'
+           or (trigger_id == 'lux_dark'
                and not too_bright
                and room_occupancy_entities | length > 0 and not occupancy_clear_for_wait) }}
       # Retried by self-heal. Excludes hands-off and idle lights.
@@ -781,7 +804,7 @@ action:
         {% endif %}
       # Re-activating a scene every minute would stomp manual changes, so the
       # tick never does.
-      scene_recheck_due: "{{ not (trigger is defined and trigger.id is defined and trigger.id == 'tick') }}"
+      scene_recheck_due: "{{ trigger_id != 'tick' }}"
       # No scene until flare.compute_scene_coverage says otherwise, in default:.
       scene_coverage: "{{ {'scene_valid': false, 'covered_entities': []} }}"
   # Never checks occupancy: an already-on light should follow the curve
@@ -792,9 +815,9 @@ action:
   # starts.
   - alias: "Stop a motion_on run with nothing to turn on"
     if:
-      - condition: trigger
+      - condition: template
         alias: "Triggered by motion_on"
-        id: motion_on
+        value_template: "{{ trigger_id == 'motion_on' }}"
       - condition: template
         alias: "Nothing in the room is off, and nothing has an idle level"
         value_template: >-
@@ -807,9 +830,9 @@ action:
       # sensor's own Wait time is up, even if another saw motion since.
       - alias: "Motion timed out and the room is confirmed empty"
         conditions:
-          - condition: trigger
+          - condition: template
             alias: "Triggered by motion_off"
-            id: motion_off
+            value_template: "{{ trigger_id == 'motion_off' }}"
           - condition: template
             alias: "Every occupancy sensor has been clear for the full Wait time"
             value_template: "{{ occupancy_clear_for_wait }}"
@@ -844,11 +867,9 @@ action:
         conditions:
           # phase_change too: moving to a phase with no idle brightness leaves
           # lights on that no longer read as idle.
-          - condition: trigger
+          - condition: template
             alias: "Triggered by the periodic tick or a phase change"
-            id:
-              - tick
-              - phase_change
+            value_template: "{{ trigger_id in ['tick', 'phase_change'] }}"
           - condition: template
             alias: "Room has an occupancy sensor to reconcile against"
             value_template: "{{ room_occupancy_entities | length > 0 }}"
