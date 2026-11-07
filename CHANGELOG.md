@@ -18,6 +18,10 @@ CI — see `.github/workflows/release.yml`.
   compares such a light's colour with the RGB Home Assistant sent it, and the Overrides
   dashboard shows that RGB as what was asked, beside the RGB the strip reports. Thanks to
   @LotharMadsson ([#350](https://github.com/danrspencer/flare/pull/350)).
+- **Dimmers and on/off lights are no longer marked overridden when nobody has touched them.**
+  Home Assistant drops the colour FLARE sends a light that can't show one, and the brightness it
+  sends an on/off light, but FLARE still expected the light to show them, so the first report it
+  made of its own marked it overridden. FLARE now compares only what a light can show.
 
 ## [2.0.1] - Unreleased
 

@@ -91,6 +91,30 @@ async def test_an_rgb_only_strip_sent_kelvin_is_not_treated_as_overridden(
     )
 
 
+async def test_a_dimmer_sent_kelvin_is_not_treated_as_overridden(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    """A dimmer can't show colour, so HA drops the Kelvin it's sent. A report
+    of its own is matched on brightness alone."""
+    (dimmer,) = await add_bulbs("dimmer", area_id=area, dimmer={"dims_only": True})
+    occupancy(hass, SENSOR, "off")
+    await setup_room(lights=[dimmer], occupancy_sensors=[SENSOR])
+
+    occupancy(hass, SENSOR, "on")
+    await hass.async_block_till_done()
+    assert dimmer.brightness == CURVE_BRIGHTNESS, "precondition: the dimmer must have been lit to the curve"
+
+    # The dimmer's own report: the same brightness under an unrelated context.
+    await dimmer.async_echo(is_on=True, brightness=dimmer.brightness - 1)
+    await hass.async_block_till_done()
+
+    await move_to_phase(hass, frozen_time, "Night")
+
+    assert hass.states.get(dimmer.entity_id).attributes.get("brightness") == NIGHT_BRIGHTNESS, (
+        "a dimmer showing the brightness it was sent was wrongly excluded as if something else had taken it"
+    )
+
+
 async def test_an_rgb_capable_bulb_gets_colour_while_its_non_rgb_neighbour_stays_on_colour_temperature(
     hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
