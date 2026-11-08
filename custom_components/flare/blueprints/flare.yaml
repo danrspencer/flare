@@ -14,7 +14,7 @@ blueprint:
   author: Dan Spencer
   homeassistant:
     # Required by the occupancy.* triggers/conditions.
-    min_version: 2026.4.0
+    min_version: 2026.11.0
   input:
     schedule:
       name: Schedule
@@ -44,29 +44,15 @@ blueprint:
               device_class: motion
             - domain: sensor
               device_class: illuminance
-    additional_triggers:
-      name: Additional Triggers
-      description: >
-        Triggers that make the room update as soon as they fire, such as
-        the TV starting to play when a Brightness Template depends on it.
-        They only adjust lights that are already on, and never switch one
-        on.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-      default: []
+    # A heading, not a setting: a constant with a blank label shows only its name and description.
+    customise_divider:
+      name: Customise
+      description: When the lights come on and off, and how they look through the day.
+      default: true
       selector:
-        trigger: {}
-    conditions:
-      name: Conditions
-      description: >
-        As in an ordinary automation, every one must be met for the room
-        to run at all. While they aren't, the room is paused: lights stay
-        as they are, nothing turns on or off, and the schedule isn't
-        followed. It catches up on its next update once they're met
-        again. Running the room by hand still works.
-        [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
-      default: []
-      selector:
-        condition: {}
+        constant:
+          value: true
+          label: " "
     sensors:
       name: Sensors
       icon: mdi:motion-sensor
@@ -262,6 +248,15 @@ blueprint:
           selector:
             entity:
               domain: scene
+    # A heading, like customise_divider.
+    advanced_divider:
+      name: Advanced
+      description: Rarely needed. The defaults suit most rooms.
+      default: true
+      selector:
+        constant:
+          value: true
+          label: " "
     timing:
       name: Transitions
       icon: mdi:timer-outline
@@ -294,6 +289,29 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
+    triggers_conditions:
+      name: Triggers & Conditions
+      icon: mdi:lightning-bolt
+      collapsed: true
+      input:
+        additional_triggers:
+          name: Additional Triggers
+          description: >
+            Update the room straight away when one of these fires, like the
+            TV starting to play. They only adjust lights that are already on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            trigger: {}
+        conditions:
+          name: Conditions
+          description: >
+            If any are set, the room only updates while all of them are true.
+            The rest of the time it's paused and leaves the lights alone.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
+          default: []
+          selector:
+            condition: {}
     settings:
       name: Settings
       icon: mdi:cog-outline
@@ -337,16 +355,23 @@ blueprint:
               min: 1
               max: 200
               mode: box
+        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
         use_area_sensors:
           name: Sensors From Areas (Deprecated)
           description: >
-            Deprecated and will be removed as an option in FLARE 3.0. From
-            Home Assistant 2026.11 use "Exclude target" instead of turning
-            this off.
+            Deprecated and will be removed as an option in FLARE 3.0: use
+            "Exclude target" in Lights & Occupancy instead of turning this
+            off. Only shown while it's off.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+          # Shown only while it's off: hidden, an input reads as its
+          # default, so hiding it at the default can't change a room.
+          visible:
+            field: use_area_sensors
+            value: false
           default: true
           selector:
             boolean: {}
+        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
         extra_triggers:
           name: Additional Trigger Entities (Deprecated)
           description: >

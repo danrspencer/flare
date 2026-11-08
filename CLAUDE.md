@@ -102,16 +102,36 @@ Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
   name for `!input`, so regrouping isn't breaking. The top level holds
-  what's required (Schedule, Lights & Occupancy) and then Additional
-  Triggers and Conditions, the two that make a room work like an ordinary
-  automation (user's call); everything else optional is collapsed, so
-  input names carry no "(Optional)" (user's call). Sections hold what a
-  room may want tweaked (**Sensors**: Wait time, Lux Threshold; then
-  Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
-  (Override Protection, Prefer RGB During, Stored Traces, then the
-  deprecated Sensors From Areas and Additional Trigger Entities).
+  only what's required (Schedule, Lights & Occupancy); everything optional
+  is collapsed, so input names carry no "(Optional)" (user's call).
+  Sections run **Sensors** (Wait time, Lux Threshold), then what shapes a
+  room's light (Brightness, Idle Brightness, Scenes), then the fiddly
+  (Transitions; **Triggers & Conditions**, rarely set, collapsed like the
+  rest; user's call); **Settings**, last, holds what most rooms never touch
+  (Override Protection, Prefer RGB During, Stored Traces), then every
+  deprecated input, until the release that deletes it (user's call):
+  Sensors From Areas and Additional Trigger Entities.
   `docs/reference/blueprint.md` follows the same grouping.
-- `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
+- **Two headings split the sections**: **Customise** (Sensors through
+  Scenes) and **Advanced** (Transitions on). Blueprints have no heading
+  and sections don't nest, and an empty section isn't drawn, so each is
+  an input (`customise_divider`, `advanced_divider`) with a `constant`
+  selector whose blank label leaves only its name and description
+  (user's call). It relies on how the editor draws that selector; a room
+  may store its value, which nothing reads.
+- `homeassistant.min_version: 2026.11.0`, with `hacs.json` (user's
+  call): inputs take `visible:` from 2026.11, which a 2026.10 house
+  rejects, failing every room. It also gives everyone Exclude target,
+  which Lights & Occupancy points to.
+- **A deprecated input hides only while it's at its default**
+  (`visible:` on its own value, user's call). HA builds the automation
+  from a hidden input's default, not its stored value
+  (`BlueprintInputs.inputs_with_default`; the editor drops it too), so
+  that's the only hiding that can't change a room.
+  `tests/checks/test_blueprint_visibility.py` holds every `visible:` to
+  it. Sensors From Areas hides while on. A list input can't: `visible:`
+  counts only `None` and `""` as empty, and a State trigger's `entity_id`
+  takes neither.
 - **Schedule is a device selector** (`integration: flare`,
   `model: Schedule`). The blueprint finds the schedule's
   sensor in `variables:`. Triggers can't do that lookup, hence the
@@ -876,7 +896,7 @@ would switch off every light turned on there.
   native "triggered by" conditions are templates on it for the same
   reason. `tests/checks/test_blueprint_triggers.py` pins the position and
   that nothing else reads `trigger.id`. The old entity list is
-  `extra_triggers` (`extra`), deprecated under Settings.
+  `extra_triggers` (`extra`), deprecated, last in Settings.
 - **The trigger IDs are public**: the reference page's Trigger IDs table
   documents them for **Triggered by** conditions in Conditions (user's
   call), so renaming or splitting one breaks rooms that check it, silently
@@ -1070,11 +1090,16 @@ having switched it on and left.
   would leave a forgotten lamp in an empty room on forever.
   Presence (mmWave) sensors remove the cause, but that's hardware.
 
-### Planned for 3.0: Sensors From Areas goes, the floor goes to 2026.11
+### Planned for 3.0: Sensors From Areas goes
+
+**`tests/checks/test_deprecated_inputs.py` fails once the changelog's top
+version is 3.0 while either deprecated input is still in the blueprint**
+(at the user's request, so they can't be forgotten); every input named
+"(Deprecated)" must be listed there with the release that removes it.
 
 Deprecated in 2.0 (its description, the reference page and the changelog
-say so); remove it in 3.0 and raise the blueprint's `min_version` and
-`hacs.json` to 2026.11.0 together (user's call).
+say so), hidden while on since 2.1 raised the floor to 2026.11; remove it
+in 3.0.
 
 - **Exclude replaces it.** From 2026.11 a target takes an `exclude`
   block, the target selector offers it in blueprint forms, and
@@ -1086,11 +1111,7 @@ say so); remove it in 3.0 and raise the blueprint's `min_version` and
   narrowed) and the `use_area_sensors` branches in `room_lux_entities`,
   `room_occupancy_entities` and the `lux_dark` trigger. That trigger's
   Jinja ignores exclusions, like `recovered`'s: a wake-up only.
-- **Not done in 2.0 because** HA before 2026.11 rejects a blueprint input
-  with an unknown key (`BLUEPRINT_INPUT_SCHEMA` is closed), so hiding it
-  with `visible:` would stop the blueprint, and every room, loading there.
-  With the floor at 2026.11 it can simply go: a stored input that no
-  longer exists is ignored.
+- **It can simply go**: a stored input that no longer exists is ignored.
 - **A room with it off then reads every sensor its target reaches.** It
   only differs where the target names an area, device, floor or label;
   3.0's changelog needs to say so.
@@ -1245,11 +1266,11 @@ files, and a symlink once wrote junk blueprints into the repo.
   releases. That's deliberate; don't "fix" it with a PAT.
 - **`git push origin dev:main` must be a fast-forward**: `main` requires
   linear history.
-- **The integration needs HA 2026.10.0** (`hacs.json`'s `homeassistant`):
+- **The integration needs HA 2026.11.0** (`hacs.json`'s `homeassistant`),
+  the blueprint's floor (`visible:`). Before that it needed 2026.10.0:
   earlier releases make every subentry's Add button ask which entry type
   first, a frontend bug that would read as ours, and the Activity card
-  needs 2026.10's `ha-logbook-entry`. The blueprint's own floor stays at
-  what it needs.
+  needs 2026.10's `ha-logbook-entry`.
 - `tests/checks/test_versions.py` pins the placeholders and a parseable
   changelog heading. Full flow in CONTRIBUTING.md.
 
@@ -1525,7 +1546,7 @@ test module never imports another.
 - The dashboard's JavaScript runs under node (`tests/support/node.py`);
   `tests/support/registry.py` builds `hass.entities` for its fixtures.
 - **The sandbox** (`mise run sandbox`, `scripts/sandbox.py`) is a real
-  HA (`hacs.json`'s minimum unless `SANDBOX_HA_VERSION` says otherwise) on
+  HA (the latest release, `SANDBOX_HA_RELEASE`, unless `SANDBOX_HA_VERSION` says otherwise) on
   `SANDBOX_PORT` running this checkout's FLARE over a fake house
   (`sandbox/`), already onboarded. It's for trying setup and the UI as a
   new user would before touching the live instance, not a test layer.

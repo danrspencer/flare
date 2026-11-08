@@ -10,8 +10,7 @@ permalink: /installation/
 Five minutes to a room running on the curve.
 
 {: .note }
-> **Prerequisites** — Home Assistant 2026.10.0 or newer. On 2026.10 you also need
-> [HACS](https://hacs.xyz) installed; from 2026.11 it's built in as the Marketplace.
+> **Prerequisites** — Home Assistant 2026.11.0 or newer.
 >
 > It's best to assign your lights and your occupancy and motion sensors to areas first. FLARE
 > works without that, but it sets rooms up area by area, so anything without an area is left out
@@ -26,14 +25,9 @@ Five minutes to a room running on the curve.
 
 [![Open your Home Assistant instance and open FLARE in the Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=danrspencer&repository=flare&category=integration)
 
-The button opens FLARE on your Home Assistant, in the Marketplace on 2026.11 or newer, or in
-HACS on 2026.10.
-
-**On Home Assistant 2026.11 or newer**, go to **Settings → Marketplace**, search for **FLARE**,
-choose **Install** and confirm. FLARE's setup opens straight away, so carry on with Step 2.
-
-**On Home Assistant 2026.10**, open HACS, search for **FLARE** and download it. Restart Home
-Assistant, then go to **Settings → Devices & Services → Add Integration → FLARE**.
+The button opens FLARE in your Home Assistant's Marketplace. Or go to **Settings →
+Marketplace**, search for **FLARE**, choose **Install** and confirm. FLARE's setup opens
+straight away, so carry on with Step 2.
 
 ## Step 2 — set FLARE up
 

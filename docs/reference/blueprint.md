@@ -31,8 +31,6 @@ behaves.
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives **Lux Threshold**. |
-| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
-| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -52,76 +50,13 @@ Sensors are `binary_sensor` entities with `device_class: occupancy` or `device_c
 other binary sensors in the target are ignored. A room can mix both kinds.
 
 To pick an area for its lights but leave some of its sensors out, add them with **Exclude
-target** (Home Assistant 2026.11 and later). On earlier versions, turn off
-[Sensors From Areas](#sensors-from-areas) and pick the sensors you want by name.
+target**.
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
 A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they're all off; a light in both is released when
 either room goes dark.
-
-### Additional triggers
-
-Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
-Brightness Template that dims the room while it's playing. They're the same triggers as an
-ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
-attribute, a button press, a time. An additional trigger only adjusts lights that are already
-on, and never switches one on. To turn a room on from something else, see
-[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
-
-### Conditions
-
-While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
-they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
-guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
-the room catches up on its next tick: lights that are on move to the schedule, and an empty
-room turns off. If a condition reads an entity, add a trigger for it to
-[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
-
-Running the automation by hand, or turning on its [flare](../flares/), still works while the
-room is paused.
-
-A room left on when the pause starts stays on until it ends. To stop only some runs, make a
-condition about what started the run, with a **Triggered by** condition on one of the
-[trigger IDs](#trigger-ids). For example, so a pet walking through at night doesn't light the
-room, while everything else carries on (turning off, following the schedule):
-
-```yaml
-condition: not
-conditions:
-  - condition: and
-    conditions:
-      - condition: trigger
-        id:
-          - motion_on
-          - lux_dark
-      - condition: time
-        after: "23:00:00"
-        before: "06:00:00"
-```
-
-### Trigger IDs
-
-Each of the room's triggers has an ID, which a **Triggered by** condition in **Conditions** can
-check. Home Assistant's editor can't list a blueprint's triggers, so the condition shows a
-warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the example above.
-
-| ID | Fires when |
-|---|---|
-| `phase_change` | the schedule moves to another phase |
-| `tick` | the room's regular update, about once a minute |
-| `motion_on` | an occupancy or motion sensor detects someone |
-| `motion_off` | a sensor has been clear for the **Wait time** |
-| `lux_dark` | the room stops being too bright for **Lux Threshold**, with someone there |
-| `recovered` | one of the room's lights comes back online |
-| `extra` | an entity in **Additional Trigger Entities** changes (deprecated) |
-| your own | one of your **Additional Triggers** fires: the ID you give it, or its position if it has none |
-
-Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
-you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
-Running the automation by hand has no trigger, and skips **Conditions** anyway.
-
 
 ## Sensors
 
@@ -211,6 +146,74 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 | **Motion Off Transition** | 15s | Transition when the room empties. |
 | **Background Transition** | 5s | Transition for every other update. |
 
+## Triggers & Conditions
+
+| Input | Default | Description |
+|---|---|---|
+| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
+| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
+
+### Additional triggers
+
+Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
+Brightness Template that dims the room while it's playing. They're the same triggers as an
+ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
+[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+
+### Conditions
+
+While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
+they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
+guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
+the room catches up on its next tick: lights that are on move to the schedule, and an empty
+room turns off. If a condition reads an entity, add a trigger for it to
+[Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
+
+Running the automation by hand, or turning on its [flare](../flares/), still works while the
+room is paused.
+
+A room left on when the pause starts stays on until it ends. To stop only some runs, make a
+condition about what started the run, with a **Triggered by** condition on one of the
+[trigger IDs](#trigger-ids). For example, so a pet walking through at night doesn't light the
+room, while everything else carries on (turning off, following the schedule):
+
+```yaml
+condition: not
+conditions:
+  - condition: and
+    conditions:
+      - condition: trigger
+        id:
+          - motion_on
+          - lux_dark
+      - condition: time
+        after: "23:00:00"
+        before: "06:00:00"
+```
+
+### Trigger IDs
+
+Each of the room's triggers has an ID, which a **Triggered by** condition in **Conditions** can
+check. Home Assistant's editor can't list a blueprint's triggers, so the condition shows a
+warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the example above.
+
+| ID | Fires when |
+|---|---|
+| `phase_change` | the schedule moves to another phase |
+| `tick` | the room's regular update, about once a minute |
+| `motion_on` | an occupancy or motion sensor detects someone |
+| `motion_off` | a sensor has been clear for the **Wait time** |
+| `lux_dark` | the room stops being too bright for **Lux Threshold**, with someone there |
+| `recovered` | one of the room's lights comes back online |
+| `extra` | an entity in **Additional Trigger Entities** changes (deprecated) |
+| your own | one of your **Additional Triggers** fires: the ID you give it, or its position if it has none |
+
+Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
+you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
+Running the automation by hand has no trigger, and skips **Conditions** anyway.
+
 ## Settings
 
 | Input | Default | Description |
@@ -242,9 +245,9 @@ Turn **Sensors From Areas** off and only the sensors you pick by name in **Light
 count, so you can pick an area for its lights and choose the sensors yourself, such as the
 hallway's for a landing. Pick none for a room that only follows the schedule.
 
-**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** From Home Assistant 2026.11,
-use **Exclude target** in **Lights & Occupancy** instead of turning it off, to leave out the
-sensors you don't want (see Home Assistant's
+**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** It only shows in a room that
+has it turned off. Use **Exclude target** in **Lights & Occupancy** instead of turning it off,
+to leave out the sensors you don't want (see Home Assistant's
 [excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
 An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
 
@@ -288,6 +291,8 @@ changed.
 - **Someone else changed it.** A light changed from a wall switch, an app, a voice assistant or
   another automation, including being turned off, is left alone until every light in the room is
   off. See [override protection](../override-protection/).
+- **The room's [Conditions](#conditions) aren't met**, so it's paused. Its **Traces** show the
+  Conditions step that stopped it.
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour

@@ -30,6 +30,20 @@ room_target:
     wann. Mit „Ziel ausnehmen“ lässt du Sensoren weg, die du nicht willst.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#room).
 
+triggers_conditions:
+  source: 0feb3c36
+  name: Auslöser & Bedingungen
+
+customise_divider:
+  source: addf375c
+  name: Anpassen
+  description: Wann die Lampen an- und ausgehen und wie sie im Lauf des Tages aussehen.
+
+advanced_divider:
+  source: db3d46bb
+  name: Erweitert
+  description: Selten nötig. Die Standardwerte passen für die meisten Räume.
+
 sensors:
   source: a4ed6c4f
   name: Sensoren
@@ -57,12 +71,11 @@ lux_threshold:
   unit: lx
 
 additional_triggers:
-  source: dc610fdb
+  source: c7f87339
   name: Zusätzliche Auslöser
   description: >-
-    Auslöser, bei denen der Raum sofort aktualisiert wird, etwa wenn der
-    Fernseher zu spielen beginnt und die Helligkeitsvorlage von ihm abhängt.
-    Sie passen nur Lampen an, die schon an sind, und schalten nie eine ein.
+    Aktualisiert den Raum sofort, wenn einer davon auslöst, etwa wenn der
+    Fernseher zu spielen beginnt. Sie passen nur Lampen an, die schon an sind.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
 
 brightness_exclusions:
@@ -201,15 +214,11 @@ settings:
   name: Einstellungen
 
 conditions:
-  source: ccc038f6
+  source: 'ce8aab53'
   name: Bedingungen
   description: >-
-    Wie bei einer gewöhnlichen Automation müssen alle erfüllt sein, damit der
-    Raum überhaupt läuft. Solange sie es nicht sind, ist der Raum pausiert: Die Lampen
-    bleiben, wie sie sind, nichts geht an oder aus, und dem Zeitplan wird
-    nicht gefolgt. Sind sie wieder erfüllt, holt er das bei seiner nächsten
-    Aktualisierung nach. Den Raum von Hand auszuführen funktioniert
-    weiterhin.
+    Sind welche gesetzt, aktualisiert sich der Raum nur, solange alle
+    zutreffen. Den Rest der Zeit ist er pausiert und lässt die Lampen in Ruhe.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
 
 override_protection:
@@ -247,11 +256,12 @@ stored_traces:
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#stored-traces).
 
 use_area_sensors:
-  source: 4755b2a6
+  source: 65f77069
   name: Sensoren aus Bereichen (veraltet)
   description: >-
-    Veraltet und wird in FLARE 3.0 als Option entfernt. Ab Home Assistant
-    2026.11 nutze „Ziel ausnehmen“, statt dies abzuschalten.
+    Veraltet und wird in FLARE 3.0 als Option entfernt: nutze „Ziel
+    ausnehmen“ in „Lampen & Anwesenheit“, statt dies abzuschalten. Nur
+    sichtbar, solange es aus ist.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
 
 extra_triggers:
