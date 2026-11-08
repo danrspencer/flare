@@ -102,9 +102,9 @@ Whenever a template returns a value, it overrides the per-phase setting.
 
 | Input | Default | Description |
 |---|---|---|
-| **Brightness Template** | none | A template returning a mapping of entity ID to brightness, in place of the schedule's. Lights it includes ignore **Lights Off**. |
-| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty. Lights it includes ignore **Idle Brightness**. |
-| **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. When it returns a scene that exists, it wins over the phase's **Scene**. |
+| **Brightness Template** | none | A template returning a mapping of entity ID to brightness, in place of the schedule's. When it returns a light, its value overrides **Lights Off** for that light. |
+| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty. When it returns a light, its value overrides **Idle Brightness** for that light. |
+| **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. When it returns a scene that exists, it overrides the phase's **Scene**. |
 | **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
 
 ### Brightness template

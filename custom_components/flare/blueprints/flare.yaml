@@ -213,7 +213,8 @@ blueprint:
           description: >
             Returns each light's brightness, 0-255, in place of the
             schedule's: {{ {'light.lamp': 50} }}. 0 switches a light off;
-            null leaves it alone. Lights it names ignore Lights Off.
+            null leaves it alone. When it returns a light, its value overrides
+            Lights Off for that light.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness-template).
           default: "{{ {} }}"
           selector:
@@ -222,8 +223,9 @@ blueprint:
           name: Idle Brightness Template
           description: >
             Returns the brightness (1-255) each light dims to when the room is
-            empty: {{ {'light.lamp': 10} }}. Lights it names ignore Idle
-            Brightness. Only works in rooms with occupancy or motion sensors.
+            empty: {{ {'light.lamp': 10} }}. When it returns a light, its value
+            overrides Idle Brightness for that light. Only works in rooms with
+            occupancy or motion sensors.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
           default: "{{ {} }}"
           selector:
@@ -232,7 +234,7 @@ blueprint:
           name: Scene Template
           description: >
             Returns a scene to use instead of the schedule, or nothing to
-            carry on as normal. When it returns one, it wins over the phase's
+            carry on as normal. When it returns one, it overrides the phase's
             Scene.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
           default: ""
@@ -657,7 +659,7 @@ action:
         {% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,
                     'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}
         {{ m.get(phase, []) }}
-      # The template wins over the per-phase exclude list. A single number from
+      # The template overrides the per-phase exclude list. A single number from
       # the template means every light in the room.
       template_brightness_map: >
         {% set t = template_brightness_levels %}
@@ -830,7 +832,7 @@ action:
       phase_scene: >
         {% set m = {'Morning': morning_scene, 'Day': day_scene, 'Evening': evening_scene, 'Night': night_scene} %}
         {{ m.get(phase) }}
-      # scene_template wins when it returns a valid scene; a typo or missing
+      # scene_template overrides when it returns a valid scene; a typo or missing
       # scene counts as nothing. The entity_id shape check has to come first:
       # states[] raises on a malformed string, aborting the whole run.
       desired_scene: >
