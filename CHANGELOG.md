@@ -22,9 +22,9 @@ CI — see `.github/workflows/release.yml`.
   on something specific: the TV changing to playing, an attribute, a button press. They still
   only adjust lights that are already on, and never switch one on. Rooms keep the entities they
   listed: they're now under **Settings** as **Additional Trigger Entities** and still work.
-- **The blueprint's sections are reordered**: Brightness, Idle Brightness, Scenes, then
-  **Sensors** (the section that held Wait time and Lux Threshold, renamed), Transitions, a new
-  **Triggers & Conditions** section holding Additional Triggers and Conditions, and Settings.
+- **The blueprint's sections are reordered**: **Sensors** (the section that held Wait time and
+  Lux Threshold, renamed), Brightness, Idle Brightness, Scenes, Transitions, a new **Triggers &
+  Conditions** section holding Additional Triggers and Conditions, and Settings.
 
 ### Deprecated
 
