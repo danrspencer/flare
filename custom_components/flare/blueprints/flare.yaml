@@ -47,24 +47,226 @@ blueprint:
     # A heading, not a setting: a constant with a blank label shows only its name and description.
     customise_divider:
       name: Customise
-      description: When the lights come on and off, and how they look through the day.
+      description: >
+        Which lights stay off, idle brightness and scenes, for each phase.
+        Use Custom when you need more control than per phase allows.
+      default: true
+      selector:
+        constant:
+          value: true
+          label: " "
+    morning_phase:
+      name: Morning
+      icon: mdi:weather-sunset-up
+      collapsed: true
+      input:
+        morning_exclude_lights:
+          name: Lights Off
+          description: Lights in the room that stay off during Morning.
+          selector:
+            entity:
+              domain: light
+              multiple: true
+          default: []
+        morning_idle_brightness:
+          name: Idle Brightness
+          description: >
+            The brightness (0-255) the room dims to when it's empty, instead
+            of switching off. Useful as a nightlight. Only works in rooms with
+            occupancy or motion sensors.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 255
+              mode: box
+        morning_scene:
+          name: Scene
+          description: >
+            This scene is applied during the phase. Any lights not in it stay
+            on the schedule.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: null
+          selector:
+            entity:
+              domain: scene
+    day_phase:
+      name: Day
+      icon: mdi:white-balance-sunny
+      collapsed: true
+      input:
+        day_exclude_lights:
+          name: Lights Off
+          description: Lights in the room that stay off during Day.
+          selector:
+            entity:
+              domain: light
+              multiple: true
+          default: []
+        day_idle_brightness:
+          name: Idle Brightness
+          description: >
+            The brightness (0-255) the room dims to when it's empty, instead
+            of switching off. Useful as a nightlight. Only works in rooms with
+            occupancy or motion sensors.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 255
+              mode: box
+        day_scene:
+          name: Scene
+          description: >
+            This scene is applied during the phase. Any lights not in it stay
+            on the schedule.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: null
+          selector:
+            entity:
+              domain: scene
+    evening_phase:
+      name: Evening
+      icon: mdi:weather-sunset-down
+      collapsed: true
+      input:
+        evening_exclude_lights:
+          name: Lights Off
+          description: Lights in the room that stay off during Evening.
+          selector:
+            entity:
+              domain: light
+              multiple: true
+          default: []
+        evening_idle_brightness:
+          name: Idle Brightness
+          description: >
+            The brightness (0-255) the room dims to when it's empty, instead
+            of switching off. Useful as a nightlight. Only works in rooms with
+            occupancy or motion sensors.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 255
+              mode: box
+        evening_scene:
+          name: Scene
+          description: >
+            This scene is applied during the phase. Any lights not in it stay
+            on the schedule.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: null
+          selector:
+            entity:
+              domain: scene
+    night_phase:
+      name: Night
+      icon: mdi:weather-night
+      collapsed: true
+      input:
+        night_exclude_lights:
+          name: Lights Off
+          description: Lights in the room that stay off during Night.
+          selector:
+            entity:
+              domain: light
+              multiple: true
+          default: []
+        night_idle_brightness:
+          name: Idle Brightness
+          description: >
+            The brightness (0-255) the room dims to when it's empty, instead
+            of switching off. Useful as a nightlight. Only works in rooms with
+            occupancy or motion sensors.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 255
+              mode: box
+        night_scene:
+          name: Scene
+          description: >
+            This scene is applied during the phase. Any lights not in it stay
+            on the schedule.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: null
+          selector:
+            entity:
+              domain: scene
+    templates:
+      name: Custom
+      icon: mdi:code-braces
+      description: >
+        For settings that depend on something, or differ light by light. Each
+        wins over the phases' own settings for what it covers.
+      collapsed: true
+      input:
+        brightness_template:
+          name: Brightness Template
+          description: >
+            Returns each light's brightness, 0-255, in place of the
+            schedule's: {{ {'light.lamp': 50} }}. 0 switches a light off;
+            null leaves it alone. Lights it names ignore Lights Off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness-template).
+          default: "{{ {} }}"
+          selector:
+            template: {}
+        idle_brightness_template:
+          name: Idle Brightness Template
+          description: >
+            Returns the brightness (1-255) each light dims to when the room is
+            empty: {{ {'light.lamp': 10} }}. Lights it names ignore Idle
+            Brightness. Only works in rooms with occupancy or motion sensors.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
+          default: "{{ {} }}"
+          selector:
+            template: {}
+        scene_template:
+          name: Scene Template
+          description: >
+            Returns a scene to use instead of the schedule, or nothing to
+            carry on as normal. When it returns one, it wins over the phase's
+            Scene.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
+          default: ""
+          selector:
+            template: {}
+        additional_triggers:
+          name: Additional Triggers
+          description: >
+            Update the room straight away when one of these fires, like the
+            TV starting to play or an entity a template reads changing. They
+            only adjust lights that are already on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            trigger: {}
+    # A heading, like customise_divider.
+    advanced_divider:
+      name: Fine Tuning
+      description: When the room reacts, and how. The defaults suit most rooms.
       default: true
       selector:
         constant:
           value: true
           label: " "
     sensors:
-      name: Sensors
+      name: Sensors & Conditions
       icon: mdi:motion-sensor
       collapsed: true
       input:
         no_motion_wait:
-          name: Wait time
+          name: Wait Time
           description: >
-            Only used when the room has occupancy or motion sensors: how long
-            every one must be clear before the room counts as empty and its
-            lights turn off.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors).
+            How long every occupancy and motion sensor must be clear before
+            the room counts as empty and its lights turn off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#wait-time).
           default: 120
           selector:
             number:
@@ -74,11 +276,10 @@ blueprint:
         lux_threshold:
           name: Lux Threshold
           description: >
-            When every illuminance sensor in Lights & Occupancy reads above this
-            many lux, the room leaves its lights off: a sensor, a tick or a scene
-            won't switch one on until it is darker. If someone is still there
-            when it gets darker, the lights come on then. Switching the room on
-            by hand still works. 0 turns this off.
+            Above this many lux on every illuminance sensor, the room stays
+            dark. If someone's still there when it gets darker, the lights
+            come on then. Switching the room on by hand still works. 0 turns
+            this off.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
           default: 0
           selector:
@@ -87,222 +288,6 @@ blueprint:
               max: 2000
               step: 10
               unit_of_measurement: lx
-    brightness_exclusions:
-      name: Brightness & Exclusions
-      icon: mdi:brightness-6
-      collapsed: true
-      input:
-        brightness_template:
-          name: Brightness Template
-          description: >
-            Template returning entity_id → brightness, 0-255, replacing
-            the curve's brightness for the lights it names (0 = off, null
-            = skip entirely). The same scale the phase brightnesses use.
-            Its own per-entity values always win over the per-phase
-            exclusions below - those only fill in entities it doesn't
-            already mention.
-            If it reads another entity, add that entity to Additional
-            Triggers, so the room updates as soon as it
-            changes.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness).
-          default: "{{ {} }}"
-          selector:
-            template: {}
-        morning_exclude_lights:
-          name: Lights Off During Morning
-          selector:
-            entity:
-              domain: light
-              multiple: true
-          default: []
-        day_exclude_lights:
-          name: Lights Off During Day
-          selector:
-            entity:
-              domain: light
-              multiple: true
-          default: []
-        evening_exclude_lights:
-          name: Lights Off During Evening
-          selector:
-            entity:
-              domain: light
-              multiple: true
-          default: []
-        night_exclude_lights:
-          name: Lights Off During Night
-          selector:
-            entity:
-              domain: light
-              multiple: true
-          default: []
-    idle_brightness:
-      name: Idle Brightness
-      icon: mdi:lightbulb-night
-      collapsed: true
-      input:
-        idle_brightness_template:
-          name: Idle Brightness Template
-          description: >
-            Template returning entity_id → brightness, 1-255, for
-            lights that should stay dimly lit when the room is empty,
-            instead of switching off. Its own per-entity values always
-            win over the per-phase settings below - those only fill in
-            entities it doesn't already mention.
-            If it reads another entity, add that entity to Additional
-            Triggers, so the room updates as soon as it
-            changes.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
-          default: "{{ {} }}"
-          selector:
-            template: {}
-        morning_idle_brightness:
-          name: Morning Idle Brightness
-          description: >
-            What this phase dims to when the room is empty, instead of
-            switching off, on the same 0-255 scale as the phase
-            brightnesses. 0 means it goes dark, which is the default.
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 255
-              mode: box
-        day_idle_brightness:
-          name: Day Idle Brightness
-          description: >
-            What this phase dims to when the room is empty, instead of
-            switching off, on the same 0-255 scale as the phase
-            brightnesses. 0 means it goes dark, which is the default.
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 255
-              mode: box
-        evening_idle_brightness:
-          name: Evening Idle Brightness
-          description: >
-            What this phase dims to when the room is empty, instead of
-            switching off, on the same 0-255 scale as the phase
-            brightnesses. 0 means it goes dark, which is the default.
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 255
-              mode: box
-        night_idle_brightness:
-          name: Night Idle Brightness
-          description: >
-            What this phase dims to when the room is empty, instead of
-            switching off, on the same 0-255 scale as the phase
-            brightnesses. 0 means it goes dark, which is the default.
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 255
-              mode: box
-    scene_handoff:
-      name: Scene Handoff
-      icon: mdi:palette-swatch
-      collapsed: true
-      input:
-        scene_template:
-          name: Scene Template
-          description: >
-            Template returning a scene entity_id to hand the room over
-            to instead of the adaptive brightness/colour. Takes
-            precedence over the per-phase scenes below whenever it
-            returns one - they're the fallback for phases it doesn't
-            cover.
-            If it reads another entity, add that entity to Additional
-            Triggers, so the room updates as soon as it
-            changes.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#scenes).
-          default: ""
-          selector:
-            template: {}
-        morning_scene:
-          name: Morning Scene
-          default: null
-          selector:
-            entity:
-              domain: scene
-        day_scene:
-          name: Day Scene
-          default: null
-          selector:
-            entity:
-              domain: scene
-        evening_scene:
-          name: Evening Scene
-          default: null
-          selector:
-            entity:
-              domain: scene
-        night_scene:
-          name: Night Scene
-          default: null
-          selector:
-            entity:
-              domain: scene
-    # A heading, like customise_divider.
-    advanced_divider:
-      name: Advanced
-      description: Rarely needed. The defaults suit most rooms.
-      default: true
-      selector:
-        constant:
-          value: true
-          label: " "
-    timing:
-      name: Transitions
-      icon: mdi:timer-outline
-      collapsed: true
-      input:
-        motion_on_transition:
-          name: Motion On Transition
-          description: Transition duration when turning on via motion or a manual run.
-          default: 1
-          selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: seconds
-        motion_off_transition:
-          name: Motion Off Transition
-          description: Transition duration when turning off via motion.
-          default: 15
-          selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: seconds
-        background_transition:
-          name: Background Transition
-          description: Transition duration when the schedule, the scene template, or an Additional Trigger updates - i.e. nothing a person is actively waiting on.
-          default: 5
-          selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: seconds
-    triggers_conditions:
-      name: Triggers & Conditions
-      icon: mdi:lightning-bolt
-      collapsed: true
-      input:
-        additional_triggers:
-          name: Additional Triggers
-          description: >
-            Update the room straight away when one of these fires, like the
-            TV starting to play. They only adjust lights that are already on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            trigger: {}
         conditions:
           name: Conditions
           description: >
@@ -312,8 +297,40 @@ blueprint:
           default: []
           selector:
             condition: {}
+    timing:
+      name: Transitions
+      icon: mdi:timer-outline
+      collapsed: true
+      input:
+        motion_on_transition:
+          name: Turning On
+          description: How long lights take to fade up when someone arrives or the room is switched on.
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: seconds
+        motion_off_transition:
+          name: Turning Off
+          description: How long lights take to fade out once the room is empty.
+          default: 15
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: seconds
+        background_transition:
+          name: Everything Else
+          description: How long other changes take to fade in, like the schedule moving on or a template changing. Nobody is waiting on these.
+          default: 5
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: seconds
     settings:
-      name: Settings
+      name: Other Settings
       icon: mdi:cog-outline
       collapsed: true
       input:
@@ -330,12 +347,9 @@ blueprint:
         rgb_phases:
           name: Prefer RGB During
           description: >
-            Phases to send RGB colour instead of colour temperature, for
-            lights that support it (auto-detected). At the high colour
-            temperatures used during Morning/Day, this can look
-            blue-tinted rather than a clean white, so those phases are
-            off by default - Evening/Night's warmer values don't have
-            that problem.
+            Phases that send RGB colour rather than colour temperature to
+            lights that support it. Cool whites can look blue in RGB, so
+            Morning and Day are off by default.
             [Details](https://danrspencer.github.io/flare/reference/blueprint/#prefer-rgb-during).
           default: [Evening, Night]
           selector:

@@ -92,10 +92,10 @@ HA's trace UI.
   before `default:` reads coverage. See "Parked: scene handling".
 - Override protection is in Python, re-checked against live state on
   every call, never a one-shot trigger check (lesson 2).
-- **The blueprint knows phase names in three inputs** - `rgb_phases`,
-  the four scene pickers and the four exclude lists - a deliberate
+- **The blueprint knows phase names**: a section per phase (its exclude
+  list, idle brightness and scene) and `rgb_phases` - a deliberate
   exception, because a Jinja template is poor UI for something this
-  simple. In both templated cases the template wins and the per-phase
+  simple. In each templated case the template wins and the per-phase
   pick fills in what it doesn't cover.
 
 Blueprint input mechanics:
@@ -104,21 +104,26 @@ Blueprint input mechanics:
   name for `!input`, so regrouping isn't breaking. The top level holds
   only what's required (Schedule, Lights & Occupancy); everything optional
   is collapsed, so input names carry no "(Optional)" (user's call).
-  Sections run **Sensors** (Wait time, Lux Threshold), then what shapes a
-  room's light (Brightness, Idle Brightness, Scenes), then the fiddly
-  (Transitions; **Triggers & Conditions**, rarely set, collapsed like the
-  rest; user's call); **Settings**, last, holds what most rooms never touch
-  (Override Protection, Prefer RGB During, Stored Traces), then every
-  deprecated input, until the release that deletes it (user's call):
-  Sensors From Areas and Additional Trigger Entities.
-  `docs/reference/blueprint.md` follows the same grouping.
-- **Two headings split the sections**: **Customise** (Sensors through
-  Scenes) and **Advanced** (Transitions on). Blueprints have no heading
-  and sections don't nest, and an empty section isn't drawn, so each is
-  an input (`customise_divider`, `advanced_divider`) with a `constant`
-  selector whose blank label leaves only its name and description
-  (user's call). It relies on how the editor draws that selector; a room
-  may store its value, which nothing reads.
+  Under **Customise** come a section per phase (Morning, Day, Evening,
+  Night), each holding that phase's Lights Off, Idle Brightness and Scene,
+  then **Custom**: the three templates and Additional Triggers, named for
+  what it's for rather than how (user's call). Under **Fine Tuning**:
+  **Sensors & Conditions** (Wait Time, Lux Threshold, Conditions),
+  **Transitions**, and **Other Settings**, holding what most rooms never
+  touch (Override Protection, Prefer RGB During, Stored Traces), then every
+  deprecated input until the release that deletes it (user's call):
+  Sensors From Areas and Additional Trigger Entities. Names inside a phase
+  section don't repeat the phase. Prefer RGB During stays one input in
+  Other Settings: splitting it per phase would be a new key per phase,
+  dropping rooms' stored choice. `docs/reference/blueprint.md` follows the
+  same grouping.
+- **Two headings split the sections**: **Customise** and **Fine Tuning**.
+  Blueprints have no heading and sections don't nest, and an empty section
+  isn't drawn, so each is an input (`customise_divider`,
+  `advanced_divider`) with a `constant` selector whose blank label leaves
+  only its name and description (user's call). It relies on how the
+  editor draws that selector; a room may store its value, which nothing
+  reads.
 - `homeassistant.min_version: 2026.11.0`, with `hacs.json` (user's
   call): inputs take `visible:` from 2026.11, which a 2026.10 house
   rejects, failing every room. It also gives everyone Exclude target,
@@ -896,7 +901,7 @@ would switch off every light turned on there.
   native "triggered by" conditions are templates on it for the same
   reason. `tests/checks/test_blueprint_triggers.py` pins the position and
   that nothing else reads `trigger.id`. The old entity list is
-  `extra_triggers` (`extra`), deprecated, last in Settings.
+  `extra_triggers` (`extra`), deprecated, last in Other Settings.
 - **The trigger IDs are public**: the reference page's Trigger IDs table
   documents them for **Triggered by** conditions in Conditions (user's
   call), so renaming or splitting one breaks rooms that check it, silently

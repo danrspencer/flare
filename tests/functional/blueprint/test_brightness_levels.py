@@ -18,7 +18,7 @@ from tests.functional.blueprint.harness import (
 
 
 class TestBrightnessScaling:
-    """docs/reference/blueprint.md#brightness"""
+    """docs/reference/blueprint.md#brightness-template"""
 
     async def test_a_schedule_at_zero_brightness_turns_the_lights_off(self, hass, apply_lighting_calls):
         """0 is off, as it is for light.turn_on."""

@@ -27,10 +27,11 @@ CI — see `.github/workflows/release.yml`.
   as **Additional Trigger Entities**.
 - **Sensors From Areas is hidden unless you've turned it off.** To leave a sensor out, use
   **Exclude target** in **Lights & Occupancy**.
-- **The blueprint's settings are reorganised**, with nothing to change in your rooms. Under a
-  new **Customise** heading: **Sensors** (Wait time and Lux Threshold, renamed from Sensors &
-  Triggers), Brightness & Exclusions, Idle Brightness and Scene Handoff. Under **Advanced**:
-  Transitions, a new **Triggers & Conditions** section, and Settings.
+- **The blueprint's settings are reorganised by phase**, with nothing to change in your rooms.
+  Under **Customise**, each phase has its own section with its **Lights Off**, **Idle
+  Brightness** and **Scene**, and **Custom** holds the templates and Additional Triggers.
+  Under **Fine Tuning**: **Sensors & Conditions**, **Transitions** and **Other Settings**.
+  Many settings have shorter names and plainer descriptions.
 
 ### Deprecated
 
