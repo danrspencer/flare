@@ -108,8 +108,10 @@ Blueprint input mechanics:
   Conditions**, the two that make a room work like an ordinary automation,
   user's call; then **Sensors**: Wait time, Lux Threshold; then
   Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
-  (Override Protection, Prefer RGB During, Stored Traces, then the
-  deprecated Sensors From Areas and Additional Trigger Entities).
+  (Override Protection, Prefer RGB During, Stored Traces). A deprecated
+  input sits last in the section it belongs to (Additional Trigger
+  Entities in Triggers & Conditions, Sensors From Areas in Sensors), not
+  in Settings (user's call).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
@@ -876,7 +878,7 @@ would switch off every light turned on there.
   native "triggered by" conditions are templates on it for the same
   reason. `tests/checks/test_blueprint_triggers.py` pins the position and
   that nothing else reads `trigger.id`. The old entity list is
-  `extra_triggers` (`extra`), deprecated under Settings.
+  `extra_triggers` (`extra`), deprecated, last in Triggers & Conditions.
 - **The trigger IDs are public**: the reference page's Trigger IDs table
   documents them for **Triggered by** conditions in Conditions (user's
   call), so renaming or splitting one breaks rooms that check it, silently
@@ -1071,6 +1073,11 @@ having switched it on and left.
   Presence (mmWave) sensors remove the cause, but that's hardware.
 
 ### Planned for 3.0: Sensors From Areas goes, the floor goes to 2026.11
+
+**`tests/checks/test_deprecated_inputs.py` fails once the changelog's top
+version is 3.0 while either deprecated input is still in the blueprint**
+(at the user's request, so they can't be forgotten); every input named
+"(Deprecated)" must be listed there with the release that removes it.
 
 Deprecated in 2.0 (its description, the reference page and the changelog
 say so); remove it in 3.0 and raise the blueprint's `min_version` and

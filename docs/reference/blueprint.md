@@ -65,6 +65,7 @@ either room goes dark.
 |---|---|---|
 | **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
 | **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
+| **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Additional triggers
 
@@ -127,6 +128,13 @@ Give each of your Additional Triggers an ID if a condition needs to tell it apar
 you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
 Running the automation by hand has no trigger, and skips **Conditions** anyway.
 
+### Additional trigger entities
+
+The list of entities **Additional Triggers** used to be: any change to one updates the room,
+as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
+
+**Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
+**Additional Triggers** as a **State** trigger, then clear this list.
 
 ## Sensors
 
@@ -134,6 +142,7 @@ Running the automation by hand has no trigger, and skips **Conditions** anyway.
 |---|---|---|
 | **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
 | **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
+| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
 
 ### Lux Threshold
 
@@ -160,6 +169,18 @@ is switched off for being bright. Turning the room on by hand — the automation
 A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
 doesn't count either way, and a room with no illuminance sensor never blocks. The check is off
 while **Lux Threshold** is `0`, which is the default.
+
+### Sensors from areas
+
+Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
+count, so you can pick an area for its lights and choose the sensors yourself, such as the
+hallway's for a landing. Pick none for a room that only follows the schedule.
+
+**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** From Home Assistant 2026.11,
+use **Exclude target** in **Lights & Occupancy** instead of turning it off, to leave out the
+sensors you don't want (see Home Assistant's
+[excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
+An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
 
 ## Brightness
 
@@ -223,8 +244,6 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 | **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
-| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
-| **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Override protection
 
@@ -240,26 +259,6 @@ leaves Morning and Day on colour temperature.
 A room updates every minute, so the default keeps about the last 20 minutes of runs in the
 automation's **Traces**. Raise it while you're tracking down something that happened earlier;
 each trace takes memory, so set it back once you're done.
-
-### Sensors from areas
-
-Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
-count, so you can pick an area for its lights and choose the sensors yourself, such as the
-hallway's for a landing. Pick none for a room that only follows the schedule.
-
-**Sensors From Areas is deprecated, and FLARE 3.0 removes it.** From Home Assistant 2026.11,
-use **Exclude target** in **Lights & Occupancy** instead of turning it off, to leave out the
-sensors you don't want (see Home Assistant's
-[excluding targets](https://www.home-assistant.io/docs/automation/targets/#excluding-targets)).
-An excluded sensor doesn't count, whether it came from an area, a device, a floor or a label.
-
-### Additional trigger entities
-
-The list of entities **Additional Triggers** used to be: any change to one updates the room,
-as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
-
-**Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
-**Additional Triggers** as a **State** trigger, then clear this list.
 
 ## How a room behaves
 
