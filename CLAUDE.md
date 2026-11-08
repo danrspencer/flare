@@ -108,10 +108,12 @@ Blueprint input mechanics:
   Conditions**, the two that make a room work like an ordinary automation,
   user's call; then **Sensors**: Wait time, Lux Threshold; then
   Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
-  (Override Protection, Prefer RGB During, Stored Traces). A deprecated
-  input sits last in the section it belongs to (Additional Trigger
-  Entities in Triggers & Conditions, Sensors From Areas in Sensors), not
-  in Settings (user's call).
+  (Override Protection, Prefer RGB During, Stored Traces, then the
+  deprecated Additional Trigger Entities). Sensors From Areas, deprecated,
+  sits last in Sensors, where it belongs, since it can hide while unused;
+  Additional Trigger Entities can't (a list is never empty to `visible:`,
+  and a State trigger refuses an unset `entity_id`), so it stays out of
+  the way in Settings until 3.0 deletes it (user's call).
   `docs/reference/blueprint.md` follows the same grouping.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
@@ -878,7 +880,7 @@ would switch off every light turned on there.
   native "triggered by" conditions are templates on it for the same
   reason. `tests/checks/test_blueprint_triggers.py` pins the position and
   that nothing else reads `trigger.id`. The old entity list is
-  `extra_triggers` (`extra`), deprecated, last in Triggers & Conditions.
+  `extra_triggers` (`extra`), deprecated, last in Settings.
 - **The trigger IDs are public**: the reference page's Trigger IDs table
   documents them for **Triggered by** conditions in Conditions (user's
   call), so renaming or splitting one breaks rooms that check it, silently

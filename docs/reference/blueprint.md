@@ -65,7 +65,6 @@ either room goes dark.
 |---|---|---|
 | **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
 | **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
-| **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Additional triggers
 
@@ -127,14 +126,6 @@ warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the 
 Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
 you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
 Running the automation by hand has no trigger, and skips **Conditions** anyway.
-
-### Additional trigger entities
-
-The list of entities **Additional Triggers** used to be: any change to one updates the room,
-as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
-
-**Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
-**Additional Triggers** as a **State** trigger, then clear this list.
 
 ## Sensors
 
@@ -244,6 +235,7 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 | **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
+| **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Override protection
 
@@ -259,6 +251,14 @@ leaves Morning and Day on colour temperature.
 A room updates every minute, so the default keeps about the last 20 minutes of runs in the
 automation's **Traces**. Raise it while you're tracking down something that happened earlier;
 each trace takes memory, so set it back once you're done.
+
+### Additional trigger entities
+
+The list of entities **Additional Triggers** used to be: any change to one updates the room,
+as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
+
+**Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
+**Additional Triggers** as a **State** trigger, then clear this list.
 
 ## How a room behaves
 

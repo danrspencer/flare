@@ -72,18 +72,6 @@ blueprint:
           default: []
           selector:
             condition: {}
-        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
-        extra_triggers:
-          name: Additional Trigger Entities (Deprecated)
-          description: >
-            Deprecated and will be removed as an option in FLARE 3.0: add a
-            State trigger to Additional Triggers instead. Entities that make
-            the room update as soon as they change.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-trigger-entities).
-          default: []
-          selector:
-            entity:
-              multiple: true
     sensors:
       name: Sensors
       icon: mdi:motion-sensor
@@ -365,6 +353,18 @@ blueprint:
               min: 1
               max: 200
               mode: box
+        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
+        extra_triggers:
+          name: Additional Trigger Entities (Deprecated)
+          description: >
+            Deprecated and will be removed as an option in FLARE 3.0: add a
+            State trigger to Additional Triggers instead. Entities that make
+            the room update as soon as they change.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-trigger-entities).
+          default: []
+          selector:
+            entity:
+              multiple: true
 
 mode: restart
 max_exceeded: silent

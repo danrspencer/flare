@@ -21,8 +21,7 @@ CI — see `.github/workflows/release.yml`.
 - **Additional Triggers takes triggers, as an ordinary automation does**, so a room can update
   on something specific: the TV changing to playing, an attribute, a button press. They still
   only adjust lights that are already on, and never switch one on. Rooms keep the entities they
-  listed: they're now **Additional Trigger Entities**, last in **Triggers & Conditions**, and
-  still work.
+  listed: they're now under **Settings** as **Additional Trigger Entities** and still work.
 - **Additional Triggers and Conditions have a section of their own, Triggers & Conditions**,
   first after **Lights & Occupancy**, and the section that held Wait time and Lux Threshold is
   now **Sensors**.
