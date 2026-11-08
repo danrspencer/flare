@@ -1,6 +1,6 @@
 """Check that FLARE sets up and runs on a Home Assistant release.
 
-    mise run ha-check                    SANDBOX_HA_VERSION's release, else hacs.json's
+    mise run ha-check                    SANDBOX_HA_VERSION's release, else SANDBOX_HA_RELEASE's
     python scripts/ha_check.py latest    the newest release on PyPI, betas included
     python scripts/ha_check.py issue     open, update or close the ha-compat issue
 

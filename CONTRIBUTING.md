@@ -145,8 +145,9 @@ mise run sandbox:reset
 ```
 
 - `mise run sandbox:install` (which both run first) installs Home Assistant into `.venv-sandbox/`, with the
-  Python and uv from `mise.toml`. By default that's the oldest release FLARE supports, `hacs.json`'s
-  `homeassistant`. To try another, set `SANDBOX_HA_VERSION` (`SANDBOX_HA_VERSION=2026.11.0 mise run sandbox`).
+  Python and uv from `mise.toml`. By default that's the latest release, `SANDBOX_HA_RELEASE` in `mise.toml`,
+  raised by hand. To try another, such as the oldest FLARE supports (`hacs.json`'s `homeassistant`), set
+  `SANDBOX_HA_VERSION` (`SANDBOX_HA_VERSION=2026.10.0 mise run sandbox`).
   It reinstalls only when the version changes, and the first install takes a few minutes. A house saved by a
   newer release may not load in an older one; use `sandbox:reset` after going back.
 - The port is `SANDBOX_PORT` in `mise.toml`'s `[env]`.

@@ -1538,7 +1538,7 @@ test module never imports another.
 - The dashboard's JavaScript runs under node (`tests/support/node.py`);
   `tests/support/registry.py` builds `hass.entities` for its fixtures.
 - **The sandbox** (`mise run sandbox`, `scripts/sandbox.py`) is a real
-  HA (`hacs.json`'s minimum unless `SANDBOX_HA_VERSION` says otherwise) on
+  HA (the latest release, `SANDBOX_HA_RELEASE`, unless `SANDBOX_HA_VERSION` says otherwise) on
   `SANDBOX_PORT` running this checkout's FLARE over a fake house
   (`sandbox/`), already onboarded. It's for trying setup and the UI as a
   new user would before touching the live instance, not a test layer.
