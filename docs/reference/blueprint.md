@@ -18,6 +18,10 @@ render_with_liquid: false
 The blueprint is the automation each room runs. This page covers every input and how a room
 behaves.
 
+Its settings come in two groups. **Customise** holds what most rooms change: a section for each
+phase, and **Custom** for anything more particular. **Fine Tuning** holds what most rooms never
+touch. This page follows the same order.
+
 <details open markdown="block">
   <summary>On this page</summary>
   {: .text-delta }
@@ -58,12 +62,84 @@ A room can have two automations, for example one for a lamp and one for the ceil
 Each releases the lights it drives once they're all off; a light in both is released when
 either room goes dark.
 
-## Sensors
+## Phases
+
+**Morning**, **Day**, **Evening** and **Night** each have a section with the same three
+settings, which apply while the schedule is in that phase.
 
 | Input | Default | Description |
 |---|---|---|
-| **Wait time** | 120s | How long every sensor must be clear before the room is empty. Only used when the room has sensors. |
-| **Lux Threshold** | 0 (off) | Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux. |
+| **Lights Off** | none | Lights in the room that stay off during the phase. |
+| **Idle Brightness** | `0` | The brightness, 0–255, the room's lights dim to when it's empty, instead of switching off. `0` turns them off. |
+| **Scene** | none | A scene the room uses instead of the schedule during the phase. |
+
+### Idle brightness
+
+An idle brightness turns a room's "off" into a dim glow: a nightlight. It only works in a room
+with occupancy or motion sensors, since without them the room is never empty. It's the only way
+the room's lights come on while it's empty.
+
+For a nightlight whenever it's dark outside, leave each phase at `0` and set the
+[Idle Brightness Template](#custom) to:
+
+```yaml
+{{ 10 if is_state('sun.sun', 'below_horizon') else {} }}
+```
+
+See [Templates](../../guides/templates/#idle-brightness-template) for one lamp as the nightlight,
+and other variations.
+
+### Scenes
+
+A scene is only used if every entity it sets is in the room; otherwise the whole room follows
+the schedule. When a scene is used, any light in the room that the scene doesn't set still
+follows the schedule. See [Scene handoff](../../guides/scenes/).
+
+## Custom
+
+For settings that depend on something, or differ light by light. Each template wins over the
+phases' own settings for the lights it covers.
+
+| Input | Default | Description |
+|---|---|---|
+| **Brightness Template** | none | A template returning a mapping of entity ID to brightness, in place of the schedule's. Lights it includes ignore **Lights Off**. |
+| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty. Lights it includes ignore **Idle Brightness**. |
+| **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. When it returns a scene that exists, it wins over the phase's **Scene**. |
+| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
+
+### Brightness template
+
+| Value | Effect |
+|---|---|
+| `1`–`255` | Sets the light to this brightness, on the same scale as the phase brightnesses. |
+| `0` | Turns the light off. |
+| `null` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
+
+A single number instead of a mapping applies to every light in the room, and any light the
+template doesn't include follows the schedule. See [Templates](../../guides/templates/#brightness-template).
+
+### Additional triggers
+
+Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
+Brightness Template that dims the room while it's playing. They're the same triggers as an
+ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
+[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+
+## Sensors & Conditions
+
+| Input | Default | Description |
+|---|---|---|
+| **Wait Time** | 120s | How long every occupancy and motion sensor must be clear before the room is empty. |
+| **Lux Threshold** | 0 (off) | Above 0, the room stays dark while every illuminance sensor in it reads above this many lux. |
+| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
+
+### Wait time
+
+Most occupancy and motion sensors clear the moment they stop seeing movement, even with someone
+sitting still. The room counts as empty only once every one of them has been clear for the
+**Wait Time**. It isn't used in a room without sensors.
 
 ### Lux Threshold
 
@@ -81,7 +157,7 @@ many lux. A bright room isn't switched on by:
 
 If someone is still in the room when it stops being bright enough, because one of those sensors
 drops to the threshold or below, the lights come on then. Someone counts as in the room if one
-of its occupancy or motion sensors is detecting them, or was within the **Wait time**.
+of its occupancy or motion sensors is detecting them, or was within the **Wait Time**.
 
 Lights already on carry on as before: following the curve, or left to the phase's scene. Nothing
 is switched off for being bright. Turning the room on by hand — the automation's
@@ -90,77 +166,6 @@ is switched off for being bright. Turning the room on by hand — the automation
 A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
 doesn't count either way, and a room with no illuminance sensor never blocks. The check is off
 while **Lux Threshold** is `0`, which is the default.
-
-## Brightness
-
-| Input | Default | Description |
-|---|---|---|
-| **Lights Off During Morning / Day / Evening / Night** | none | Lights to turn off during that phase. |
-| **Brightness Template** | none | A template returning a mapping of entity ID to brightness. Overrides the lists above for the lights it includes. |
-
-Brightness Template values:
-
-| Value | Effect |
-|---|---|
-| `1`–`255` | Sets the light to this brightness, on the same scale as the phase brightnesses. |
-| `0` | Turns the light off. |
-| `null` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
-
-A single number instead of a mapping applies to every light in the room, and any light the
-template doesn't include follows the schedule. See [Templates](../../guides/templates/#brightness-template).
-
-## Idle brightness
-
-| Input | Default | Description |
-|---|---|---|
-| **Morning / Day / Evening / Night Idle Brightness** | `0` | The brightness, 0–255, the room's lights dim to when it empties during that phase. `0` turns them off. |
-| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty. Overrides the settings above for the lights it includes. |
-
-For a nightlight whenever it's dark outside, leave the four settings at `0` and set the template
-to:
-
-```yaml
-{{ 10 if is_state('sun.sun', 'below_horizon') else {} }}
-```
-
-An idle brightness is the only way the room's lights come on while it's empty. See
-[Templates](../../guides/templates/#idle-brightness-template) for one lamp as the nightlight,
-and other variations.
-
-## Scenes
-
-| Input | Default | Description |
-|---|---|---|
-| **Morning / Day / Evening / Night Scene** | none | A scene the room uses instead of the schedule during that phase. |
-| **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. Overrides the per-phase scenes when it returns a scene that exists. |
-
-A scene is only used if every entity it sets is in the room; otherwise the whole room follows
-the schedule. When a scene is used, any light in the room that the scene doesn't set still
-follows the schedule. See [Scene handoff](../../guides/scenes/).
-
-## Transitions
-
-| Input | Default | Description |
-|---|---|---|
-| **Motion On Transition** | 1s | Transition when someone comes in, or when you run the automation by hand. |
-| **Motion Off Transition** | 15s | Transition when the room empties. |
-| **Background Transition** | 5s | Transition for every other update. |
-
-## Triggers & Conditions
-
-| Input | Default | Description |
-|---|---|---|
-| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
-| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
-
-### Additional triggers
-
-Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
-Brightness Template that dims the room while it's playing. They're the same triggers as an
-ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
-attribute, a button press, a time. An additional trigger only adjusts lights that are already
-on, and never switches one on. To turn a room on from something else, see
-[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
 
 ### Conditions
 
@@ -204,7 +209,7 @@ warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the 
 | `phase_change` | the schedule moves to another phase |
 | `tick` | the room's regular update, about once a minute |
 | `motion_on` | an occupancy or motion sensor detects someone |
-| `motion_off` | a sensor has been clear for the **Wait time** |
+| `motion_off` | a sensor has been clear for the **Wait Time** |
 | `lux_dark` | the room stops being too bright for **Lux Threshold**, with someone there |
 | `recovered` | one of the room's lights comes back online |
 | `extra` | an entity in **Additional Trigger Entities** changes (deprecated) |
@@ -214,7 +219,15 @@ Give each of your Additional Triggers an ID if a condition needs to tell it apar
 you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
 Running the automation by hand has no trigger, and skips **Conditions** anyway.
 
-## Settings
+## Transitions
+
+| Input | Default | Description |
+|---|---|---|
+| **Turning On** | 1s | How long lights take to fade up when someone comes in, or when you run the automation by hand. |
+| **Turning Off** | 15s | How long lights take to fade out once the room is empty. |
+| **Everything Else** | 5s | How long every other update takes, such as the schedule moving on. |
+
+## Other settings
 
 | Input | Default | Description |
 |---|---|---|
@@ -272,7 +285,7 @@ minute, on the minute.
 ### When lights turn on and off
 
 Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
-been clear for the **Wait time**.
+been clear for the **Wait Time**.
 
 While every light in **Lights & Occupancy** is off, the only things that turn any of them on are
 a sensor detecting someone, running the automation by hand, the room getting dark while someone
@@ -280,7 +293,7 @@ is in it (with a [Lux Threshold](#lux-threshold)), and [idle brightness](#idle-b
 at least one light is on, any update can turn on the others. This means a phase change doesn't light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.
 
-If a light is still on after the room has been empty for the **Wait time**, the turn-off is sent
+If a light is still on after the room has been empty for the **Wait Time**, the turn-off is sent
 again.
 
 Running the automation by hand sets every light in the room, including ones someone else has

@@ -51,7 +51,7 @@ were sent. See
 ### What it doesn't do
 
 - **It doesn't stop a room switching off when it empties.** Once every sensor has been clear for
-  the Wait time, the room's lights go off, including ones you've changed.
+  the Wait Time, the room's lights go off, including ones you've changed.
 - **It doesn't last for ever.** It ends once the room has been dark, or when you press
   **Clear**. See [how a light goes back to the curve](#back-to-the-curve).
 - **It doesn't affect lights FLARE isn't running**, such as a lamp left out of the room's
