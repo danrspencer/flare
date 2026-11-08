@@ -97,8 +97,8 @@ follows the schedule. See [Scene handoff](../../guides/scenes/).
 
 ## Custom
 
-For settings that depend on something, or differ light by light. Each template wins over the
-phases' own settings for the lights it covers.
+Templates for when per-phase settings aren't enough, like dimming the room while the TV is on.
+Whatever a template sets replaces the phase's setting.
 
 | Input | Default | Description |
 |---|---|---|
