@@ -61,12 +61,11 @@ lux_threshold:
   unit: lx
 
 additional_triggers:
-  source: dc610fdb
+  source: c7f87339
   name: Zusätzliche Auslöser
   description: >-
-    Auslöser, bei denen der Raum sofort aktualisiert wird, etwa wenn der
-    Fernseher zu spielen beginnt und die Helligkeitsvorlage von ihm abhängt.
-    Sie passen nur Lampen an, die schon an sind, und schalten nie eine ein.
+    Aktualisiert den Raum sofort, wenn einer davon auslöst, etwa wenn der
+    Fernseher zu spielen beginnt. Sie passen nur Lampen an, die schon an sind.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
 
 brightness_exclusions:
@@ -205,15 +204,11 @@ settings:
   name: Einstellungen
 
 conditions:
-  source: ccc038f6
+  source: '97021323'
   name: Bedingungen
   description: >-
-    Wie bei einer gewöhnlichen Automation müssen alle erfüllt sein, damit der
-    Raum überhaupt läuft. Solange sie es nicht sind, ist der Raum pausiert: Die Lampen
-    bleiben, wie sie sind, nichts geht an oder aus, und dem Zeitplan wird
-    nicht gefolgt. Sind sie wieder erfüllt, holt er das bei seiner nächsten
-    Aktualisierung nach. Den Raum von Hand auszuführen funktioniert
-    weiterhin.
+    Der Raum läuft nur, solange alle davon zutreffen. Den Rest der Zeit ist er
+    pausiert und lässt die Lampen in Ruhe.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
 
 override_protection:
