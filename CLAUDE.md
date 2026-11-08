@@ -104,10 +104,10 @@ Blueprint input mechanics:
   name for `!input`, so regrouping isn't breaking. The top level holds
   only what's required (Schedule, Lights & Occupancy); everything optional
   is collapsed, so input names carry no "(Optional)" (user's call).
-  Sections hold what a room may want tweaked (first **Triggers &
-  Conditions**, the two that make a room work like an ordinary automation,
-  user's call; then **Sensors**: Wait time, Lux Threshold; then
-  Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
+  Sections run from what shapes a room's light (Brightness, Idle
+  Brightness, Scenes) to the fiddly (**Sensors**: Wait time, Lux
+  Threshold; Transitions; **Triggers & Conditions**, rarely set, collapsed
+  like the rest; user's call); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces), then every
   deprecated input, until the release that deletes it (user's call):
   Sensors From Areas and Additional Trigger Entities.

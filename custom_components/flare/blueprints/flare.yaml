@@ -44,63 +44,6 @@ blueprint:
               device_class: motion
             - domain: sensor
               device_class: illuminance
-    triggers_conditions:
-      name: Triggers & Conditions
-      icon: mdi:lightning-bolt
-      collapsed: true
-      input:
-        additional_triggers:
-          name: Additional Triggers
-          description: >
-            Update the room straight away when one of these fires, like the
-            TV starting to play. They only adjust lights that are already on.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
-          default: []
-          selector:
-            trigger: {}
-        conditions:
-          name: Conditions
-          description: >
-            If any are set, the room only updates while all of them are true.
-            The rest of the time it's paused and leaves the lights alone.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
-          default: []
-          selector:
-            condition: {}
-    sensors:
-      name: Sensors
-      icon: mdi:motion-sensor
-      collapsed: true
-      input:
-        no_motion_wait:
-          name: Wait time
-          description: >
-            Only used when the room has occupancy or motion sensors: how long
-            every one must be clear before the room counts as empty and its
-            lights turn off.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors).
-          default: 120
-          selector:
-            number:
-              min: 0
-              max: 3600
-              unit_of_measurement: seconds
-        lux_threshold:
-          name: Lux Threshold
-          description: >
-            When every illuminance sensor in Lights & Occupancy reads above this
-            many lux, the room leaves its lights off: a sensor, a tick or a scene
-            won't switch one on until it is darker. If someone is still there
-            when it gets darker, the lights come on then. Switching the room on
-            by hand still works. 0 turns this off.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 2000
-              step: 10
-              unit_of_measurement: lx
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
@@ -262,6 +205,40 @@ blueprint:
           selector:
             entity:
               domain: scene
+    sensors:
+      name: Sensors
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        no_motion_wait:
+          name: Wait time
+          description: >
+            Only used when the room has occupancy or motion sensors: how long
+            every one must be clear before the room counts as empty and its
+            lights turn off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors).
+          default: 120
+          selector:
+            number:
+              min: 0
+              max: 3600
+              unit_of_measurement: seconds
+        lux_threshold:
+          name: Lux Threshold
+          description: >
+            When every illuminance sensor in Lights & Occupancy reads above this
+            many lux, the room leaves its lights off: a sensor, a tick or a scene
+            won't switch one on until it is darker. If someone is still there
+            when it gets darker, the lights come on then. Switching the room on
+            by hand still works. 0 turns this off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#lux-threshold).
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 2000
+              step: 10
+              unit_of_measurement: lx
     timing:
       name: Transitions
       icon: mdi:timer-outline
@@ -294,6 +271,29 @@ blueprint:
               min: 0
               max: 60
               unit_of_measurement: seconds
+    triggers_conditions:
+      name: Triggers & Conditions
+      icon: mdi:lightning-bolt
+      collapsed: true
+      input:
+        additional_triggers:
+          name: Additional Triggers
+          description: >
+            Update the room straight away when one of these fires, like the
+            TV starting to play. They only adjust lights that are already on.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#additional-triggers).
+          default: []
+          selector:
+            trigger: {}
+        conditions:
+          name: Conditions
+          description: >
+            If any are set, the room only updates while all of them are true.
+            The rest of the time it's paused and leaves the lights alone.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#conditions).
+          default: []
+          selector:
+            condition: {}
     settings:
       name: Settings
       icon: mdi:cog-outline
