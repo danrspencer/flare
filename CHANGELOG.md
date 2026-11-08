@@ -11,39 +11,38 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
-- **Conditions**, a new blueprint setting, as in an ordinary automation: all must be met for the
-  room to run. While they aren't, the room is paused, for a vacation or guest mode. Running the
-  automation by hand still works. The room's trigger IDs are now documented, so a condition can
-  stop only some runs, such as a sensor lighting the room at night.
+- **Conditions** stop a room updating while they aren't met, for example if you don't want
+  motion sensors to trigger at night. They work as they do in any automation, and the room's
+  trigger IDs are now documented, so a condition can stop just the motion sensors and leave the
+  rest of the room running. Running the automation by hand still works. Thanks to @Nox3210 for the idea
+  ([#342](https://github.com/danrspencer/flare/issues/342)).
 
 ### Changed
 
-- **FLARE needs Home Assistant 2026.11.0 or newer**, for both the integration and the blueprint.
-  On 2026.10, stay on FLARE 2.0 until you update Home Assistant.
-- **Sensors From Areas only shows in a room that has it turned off.** Rooms with it on (the
-  default) don't see it any more; use **Exclude target** in **Lights & Occupancy** instead.
-- **Additional Triggers takes triggers, as an ordinary automation does**, so a room can update
-  on something specific: the TV changing to playing, an attribute, a button press. They still
-  only adjust lights that are already on, and never switch one on. Rooms keep the entities they
-  listed: they're now under **Settings** as **Additional Trigger Entities** and still work.
-- **The blueprint's sections are reordered**: **Sensors** (the section that held Wait time and
-  Lux Threshold, renamed), Brightness, Idle Brightness, Scenes, Transitions, a new **Triggers &
-  Conditions** section holding Additional Triggers and Conditions, and Settings. Headings
-  split them into **Customise** and **Advanced**.
+- **FLARE needs Home Assistant 2026.11.0 or newer.** If you're on 2026.10, stay on FLARE 2.0
+  until you update.
+- **Additional Triggers now takes any trigger, not just entities.** For example, a room can
+  update when the TV starts playing or a button is pressed. As before, they only adjust lights
+  that are already on. Entities you'd already listed keep working: they've moved to **Settings**
+  as **Additional Trigger Entities**.
+- **Sensors From Areas is hidden unless you've turned it off.** To leave a sensor out, use
+  **Exclude target** in **Lights & Occupancy**.
+- **The blueprint's settings are reorganised**, with nothing to change in your rooms. Under a
+  new **Customise** heading: **Sensors** (Wait time and Lux Threshold, renamed from Sensors &
+  Triggers), Brightness & Exclusions, Idle Brightness and Scene Handoff. Under **Advanced**:
+  Transitions, a new **Triggers & Conditions** section, and Settings.
 
 ### Deprecated
 
-- **Additional Trigger Entities** (the old Additional Triggers list) will be removed in FLARE 3.0.
-  Add a **State** trigger for each of its entities to **Additional Triggers** instead.
+- **Additional Trigger Entities** will be removed in FLARE 3.0. Add a **State** trigger for each
+  of its entities to **Additional Triggers** instead.
 
 ### Fixed
 
-- **RGB LED strips are no longer marked overridden when nobody has touched them.** A light
-  with no colour temperature of its own is set by Home Assistant to the RGB for the colour
-  temperature FLARE asks for, and FLARE read that colour back as a much warmer white (2700 K as
-  about 1870 K), so the strip was marked overridden a minute after every update. FLARE now
-  compares such a light's colour with the RGB Home Assistant sent it, and the Overrides
-  dashboard shows that RGB as what was asked, beside the RGB the strip reports. Thanks to
+- **Some lights were marked overridden by FLARE's own updates.** Some bulbs, often RGB LED
+  strips, handle colour oddly: Home Assistant sends them an RGB colour in place of the colour
+  temperature FLARE asked for. FLARE now records what Home Assistant actually sent, and
+  checks the light against that. Thanks to
   @LotharMadsson ([#350](https://github.com/danrspencer/flare/pull/350)).
 - **Dimmers and on/off lights are no longer marked overridden when nobody has touched them.**
   Home Assistant drops the colour FLARE sends a light that can't show one, and the brightness it
