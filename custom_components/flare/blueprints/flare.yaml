@@ -106,17 +106,6 @@ blueprint:
               max: 2000
               step: 10
               unit_of_measurement: lx
-        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
-        use_area_sensors:
-          name: Sensors From Areas (Deprecated)
-          description: >
-            Deprecated and will be removed as an option in FLARE 3.0. From
-            Home Assistant 2026.11 use "Exclude target" instead of turning
-            this off.
-            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
-          default: true
-          selector:
-            boolean: {}
     brightness_exclusions:
       name: Brightness & Exclusions
       icon: mdi:brightness-6
@@ -353,6 +342,17 @@ blueprint:
               min: 1
               max: 200
               mode: box
+        # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
+        use_area_sensors:
+          name: Sensors From Areas (Deprecated)
+          description: >
+            Deprecated and will be removed as an option in FLARE 3.0. From
+            Home Assistant 2026.11 use "Exclude target" instead of turning
+            this off.
+            [Details](https://danrspencer.github.io/flare/reference/blueprint/#sensors-from-areas).
+          default: true
+          selector:
+            boolean: {}
         # Deprecated: removed in FLARE 3.0 (tests/checks/test_deprecated_inputs.py).
         extra_triggers:
           name: Additional Trigger Entities (Deprecated)

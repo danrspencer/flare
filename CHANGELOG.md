@@ -25,7 +25,6 @@ CI — see `.github/workflows/release.yml`.
 - **Additional Triggers and Conditions have a section of their own, Triggers & Conditions**,
   first after **Lights & Occupancy**, and the section that held Wait time and Lux Threshold is
   now **Sensors**.
-- **Sensors From Areas moves from Settings to the end of Sensors.**
 
 ### Deprecated
 
