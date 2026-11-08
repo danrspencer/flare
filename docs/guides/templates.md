@@ -14,7 +14,7 @@ render_with_liquid: false
 
 The blueprint's settings work per phase and for the whole room, so on their own they can't dim
 the lights while the TV is on, keep one lamp as the nightlight, or leave a light to another
-automation. The three template inputs cover cases like these, because each one is a Home
+automation. The three template inputs, in the blueprint's **Custom** section, cover cases like these, because each one is a Home
 Assistant template that can depend on anything and set each light separately. The
 [Blueprint](../../reference/blueprint/) page lists what each one accepts.
 
@@ -98,7 +98,7 @@ time of day. To keep a light at, say, half the room's brightness, read the curve
 `null` hands the light over completely: FLARE doesn't touch it at all, so it isn't turned off
 when the room empties either, and whatever controls it has to do that instead.
 
-The template wins over the **Lights Off During** lists for any light it names.
+The template wins over each phase's **Lights Off** for any light it names.
 
 ## Idle Brightness Template
 

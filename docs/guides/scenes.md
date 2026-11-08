@@ -32,7 +32,7 @@ its lights back too.
 
 ## Handing a room to a scene
 
-If you pick a scene in the blueprint's **Night Scene** (or whichever phase), the room uses it
+If you pick a **Scene** in one of the blueprint's phase sections, such as **Night**, the room uses it
 during that phase. For anything a phase can't express — a different scene
 while the TV is on — use [Scene Template](../templates/#scene-template), which wins over the
 per-phase pickers whenever it returns a scene.
