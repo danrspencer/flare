@@ -402,7 +402,7 @@ time of day. To keep a light at, say, half the room’s brightness, read the cur
 <code class="language-plaintext highlighter-rouge">null</code> hands the light over completely: FLARE doesn’t touch it at all, so it isn’t turned off
 when the room empties either, and whatever controls it has to do that instead.</p>
 
-<p>The template wins over each phase’s <strong>Lights Off</strong> for any light it names.</p>
+<p>When the template returns a light, its value overrides the phase’s <strong>Lights Off</strong> for that light.</p>
 <h2 id="idle-brightness-template">
   
   
@@ -413,8 +413,8 @@ when the room empties either, and whatever controls it has to do that instead.</
     
 
 <p>Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template, and wins over the per-phase <strong>Idle Brightness</strong> settings
-for any light it names.</p>
+same values as Brightness Template. When it returns a light, its value overrides the phase’s
+<strong>Idle Brightness</strong> for that light.</p>
 <h3 id="one-lamp-as-the-nightlight">
   
   
@@ -477,8 +477,8 @@ the curve instead of turning them off.</p>
 </h2>
     
 
-<p>Returns a scene’s entity ID, to hand the room to that scene instead of the curve. It wins over
-the per-phase scene pickers whenever it returns a scene that exists.</p>
+<p>Returns a scene’s entity ID, to hand the room to that scene instead of the curve. It overrides
+the phase’s <strong>Scene</strong> whenever it returns a scene that exists.</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="s1">'</span><span class="s">scene.lounge_movie'</span> <span class="nv">if is_state('media_player.tv'</span><span class="pi">,</span> <span class="s1">'</span><span class="s">playing'</span><span class="nv">) else ''</span> <span class="pi">}}</span>
 </code></pre></div></div>

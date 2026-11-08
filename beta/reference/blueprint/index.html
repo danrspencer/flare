@@ -432,8 +432,8 @@ follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
 </h2>
     
 
-<p>For settings that depend on something, or differ light by light. Each template wins over the
-phases’ own settings for the lights it covers.</p>
+<p>Templates for when per-phase settings aren’t enough, like dimming the room while the TV is on.
+Whenever a template returns a value, it overrides the per-phase setting.</p>
 
 <div class="table-wrapper"><table>
   <thead>
@@ -447,17 +447,17 @@ phases’ own settings for the lights it covers.</p>
     <tr>
       <td><strong>Brightness Template</strong></td>
       <td>none</td>
-      <td>A template returning a mapping of entity ID to brightness, in place of the schedule’s. Lights it includes ignore <strong>Lights Off</strong>.</td>
+      <td>A template returning a mapping of entity ID to brightness, in place of the schedule’s. When it returns a light, its value overrides <strong>Lights Off</strong> for that light.</td>
     </tr>
     <tr>
       <td><strong>Idle Brightness Template</strong></td>
       <td>none</td>
-      <td>Like Brightness Template, for when the room is empty. Lights it includes ignore <strong>Idle Brightness</strong>.</td>
+      <td>Like Brightness Template, for when the room is empty. When it returns a light, its value overrides <strong>Idle Brightness</strong> for that light.</td>
     </tr>
     <tr>
       <td><strong>Scene Template</strong></td>
       <td>none</td>
-      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. When it returns a scene that exists, it wins over the phase’s <strong>Scene</strong>.</td>
+      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. When it returns a scene that exists, it overrides the phase’s <strong>Scene</strong>.</td>
     </tr>
     <tr>
       <td><strong>Additional Triggers</strong></td>
