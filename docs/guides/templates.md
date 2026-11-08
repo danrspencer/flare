@@ -98,13 +98,13 @@ time of day. To keep a light at, say, half the room's brightness, read the curve
 `null` hands the light over completely: FLARE doesn't touch it at all, so it isn't turned off
 when the room empties either, and whatever controls it has to do that instead.
 
-The template wins over each phase's **Lights Off** for any light it names.
+When the template returns a light, its value overrides the phase's **Lights Off** for that light.
 
 ## Idle Brightness Template
 
 Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template, and wins over the per-phase **Idle Brightness** settings
-for any light it names.
+same values as Brightness Template. When it returns a light, its value overrides the phase's
+**Idle Brightness** for that light.
 
 ### One lamp as the nightlight
 
@@ -145,8 +145,8 @@ the curve instead of turning them off.
 
 ## Scene Template
 
-Returns a scene's entity ID, to hand the room to that scene instead of the curve. It wins over
-the per-phase scene pickers whenever it returns a scene that exists.
+Returns a scene's entity ID, to hand the room to that scene instead of the curve. It overrides
+the phase's **Scene** whenever it returns a scene that exists.
 
 ```yaml
 {{ 'scene.lounge_movie' if is_state('media_player.tv', 'playing') else '' }}
