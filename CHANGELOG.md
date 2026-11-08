@@ -24,7 +24,8 @@ CI — see `.github/workflows/release.yml`.
   listed: they're now under **Settings** as **Additional Trigger Entities** and still work.
 - **The blueprint's sections are reordered**: **Sensors** (the section that held Wait time and
   Lux Threshold, renamed), Brightness, Idle Brightness, Scenes, Transitions, a new **Triggers &
-  Conditions** section holding Additional Triggers and Conditions, and Settings.
+  Conditions** section holding Additional Triggers and Conditions, and Settings. Headings
+  split them into **Customise** and **Advanced**.
 
 ### Deprecated
 

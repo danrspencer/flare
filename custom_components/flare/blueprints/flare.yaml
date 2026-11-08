@@ -44,6 +44,15 @@ blueprint:
               device_class: motion
             - domain: sensor
               device_class: illuminance
+    # A heading, not a setting: a constant with a blank label shows only its name and description.
+    customise_divider:
+      name: Customise
+      description: When the lights come on and off, and how they look through the day.
+      default: true
+      selector:
+        constant:
+          value: true
+          label: " "
     sensors:
       name: Sensors
       icon: mdi:motion-sensor
@@ -239,6 +248,15 @@ blueprint:
           selector:
             entity:
               domain: scene
+    # A heading, like customise_divider.
+    advanced_divider:
+      name: Advanced
+      description: Rarely needed. The defaults suit most rooms.
+      default: true
+      selector:
+        constant:
+          value: true
+          label: " "
     timing:
       name: Transitions
       icon: mdi:timer-outline

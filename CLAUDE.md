@@ -112,6 +112,13 @@ Blueprint input mechanics:
   deprecated input, until the release that deletes it (user's call):
   Sensors From Areas and Additional Trigger Entities.
   `docs/reference/blueprint.md` follows the same grouping.
+- **Two headings split the sections**: **Customise** (Sensors through
+  Scenes) and **Advanced** (Transitions on). Blueprints have no heading
+  and sections don't nest, and an empty section isn't drawn, so each is
+  an input (`customise_divider`, `advanced_divider`) with a `constant`
+  selector whose blank label leaves only its name and description
+  (user's call). It relies on how the editor draws that selector; a room
+  may store its value, which nothing reads.
 - `homeassistant.min_version: 2026.4.0` is what `occupancy.*` needs.
 - **Schedule is a device selector** (`integration: flare`,
   `model: Schedule`). The blueprint finds the schedule's
