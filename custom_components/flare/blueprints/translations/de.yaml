@@ -151,26 +151,27 @@ templates:
     Wert liefert, hat er Vorrang vor der Einstellung je Phase.
 
 brightness_template:
-  source: 8d318e69
+  source: 5ef095a2
   name: Helligkeitsvorlage
   description: >-
     Liefert die Helligkeit (0–255) jeder Lampe anstelle der des Zeitplans: {{
     {'light.lamp': 50} }}. 0 schaltet eine Lampe aus; null lässt sie in Ruhe.
-    Für Lampen, die sie nennt, gilt „Lampen aus“ nicht.
+    Liefert sie eine Lampe, hat ihr Wert für diese Lampe Vorrang vor „Lampen
+    aus“.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#brightness-template).
 
 idle_brightness_template:
-  source: 6f0f8e16
+  source: faa6155f
   name: Ruhehelligkeitsvorlage
   description: >-
     Liefert die Helligkeit (1–255), auf die jede Lampe dimmt, wenn der Raum
-    leer ist: {{ {'light.lamp': 10} }}. Für Lampen, die sie nennt, gilt
-    „Ruhehelligkeit“ nicht. Funktioniert nur in Räumen mit Anwesenheits- oder
-    Bewegungssensoren.
+    leer ist: {{ {'light.lamp': 10} }}. Liefert sie eine Lampe, hat ihr Wert
+    für diese Lampe Vorrang vor „Ruhehelligkeit“. Funktioniert nur in Räumen
+    mit Anwesenheits- oder Bewegungssensoren.
     [Details](https://danrspencer.github.io/flare/reference/blueprint/#idle-brightness).
 
 scene_template:
-  source: 522f81af
+  source: a353f95e
   name: Szenenvorlage
   description: >-
     Liefert eine Szene, die statt des Zeitplans gilt, oder nichts, um normal

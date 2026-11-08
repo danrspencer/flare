@@ -34,8 +34,8 @@ its lights back too.
 
 If you pick a **Scene** in one of the blueprint's phase sections, such as **Night**, the room uses it
 during that phase. For anything a phase can't express — a different scene
-while the TV is on — use [Scene Template](../templates/#scene-template), which wins over the
-per-phase pickers whenever it returns a scene.
+while the TV is on — use [Scene Template](../templates/#scene-template), which overrides the
+phase's **Scene** whenever it returns one.
 
 A scene is only used if every entity it touches is in the room. A scene that reaches into
 another room, or doesn't exist, is ignored and the room follows the curve.
