@@ -31,8 +31,6 @@ behaves.
 |---|---|---|
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives **Lux Threshold**. |
-| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
-| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 **Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
 area includes lights and sensors added to it later.
@@ -60,6 +58,13 @@ A room with no sensor follows the schedule but never turns its lights on or off.
 A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they're all off; a light in both is released when
 either room goes dark.
+
+## Triggers & Conditions
+
+| Input | Default | Description |
+|---|---|---|
+| **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
+| **Conditions** | none | As in an ordinary automation: all must be met for the room to run. While they aren't, the room is paused. |
 
 ### Additional triggers
 

@@ -102,11 +102,11 @@ Blueprint input mechanics:
 
 - Inputs are grouped with `sections:`; nesting doesn't change an input's
   name for `!input`, so regrouping isn't breaking. The top level holds
-  what's required (Schedule, Lights & Occupancy) and then Additional
-  Triggers and Conditions, the two that make a room work like an ordinary
-  automation (user's call); everything else optional is collapsed, so
-  input names carry no "(Optional)" (user's call). Sections hold what a
-  room may want tweaked (**Sensors**: Wait time, Lux Threshold; then
+  only what's required (Schedule, Lights & Occupancy); everything optional
+  is collapsed, so input names carry no "(Optional)" (user's call).
+  Sections hold what a room may want tweaked (first **Triggers &
+  Conditions**, the two that make a room work like an ordinary automation,
+  user's call; then **Sensors**: Wait time, Lux Threshold; then
   Brightness, Idle Brightness, Scenes, Transitions); **Settings**, last, holds what most rooms never touch
   (Override Protection, Prefer RGB During, Stored Traces, then the
   deprecated Sensors From Areas and Additional Trigger Entities).
