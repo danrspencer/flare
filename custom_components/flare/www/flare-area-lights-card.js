@@ -214,12 +214,12 @@ function infoTip({ title, text, lines, link }) {
   const tip = document.createElement('div');
   tip.className = 'tip';
   tip.setAttribute('popover', 'manual');
-  tip.innerHTML = '<div class="tip-title"></div><p><span></span> <a target="_blank" rel="noreferrer"></a></p>';
+  tip.innerHTML = '<div class="tip-title"></div><p></p><a target="_blank" rel="noreferrer"></a>';
   tip.querySelector('.tip-title').textContent = title;
-  tip.querySelector('p span').textContent = text;
+  tip.querySelector('p').textContent = text;
   const values = detailLines(lines);
   values.classList.add('waiting');
-  tip.querySelector('p').after(values);
+  tip.querySelector('a').after(values);
   const anchor = tip.querySelector('a');
   anchor.href = link.href;
   anchor.textContent = link.text;
@@ -292,15 +292,16 @@ const BADGE_STYLE = `
   .info:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 50%; }
   .tip {
     position: fixed; inset: auto; margin: 0; width: max-content; max-width: 300px; padding: 8px 10px;
-    border: none; border-radius: 8px; font-size: 12px; line-height: 1.4;
+    border: 1px solid var(--ha-card-border-color, var(--divider-color, #e0e0e0));
+    border-radius: var(--ha-card-border-radius, 12px); font-size: 12px; line-height: 1.4;
     color: var(--primary-text-color); background: var(--card-background-color, #fff);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); cursor: auto;
   }
   .tip .tip-title { font-size: 13px; font-weight: 500; }
-  .tip p { margin: 4px 0 8px; color: var(--secondary-text-color); }
-  .tip .values { margin-bottom: 2px; }
+  .tip p { margin: 4px 0 0; color: var(--secondary-text-color); }
+  .tip .values { margin-top: 8px; }
   .tip .note { font-style: italic; }
-  .tip a { color: var(--primary-color); }
+  .tip a { display: block; margin-top: 4px; color: var(--primary-color); }
 `;
 
 class FlareAreaLightsCard extends HTMLElement {
