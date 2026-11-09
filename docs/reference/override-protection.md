@@ -35,10 +35,10 @@ For what override protection means for your lights day to day, see the
 | `sensor.flare_controlled_lights` | The number of lights FLARE is setting. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
-| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, `asked` what FLARE last asked it for, and `differs` which of that it isn't showing (`state`, `brightness`, `color`), within the tolerances. |
+| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, `asked` what FLARE last asked it for, `confirmed` what FLARE last saw it take (its older claim, see [two claims, not one](#two-claims-not-one)), and `differs` which of what it asked for it isn't showing (`state`, `brightness`, `color`), within the tolerances. |
 
 The two counts and each light's status are recorded in history, with long-term statistics for
-the counts. `asked` and `differs` aren't recorded, since they change with every update. A light that's
+the counts. `asked`, `confirmed` and `differs` aren't recorded, since they change with every update. A light that's
 unavailable or has no claim isn't included in either count. The [dashboard](../../dashboard/)
 shows the counts and each light for each area too.
 

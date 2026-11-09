@@ -40,6 +40,9 @@ const word = (hass, text) => (WORDS.has(text) ? localize(hass, `overrides.${text
 // The order lights are listed in: what needs a look first.
 const ORDER = ['overridden', 'mismatched', 'controlled', 'untracked', 'off', 'unavailable'];
 
+// Where the claims a light's status comes from are explained.
+const CLAIMS_DOCS = 'https://danrspencer.github.io/flare/reference/override-protection/#two-claims-not-one';
+
 const nameOf = (hass, entityId) => hass.states?.[entityId]?.attributes?.friendly_name || entityId;
 
 /**
@@ -101,10 +104,11 @@ export const isUntracked = (light) => !light.claimed && (light.status === 'untra
 
 /**
  * Each of the area's room lights, as the lights card lists them:
- * {entity_id, name, status, claimed, asked, showing, differs, waiting}, overridden
- * and mismatched first. `asked` and `showing` are parts(); `asked` is
- * FLARE's last write, null with none or when the light was marked as
- * someone else's. `differs` names the values it shows that aren't what was
+ * {entity_id, name, status, claimed, asked, confirmed, showing, differs,
+ * waiting}, overridden and mismatched first. `asked`, `confirmed` and
+ * `showing` are parts(); `asked` is FLARE's last write, null with none or
+ * when the light was marked as someone else's, and `confirmed` what FLARE
+ * last saw the light take. `differs` names the values it shows that aren't what was
  * asked, by the same rule as override protection. `waiting` is a controlled
  * light that doesn't show it yet: it matches an earlier claim, and FLARE's
  * latest write hasn't landed.
@@ -115,13 +119,14 @@ export function areaLights(hass, area) {
   const lights = lightStatuses(hass);
   return entry.lights
     .map((entityId) => {
-      const { status, claimed, asked, differs } = lights.get(entityId);
+      const { status, claimed, asked, confirmed, differs } = lights.get(entityId);
       return {
         entity_id: entityId,
         name: nameOf(hass, entityId),
         status,
         claimed,
         asked: translated(hass, parts(asked)),
+        confirmed: translated(hass, parts(confirmed)),
         showing: translated(hass, showing(hass.states?.[entityId])),
         differs,
         waiting: status === 'controlled' && differs.length > 0,
@@ -148,11 +153,29 @@ export function detail(light, hass) {
   return lines;
 }
 
+/**
+ * A waiting light's tip: {title, text, lines, link}. Its lines are what FLARE
+ * asked for, still pending; what it last saw the light take, which the light
+ * still matches; and what the light shows.
+ */
+export function waitingTip(light, hass) {
+  const [asked, showing] = detail(light, hass);
+  const lines = [{ ...asked, note: localize(hass, 'overrides.pending') }];
+  if (light.confirmed) lines.push({ label: localize(hass, 'overrides.confirmed'), parts: light.confirmed });
+  if (showing) lines.push(showing);
+  return {
+    title: localize(hass, 'overrides.waiting_title'),
+    text: localize(hass, 'overrides.waiting'),
+    lines,
+    link: { href: CLAIMS_DOCS, text: localize(hass, 'overrides.learn_more') },
+  };
+}
+
 // The lines as a two-column grid, so each line's values start together.
 function detailLines(lines) {
   const grid = document.createElement('div');
   grid.className = 'values';
-  for (const { label, parts: found } of lines) {
+  for (const { label, parts: found, note } of lines) {
     const name = document.createElement('span');
     name.className = 'label';
     name.textContent = label;
@@ -165,28 +188,45 @@ function detailLines(lines) {
       if (part.differs) text.className = 'differs';
       line.append(text);
     });
+    if (note) {
+      const tag = document.createElement('span');
+      tag.className = 'note';
+      tag.textContent = note;
+      line.append(' ', tag);
+    }
     grid.append(name, line);
   }
   return grid;
 }
 
 /**
- * An info icon whose text shows on hover, focus or tap. The text is a
- * popover, so the card's overflow doesn't clip it.
+ * An info icon whose tip (waitingTip()) shows on hover, focus or tap, and
+ * stays open while the pointer is over it, so its link can be followed. The
+ * tip is a popover, so the card's overflow doesn't clip it.
  */
-function infoTip(text) {
+function infoTip({ title, text, lines, link }) {
   const info = document.createElement('span');
   info.className = 'info';
   info.tabIndex = 0;
   info.setAttribute('role', 'button');
-  info.setAttribute('aria-label', text);
+  info.setAttribute('aria-label', title);
   info.innerHTML = '<ha-icon icon="mdi:information-outline"></ha-icon>';
   const tip = document.createElement('div');
   tip.className = 'tip';
   tip.setAttribute('popover', 'manual');
-  tip.textContent = text;
+  tip.innerHTML = '<div class="tip-title"></div><p></p><a target="_blank" rel="noreferrer"></a>';
+  tip.querySelector('.tip-title').textContent = title;
+  tip.querySelector('p').textContent = text;
+  const values = detailLines(lines);
+  values.classList.add('waiting');
+  tip.querySelector('p').after(values);
+  const anchor = tip.querySelector('a');
+  anchor.href = link.href;
+  anchor.textContent = link.text;
   info.append(tip);
+  let hiding = null;
   const show = () => {
+    clearTimeout(hiding);
     if (tip.matches(':popover-open')) return;
     tip.showPopover();
     const icon = info.getBoundingClientRect();
@@ -198,13 +238,22 @@ function infoTip(text) {
     tip.style.top = `${top}px`;
   };
   const hide = () => tip.matches(':popover-open') && tip.hidePopover();
+  // Delayed, so the pointer can cross the gap from the icon to the tip.
+  const hideSoon = () => {
+    clearTimeout(hiding);
+    hiding = setTimeout(hide, 250);
+  };
+  // The tip is inside the icon's element, so hovering it counts as the icon.
   info.addEventListener('mouseenter', show);
-  info.addEventListener('mouseleave', hide);
-  info.addEventListener('focus', show);
-  info.addEventListener('blur', hide);
+  info.addEventListener('mouseleave', hideSoon);
+  info.addEventListener('focusin', show);
+  info.addEventListener('focusout', (event) => {
+    if (!info.contains(event.relatedTarget)) hide();
+  });
   // A tap shouldn't also open the light, as the rest of the text does.
   info.addEventListener('click', (event) => {
     event.stopPropagation();
+    if (event.target.closest('a')) return;
     show();
   });
   return info;
@@ -242,11 +291,16 @@ const BADGE_STYLE = `
   }
   .info:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 50%; }
   .tip {
-    position: fixed; inset: auto; margin: 0; width: max-content; max-width: 260px; padding: 8px 10px;
+    position: fixed; inset: auto; margin: 0; width: max-content; max-width: 300px; padding: 8px 10px;
     border: none; border-radius: 8px; font-size: 12px; line-height: 1.4;
     color: var(--primary-text-color); background: var(--card-background-color, #fff);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); cursor: auto;
   }
+  .tip .tip-title { font-size: 13px; font-weight: 500; }
+  .tip p { margin: 4px 0 8px; color: var(--secondary-text-color); }
+  .tip .values { margin-bottom: 8px; }
+  .tip .note { font-style: italic; }
+  .tip a { color: var(--primary-color); }
 `;
 
 class FlareAreaLightsCard extends HTMLElement {
@@ -378,7 +432,7 @@ class FlareAreaLightsCard extends HTMLElement {
     const values = detailLines(detail(light, this._hass));
     if (light.waiting) {
       values.classList.add('waiting');
-      values.append(infoTip(localize(this._hass, 'overrides.waiting')));
+      values.append(infoTip(waitingTip(light, this._hass)));
     }
     row.querySelector('.text').append(values);
     const status = row.querySelector('.status');

@@ -19,9 +19,11 @@ KITCHEN = ["automation.kitchen"]
 ASKED = {"brightness": 200, "color_temp_kelvin": 3000}
 
 
-def _status(light, status, *, rooms, claimed=True, asked=None, differs=()):
+def _status(light, status, *, rooms, claimed=True, asked=None, confirmed=None, differs=()):
     """A light's status sensor: its state, and what it says of its light."""
-    attributes = {"light": light, "rooms": rooms, "claimed": claimed, "asked": asked, "differs": list(differs)}
+    attributes = {
+        "light": light, "rooms": rooms, "claimed": claimed, "asked": asked, "confirmed": confirmed, "differs": list(differs)
+    }
     return {"state": status, "attributes": attributes}
 
 
@@ -31,7 +33,10 @@ STATUSES = {
     "k1": _status("light.k1", "controlled", rooms=KITCHEN, asked=ASKED),
     "k2": _status("light.k2", "mismatched", rooms=KITCHEN, asked={"state": "off"}),
     "k3": _status("light.k3", "overridden", rooms=KITCHEN, asked=ASKED, differs=["brightness", "color"]),
-    "k5": _status("light.k5", "controlled", rooms=KITCHEN, asked=ASKED, differs=["color"]),
+    "k5": _status(
+        "light.k5", "controlled", rooms=KITCHEN, asked=ASKED,
+        confirmed={"brightness": 200, "color_temp_kelvin": 3100}, differs=["color"],
+    ),
     # Its room let it go, so it isn't a room light any more.
     "k4": _status("light.k4", "untracked", rooms=[], claimed=False),
     # Marked as someone else's: claimed, but nothing asked.
@@ -91,7 +96,7 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
-const {{ areaSummary, areaLights, claimedIn, describe, detail, isUntracked, statusLook }} = await import({js_path(WWW / "flare-area-lights-card.js")});
+const {{ areaSummary, areaLights, claimedIn, describe, detail, isUntracked, statusLook, waitingTip }} = await import({js_path(WWW / "flare-area-lights-card.js")});
 const empty = {{ ...input, entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => e.translation_key !== 'status')) }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
@@ -110,6 +115,7 @@ return {{
     describe(null),
   ],
   details: areaLights(input, 'kitchen').map((light) => detail(light)),
+  tip: waitingTip(areaLights(input, 'kitchen').find((light) => light.waiting)),
   untracked: areaLights(input, 'bedroom').filter(isUntracked).map((light) => light.name),
   labels: ['untracked', 'off', 'controlled'].map((status) => statusLook(status).label),
   clearAll: {{ kitchen: claimedIn(areaLights(input, 'kitchen')), bedroom: claimedIn(areaLights(input, 'bedroom')) }},
@@ -202,9 +208,12 @@ def test_an_areas_lights_are_listed_overridden_first(result):
 
 
 def _lines(detail):
-    """Each line as text, with the parts that differ in [brackets]."""
+    """Each line as text, with the parts that differ in [brackets] and any
+    note in (parentheses)."""
     return [
-        f"{line['label']} " + " · ".join(f"[{p['text']}]" if p.get("differs") else p["text"] for p in line["parts"])
+        f"{line['label']} "
+        + " · ".join(f"[{p['text']}]" if p.get("differs") else p["text"] for p in line["parts"])
+        + (f" ({line['note']})" if line.get("note") else "")
         for line in detail
     ]
 
@@ -226,6 +235,16 @@ def test_a_controlled_light_not_showing_what_was_asked_is_waiting(result):
         ("Kitchen 1", False),
         ("Kitchen 5", True),
     ]
+
+
+def test_a_waiting_lights_tip_has_what_was_asked_what_flare_last_saw_and_what_it_shows(result):
+    tip = result["tip"]
+    assert _lines(tip["lines"]) == [
+        "Asked 78% · 3000K (pending)",
+        "Confirmed 78% · 3100K",
+        "Showing 78% · [3100K]",
+    ]
+    assert tip["link"]["href"].endswith("/reference/override-protection/#two-claims-not-one")
 
 
 def test_untracked_lights_are_the_ones_flare_holds_nothing_on(result):
