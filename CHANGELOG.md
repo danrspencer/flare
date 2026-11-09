@@ -33,6 +33,10 @@ CI — see `.github/workflows/release.yml`.
   Under **Fine Tuning**: **Sensors & Conditions**, **Transitions** and **Other Settings**.
   Many settings have shorter names and plainer descriptions.
 
+- **On the Overrides view, a controlled light that hasn't taken FLARE's last change is shown
+  in amber**, with an info icon explaining why. Before, it read as plain Controlled beside
+  values in red, for example a bulb that came back online but isn't receiving commands.
+
 ### Deprecated
 
 - **Additional Trigger Entities** will be removed in FLARE 3.0. Add a **State** trigger for each

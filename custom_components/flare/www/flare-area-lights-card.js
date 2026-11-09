@@ -101,11 +101,13 @@ export const isUntracked = (light) => !light.claimed && (light.status === 'untra
 
 /**
  * Each of the area's room lights, as the lights card lists them:
- * {entity_id, name, status, claimed, asked, showing, differs}, overridden
+ * {entity_id, name, status, claimed, asked, showing, differs, waiting}, overridden
  * and mismatched first. `asked` and `showing` are parts(); `asked` is
  * FLARE's last write, null with none or when the light was marked as
  * someone else's. `differs` names the values it shows that aren't what was
- * asked, by the same rule as override protection.
+ * asked, by the same rule as override protection. `waiting` is a controlled
+ * light that doesn't show it yet: it matches an earlier claim, and FLARE's
+ * latest write hasn't landed.
  */
 export function areaLights(hass, area) {
   const entry = claimsByArea(hass).get(area);
@@ -122,6 +124,7 @@ export function areaLights(hass, area) {
         asked: translated(hass, parts(asked)),
         showing: translated(hass, showing(hass.states?.[entityId])),
         differs,
+        waiting: status === 'controlled' && differs.length > 0,
       };
     })
     .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
@@ -239,7 +242,12 @@ class FlareAreaLightsCard extends HTMLElement {
         .header button.clear-all:disabled { cursor: default; color: var(--disabled-text-color); background: none; }
         .row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; }
         .text { flex: 1; cursor: pointer; }
-        .status { font-size: 12px; font-weight: 500; flex: none; }
+        .status {
+          font-size: 12px; font-weight: 500; flex: none;
+          display: flex; align-items: center; gap: 4px; --mdc-icon-size: 16px;
+        }
+        .status ha-icon[hidden] { display: none; }
+        .status[title] { cursor: help; }
         button {
           width: 32px; height: 32px; border-radius: 50%; border: none; padding: 0; flex: none;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -307,19 +315,27 @@ class FlareAreaLightsCard extends HTMLElement {
 
   _row(light) {
     const look = statusLook(light.status, this._hass);
+    if (light.waiting) look.color = AMBER;
     const row = document.createElement('div');
     row.className = 'row';
     row.append(badge(look.icon, look.color));
     row.insertAdjacentHTML(
       'beforeend',
-      '<div class="text"><span class="name"></span></div><span class="status"></span>' +
+      '<div class="text"><span class="name"></span></div>' +
+        '<span class="status"><span></span><ha-icon icon="mdi:information-outline" hidden></ha-icon></span>' +
         '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
     );
     row.querySelector('.name').textContent = light.name;
     row.querySelector('.text').append(detailLines(detail(light, this._hass)));
     const status = row.querySelector('.status');
-    status.textContent = look.label;
+    status.firstChild.textContent = look.label;
     status.style.color = look.color;
+    if (light.waiting) {
+      const info = status.querySelector('ha-icon');
+      info.hidden = false;
+      status.title = localize(this._hass, 'overrides.waiting');
+      info.setAttribute('aria-label', status.title);
+    }
     const clear = row.querySelector('button');
     clear.hidden = !light.claimed;
     clear.title = localize(this._hass, 'overrides.clear_light', { name: light.name });

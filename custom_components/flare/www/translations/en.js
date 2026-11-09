@@ -74,6 +74,7 @@ export default {
   'overrides.clear_light': 'Clear {name}',
   'overrides.asked': 'Asked',
   'overrides.showing': 'Showing',
+  'overrides.waiting': "FLARE's last change hasn't reached this light yet, so it still shows an earlier one. FLARE keeps sending it until the light shows what was asked. A light that stays like this may not be getting FLARE's commands.",
   'overrides.show_untracked': 'Show {count} untracked',
   'overrides.hide_untracked': 'Hide {count} untracked',
   'overrides.off': 'off',

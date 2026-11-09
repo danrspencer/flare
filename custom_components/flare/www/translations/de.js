@@ -78,6 +78,7 @@ export default {
   'overrides.clear_light': '{name} zurücksetzen',
   'overrides.asked': 'Angefordert',
   'overrides.showing': 'Zeigt',
+  'overrides.waiting': 'FLAREs letzte Änderung ist noch nicht bei diesem Licht angekommen, daher zeigt es noch eine frühere. FLARE sendet sie weiter, bis das Licht zeigt, was angefordert wurde. Bleibt ein Licht so, erreichen es FLAREs Befehle vielleicht nicht.',
   'overrides.show_untracked': '{count} nicht verfolgte anzeigen',
   'overrides.hide_untracked': '{count} nicht verfolgte ausblenden',
   'overrides.off': 'aus',

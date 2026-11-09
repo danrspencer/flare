@@ -20,7 +20,9 @@ name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
   Assistant's Lights dashboard: a list of the area's lights, overridden ones first, headed by
   its controlled and overridden counts and **Clear all** to hand them back. Each light shows its
   status, what FLARE last asked it for and what it's showing, in red where that differs, with its
-  own **Clear**; press its name to open the light. Lights FLARE isn't driving are hidden until
+  own **Clear**; press its name to open the light. A controlled light in amber with an info icon
+  hasn't taken FLARE's last change yet: FLARE keeps sending it, and hovering over the icon says
+  so. Lights FLARE isn't driving are hidden until
   you press **Show untracked** at the bottom of the list. An area's name opens its page. Beside
   the areas, **Activity** lists the last 24 hours of what the rooms did, coloured by kind - blue
   when a room takes its lights, amber when something else overrides one, grey when a room lets

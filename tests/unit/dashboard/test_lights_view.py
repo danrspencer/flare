@@ -218,6 +218,16 @@ def test_each_light_says_what_flare_asked_for_then_what_it_shows(result):
     ]
 
 
+def test_a_controlled_light_not_showing_what_was_asked_is_waiting(result):
+    """Kitchen 5 matches an earlier claim; FLARE's latest write hasn't landed."""
+    assert [(light["name"], light["waiting"]) for light in result["kitchenLights"]] == [
+        ("Kitchen 3", False),
+        ("Kitchen 2", False),
+        ("Kitchen 1", False),
+        ("Kitchen 5", True),
+    ]
+
+
 def test_untracked_lights_are_the_ones_flare_holds_nothing_on(result):
     """Kept behind the card's untracked row."""
     assert result["untracked"] == ["Bed Ceiling"]
