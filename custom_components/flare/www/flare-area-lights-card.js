@@ -105,13 +105,15 @@ export const isUntracked = (light) => !light.claimed && (light.status === 'untra
 /**
  * Each of the area's room lights, as the lights card lists them:
  * {entity_id, name, status, claimed, asked, confirmed, showing, differs,
- * waiting}, overridden and mismatched first. `asked`, `confirmed` and
+ * pending}, overridden and mismatched first. `asked`, `confirmed` and
  * `showing` are parts(); `asked` is FLARE's last write, null with none or
  * when the light was marked as someone else's, and `confirmed` what FLARE
  * last saw the light take. `differs` names the values it shows that aren't what was
- * asked, by the same rule as override protection. `waiting` is a controlled
- * light that doesn't show it yet: it matches an earlier claim, and FLARE's
- * latest write hasn't landed.
+ * asked, by the same rule as override protection. `pending` says why a
+ * light FLARE hasn't let go of doesn't show what it asked for: "waiting", a
+ * controlled light matching an earlier claim while FLARE's latest write
+ * hasn't landed, or "mismatched", one that matches neither claim but hasn't
+ * been overridden yet. Null otherwise.
  */
 export function areaLights(hass, area) {
   const entry = claimsByArea(hass).get(area);
@@ -129,7 +131,7 @@ export function areaLights(hass, area) {
         confirmed: translated(hass, parts(confirmed)),
         showing: translated(hass, showing(hass.states?.[entityId])),
         differs,
-        waiting: status === 'controlled' && differs.length > 0,
+        pending: pendingKind(status, asked, differs),
       };
     })
     .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
@@ -153,19 +155,26 @@ export function detail(light, hass) {
   return lines;
 }
 
+function pendingKind(status, asked, differs) {
+  if (status === 'controlled' && differs.length) return 'waiting';
+  if (status === 'mismatched' && asked) return 'mismatched';
+  return null;
+}
+
 /**
- * A waiting light's tip: {title, text, lines, link}. Its lines are what FLARE
- * asked for, still pending; what it last saw the light take, which the light
- * still matches; and what the light shows.
+ * The tip for a light with a `pending` kind: {title, text, lines, link}. Its
+ * lines are what FLARE asked for (still to land, for a waiting light), what
+ * it last saw the light take, and what the light shows.
  */
-export function waitingTip(light, hass) {
+export function pendingTip(light, hass) {
   const [asked, showing] = detail(light, hass);
-  const lines = [{ ...asked, note: localize(hass, 'overrides.pending') }];
+  const waiting = light.pending === 'waiting';
+  const lines = [waiting ? { ...asked, note: localize(hass, 'overrides.pending') } : asked];
   if (light.confirmed) lines.push({ label: localize(hass, 'overrides.confirmed'), parts: light.confirmed });
   if (showing) lines.push(showing);
   return {
-    title: localize(hass, 'overrides.waiting_title'),
-    text: localize(hass, 'overrides.waiting'),
+    title: localize(hass, `overrides.${light.pending}_title`),
+    text: localize(hass, `overrides.${light.pending}`),
     lines,
     link: { href: CLAIMS_DOCS, text: localize(hass, 'overrides.learn_more') },
   };
@@ -200,7 +209,7 @@ function detailLines(lines) {
 }
 
 /**
- * An info icon whose tip (waitingTip()) shows on hover, focus or tap, and
+ * An info icon whose tip (pendingTip()) shows on hover, focus or tap, and
  * stays open while the pointer is over it, so its link can be followed. The
  * tip is a popover, so the card's overflow doesn't clip it.
  */
@@ -218,7 +227,7 @@ function infoTip({ title, text, lines, link }) {
   tip.querySelector('.tip-title').textContent = title;
   tip.querySelector('p').textContent = text;
   const values = detailLines(lines);
-  values.classList.add('waiting');
+  values.classList.add('pending');
   tip.querySelector('a').after(values);
   const anchor = tip.querySelector('a');
   anchor.href = link.href;
@@ -284,7 +293,7 @@ const BADGE_STYLE = `
   .values > .label { grid-column: 1; }
   .values > .line { grid-column: 2; }
   .values .differs { color: var(--error-color, #db4437); font-weight: 500; }
-  .values.waiting .differs { color: var(--amber-color, #ffc107); }
+  .values.pending .differs { color: var(--amber-color, #ffc107); }
   .info {
     display: inline-flex; vertical-align: middle; margin-left: 4px; cursor: help; color: var(--amber-color, #ffc107); --mdc-icon-size: 16px;
   }
@@ -430,10 +439,10 @@ class FlareAreaLightsCard extends HTMLElement {
     );
     row.querySelector('.name').textContent = light.name;
     const values = detailLines(detail(light, this._hass));
-    if (light.waiting) {
-      values.classList.add('waiting');
+    if (light.pending) {
+      values.classList.add('pending');
       // At the end of the Showing line, beside the values it explains.
-      [...values.querySelectorAll('.line')].at(-1).append(infoTip(waitingTip(light, this._hass)));
+      [...values.querySelectorAll('.line')].at(-1).append(infoTip(pendingTip(light, this._hass)));
     }
     row.querySelector('.text').append(values);
     const status = row.querySelector('.status');

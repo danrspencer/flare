@@ -33,10 +33,11 @@ CI — see `.github/workflows/release.yml`.
   Under **Fine Tuning**: **Sensors & Conditions**, **Transitions** and **Other Settings**.
   Many settings have shorter names and plainer descriptions.
 
-- **On the Overrides view, a controlled light that hasn't taken FLARE's last change shows its
-  values in amber, not red**, with an info icon showing what FLARE asked for, what it last saw
-  the light take, and what the light shows. For example, a bulb that came back online but isn't
-  receiving commands. Each light's status sensor has a new `confirmed` attribute, what FLARE last
+- **On the Overrides view, a light that isn't showing FLARE's last change but hasn't been
+  overridden shows its values in amber, not red**, with an info icon showing what FLARE asked
+  for, what it last saw the light take, and what the light shows. That's a controlled light whose
+  change hasn't arrived, such as a bulb that came back online but isn't receiving commands, or a
+  mismatched one in the 30 seconds before it counts as overridden. Each light's status sensor has a new `confirmed` attribute, what FLARE last
   saw the light take.
 
 ### Deprecated

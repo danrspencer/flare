@@ -80,6 +80,8 @@ export default {
   'overrides.showing': 'Zeigt',
   'overrides.waiting_title': 'Warten auf das Licht',
   'overrides.waiting': "Die letzte an diese Lampe gesendete Aktualisierung ist in Home Assistant noch nicht angekommen. Die Lampe zeigt noch einen bekannten Zustand und wird daher weiter von FLARE gesteuert.",
+  'overrides.mismatched_title': 'Prüfung auf Überschreiben',
+  'overrides.mismatched': "Diese Lampe zeigt nicht mehr, was FLARE angefordert hat. Stimmt sie nicht innerhalb von 30 Sekunden wieder überein, gilt sie als überschrieben und FLARE lässt sie in Ruhe.",
   'overrides.pending': 'ausstehend',
   'overrides.confirmed': 'Bestätigt',
   'overrides.learn_more': 'Hier mehr darüber, wie Claims funktionieren.',

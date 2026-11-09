@@ -76,6 +76,8 @@ export default {
   'overrides.showing': 'Showing',
   'overrides.waiting_title': 'Waiting for the light',
   'overrides.waiting': "The last update sent to this bulb hasn't shown in Home Assistant yet. The bulb is still showing a known state so is still under FLARE's control.",
+  'overrides.mismatched_title': 'Checking for an override',
+  'overrides.mismatched': "This bulb has stopped showing what FLARE asked for. If it doesn't match again within 30 seconds, it counts as overridden and FLARE leaves it alone.",
   'overrides.pending': 'pending',
   'overrides.confirmed': 'Confirmed',
   'overrides.learn_more': 'Read more about how claims work here.',

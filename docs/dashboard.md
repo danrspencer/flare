@@ -21,9 +21,10 @@ name and an icon. FLARE's logo is in the icon picker as `flare:logo`.
   its controlled and overridden counts and **Clear all** to hand them back. Each light shows its
   status, what FLARE last asked it for and what it's showing, in red where that differs, with its
   own **Clear**; press its name to open the light. Values in amber with an info icon beside them
-  mean the light hasn't taken FLARE's last change yet: it's still FLARE's, and FLARE keeps sending
-  it. Hover over or tap the icon to see what FLARE asked for, what it last saw the light take, and
-  what the light shows. Lights FLARE isn't driving are hidden until
+  mean the light isn't showing FLARE's last change but hasn't been overridden: on a controlled
+  light the change hasn't arrived yet and FLARE keeps sending it, and on a mismatched one it
+  counts as overridden if it doesn't match again within 30 seconds. Hover over or tap the icon to
+  see what FLARE asked for, what it last saw the light take, and what the light shows. Lights FLARE isn't driving are hidden until
   you press **Show untracked** at the bottom of the list. An area's name opens its page. Beside
   the areas, **Activity** lists the last 24 hours of what the rooms did, coloured by kind - blue
   when a room takes its lights, amber when something else overrides one, grey when a room lets

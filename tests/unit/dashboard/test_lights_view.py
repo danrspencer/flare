@@ -96,7 +96,7 @@ def result():
 const defined = {{}};
 globalThis.customElements.define = (name, cls) => {{ defined[name] = cls; }};
 await import({js_path(WWW / "flare-view-strategy.js")});
-const {{ areaSummary, areaLights, claimedIn, describe, detail, isUntracked, statusLook, waitingTip }} = await import({js_path(WWW / "flare-area-lights-card.js")});
+const {{ areaSummary, areaLights, claimedIn, describe, detail, isUntracked, statusLook, pendingTip }} = await import({js_path(WWW / "flare-area-lights-card.js")});
 const empty = {{ ...input, entities: Object.fromEntries(Object.entries(input.entities).filter(([, e]) => e.translation_key !== 'status')) }};
 const noSettings = {{ ...input, entities: {{}} }};
 return {{
@@ -115,7 +115,9 @@ return {{
     describe(null),
   ],
   details: areaLights(input, 'kitchen').map((light) => detail(light)),
-  tip: waitingTip(areaLights(input, 'kitchen').find((light) => light.waiting)),
+  tips: Object.fromEntries(
+    areaLights(input, 'kitchen').filter((light) => light.pending).map((light) => [light.name, pendingTip(light)])
+  ),
   untracked: areaLights(input, 'bedroom').filter(isUntracked).map((light) => light.name),
   labels: ['untracked', 'off', 'controlled'].map((status) => statusLook(status).label),
   clearAll: {{ kitchen: claimedIn(areaLights(input, 'kitchen')), bedroom: claimedIn(areaLights(input, 'bedroom')) }},
@@ -227,24 +229,32 @@ def test_each_light_says_what_flare_asked_for_then_what_it_shows(result):
     ]
 
 
-def test_a_controlled_light_not_showing_what_was_asked_is_waiting(result):
-    """Kitchen 5 matches an earlier claim; FLARE's latest write hasn't landed."""
-    assert [(light["name"], light["waiting"]) for light in result["kitchenLights"]] == [
-        ("Kitchen 3", False),
-        ("Kitchen 2", False),
-        ("Kitchen 1", False),
-        ("Kitchen 5", True),
+def test_a_light_flare_still_holds_that_doesnt_match_says_why(result):
+    """Kitchen 5 matches an earlier claim while FLARE's latest write hasn't
+    landed; Kitchen 2 matches neither, but isn't overridden yet."""
+    assert [(light["name"], light["pending"]) for light in result["kitchenLights"]] == [
+        ("Kitchen 3", None),
+        ("Kitchen 2", "mismatched"),
+        ("Kitchen 1", None),
+        ("Kitchen 5", "waiting"),
     ]
 
 
 def test_a_waiting_lights_tip_has_what_was_asked_what_flare_last_saw_and_what_it_shows(result):
-    tip = result["tip"]
+    tip = result["tips"]["Kitchen 5"]
+    assert tip["title"] == "Waiting for the light"
     assert _lines(tip["lines"]) == [
         "Asked 78% · 3000K (pending)",
         "Confirmed 78% · 3100K",
         "Showing 78% · [3100K]",
     ]
     assert tip["link"]["href"].endswith("/reference/override-protection/#two-claims-not-one")
+
+
+def test_a_mismatched_lights_tip_says_it_may_be_overridden_and_nothing_is_pending(result):
+    tip = result["tips"]["Kitchen 2"]
+    assert tip["title"] == "Checking for an override"
+    assert _lines(tip["lines"]) == ["Asked off", "Showing off"]
 
 
 def test_untracked_lights_are_the_ones_flare_holds_nothing_on(result):
