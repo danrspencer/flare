@@ -33,9 +33,9 @@ CI — see `.github/workflows/release.yml`.
   Under **Fine Tuning**: **Sensors & Conditions**, **Transitions** and **Other Settings**.
   Many settings have shorter names and plainer descriptions.
 
-- **On the Overrides view, a controlled light that hasn't taken FLARE's last change is shown
-  in amber**, with an info icon explaining why. Before, it read as plain Controlled beside
-  values in red, for example a bulb that came back online but isn't receiving commands.
+- **On the Overrides view, a controlled light that hasn't taken FLARE's last change shows its
+  values in amber, not red**, with an info icon explaining why. For example, a bulb that came
+  back online but isn't receiving commands.
 
 ### Deprecated
 

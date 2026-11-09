@@ -154,8 +154,10 @@ function detailLines(lines) {
   grid.className = 'values';
   for (const { label, parts: found } of lines) {
     const name = document.createElement('span');
+    name.className = 'label';
     name.textContent = label;
     const line = document.createElement('span');
+    line.className = 'line';
     found.forEach((part, index) => {
       if (index) line.append(' · ');
       const text = document.createElement('span');
@@ -166,6 +168,46 @@ function detailLines(lines) {
     grid.append(name, line);
   }
   return grid;
+}
+
+/**
+ * An info icon whose text shows on hover, focus or tap. The text is a
+ * popover, so the card's overflow doesn't clip it.
+ */
+function infoTip(text) {
+  const info = document.createElement('span');
+  info.className = 'info';
+  info.tabIndex = 0;
+  info.setAttribute('role', 'button');
+  info.setAttribute('aria-label', text);
+  info.innerHTML = '<ha-icon icon="mdi:information-outline"></ha-icon>';
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.setAttribute('popover', 'manual');
+  tip.textContent = text;
+  info.append(tip);
+  const show = () => {
+    if (tip.matches(':popover-open')) return;
+    tip.showPopover();
+    const icon = info.getBoundingClientRect();
+    const width = tip.offsetWidth;
+    const left = Math.min(Math.max(8, icon.left + icon.width / 2 - width / 2), window.innerWidth - width - 8);
+    const below = icon.bottom + 6;
+    const top = below + tip.offsetHeight > window.innerHeight - 8 ? icon.top - tip.offsetHeight - 6 : below;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  };
+  const hide = () => tip.matches(':popover-open') && tip.hidePopover();
+  info.addEventListener('mouseenter', show);
+  info.addEventListener('mouseleave', hide);
+  info.addEventListener('focus', show);
+  info.addEventListener('blur', hide);
+  // A tap shouldn't also open the light, as the rest of the text does.
+  info.addEventListener('click', (event) => {
+    event.stopPropagation();
+    show();
+  });
+  return info;
 }
 
 function badge(icon, color) {
@@ -187,10 +229,24 @@ const BADGE_STYLE = `
   .text { display: flex; flex-direction: column; min-width: 0; }
   .name { font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
   .values {
-    display: grid; grid-template-columns: auto 1fr; column-gap: 6px;
+    display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 6px;
     font-size: 12px; color: var(--secondary-text-color);
   }
+  .values > .label { grid-column: 1; }
+  .values > .line { grid-column: 2; }
   .values .differs { color: var(--error-color, #db4437); font-weight: 500; }
+  .values.waiting .differs { color: var(--amber-color, #ffc107); }
+  .info {
+    grid-column: 3; grid-row: 1 / span 2; align-self: center; display: flex;
+    margin-left: 4px; cursor: help; color: var(--amber-color, #ffc107); --mdc-icon-size: 16px;
+  }
+  .info:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 50%; }
+  .tip {
+    position: fixed; inset: auto; margin: 0; width: max-content; max-width: 260px; padding: 8px 10px;
+    border: none; border-radius: 8px; font-size: 12px; line-height: 1.4;
+    color: var(--primary-text-color); background: var(--card-background-color, #fff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
 `;
 
 class FlareAreaLightsCard extends HTMLElement {
@@ -242,12 +298,7 @@ class FlareAreaLightsCard extends HTMLElement {
         .header button.clear-all:disabled { cursor: default; color: var(--disabled-text-color); background: none; }
         .row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; }
         .text { flex: 1; cursor: pointer; }
-        .status {
-          font-size: 12px; font-weight: 500; flex: none;
-          display: flex; align-items: center; gap: 4px; --mdc-icon-size: 16px;
-        }
-        .status ha-icon[hidden] { display: none; }
-        .status[title] { cursor: help; }
+        .status { font-size: 12px; font-weight: 500; flex: none; }
         button {
           width: 32px; height: 32px; border-radius: 50%; border: none; padding: 0; flex: none;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -315,27 +366,24 @@ class FlareAreaLightsCard extends HTMLElement {
 
   _row(light) {
     const look = statusLook(light.status, this._hass);
-    if (light.waiting) look.color = AMBER;
     const row = document.createElement('div');
     row.className = 'row';
     row.append(badge(look.icon, look.color));
     row.insertAdjacentHTML(
       'beforeend',
-      '<div class="text"><span class="name"></span></div>' +
-        '<span class="status"><span></span><ha-icon icon="mdi:information-outline" hidden></ha-icon></span>' +
+      '<div class="text"><span class="name"></span></div><span class="status"></span>' +
         '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
     );
     row.querySelector('.name').textContent = light.name;
-    row.querySelector('.text').append(detailLines(detail(light, this._hass)));
-    const status = row.querySelector('.status');
-    status.firstChild.textContent = look.label;
-    status.style.color = look.color;
+    const values = detailLines(detail(light, this._hass));
     if (light.waiting) {
-      const info = status.querySelector('ha-icon');
-      info.hidden = false;
-      status.title = localize(this._hass, 'overrides.waiting');
-      info.setAttribute('aria-label', status.title);
+      values.classList.add('waiting');
+      values.append(infoTip(localize(this._hass, 'overrides.waiting')));
     }
+    row.querySelector('.text').append(values);
+    const status = row.querySelector('.status');
+    status.textContent = look.label;
+    status.style.color = look.color;
     const clear = row.querySelector('button');
     clear.hidden = !light.claimed;
     clear.title = localize(this._hass, 'overrides.clear_light', { name: light.name });
