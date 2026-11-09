@@ -278,7 +278,7 @@ const BADGE_STYLE = `
   .text { display: flex; flex-direction: column; min-width: 0; }
   .name { font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
   .values {
-    display: grid; grid-template-columns: auto auto auto; justify-content: start; column-gap: 6px;
+    display: grid; grid-template-columns: auto 1fr; column-gap: 6px;
     font-size: 12px; color: var(--secondary-text-color);
   }
   .values > .label { grid-column: 1; }
@@ -286,8 +286,7 @@ const BADGE_STYLE = `
   .values .differs { color: var(--error-color, #db4437); font-weight: 500; }
   .values.waiting .differs { color: var(--amber-color, #ffc107); }
   .info {
-    grid-column: 3; grid-row: 1 / span 2; align-self: center; display: flex;
-    margin-left: 4px; cursor: help; color: var(--amber-color, #ffc107); --mdc-icon-size: 16px;
+    display: inline-flex; vertical-align: middle; margin-left: 4px; cursor: help; color: var(--amber-color, #ffc107); --mdc-icon-size: 16px;
   }
   .info:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 50%; }
   .tip {
@@ -433,7 +432,8 @@ class FlareAreaLightsCard extends HTMLElement {
     const values = detailLines(detail(light, this._hass));
     if (light.waiting) {
       values.classList.add('waiting');
-      values.append(infoTip(waitingTip(light, this._hass)));
+      // At the end of the Showing line, beside the values it explains.
+      [...values.querySelectorAll('.line')].at(-1).append(infoTip(waitingTip(light, this._hass)));
     }
     row.querySelector('.text').append(values);
     const status = row.querySelector('.status');
