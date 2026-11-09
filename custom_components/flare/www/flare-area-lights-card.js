@@ -214,9 +214,9 @@ function infoTip({ title, text, lines, link }) {
   const tip = document.createElement('div');
   tip.className = 'tip';
   tip.setAttribute('popover', 'manual');
-  tip.innerHTML = '<div class="tip-title"></div><p></p><a target="_blank" rel="noreferrer"></a>';
+  tip.innerHTML = '<div class="tip-title"></div><p><span></span> <a target="_blank" rel="noreferrer"></a></p>';
   tip.querySelector('.tip-title').textContent = title;
-  tip.querySelector('p').textContent = text;
+  tip.querySelector('p span').textContent = text;
   const values = detailLines(lines);
   values.classList.add('waiting');
   tip.querySelector('p').after(values);
@@ -298,7 +298,7 @@ const BADGE_STYLE = `
   }
   .tip .tip-title { font-size: 13px; font-weight: 500; }
   .tip p { margin: 4px 0 8px; color: var(--secondary-text-color); }
-  .tip .values { margin-bottom: 8px; }
+  .tip .values { margin-bottom: 2px; }
   .tip .note { font-style: italic; }
   .tip a { color: var(--primary-color); }
 `;
