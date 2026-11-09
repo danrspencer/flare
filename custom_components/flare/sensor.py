@@ -385,7 +385,7 @@ class _LightStatusSensor(SensorEntity):
     _attr_translation_key = "status"
     _attr_should_poll = False
     # Changes with every write.
-    _unrecorded_attributes = frozenset({"asked", "differs"})
+    _unrecorded_attributes = frozenset({"asked", "confirmed", "differs"})
 
     def __init__(
         self,
@@ -474,6 +474,9 @@ class _LightStatusSensor(SensorEntity):
             "light": self.light_entity_id,
             "claimed": bool(record),
             "asked": copy.deepcopy(asked),
+            # What FLARE last saw the light show of its own: its observed
+            # claim's target.
+            "confirmed": copy.deepcopy((record.get("observed") or {}).get("target")),
             # Which of those the light doesn't show: "state", "brightness",
             # "color".
             "differs": self._registry.differs(self.light_entity_id, asked),

@@ -40,6 +40,9 @@ const word = (hass, text) => (WORDS.has(text) ? localize(hass, `overrides.${text
 // The order lights are listed in: what needs a look first.
 const ORDER = ['overridden', 'mismatched', 'controlled', 'untracked', 'off', 'unavailable'];
 
+// Where the claims a light's status comes from are explained.
+const CLAIMS_DOCS = 'https://danrspencer.github.io/flare/reference/override-protection/#two-claims-not-one';
+
 const nameOf = (hass, entityId) => hass.states?.[entityId]?.attributes?.friendly_name || entityId;
 
 /**
@@ -101,11 +104,16 @@ export const isUntracked = (light) => !light.claimed && (light.status === 'untra
 
 /**
  * Each of the area's room lights, as the lights card lists them:
- * {entity_id, name, status, claimed, asked, showing, differs}, overridden
- * and mismatched first. `asked` and `showing` are parts(); `asked` is
- * FLARE's last write, null with none or when the light was marked as
- * someone else's. `differs` names the values it shows that aren't what was
- * asked, by the same rule as override protection.
+ * {entity_id, name, status, claimed, asked, confirmed, showing, differs,
+ * pending}, overridden and mismatched first. `asked`, `confirmed` and
+ * `showing` are parts(); `asked` is FLARE's last write, null with none or
+ * when the light was marked as someone else's, and `confirmed` what FLARE
+ * last saw the light take. `differs` names the values it shows that aren't what was
+ * asked, by the same rule as override protection. `pending` says why a
+ * light FLARE hasn't let go of doesn't show what it asked for: "waiting", a
+ * controlled light matching an earlier claim while FLARE's latest write
+ * hasn't landed, or "mismatched", one that matches neither claim but hasn't
+ * been overridden yet. Null otherwise.
  */
 export function areaLights(hass, area) {
   const entry = claimsByArea(hass).get(area);
@@ -113,15 +121,17 @@ export function areaLights(hass, area) {
   const lights = lightStatuses(hass);
   return entry.lights
     .map((entityId) => {
-      const { status, claimed, asked, differs } = lights.get(entityId);
+      const { status, claimed, asked, confirmed, differs } = lights.get(entityId);
       return {
         entity_id: entityId,
         name: nameOf(hass, entityId),
         status,
         claimed,
         asked: translated(hass, parts(asked)),
+        confirmed: translated(hass, parts(confirmed)),
         showing: translated(hass, showing(hass.states?.[entityId])),
         differs,
+        pending: pendingKind(status, asked, differs),
       };
     })
     .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.name.localeCompare(b.name));
@@ -145,14 +155,41 @@ export function detail(light, hass) {
   return lines;
 }
 
+function pendingKind(status, asked, differs) {
+  if (status === 'controlled' && differs.length) return 'waiting';
+  if (status === 'mismatched' && asked) return 'mismatched';
+  return null;
+}
+
+/**
+ * The tip for a light with a `pending` kind: {title, text, lines, link}. Its
+ * lines are what FLARE asked for (still to land, for a waiting light), what
+ * it last saw the light take, and what the light shows.
+ */
+export function pendingTip(light, hass) {
+  const [asked, showing] = detail(light, hass);
+  const waiting = light.pending === 'waiting';
+  const lines = [waiting ? { ...asked, note: localize(hass, 'overrides.pending') } : asked];
+  if (light.confirmed) lines.push({ label: localize(hass, 'overrides.confirmed'), parts: light.confirmed });
+  if (showing) lines.push(showing);
+  return {
+    title: localize(hass, `overrides.${light.pending}_title`),
+    text: localize(hass, `overrides.${light.pending}`),
+    lines,
+    link: { href: CLAIMS_DOCS, text: localize(hass, 'overrides.learn_more') },
+  };
+}
+
 // The lines as a two-column grid, so each line's values start together.
 function detailLines(lines) {
   const grid = document.createElement('div');
   grid.className = 'values';
-  for (const { label, parts: found } of lines) {
+  for (const { label, parts: found, note } of lines) {
     const name = document.createElement('span');
+    name.className = 'label';
     name.textContent = label;
     const line = document.createElement('span');
+    line.className = 'line';
     found.forEach((part, index) => {
       if (index) line.append(' · ');
       const text = document.createElement('span');
@@ -160,9 +197,75 @@ function detailLines(lines) {
       if (part.differs) text.className = 'differs';
       line.append(text);
     });
+    if (note) {
+      const tag = document.createElement('span');
+      tag.className = 'note';
+      tag.textContent = note;
+      line.append(' ', tag);
+    }
     grid.append(name, line);
   }
   return grid;
+}
+
+/**
+ * An info icon whose tip (pendingTip()) shows on hover, focus or tap, and
+ * stays open while the pointer is over it, so its link can be followed. The
+ * tip is a popover, so the card's overflow doesn't clip it.
+ */
+function infoTip({ title, text, lines, link }) {
+  const info = document.createElement('span');
+  info.className = 'info';
+  info.tabIndex = 0;
+  info.setAttribute('role', 'button');
+  info.setAttribute('aria-label', title);
+  info.innerHTML = '<ha-icon icon="mdi:information-outline"></ha-icon>';
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.setAttribute('popover', 'manual');
+  tip.innerHTML = '<div class="tip-title"></div><p></p><a target="_blank" rel="noreferrer"></a>';
+  tip.querySelector('.tip-title').textContent = title;
+  tip.querySelector('p').textContent = text;
+  const values = detailLines(lines);
+  values.classList.add('pending');
+  tip.querySelector('a').after(values);
+  const anchor = tip.querySelector('a');
+  anchor.href = link.href;
+  anchor.textContent = link.text;
+  info.append(tip);
+  let hiding = null;
+  const show = () => {
+    clearTimeout(hiding);
+    if (tip.matches(':popover-open')) return;
+    tip.showPopover();
+    const icon = info.getBoundingClientRect();
+    const width = tip.offsetWidth;
+    const left = Math.min(Math.max(8, icon.left + icon.width / 2 - width / 2), window.innerWidth - width - 8);
+    const below = icon.bottom + 6;
+    const top = below + tip.offsetHeight > window.innerHeight - 8 ? icon.top - tip.offsetHeight - 6 : below;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  };
+  const hide = () => tip.matches(':popover-open') && tip.hidePopover();
+  // Delayed, so the pointer can cross the gap from the icon to the tip.
+  const hideSoon = () => {
+    clearTimeout(hiding);
+    hiding = setTimeout(hide, 250);
+  };
+  // The tip is inside the icon's element, so hovering it counts as the icon.
+  info.addEventListener('mouseenter', show);
+  info.addEventListener('mouseleave', hideSoon);
+  info.addEventListener('focusin', show);
+  info.addEventListener('focusout', (event) => {
+    if (!info.contains(event.relatedTarget)) hide();
+  });
+  // A tap shouldn't also open the light, as the rest of the text does.
+  info.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (event.target.closest('a')) return;
+    show();
+  });
+  return info;
 }
 
 function badge(icon, color) {
@@ -187,7 +290,26 @@ const BADGE_STYLE = `
     display: grid; grid-template-columns: auto 1fr; column-gap: 6px;
     font-size: 12px; color: var(--secondary-text-color);
   }
+  .values > .label { grid-column: 1; }
+  .values > .line { grid-column: 2; }
   .values .differs { color: var(--error-color, #db4437); font-weight: 500; }
+  .values.pending .differs { color: var(--amber-color, #ffc107); }
+  .info {
+    display: inline-flex; vertical-align: middle; margin-left: 4px; cursor: help; color: var(--amber-color, #ffc107); --mdc-icon-size: 16px;
+  }
+  .info:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; border-radius: 50%; }
+  .tip {
+    position: fixed; inset: auto; margin: 0; width: max-content; max-width: 300px; padding: 8px 10px;
+    border: 1px solid var(--ha-card-border-color, var(--divider-color, #e0e0e0));
+    border-radius: var(--ha-card-border-radius, 12px); font-size: 12px; line-height: 1.4;
+    color: var(--primary-text-color); background: var(--card-background-color, #fff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); cursor: auto;
+  }
+  .tip .tip-title { font-size: 13px; font-weight: 500; }
+  .tip p { margin: 4px 0 0; color: var(--secondary-text-color); }
+  .tip .values { margin-top: 8px; }
+  .tip .note { font-style: italic; }
+  .tip a { display: block; margin-top: 4px; color: var(--primary-color); }
 `;
 
 class FlareAreaLightsCard extends HTMLElement {
@@ -316,7 +438,13 @@ class FlareAreaLightsCard extends HTMLElement {
         '<button><ha-icon icon="mdi:backup-restore"></ha-icon></button>'
     );
     row.querySelector('.name').textContent = light.name;
-    row.querySelector('.text').append(detailLines(detail(light, this._hass)));
+    const values = detailLines(detail(light, this._hass));
+    if (light.pending) {
+      values.classList.add('pending');
+      // At the end of the Showing line, beside the values it explains.
+      [...values.querySelectorAll('.line')].at(-1).append(infoTip(pendingTip(light, this._hass)));
+    }
+    row.querySelector('.text').append(values);
     const status = row.querySelector('.status');
     status.textContent = look.label;
     status.style.color = look.color;

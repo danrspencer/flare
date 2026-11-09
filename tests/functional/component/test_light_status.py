@@ -208,6 +208,27 @@ async def test_it_says_what_flare_last_asked_for_and_whether_flare_holds_it(stub
     assert (spot_state.attributes["asked"], spot_state.attributes["claimed"]) == (None, False)
 
 
+async def test_a_write_that_never_lands_leaves_what_flare_last_saw_confirmed(stub_entry_setup, hass: HomeAssistant):
+    """The lamp never reports the write, so it still matches the claim made
+    from what it showed: controlled, with the write still to land."""
+    await _set_up(hass)
+    lamp = _bulb(hass, "lamp")
+
+    await hass.services.async_call(
+        DOMAIN,
+        "apply_lighting",
+        {"entities": [lamp], "brightness": 200, "color_temp_kelvin": 3000, "transition": 0, "room_id": ROOM},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    attributes = hass.states.get("sensor.lamp_flare_status").attributes
+    assert hass.states.get("sensor.lamp_flare_status").state == "controlled"
+    assert attributes["asked"] == {"brightness": 200, "color_temp_kelvin": 3000}
+    assert attributes["confirmed"] == {"brightness": 90, "color_temp_kelvin": 3000}
+    assert attributes["differs"] == ["brightness"]
+
+
 async def test_it_says_which_of_what_flare_asked_for_the_light_doesnt_show(stub_entry_setup, hass: HomeAssistant):
     await _set_up(hass)
     lamp, spot = _bulb(hass, "lamp"), _bulb(hass, "spot")

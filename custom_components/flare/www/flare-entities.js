@@ -88,6 +88,7 @@ export function lightStatuses(hass) {
       status: state.state,
       claimed: Boolean(attributes.claimed),
       asked: attributes.asked || null,
+      confirmed: attributes.confirmed || null,
       differs: attributes.differs || [],
       rooms,
     });
