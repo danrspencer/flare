@@ -14,7 +14,11 @@ CI — see `.github/workflows/release.yml`.
 - **Conditions** stop a room updating while they aren't met, for example if you don't want
   motion sensors to trigger at night. They work as they do in any automation, and the room's
   trigger IDs are now documented, so a condition can stop just the motion sensors and leave the
-  rest of the room running. Running the automation by hand still works. Thanks to @Nox3210 for the idea
+  rest of the room running. Running the automation by hand still works. Until Home Assistant
+  2026.12, the editor's **Triggered by** condition doesn't work well in a blueprint automation: it
+  lists no triggers and marks the room's trigger IDs as missing. That's a bug in Home Assistant,
+  and I've contributed a fix for 2026.12
+  ([frontend#55802](https://github.com/home-assistant/frontend/pull/55802)). Thanks to @Nox3210 for the idea
   ([#342](https://github.com/danrspencer/flare/issues/342)).
 
 ### Changed
@@ -32,7 +36,6 @@ CI — see `.github/workflows/release.yml`.
   Brightness** and **Scene**, and **Custom** holds the templates and Additional Triggers.
   Under **Fine Tuning**: **Sensors & Conditions**, **Transitions** and **Other Settings**.
   Many settings have shorter names and plainer descriptions.
-
 - **On the Overrides view, a light that isn't showing FLARE's last change but hasn't been
   overridden shows its values in amber, not red**, with an info icon showing what FLARE asked
   for, what it last saw the light take, and what the light shows. That's a controlled light whose
