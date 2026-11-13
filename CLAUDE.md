@@ -465,7 +465,8 @@ as the Store is where it's kept: it reads the registry and holds nothing.
 The dashboard reads these, not the registry. It shows the raw status (so
 `untracked` stays `untracked`, unlike the counts), outlives its claims so
 its history carries on, and is keyed by the light's registry id so a
-rename keeps it.
+rename keeps it. One whose light left the registry while nothing followed
+it is removed at setup: building it raised, and no status sensor was added.
 
 - **It sits on the light's own device** through `device_entry`, as HA's
   own helpers link to a source device. `DeviceInfo` with the device's
@@ -482,8 +483,9 @@ curve the value match drifts further away. The room going dark clears it;
 ### Claims across restarts and reconnects
 
 **The registry holds the claims and rooms, saved in a `Store`**
-(`.storage/flare.claims`, `SAVE_DELAY` seconds after each change, and at
-shutdown), loaded before the platforms. Without the rooms, nothing would
+(`.storage/flare.claims`, `SAVE_DELAY` seconds after each change, at
+shutdown, and when the Settings entry unloads, or a reload reads them back
+before the delayed save), loaded before the platforms. Without the rooms, nothing would
 release a restored claim. They lived on a `RestoreEntity` claims sensor
 until 2.0, at the user's direction moved out: where the data lives matters
 less than how it's shown (the status sensors, counts, events and the

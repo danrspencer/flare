@@ -22,6 +22,13 @@ CI — see `.github/workflows/release.yml`.
 - **The dashboard's colour temperature sliders looked dull on a light theme.** Oranges showed as
   brown and the coolest blues as grey. Now only the near-whites are darkened, just enough to show
   against a white card.
+- **Lights' status sensors could all go missing after a light was removed.** If a light was
+  deleted while FLARE's Settings entry wasn't loaded, the status sensor left behind stopped every
+  other one being created, and the Overrides view showed no lights. The leftover sensor is now
+  removed.
+- **Saving FLARE's settings could forget which lights it was controlling.** Anything FLARE had
+  set in the few seconds before the Settings entry reloaded was lost, so a light just changed by
+  hand could be taken back. FLARE now saves as it unloads.
 
 ## [2.1.0] - Unreleased
 

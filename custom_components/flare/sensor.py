@@ -18,7 +18,7 @@ from homeassistant.components.button import ENTITY_ID_FORMAT as BUTTON_ENTITY_ID
 from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_ID, ATTR_ENTITY_ID, EVENT_HOMEASSISTANT_STOP, STATE_ON, EntityCategory, Platform
-from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback, split_entity_id
+from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback, split_entity_id, valid_entity_id
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -335,11 +335,17 @@ class _LightStatuses:
 
     def start(self) -> None:
         prefix = STATUS_UNIQUE_ID.format(entry_id=self._entry.entry_id, light="")
-        known = [
-            e.unique_id[len(prefix) :]
-            for e in er.async_entries_for_config_entry(er.async_get(self._hass), self._entry.entry_id)
-            if e.unique_id.startswith(prefix)
-        ]
+        registry = er.async_get(self._hass)
+        known = []
+        for sensor in er.async_entries_for_config_entry(registry, self._entry.entry_id):
+            if not sensor.unique_id.startswith(prefix):
+                continue
+            key = sensor.unique_id[len(prefix) :]
+            if registry.async_get(key) is None and not valid_entity_id(key):
+                # Its light left the registry while nothing was following it.
+                registry.async_remove(sensor.entity_id)
+            else:
+                known.append(key)
         self._add_for(known)
         self._entry.async_on_unload(async_dispatcher_connect(self._hass, SIGNAL_CLAIMS_UPDATED, self._claims_changed))
 
