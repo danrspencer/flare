@@ -164,9 +164,6 @@ def main():
     for i in range(N_BARS):
         t = T_START + (T_END - T_START) * (i + 0.5) / N_BARS
         phase = phase_at(t, MORNING, DAY, EVENING, NIGHT)
-        # Both take (phase, now, morning, day, evening, night). Note
-        # targets_for_phase in curve.py takes those four in a
-        # DIFFERENT order - don't copy this call over to that one.
         b = brightness_for_phase(phase, t, MORNING, DAY, EVENING, NIGHT)
         colour = kelvin_to_rgb(kelvin_for_phase(phase, t, MORNING, DAY, EVENING, NIGHT))
         x = PAD_X + i * slot_w + (slot_w - bar_w) / 2

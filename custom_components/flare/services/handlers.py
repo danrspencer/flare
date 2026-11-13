@@ -287,7 +287,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         )
         curve_kwargs = {key: call.data[key] for key in CURVE_KEYS if key in call.data}
         phase = phase_at(at, morning, day, evening, night)
-        targets = targets_for_phase(phase, at, evening, day, night, morning, **curve_kwargs)
+        targets = targets_for_phase(phase, at, morning, day, evening, night, **curve_kwargs)
         return {
             "phase": phase,
             "brightness": targets["brightness"],

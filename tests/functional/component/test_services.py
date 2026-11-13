@@ -38,6 +38,19 @@ async def test_compute_curve_service_returns_expected_shape(setup_integration: H
     assert isinstance(result["rgb_color"], list) and len(result["rgb_color"]) == 3
 
 
+async def test_compute_curve_eases_day_towards_evening_between_those_two_boundaries(setup_integration: HomeAssistant):
+    """A third of the way through a Day whose colour eases all the way to
+    Evening's: a third of the way from 6667K to 3200K."""
+    result = await setup_integration.services.async_call(
+        DOMAIN,
+        "compute_curve",
+        {"morning": 0, "day": 28800, "evening": 72000, "night": 79200, "at": 43200},
+        blocking=True,
+        return_response=True,
+    )
+    assert (result["phase"], result["color_temp_kelvin"]) == ("Day", 5511)
+
+
 @pytest.mark.parametrize("brightness", [{}, {"brightness": None}], ids=["omitted", "null"])
 async def test_apply_lighting_missing_brightness_raises(setup_integration: HomeAssistant, brightness):
     """Needed by any light without a level, so a missing sensor attribute

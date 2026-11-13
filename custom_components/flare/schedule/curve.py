@@ -290,18 +290,19 @@ def kelvin_for_phase(
 def targets_for_phase(
     day_phase: str,
     now_ts: float,
-    evening_ts: float,
-    day_start_ts: float,
-    night_ts: float,
     morning_ts: float,
+    day_start_ts: float,
+    evening_ts: float,
+    night_ts: float,
     *,
     next_morning_ts: float | None = None,
     next_night_ts: float | None = None,
     **curve_values,
 ) -> dict:
     """brightness/kelvin/rgb_color for a phase. Takes the phase rather than
-    computing it, so the caller can substitute an override. Curve values
-    pass through as kwargs; unknown keys raise.
+    computing it, so the caller can substitute an override. The boundaries
+    come in the day's order, as phase_at takes them. Curve values pass
+    through as kwargs; unknown keys raise.
 
     next_morning_ts / next_night_ts are tomorrow's boundaries, 24 hours
     after today's unless given: they aren't when the clocks change."""

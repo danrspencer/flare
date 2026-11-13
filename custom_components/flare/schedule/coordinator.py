@@ -235,7 +235,7 @@ def _compute_curve_points(boundaries: Boundaries, curve_kwargs: dict[str, int]) 
         t = midnight + i * 300
         phase = phase_at(t, morning_ts, day_ts, evening_ts, night_ts, next_night_ts=boundaries.next_night)
         targets = targets_for_phase(
-            phase, t, evening_ts, day_ts, night_ts, morning_ts, **boundaries.tomorrow(), **curve_kwargs
+            phase, t, morning_ts, day_ts, evening_ts, night_ts, **boundaries.tomorrow(), **curve_kwargs
         )
         points.append(
             {
@@ -276,10 +276,10 @@ class ScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         targets = targets_for_phase(
             phase,
             now_ts,
-            boundaries.evening,
-            boundaries.day,
-            boundaries.night,
             boundaries.morning,
+            boundaries.day,
+            boundaries.evening,
+            boundaries.night,
             **boundaries.tomorrow(),
             **curve_kwargs,
         )

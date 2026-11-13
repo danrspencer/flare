@@ -31,7 +31,7 @@ def _kel(phase, t, **kw):
 
 
 def _targets(phase, t, **kw):
-    return targets_for_phase(phase, t, EVENING, DAY_START, NIGHT, MORNING, **kw)
+    return targets_for_phase(phase, t, MORNING, DAY_START, EVENING, NIGHT, **kw)
 
 
 def test_phase_at_boundaries():
