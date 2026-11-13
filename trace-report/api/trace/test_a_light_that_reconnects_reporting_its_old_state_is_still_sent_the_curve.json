@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "da3af0c3a5f7cc4bf83eb8be36e4e1d1",
+      "run_id": "0a4a06f2cdfaed7524260aee26c0f851",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-11-14T03:00:02+00:00",
                 "last_updated": "2026-11-14T03:00:02+00:00",
                 "context": {
-                  "id": "01M7BZYSTG482T982ZR7G5N5WX",
+                  "id": "01M7BZYSTG51HQ6MVFEV48P9AT",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-11-14T03:00:02+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTGVC2E2CH4S2P2ZQZM",
+                    "id": "01M7BZYSTGAHW1ZDSP0106TRC3",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-11-14T03:00:02+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTGRGQVGM0B6535JNE2",
+                    "id": "01M7BZYSTG03P1YVW3HWNEKSSB",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -88,7 +88,7 @@
               "lux_threshold": 0,
               "tick_area": null,
               "trigger_id": "motion_on",
-              "schedule": "36d5f97323db2464a7eb1702006a5739",
+              "schedule": "ad69f7005c651583a80faed4244ef38f",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -136,8 +136,8 @@
             "timestamp": "2026-11-14T03:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M7BZYSTGQS3K263ZR9FA4B4Z",
-                "parent_id": "01M7BZYSTGRGQVGM0B6535JNE2",
+                "id": "01M7BZYSTG4KB52C3JWR6ZC6MD",
+                "parent_id": "01M7BZYSTG03P1YVW3HWNEKSSB",
                 "user_id": null
               },
               "room": {
@@ -550,7 +550,7 @@
         },
         "variables": {
           "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
-          "schedule": "36d5f97323db2464a7eb1702006a5739",
+          "schedule": "ad69f7005c651583a80faed4244ef38f",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -574,7 +574,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "36d5f97323db2464a7eb1702006a5739"
+              "device_id": "ad69f7005c651583a80faed4244ef38f"
             },
             "options": {
               "event_type": [
@@ -698,7 +698,7 @@
               "evening_exclude_lights": [],
               "night_exclude_lights": [],
               "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% set relative = t is string and (t | trim) is match('^([xX] *[0-9.]+|[0-9.]+ *%)$') %} {% if t is mapping %}\n  {{ t }}\n{% elif relative or (t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0) %}\n  {% set level = (t | trim) if relative else (t | float) %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: level}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
               "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
@@ -710,9 +710,9 @@
               "evening_idle_brightness": 0,
               "night_idle_brightness": 0,
               "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% set percent = t is string and (t | trim) is match('^[0-9.]+ *%$') %} {% if t is mapping %}\n  {{ t }}\n{% elif percent or (t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0) %}\n  {% set level = (t | trim) if percent else (t | float) %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: level}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% set n = level %}\n  {% if level is string %}\n    {% set s = level | trim %}\n    {% set n = (s[:-1] | float(0)) if s.endswith('%') else (s | float(0)) %}\n  {% endif %}\n  {% if n and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
@@ -1001,7 +1001,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "36d5f97323db2464a7eb1702006a5739",
+            "schedule": "ad69f7005c651583a80faed4244ef38f",
             "room_target": {
               "entity_id": [
                 "light.stale",
@@ -1012,14 +1012,14 @@
         }
       },
       "context": {
-        "id": "01M7BZYSTGQS3K263ZR9FA4B4Z",
-        "parent_id": "01M7BZYSTGRGQVGM0B6535JNE2",
+        "id": "01M7BZYSTG4KB52C3JWR6ZC6MD",
+        "parent_id": "01M7BZYSTG03P1YVW3HWNEKSSB",
         "user_id": null
       }
     },
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "d7c17362aafc2b53917fd15150495e58",
+      "run_id": "b275e42440f750bad46c264c75746273",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -1049,8 +1049,8 @@
                 "last_reported": "2026-11-14T03:00:02+00:00",
                 "last_updated": "2026-11-14T03:00:02+00:00",
                 "context": {
-                  "id": "01M7BZYSTGQS3K263ZR9FA4B4Z",
-                  "parent_id": "01M7BZYSTGRGQVGM0B6535JNE2",
+                  "id": "01M7BZYSTG4KB52C3JWR6ZC6MD",
+                  "parent_id": "01M7BZYSTG03P1YVW3HWNEKSSB",
                   "user_id": null
                 }
               },
@@ -1073,8 +1073,8 @@
                   "last_reported": "2026-11-14T03:00:02+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTGQS3K263ZR9FA4B4Z",
-                    "parent_id": "01M7BZYSTGRGQVGM0B6535JNE2",
+                    "id": "01M7BZYSTG4KB52C3JWR6ZC6MD",
+                    "parent_id": "01M7BZYSTG03P1YVW3HWNEKSSB",
                     "user_id": null
                   }
                 },
@@ -1110,7 +1110,7 @@
                   "last_reported": "2026-11-14T03:00:08+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTG4H2Q93AQT88KYQF2",
+                    "id": "01M7BZYSTGMVTC2Q9EHXCBA100",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -1134,7 +1134,7 @@
               "lux_threshold": 0,
               "tick_area": null,
               "trigger_id": "recovered",
-              "schedule": "36d5f97323db2464a7eb1702006a5739",
+              "schedule": "ad69f7005c651583a80faed4244ef38f",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -1182,8 +1182,8 @@
             "timestamp": "2026-11-14T03:00:08+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M7BZYZP0QSJJEKPWV4VHSGWR",
-                "parent_id": "01M7BZYSTG4H2Q93AQT88KYQF2",
+                "id": "01M7BZYZP00AZA70JZP615EMTS",
+                "parent_id": "01M7BZYSTGMVTC2Q9EHXCBA100",
                 "user_id": null
               },
               "room": {
@@ -1586,7 +1586,7 @@
         },
         "variables": {
           "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
-          "schedule": "36d5f97323db2464a7eb1702006a5739",
+          "schedule": "ad69f7005c651583a80faed4244ef38f",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -1610,7 +1610,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "36d5f97323db2464a7eb1702006a5739"
+              "device_id": "ad69f7005c651583a80faed4244ef38f"
             },
             "options": {
               "event_type": [
@@ -1734,7 +1734,7 @@
               "evening_exclude_lights": [],
               "night_exclude_lights": [],
               "phase_exclude_lights": "{% set m = {'Morning': morning_exclude_lights, 'Day': day_exclude_lights,\n            'Evening': evening_exclude_lights, 'Night': night_exclude_lights} %}\n{{ m.get(phase, []) }}\n",
-              "template_brightness_map": "{% set t = template_brightness_levels %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "template_brightness_map": "{% set t = template_brightness_levels %} {% set relative = t is string and (t | trim) is match('^([xX] *[0-9.]+|[0-9.]+ *%)$') %} {% if t is mapping %}\n  {{ t }}\n{% elif relative or (t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0) %}\n  {% set level = (t | trim) if relative else (t | float) %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: level}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "brightness_levels": "{% set ns = namespace(m={}) %} {% for e in phase_exclude_lights %}\n  {% set ns.m = dict(ns.m, **{e: 0}) %}\n{% endfor %} {{ dict(ns.m, **template_brightness_map) }}\n",
               "hands_off_entities": "{% set ns = namespace(items=[]) %} {% for entity_id, level in brightness_levels.items() %}\n  {% if level is none or level is sameas false %}\n    {% set ns.items = ns.items + [entity_id] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "brightness": "{{ state_attr(adaptive_sensor, 'brightness') }}",
@@ -1746,9 +1746,9 @@
               "evening_idle_brightness": 0,
               "night_idle_brightness": 0,
               "phase_idle_brightness": "{% set m = {'Morning': morning_idle_brightness, 'Day': day_idle_brightness,\n            'Evening': evening_idle_brightness, 'Night': night_idle_brightness} %}\n{{ m.get(phase, 0) | int }}\n",
-              "template_idle_map": "{% set t = template_idle_brightness %} {% if t is mapping %}\n  {{ t }}\n{% elif t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0 %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: t | float}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
+              "template_idle_map": "{% set t = template_idle_brightness %} {% set percent = t is string and (t | trim) is match('^[0-9.]+ *%$') %} {% if t is mapping %}\n  {{ t }}\n{% elif percent or (t is not none and (t | string | trim) != '' and (t | float(-1)) >= 0) %}\n  {% set level = (t | trim) if percent else (t | float) %}\n  {% set ns = namespace(m={}) %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: level}) %}\n  {% endfor %}\n  {{ ns.m }}\n{% else %}\n  {{ {} }}\n{% endif %}\n",
               "idle_brightness": "{% set ns = namespace(m={}) %} {% if phase_idle_brightness %}\n  {% for e in resolved_entities %}\n    {% set ns.m = dict(ns.m, **{e: phase_idle_brightness}) %}\n  {% endfor %}\n{% endif %} {{ dict(ns.m, **template_idle_map) }}\n",
-              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% if level and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
+              "idle_entities": "{% set ns = namespace(items=[]) %} {% for e, level in idle_brightness.items() %}\n  {% set n = level %}\n  {% if level is string %}\n    {% set s = level | trim %}\n    {% set n = (s[:-1] | float(0)) if s.endswith('%') else (s | float(0)) %}\n  {% endif %}\n  {% if n and e in resolved_entities and e not in hands_off_entities\n        and e not in lux_blocked_entities %}\n    {% set ns.items = ns.items + [e] %}\n  {% endif %}\n{% endfor %} {{ ns.items }}\n",
               "reachable_entities": "{{ resolved_entities | reject('is_state', 'unavailable') | reject('is_state', 'unknown')\n   | reject('in', hands_off_entities) | list }}\n",
               "turn_off_entities": "{{ reachable_entities | reject('in', idle_entities) | list }}\n",
               "idle_levels": "{% set ns = namespace(m={}) %} {% for e in idle_entities %}\n  {% set ns.m = dict(ns.m, **{e: idle_brightness[e]}) %}\n{% endfor %} {{ ns.m }}\n",
@@ -2037,7 +2037,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "36d5f97323db2464a7eb1702006a5739",
+            "schedule": "ad69f7005c651583a80faed4244ef38f",
             "room_target": {
               "entity_id": [
                 "light.stale",
@@ -2048,8 +2048,8 @@
         }
       },
       "context": {
-        "id": "01M7BZYZP0QSJJEKPWV4VHSGWR",
-        "parent_id": "01M7BZYSTG4H2Q93AQT88KYQF2",
+        "id": "01M7BZYZP00AZA70JZP615EMTS",
+        "parent_id": "01M7BZYSTGMVTC2Q9EHXCBA100",
         "user_id": null
       }
     }
