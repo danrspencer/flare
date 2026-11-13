@@ -195,10 +195,10 @@ class ScheduleData:
     points: list[dict[str, int]]
 
 
-def _compute_boundaries(hass: HomeAssistant, instance: ScheduleInstance) -> Boundaries:
-    """Today's boundary timestamps. A boundary not read falls back to its
-    default, as during a reload: a gap would crash phase_at() and wedge setup."""
-    values = read_schedule(hass, instance)
+def _compute_boundaries(hass: HomeAssistant, values: dict[str, str | int]) -> Boundaries:
+    """Today's boundary timestamps, from the schedule's values as read. A
+    boundary not read falls back to its default, as during a reload: a gap
+    would crash phase_at() and wedge setup."""
 
     def time_ts(key: str, days: int = 0) -> float:
         return _time_str_to_today_timestamp(values.get(key) or default_time(key).isoformat(), days)
@@ -260,8 +260,8 @@ class ScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         self._instance = instance
 
     async def _async_update_data(self) -> ScheduleData:
-        boundaries = _compute_boundaries(self.hass, self._instance)
         values = read_schedule(self.hass, self._instance)
+        boundaries = _compute_boundaries(self.hass, values)
         curve_kwargs = {key: values[key] for key in CURVE_KEYS if key in values}
         now_ts = dt_util.utcnow().timestamp()
         computed_phase = phase_at(
