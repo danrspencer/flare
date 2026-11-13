@@ -320,17 +320,7 @@ def async_setup_services(hass: HomeAssistant, entry: ConfigEntry, registry: Clai
         secondary_context_ids: dict = {}
         tasks = []
         for g in groups:
-            # Each list, what it's sent, and whether in two steps.
-            sends = [
-                (g.needing_off, g.target, False),
-                (g.combined, g.target, False),
-                (g.combined_rgb, g.target_rgb, False),
-                (g.two_step, g.target, True),
-                (g.two_step_rgb, g.target_rgb, True),
-            ]
-            for lights, target, two_step in sends:
-                if not lights:
-                    continue
+            for lights, target, two_step in g.sends():
                 written_entities.extend(lights)
                 write_targets.update(dict.fromkeys(lights, target))
                 if not two_step:
