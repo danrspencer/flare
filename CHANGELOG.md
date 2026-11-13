@@ -7,6 +7,19 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.1.1] - Unreleased
+
+### Fixed
+
+- **A Night set after midnight started an hour early or late on the day the clocks change.** The
+  schedule took tomorrow's Night to be 24 hours after today's, which it isn't on that day, so
+  Evening's fade into Night ran at the wrong time until midnight
+  ([#363](https://github.com/danrspencer/flare/issues/363)).
+- **Deleting a room's automation left its room behind.** If the room's lights were then given to
+  another automation, FLARE could let go of them while that room was still lit, and Activity
+  named the old room by an ID. The room now goes with its automation
+  ([#363](https://github.com/danrspencer/flare/issues/363)).
+
 ## [2.1.0] - Unreleased
 
 ### Added

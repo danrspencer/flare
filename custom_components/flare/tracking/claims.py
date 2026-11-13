@@ -48,6 +48,7 @@ diagnostics download."""
 from __future__ import annotations
 
 import copy
+import re
 from typing import Optional, Protocol
 
 from homeassistant.const import STATE_OFF, STATE_ON
@@ -96,6 +97,10 @@ SAVE_DELAY = 5
 OVERRIDE_LOG_SIZE = 50
 
 
+# An entity's registry id, which is what an entity's room is keyed by.
+_REGISTRY_ID = re.compile(r"[0-9a-f]{32}")
+
+
 def _baseline_target(state) -> Optional[dict]:
     """What an on light was showing just before FLARE's first write to it,
     as a target, so a fresh report of the same state still matches. An off
@@ -142,7 +147,9 @@ class ClaimRegistry:
         # they follow: exactly the claimed ones (_retrack).
         self._on_change = None
         self._on_registry_change = None
-        self._tracked: frozenset[str] = frozenset()
+        self._on_room_registry_change = None
+        # The claimed lights and the rooms' entities being followed.
+        self._tracked: tuple[frozenset[str], frozenset[str]] = (frozenset(), frozenset())
         self._untrack: list[CALLBACK_TYPE] = []
 
     async def async_load(self) -> None:
@@ -151,6 +158,7 @@ class ClaimRegistry:
         self.claims = dict(data.get("claims") or {})
         self.rooms = dict(data.get("rooms") or {})
         self.overrides = list(data.get("overrides") or [])[-OVERRIDE_LOG_SIZE:]
+        self._forget_deleted_rooms()
 
     @callback
     def _save(self) -> None:
@@ -178,6 +186,23 @@ class ClaimRegistry:
         """The entity a room is keyed by, as its current entity_id, else the key."""
         entry = er.async_get(self._hass).async_get(key)
         return entry.entity_id if entry is not None else key
+
+    @callback
+    def _forget_deleted_rooms(self) -> bool:
+        """Drops each room whose entity has left the registry, and the claims
+        only it held, which nothing else would release. True if any went."""
+        entities = er.async_get(self._hass)
+        gone = [key for key in self.rooms if _REGISTRY_ID.fullmatch(key) and entities.async_get(key) is None]
+        lights = {entity_id for key in gone for entity_id in self.rooms.pop(key).get("lights", ())}
+        for entity_id in lights:
+            if not self.rooms_of(entity_id):
+                self.claims.pop(entity_id, None)
+        return bool(gone)
+
+    def _room_entities(self) -> frozenset[str]:
+        """The entities the rooms are keyed by, as their current entity_ids."""
+        entities = er.async_get(self._hass)
+        return frozenset(entry.entity_id for key in self.rooms if (entry := entities.async_get(key)) is not None)
 
     def record(self, entity_id: str) -> _WriteRecord | None:
         """This light's claims, or None if it has none."""
@@ -284,23 +309,28 @@ class ClaimRegistry:
 
     @callback
     def _retrack(self) -> None:
-        """Follows exactly the claimed lights, once the set has changed."""
-        lights = frozenset(self.claims)
-        if self._on_change is None or lights == self._tracked:
+        """Follows exactly the claimed lights, and the rooms' entities'
+        registry entries, once either set has changed."""
+        lights, rooms = frozenset(self.claims), self._room_entities()
+        if self._on_change is None or (lights, rooms) == self._tracked:
             return
         self._stop_tracking()
-        self._tracked = lights
+        self._tracked = (lights, rooms)
         if lights:
             self._untrack = [
                 async_track_state_change_event(self._hass, sorted(lights), self._on_change),
                 async_track_entity_registry_updated_event(self._hass, sorted(lights), self._on_registry_change),
             ]
+        if rooms:
+            self._untrack.append(
+                async_track_entity_registry_updated_event(self._hass, sorted(rooms), self._on_room_registry_change)
+            )
 
     @callback
     def _stop_tracking(self) -> None:
         for untrack in self._untrack:
             untrack()
-        self._untrack, self._tracked = [], frozenset()
+        self._untrack, self._tracked = [], (frozenset(), frozenset())
 
     @callback
     def _join(self, key: str | None, written: list[str], room_entities: list[str] | None) -> None:
@@ -496,7 +526,10 @@ class ClaimRegistry:
           rooms whose claimed lights have all now reported and none is on.
 
         Their registry entries: a rename moves the claim and the light's place
-        in its rooms; a deletion drops both."""
+        in its rooms; a deletion drops both.
+
+        The rooms' entities' registry entries: a deletion drops the room, and
+        a rename is followed."""
         hass = self._hass
 
         @callback
@@ -548,13 +581,21 @@ class ClaimRegistry:
                     room["lights"] = sorted((set(room["lights"]) - {old}) | ({new} if new else set()))
             self._notify()
 
+        @callback
+        def _on_room_registry_changed(event: Event[er.EventEntityRegistryUpdatedData]) -> None:
+            if self._forget_deleted_rooms():
+                self._notify()
+            else:
+                self._retrack()
+
         self._on_change = _on_state_changed
         self._on_registry_change = _on_registry_changed
+        self._on_room_registry_change = _on_room_registry_changed
         self._retrack()
 
         @callback
         def _stop() -> None:
-            self._on_change = self._on_registry_change = None
+            self._on_change = self._on_registry_change = self._on_room_registry_change = None
             self._stop_tracking()
 
         return _stop

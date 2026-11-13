@@ -100,6 +100,11 @@ tomorrow's boundary, and Evening runs on through midnight until it. Every
 timestamp is shifted onto a clock where Night comes after Evening before
 comparing.
 
+**Tomorrow's Morning and Night are worked out by the calendar**
+(`Boundaries.next_morning`, `next_night`) and passed to the curve, since they
+aren't 24 hours after today's on a day the clocks change. `flare.compute_curve`
+takes only today's four, so it assumes 24 hours.
+
 ```mermaid
 gantt
     dateFormat HH:mm

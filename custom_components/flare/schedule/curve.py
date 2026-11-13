@@ -87,20 +87,35 @@ def kelvin_to_rgb(kelvin: float) -> tuple:
 SECONDS_PER_DAY = 86400
 
 
-def _night_clock(t: float, morning_ts: float, night_ts: float) -> tuple[float, float]:
+def _night_clock(
+    t: float, morning_ts: float, night_ts: float, next_night_ts: float | None = None
+) -> tuple[float, float]:
     """(t, night_ts) with Night after Evening. A Night set earlier in the day
     than Morning is after midnight, so it's tomorrow's boundary, and an
-    instant before it still belongs to yesterday's Evening."""
+    instant before it still belongs to yesterday's Evening.
+
+    next_night_ts is tomorrow's Night, which isn't 24 hours after today's
+    when the clocks change in between."""
     if night_ts >= morning_ts:
         return t, night_ts
     if t < night_ts:
-        t += SECONDS_PER_DAY
-    return t, night_ts + SECONDS_PER_DAY
+        # Yesterday's Evening, moved onto the same clock as today's Night.
+        return t + SECONDS_PER_DAY, night_ts + SECONDS_PER_DAY
+    return t, night_ts + SECONDS_PER_DAY if next_night_ts is None else next_night_ts
 
 
-def phase_at(t: float, morning_ts: float, day_start_ts: float, evening_ts: float, night_ts: float) -> Phase:
-    """Which phase an instant falls in, given today's boundaries."""
-    t, night_ts = _night_clock(t, morning_ts, night_ts)
+def phase_at(
+    t: float,
+    morning_ts: float,
+    day_start_ts: float,
+    evening_ts: float,
+    night_ts: float,
+    *,
+    next_night_ts: float | None = None,
+) -> Phase:
+    """Which phase an instant falls in, given today's boundaries, and
+    tomorrow's Night where it isn't 24 hours after today's."""
+    t, night_ts = _night_clock(t, morning_ts, night_ts, next_night_ts)
     if t < morning_ts:
         return Phase.NIGHT
     if t < day_start_ts:
@@ -155,9 +170,10 @@ def phase_marks(morning_ts: float, day_start_ts: float, evening_ts: float, night
 _NEXT_PHASE = {phase: PHASE_ORDER[(i + 1) % len(PHASE_ORDER)] for i, phase in enumerate(PHASE_ORDER)}
 
 
-def _phase_span(day_phase: str, now_ts: float, boundaries: dict) -> tuple:
+def _phase_span(day_phase: str, now_ts: float, boundaries: dict, next_morning_ts: float | None = None) -> tuple:
     """(start, end) of the phase's own span, on _night_clock()'s clock.
-    Night is one span crossing midnight, starting either yesterday or today."""
+    Night is one span crossing midnight, starting either yesterday or today,
+    and ending at next_morning_ts, tomorrow's Morning, when it starts today."""
     if day_phase == Phase.MORNING:
         return boundaries["morning"], boundaries["day"]
     if day_phase == Phase.DAY:
@@ -165,7 +181,7 @@ def _phase_span(day_phase: str, now_ts: float, boundaries: dict) -> tuple:
     if day_phase == Phase.EVENING:
         return boundaries["evening"], boundaries["night"]
     if now_ts >= boundaries["night"]:
-        return boundaries["night"], boundaries["morning"] + SECONDS_PER_DAY
+        return boundaries["night"], boundaries["morning"] + SECONDS_PER_DAY if next_morning_ts is None else next_morning_ts
     return boundaries["night"] - SECONDS_PER_DAY, boundaries["morning"]
 
 
@@ -175,6 +191,8 @@ def _value_at(
     boundaries: dict,
     values: dict,
     duration_minutes: float,
+    next_morning_ts: float | None = None,
+    next_night_ts: float | None = None,
 ) -> float:
     """This phase's value now, easing toward the next phase's over the last
     `duration_minutes` of the phase, so the next value arrives exactly at
@@ -184,9 +202,9 @@ def _value_at(
     span. The factor is clamped so it can't extrapolate, and strictly past
     the span it returns the phase's own value rather than the next phase's."""
     own = values[day_phase]
-    now_ts, night_ts = _night_clock(now_ts, boundaries["morning"], boundaries["night"])
+    now_ts, night_ts = _night_clock(now_ts, boundaries["morning"], boundaries["night"], next_night_ts)
     boundaries = {**boundaries, "night": night_ts}
-    span_start, span_end = _phase_span(day_phase, now_ts, boundaries)
+    span_start, span_end = _phase_span(day_phase, now_ts, boundaries, next_morning_ts)
     duration = min(max(duration_minutes, 0) * 60, max(span_end - span_start, 0))
     if duration <= 0:
         return own
@@ -213,6 +231,8 @@ def brightness_for_phase(
     day_brightness_transition: float = DEFAULT_DAY_BRIGHTNESS_TRANSITION,
     evening_brightness_transition: float = DEFAULT_EVENING_BRIGHTNESS_TRANSITION,
     night_brightness_transition: float = DEFAULT_NIGHT_BRIGHTNESS_TRANSITION,
+    next_morning_ts: float | None = None,
+    next_night_ts: float | None = None,
 ) -> int:
     """Target brightness (0-255) for the given phase/instant."""
     return round(
@@ -232,6 +252,8 @@ def brightness_for_phase(
                 Phase.EVENING: evening_brightness_transition,
                 Phase.NIGHT: night_brightness_transition,
             }[day_phase],
+            next_morning_ts,
+            next_night_ts,
         )
     )
 
@@ -252,6 +274,8 @@ def kelvin_for_phase(
     day_kelvin_transition: float = DEFAULT_DAY_KELVIN_TRANSITION,
     evening_kelvin_transition: float = DEFAULT_EVENING_KELVIN_TRANSITION,
     night_kelvin_transition: float = DEFAULT_NIGHT_KELVIN_TRANSITION,
+    next_morning_ts: float | None = None,
+    next_night_ts: float | None = None,
 ) -> int:
     """Target colour temperature (Kelvin) for the given phase/instant."""
     return round(
@@ -271,6 +295,8 @@ def kelvin_for_phase(
                 Phase.EVENING: evening_kelvin_transition,
                 Phase.NIGHT: night_kelvin_transition,
             }[day_phase],
+            next_morning_ts,
+            next_night_ts,
         )
     )
 
@@ -282,17 +308,24 @@ def targets_for_phase(
     day_start_ts: float,
     night_ts: float,
     morning_ts: float,
+    *,
+    next_morning_ts: float | None = None,
+    next_night_ts: float | None = None,
     **curve_values,
 ) -> dict:
     """brightness/kelvin/rgb_color for a phase. Takes the phase rather than
     computing it, so the caller can substitute an override. Curve values
-    pass through as kwargs; unknown keys raise."""
+    pass through as kwargs; unknown keys raise.
+
+    next_morning_ts / next_night_ts are tomorrow's boundaries, 24 hours
+    after today's unless given: they aren't when the clocks change."""
     boundaries = (now_ts, morning_ts, day_start_ts, evening_ts, night_ts)
+    tomorrow = {"next_morning_ts": next_morning_ts, "next_night_ts": next_night_ts}
     brightness = brightness_for_phase(
-        day_phase, *boundaries, **{k: v for k, v in curve_values.items() if "brightness" in k}
+        day_phase, *boundaries, **tomorrow, **{k: v for k, v in curve_values.items() if "brightness" in k}
     )
     kelvin = kelvin_for_phase(
-        day_phase, *boundaries, **{k: v for k, v in curve_values.items() if "kelvin" in k}
+        day_phase, *boundaries, **tomorrow, **{k: v for k, v in curve_values.items() if "kelvin" in k}
     )
     return {
         "brightness": brightness,

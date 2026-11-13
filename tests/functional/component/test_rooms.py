@@ -112,6 +112,45 @@ async def test_a_room_named_by_an_automation_survives_its_rename(hass: HomeAssis
     assert registry.room_entity_id(entity.id) == "automation.kitchen_lighting"
 
 
+async def test_a_deleted_automations_room_goes_with_it(hass: HomeAssistant):
+    """With the claims only it held; a light another room has too keeps its claim."""
+    _entry, registry, _ = await _setup(hass)
+    entities = er.async_get(hass)
+    kitchen = entities.async_get_or_create("automation", "automation", "kitchen", suggested_object_id="kitchen")
+    for light in ("light.a", "light.shared"):
+        _light(hass, light)
+        await _record(registry, kitchen.entity_id, light, "ctx-1", ASKED)
+    await _record(registry, HALL, "light.shared", "ctx-2", ASKED)
+    unsub = registry.async_start_listening()
+
+    entities.async_remove(kitchen.entity_id)
+    await hass.async_block_till_done()
+
+    assert registry.room_keys() == [HALL]
+    assert set(registry.all_records()) == {"light.shared"}
+    unsub()
+
+
+async def test_a_room_whose_automation_is_renamed_is_still_dropped_when_it_is_deleted(hass: HomeAssistant):
+    _entry, registry, _ = await _setup(hass)
+    entities = er.async_get(hass)
+    kitchen = entities.async_get_or_create("automation", "automation", "kitchen", suggested_object_id="kitchen")
+    _light(hass, "light.a")
+    await _record(registry, kitchen.entity_id, "light.a", "ctx-1", ASKED)
+    unsub = registry.async_start_listening()
+
+    entities.async_update_entity(kitchen.entity_id, new_entity_id="automation.kitchen_lighting")
+    await hass.async_block_till_done()
+    assert registry.room_keys() == [kitchen.id]
+
+    entities.async_remove("automation.kitchen_lighting")
+    await hass.async_block_till_done()
+
+    assert registry.room_keys() == []
+    assert registry.all_records() == {}
+    unsub()
+
+
 async def test_counters_split_the_lights_by_status(hass: HomeAssistant):
     _entry, registry, added = await _setup(hass)
     controlled = _entity(added, "sensor.flare_controlled_lights")

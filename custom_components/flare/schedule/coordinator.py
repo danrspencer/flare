@@ -150,15 +150,16 @@ def read_schedule(hass: HomeAssistant, instance: ScheduleInstance) -> dict[str, 
     return values
 
 
-def _time_str_to_today_timestamp(time_str: str | None) -> float | None:
-    """A time entity's "HH:MM:SS" as today's local timestamp."""
+def _time_str_to_today_timestamp(time_str: str | None, days: int = 0) -> float | None:
+    """A time entity's "HH:MM:SS" as today's local timestamp, or that of the
+    day `days` after it. By the calendar, so the clocks changing is allowed for."""
     if not time_str:
         return None
     t = dt_util.parse_time(time_str)
     if t is None:
         return None
-    now_local = dt_util.now()
-    return now_local.replace(hour=t.hour, minute=t.minute, second=t.second, microsecond=0).timestamp()
+    local = dt_util.now() + timedelta(days=days)
+    return local.replace(hour=t.hour, minute=t.minute, second=t.second, microsecond=0).timestamp()
 
 
 @dataclass(frozen=True)
@@ -171,6 +172,13 @@ class Boundaries:
     night: float
     evening_earliest: float
     evening_latest: float
+    # Tomorrow's, which the curve eases toward late in the day.
+    next_morning: float
+    next_night: float
+
+    def tomorrow(self) -> dict[str, float]:
+        """targets_for_phase's keywords for tomorrow's boundaries."""
+        return {"next_morning_ts": self.next_morning, "next_night_ts": self.next_night}
 
 
 @dataclass(frozen=True)
@@ -192,8 +200,8 @@ def _compute_boundaries(hass: HomeAssistant, instance: ScheduleInstance) -> Boun
     default, as during a reload: a gap would crash phase_at() and wedge setup."""
     values = read_schedule(hass, instance)
 
-    def time_ts(key: str) -> float:
-        return _time_str_to_today_timestamp(values.get(key) or default_time(key).isoformat())
+    def time_ts(key: str, days: int = 0) -> float:
+        return _time_str_to_today_timestamp(values.get(key) or default_time(key).isoformat(), days)
 
     morning_ts = time_ts(MORNING_TIME)
     day_ts = time_ts(DAY_TIME)
@@ -214,6 +222,8 @@ def _compute_boundaries(hass: HomeAssistant, instance: ScheduleInstance) -> Boun
         night=night_ts,
         evening_earliest=earliest_ts,
         evening_latest=latest_ts,
+        next_morning=time_ts(MORNING_TIME, days=1),
+        next_night=time_ts(NIGHT_TIME, days=1),
     )
 
 
@@ -223,8 +233,10 @@ def _compute_curve_points(boundaries: Boundaries, curve_kwargs: dict[str, int]) 
     points = []
     for i in range(289):
         t = midnight + i * 300
-        phase = phase_at(t, morning_ts, day_ts, evening_ts, night_ts)
-        targets = targets_for_phase(phase, t, evening_ts, day_ts, night_ts, morning_ts, **curve_kwargs)
+        phase = phase_at(t, morning_ts, day_ts, evening_ts, night_ts, next_night_ts=boundaries.next_night)
+        targets = targets_for_phase(
+            phase, t, evening_ts, day_ts, night_ts, morning_ts, **boundaries.tomorrow(), **curve_kwargs
+        )
         points.append(
             {
                 "t": int(t),
@@ -252,7 +264,14 @@ class ScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
         values = read_schedule(self.hass, self._instance)
         curve_kwargs = {key: values[key] for key in CURVE_KEYS if key in values}
         now_ts = dt_util.utcnow().timestamp()
-        computed_phase = phase_at(now_ts, boundaries.morning, boundaries.day, boundaries.evening, boundaries.night)
+        computed_phase = phase_at(
+            now_ts,
+            boundaries.morning,
+            boundaries.day,
+            boundaries.evening,
+            boundaries.night,
+            next_night_ts=boundaries.next_night,
+        )
         phase = _phase_override(self.hass, self._instance) or computed_phase
         targets = targets_for_phase(
             phase,
@@ -261,6 +280,7 @@ class ScheduleCoordinator(DataUpdateCoordinator[ScheduleData]):
             boundaries.day,
             boundaries.night,
             boundaries.morning,
+            **boundaries.tomorrow(),
             **curve_kwargs,
         )
         return ScheduleData(

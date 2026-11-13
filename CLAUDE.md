@@ -378,7 +378,11 @@ light is already in its rooms; an off one needs no claim to be taken on). A room
 by its entity's registry id (`room_key()`), so renaming the automation
 keeps it. A room's lights are the latest `room_entities`, plus what it
 wrote and any light it still claims (`_join`), so every claim it made can
-be released with it. Rooms are caller-supplied, never resolved: guessing
+be released with it. A room keyed by an entity goes when that entity leaves
+the registry (`_forget_deleted_rooms`, by the listener and at load), with
+the claims only it held; left behind, it released its old lights from under
+a new room. A key is taken for a registry id by its shape (32 hex), since a
+room_id needn't be an entity. Rooms are caller-supplied, never resolved: guessing
 a zone from areas was removed at the user's direction (*"there's just too
 much weird behaviour if it gets the wrong one"*), and a picker can split
 an area across automations anyway.
@@ -807,6 +811,12 @@ Every literal is a keyword-only parameter with a named default
   started Night at sunset. Strictly earlier: Night equal to Morning keeps
   the out-of-order meaning (`phase_marks`). The card and the docs'
   `curve.js` mirror it, held by `test_js_parity.py`.
+- **Tomorrow's Morning and Night come from the coordinator, by the
+  calendar** (`Boundaries.next_morning` / `next_night`, the curve's
+  `next_morning_ts` / `next_night_ts`): on a day the clocks change they
+  aren't 24 hours after today's, and a Night at 00:30 began an hour out.
+  Left at 24 hours: `flare.compute_curve`, the card's tooltip phase and the
+  289 chart points.
 - `day_phase` is a **parameter**, not derived from the time, because a
   manual override passes a phase the clock disagrees with. Every ramp
   clamps its factor for that reason.

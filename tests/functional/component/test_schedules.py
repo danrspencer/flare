@@ -97,6 +97,29 @@ async def test_a_boundary_change_applies_at_once(schedule, hass: HomeAssistant):
     assert hass.states.get(SENSOR).state == "Morning"
 
 
+@pytest.mark.parametrize(
+    "late_evening",
+    [datetime(2026, 3, 29, 22, 45, tzinfo=dt_util.UTC), datetime(2026, 10, 25, 23, 45, tzinfo=dt_util.UTC)],
+    ids=["clocks went forward", "clocks went back"],
+)
+async def test_a_night_after_midnight_starts_on_time_the_day_the_clocks_change(
+    stub_entry_setup, hass: HomeAssistant, late_evening
+):
+    """23:45 local, with Night at 00:30: a quarter of the way through
+    Evening's last hour, though tomorrow's 00:30 isn't 24 hours after today's."""
+    await hass.config.async_set_time_zone("Europe/London")
+    with freeze_time(late_evening, real_asyncio=True):
+        await _setup(hass)
+        await hass.services.async_call(
+            "time", "set_value", {"entity_id": "time.ground_floor_night_time", "time": time(0, 30)}, blocking=True
+        )
+        await hass.async_block_till_done()
+
+        assert dt_util.now().strftime("%H:%M") == "23:45"
+        assert hass.states.get(SENSOR).state == "Evening"
+        assert _attr(hass, "brightness") == 155
+
+
 class TestPhaseEvent:
     """What the blueprint triggers on: one event per real phase change."""
 
