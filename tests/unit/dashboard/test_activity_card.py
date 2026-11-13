@@ -90,6 +90,7 @@ return {{
   subscribed,
   rows,
   overriddenOnly,
+  kept: card._entries.map((e) => e.when),
   navigated,
   kinds,
   shown: visibleEntries(input.events, kinds, 'all', since).map((e) => e.message),
@@ -122,6 +123,12 @@ def test_an_events_kind_is_the_entity_it_is_filed_under(result):
 def test_only_flares_events_in_the_window_are_shown_newest_first(result):
     """Not the Clear press's own state change, nor another device's entries."""
     assert result["shown"] == ["cleared 6 lights", "released Hall Spot to something else", "now controlling 6 lights"]
+
+
+def test_entries_from_before_the_window_are_not_kept(result):
+    """The stream runs for as long as the page is open."""
+    assert len(result["kept"]) == len(EVENTS) - 1
+    assert min(result["kept"]) > NOW - DAY
 
 
 def test_a_kind_can_be_shown_on_its_own(result):

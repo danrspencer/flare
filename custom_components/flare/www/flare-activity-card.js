@@ -199,7 +199,11 @@ class FlareActivityCard extends HTMLElement {
   _received(message) {
     if (message && Array.isArray(message.events) && message.events.length) {
       const seen = new Set(this._entries.map(entryKey));
-      this._entries = this._entries.concat(message.events.filter((e) => !seen.has(entryKey(e))));
+      // Nothing from before the window is kept: the stream never ends.
+      const since = Date.now() / 1000 - this._hours() * 3600;
+      this._entries = this._entries
+        .concat(message.events.filter((e) => !seen.has(entryKey(e))))
+        .filter((e) => e.when >= since);
     }
     this._render();
   }
