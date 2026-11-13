@@ -18,7 +18,7 @@ STATES = {
     "sensor.some_colour_temp": {"state": "4000", "attributes": {"unit_of_measurement": "K"}},
 }
 SUPPORTED = {"number.downstairs_morning_kelvin", "number.some_other_integration_temp"}
-PAINT_KELVINS = [1000, 5500, 10000]
+PAINT_KELVINS = [1000, 3200, 6667, 10000]
 
 
 @pytest.fixture(scope="module")
@@ -54,10 +54,22 @@ def test_not_offered_without_an_entity(result):
 
 
 def test_the_fill_is_the_colour_of_the_value(result):
-    assert result["colors"] == [
-        "color-mix(in srgb, rgb({}, {}, {}) 85%, var(--primary-text-color))".format(*rgb) for rgb in result["rgbs"]
-    ]
+    for color, rgb in zip(result["colors"], result["rgbs"]):
+        assert color.startswith("color-mix(in srgb, rgb({}, {}, {}) ".format(*rgb))
+        assert color.endswith("%, var(--primary-text-color))")
     assert len(set(result["colors"])) == len(PAINT_KELVINS)
+
+
+def text_mix(color):
+    return 100 - int(color.split(") ")[1].split("%")[0])
+
+
+def test_only_a_near_white_takes_much_of_the_text_colour(result):
+    """A near-white needs it to show on a light card; an orange or blue already shows."""
+    mixes = dict(zip(PAINT_KELVINS, map(text_mix, result["colors"])))
+    assert mixes[6667] >= 12
+    assert mixes[1000] == mixes[3200] == 0
+    assert mixes[10000] <= 5
 
 
 def test_fill_and_track_use_the_same_colour_function():

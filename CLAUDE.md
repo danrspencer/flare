@@ -1411,9 +1411,11 @@ internal, is an accepted risk; if it breaks, follow
 `customTileFeatures`). The kelvin feature imports `kelvinToRgb` from the
 curve card, so a slider's colour and the chart agree by construction.
 
-- **A slider's colour has 15% of `--primary-text-color` mixed in**
+- **A slider's colour has up to 15% of `--primary-text-color` mixed in**
   (`color-mix`), so a near-white shows on a light card and the theme
-  decides which way it moves. Measuring the card's background in JS and
+  decides which way it moves. The share falls off steeply with
+  saturation: a flat 15% turned the oranges brown and greyed the blues on
+  a light theme (user's call). Measuring the card's background in JS and
   darkening to a contrast ratio shipped once and was replaced by it.
 
 - **The drag handle can't be recoloured**: it's hardcoded white with no
