@@ -72,6 +72,51 @@ async def test_apply_lighting_needs_no_brightness_when_every_light_has_a_level(s
     assert turn_on[-1].data["brightness"] == 50
 
 
+async def test_apply_lighting_needs_brightness_for_a_light_scaled_by_its_level(setup_integration: HomeAssistant):
+    """'x0.5' is half of `brightness`, so it can't stand in for it."""
+    hass = setup_integration
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    with pytest.raises(ServiceValidationError, match="light.a"):
+        await hass.services.async_call(
+            DOMAIN,
+            "apply_lighting",
+            {"entities": ["light.a"], "brightness_levels": {"light.a": "x0.5"}, "color_temp_kelvin": 3200},
+            blocking=True,
+        )
+
+
+async def test_apply_lighting_takes_percent_and_multiplier_levels(setup_integration: HomeAssistant):
+    hass = setup_integration
+    turn_on = async_mock_service(hass, "light", "turn_on")
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+    set_light(hass, "light.b", "off", supported_color_modes=CT)
+
+    await hass.services.async_call(
+        DOMAIN,
+        "apply_lighting",
+        {"entities": ["light.a", "light.b"], "brightness_levels": {"light.a": "50%", "light.b": "x0.5"},
+         "brightness": 200, "color_temp_kelvin": 3200},
+        blocking=True,
+    )
+
+    sent = {e: call.data["brightness"] for call in turn_on for e in call.data["entity_id"]}
+    assert sent == {"light.a": 127, "light.b": 100}
+
+
+async def test_apply_lighting_rejects_a_level_it_cannot_read(setup_integration: HomeAssistant):
+    hass = setup_integration
+    set_light(hass, "light.a", "off", supported_color_modes=CT)
+
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(
+            DOMAIN,
+            "apply_lighting",
+            {"entities": ["light.a"], "brightness_levels": {"light.a": "half"}, "color_temp_kelvin": 3200},
+            blocking=True,
+        )
+
+
 async def test_apply_lighting_non_numeric_color_temp_kelvin_raises(setup_integration: HomeAssistant):
     hass = setup_integration
     set_light(hass, "light.a", "off", supported_color_modes=CT)

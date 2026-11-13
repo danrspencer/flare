@@ -90,8 +90,12 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | Value | Effect |
 |---|---|
 | `1`–`255` | Sets the light to this brightness. |
-| `0` | Turns the light off. |
+| `'50%'` | Sets the light to this percentage of full brightness, rounded down, so `'50%'` is 127 and `'100%'` is 255. |
+| `'x0.5'` | Sets the light to `brightness` multiplied by this, so `'x0.5'` is half of it. Needs `brightness`. |
+| `0`, `'0%'` or `'x0'` | Turns the light off. |
 | `null` or `false` | Leaves the light alone, whether it's on or off. |
+
+A level above full brightness, such as `'150%'` or `'x2'` on a bright light, is sent as 255.
 
 ### Response data
 

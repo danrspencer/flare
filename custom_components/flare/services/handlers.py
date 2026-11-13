@@ -32,7 +32,7 @@ from ..const import (
 )
 from ..schedule.coordinator import CURVE_KEYS
 from ..schedule.curve import phase_at, targets_for_phase
-from .grouping import EntityLookup, Group, build_groups
+from .grouping import EntityLookup, Group, build_groups, needs_brightness, parse_level
 from ..tracking.override_protection import is_blocked
 from .scenes import SceneLookup, compute_scene_coverage
 from .two_step import DEFAULT_TWO_STEP_MODEL_PATTERNS, parse_patterns
@@ -48,8 +48,16 @@ ROOM_ID_FIELD = {vol.Optional(ATTR_ROOM_ID): vol.Any(None, cv.string)}
 
 # Entity ID to a 0-255 level. null/false hand the light over, so they're
 # kept as they are; vol.Any tries them first, before the number coerces.
+def _level(value):
+    """A 0-255 level, '50%' or 'x0.5', parsed as grouping reads it."""
+    try:
+        return parse_level(value)
+    except (TypeError, ValueError) as err:
+        raise vol.Invalid(f"not a brightness level: {value!r}") from err
+
+
 BRIGHTNESS_LEVELS = vol.Schema(
-    {cv.entity_id: vol.Any(None, False, cv.positive_float)}
+    {cv.entity_id: vol.Any(None, False, _level)}
 )
 
 # How close a light must be to match: unset or None takes the Settings
@@ -202,10 +210,12 @@ def _brightness(call: ServiceCall) -> int | None:
     """`brightness`, which is only optional if every light has a level."""
     brightness = call.data.get("brightness")
     if brightness is None:
-        unlevelled = [e for e in call.data[ATTR_ENTITIES] if e not in call.data["brightness_levels"]]
+        unlevelled = [
+            e for e in call.data[ATTR_ENTITIES] if needs_brightness(e, call.data["brightness_levels"])
+        ]
         if unlevelled:
             raise ServiceValidationError(
-                f"brightness is required for lights not in brightness_levels: {', '.join(unlevelled)}"
+                f"brightness is required for lights not in brightness_levels or scaled by one: {', '.join(unlevelled)}"
             )
     return brightness
 

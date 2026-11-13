@@ -7,6 +7,15 @@ The version in `custom_components/flare/manifest.json` is what
 HACS shows as installed, so it and the release tag are checked against each other in
 CI — see `.github/workflows/release.yml`.
 
+## [2.2.0] - Unreleased
+
+### Added
+
+- **Brightness levels as a percentage or a multiplier.** In the Brightness Template, `'50%'`
+  sets a light to half of full brightness, and `'x0.5'` to half of the schedule's, so it keeps
+  following the curve. The Idle Brightness Template takes percentages too, and
+  `flare.apply_lighting`'s `brightness_levels` takes both.
+
 ## [2.1.1] - Unreleased
 
 ### Fixed
