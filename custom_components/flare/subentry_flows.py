@@ -8,7 +8,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
-from homeassistant.config_entries import ConfigEntry, ConfigSubentryFlow, SubentryFlowResult
+from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers import entity_registry as er, selector
 from homeassistant.util import slugify
@@ -23,6 +23,7 @@ from .const import (
     CONF_LIGHTS_INPUT_KIND,
     CONF_LIGHTS_TARGET,
 )
+from .names import name_taken
 from .flares.automation import (
     TARGET,
     async_automation_blueprint,
@@ -47,14 +48,11 @@ class SensorSubentryFlow(ConfigSubentryFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input[CONF_NAME].strip()
-            slug = slugify(name)
-            # Slugified, to match the entity_id prefix schedule_instances() derives.
-            for subentry in self._get_entry().subentries.values():
-                if slugify(subentry.title) == slug:
-                    errors[CONF_NAME] = "already_configured"
-                    break
-            if not errors:
-                return self.async_create_entry(title=name, unique_id=slug or None, data={})
+            # By slug, which is the entity_id prefix schedule_instances() derives.
+            if name_taken(self._get_entry(), name):
+                errors[CONF_NAME] = "already_configured"
+            else:
+                return self.async_create_entry(title=name, unique_id=slugify(name) or None, data={})
 
         return self.async_show_form(
             step_id="user",
@@ -189,7 +187,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input[CONF_NAME].strip()
-            if _name_taken(self._get_entry(), name):
+            if name_taken(self._get_entry(), name):
                 errors[CONF_NAME] = "already_configured"
             else:
                 return self.async_create_entry(
@@ -235,7 +233,7 @@ class FlareSubentryFlow(ConfigSubentryFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input[CONF_NAME].strip()
-            if _name_taken(self._get_entry(), name, skip=subentry.subentry_id):
+            if name_taken(self._get_entry(), name, skip=subentry.subentry_id):
                 errors[CONF_NAME] = "already_configured"
             else:
                 # Settings flares no longer have.
@@ -278,11 +276,4 @@ _TARGET_SCHEMA = vol.Schema(
 def _inputs_schema(kinds: dict[str, str]) -> vol.Schema:
     return vol.Schema(
         {vol.Required(CONF_LIGHTS_INPUT): selector.SelectSelector(selector.SelectSelectorConfig(options=sorted(kinds)))}
-    )
-
-
-def _name_taken(entry: ConfigEntry, name: str, skip: str | None = None) -> bool:
-    slug = slugify(name)
-    return any(
-        slugify(subentry.title) == slug for subentry_id, subentry in entry.subentries.items() if subentry_id != skip
     )
