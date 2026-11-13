@@ -233,6 +233,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return await hass.config_entries.async_unload_platforms(entry, FLARE_PLATFORMS)
 
     if entry.data.get(CONF_ENTRY_TYPE) == ENTRY_TYPE_SETTINGS:
+        # Not left to the delayed save, which a reload would get ahead of.
+        await entry.runtime_data.async_save()
         return await hass.config_entries.async_unload_platforms(entry, SETTINGS_PLATFORMS)
 
     return await hass.config_entries.async_unload_platforms(entry, SCHEDULE_PLATFORMS)

@@ -171,6 +171,35 @@ async def test_it_goes_with_its_light(stub_entry_setup, hass: HomeAssistant):
     assert er.async_get(hass).async_get("sensor.lamp_flare_status") is None
 
 
+async def test_one_whose_light_went_while_flare_was_unloaded_goes_at_the_next_setup(
+    stub_entry_setup, hass: HomeAssistant
+):
+    """And the other lights still get theirs."""
+    entry = await _set_up(hass)
+    lamp, spot = _bulb(hass, "lamp"), _bulb(hass, "spot")
+    await _apply(hass, [lamp, spot])
+    assert await hass.config_entries.async_unload(entry.entry_id)
+
+    er.async_get(hass).async_remove(lamp)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert er.async_get(hass).async_get("sensor.lamp_flare_status") is None
+    assert hass.states.get("sensor.spot_flare_status").state == "controlled"
+
+
+async def test_a_claim_made_just_before_a_reload_is_kept(stub_entry_setup, hass: HomeAssistant):
+    entry = await _set_up(hass)
+    lamp = _bulb(hass, "lamp")
+    await _apply(hass, [lamp])
+
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert hass.states.get("sensor.lamp_flare_status").state == "controlled"
+    assert set(entry.runtime_data.all_records()) == {lamp}
+
+
 async def test_it_comes_back_after_a_reload_with_no_claims_left(stub_entry_setup, hass: HomeAssistant):
     entry = await _set_up(hass)
     lamp = _bulb(hass, "lamp")
