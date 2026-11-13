@@ -1,7 +1,7 @@
 /**
  * FLARE's Activity: what each room did, from the logbook's live stream for
  * FLARE's device, coloured and filtered by kind. An event's kind is the
- * entity it's filed under (sensor.py's _filed_under): the Controlled or
+ * entity it's filed under (tracking/events.py's _filed_under): the Controlled or
  * Overridden count, or Clear for a release.
  *
  * Each row is Home Assistant's own `ha-logbook-entry`, with its dot in the
@@ -199,7 +199,11 @@ class FlareActivityCard extends HTMLElement {
   _received(message) {
     if (message && Array.isArray(message.events) && message.events.length) {
       const seen = new Set(this._entries.map(entryKey));
-      this._entries = this._entries.concat(message.events.filter((e) => !seen.has(entryKey(e))));
+      // Nothing from before the window is kept: the stream never ends.
+      const since = Date.now() / 1000 - this._hours() * 3600;
+      this._entries = this._entries
+        .concat(message.events.filter((e) => !seen.has(entryKey(e))))
+        .filter((e) => e.when >= since);
     }
     this._render();
   }

@@ -71,7 +71,7 @@ The order inside the Settings entry matters.
 1. **Claims load before the platforms**, so the sensors start with them.
 2. **The services are registered before any platform**, so nothing can
    call one that isn't there yet.
-3. **The claim events start inside the sensor platform** (`ClaimEvents.start()`).
+3. **The claim events start inside the sensor platform** (`ClaimEvents.start()`, from `tracking/events.py`).
    They seed every light's status on the spot, which also notes the
    mismatch of a claim restored from before a restart.
 4. **Only after that** are rooms restored dark released, so the release is
@@ -137,8 +137,8 @@ flowchart LR
 
 `ClaimEvents` is reached directly, through the `ClaimListener` protocol,
 rather than by signal, because it must refresh before the sensors redraw.
-`_notify()` calls it first. It's a protocol so `tracking/` needn't import
-`sensor.py`.
+`_notify()` calls it first. It's a protocol because `tracking/events.py`
+imports `claims.py`, not the other way round.
 
 ## Contexts: telling FLARE's writes apart
 

@@ -50,6 +50,7 @@ from .const import (
 )
 from .flares.automation import TARGET, automation_ref
 from .flares.identity import without_flares
+from .names import name_taken
 from .services.targets import target_entities
 
 _WRITE_LOCK = f"{DOMAIN}_automations_lock"
@@ -140,9 +141,8 @@ def add_room_flares(hass: HomeAssistant, rooms: dict[str, str]) -> None:
 def room_flare(hass: HomeAssistant, entry: ConfigEntry, entity_id: str, name: str) -> ConfigSubentry:
     """A flare over a FLARE room automation, in its area. A taken name gets a
     number."""
-    taken = {slugify(subentry.title) for subentry in entry.subentries.values()}
     title, n = name, 2
-    while slugify(title) in taken:
+    while name_taken(entry, title):
         title, n = f"{name} {n}", n + 1
     registry_entry = er.async_get(hass).async_get(entity_id)
     return ConfigSubentry(

@@ -32,6 +32,7 @@ custom_components/flare/
 ├── dashboard_reload.py   getting the dashboard into a page open during setup
 ├── logbook.py            how the claim events read in the logbook
 ├── diagnostics.py        the Settings entry's diagnostics download
+├── names.py              whether a schedule's or flare's name is free
 ├── const.py              shared constants, and is_reachable()
 │
 ├── sensor.py  select.py  number.py  time.py      entity platforms: HA imports
@@ -44,6 +45,7 @@ custom_components/flare/
 ├── tracking/             who owns a light, and when each area ticks
 │   ├── override_protection.py   classify(): the decision table, pure
 │   ├── claims.py           ClaimRegistry: claims, rooms, the Store, the listener
+│   ├── events.py           ClaimEvents: the claim events, and FLARE's own device
 │   ├── matching.py         does a light show a target? (the one value matcher)
 │   └── ticker.py           TickScheduler: each area's tick, spaced apart
 ├── flares/               lights over automations

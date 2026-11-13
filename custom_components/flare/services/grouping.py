@@ -107,6 +107,18 @@ class Group:
     # is sent to them.
     already_set: list = field(default_factory=list)
 
+    def sends(self) -> list[tuple[list, dict, bool]]:
+        """Each write the group needs: (lights, what they're sent, whether
+        in two steps). An off-group's target is {"state": "off"}."""
+        every = [
+            (self.needing_off, self.target, False),
+            (self.combined, self.target, False),
+            (self.combined_rgb, self.target_rgb, False),
+            (self.two_step, self.target, True),
+            (self.two_step_rgb, self.target_rgb, True),
+        ]
+        return [send for send in every if send[0]]
+
 
 def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optional[int]) -> Optional[int]:
     """The brightness `entity_id` is sent: 0 for off, None for hands off.

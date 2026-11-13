@@ -14,7 +14,7 @@ from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.flare.const import CONF_ENTRY_TYPE, DOMAIN, ENTRY_TYPE_SETTINGS
 from custom_components.flare.diagnostics import async_get_config_entry_diagnostics
-from custom_components.flare.sensor import _classify_tracked
+from custom_components.flare.tracking.events import classify_tracked
 from custom_components.flare.tracking.claims import SAVE_DELAY, STORAGE_KEY, STORAGE_VERSION, ClaimRegistry
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE
 from tests.support.claims import after_the_grace
@@ -67,7 +67,7 @@ def _light(hass: HomeAssistant, entity_id: str, state: str, **attrs) -> None:
 
 
 def _status(hass: HomeAssistant, registry: ClaimRegistry, entity_id: str) -> str:
-    return _classify_tracked(registry, entity_id)
+    return classify_tracked(registry, entity_id)
 
 
 async def test_a_write_is_saved_without_waiting_for_shutdown(hass: HomeAssistant, hass_storage: dict[str, Any]):

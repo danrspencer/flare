@@ -43,7 +43,7 @@ CONF_TWO_STEP_MODELS = "two_step_models"
 SUBENTRY_TYPE_ZONE = "state"
 
 # Fired when a tracked light becomes "overridden", with both claims and
-# the live values at that moment (see sensor.py's _refresh_statuses).
+# the live values at that moment (see tracking/events.py's _refresh_statuses).
 EVENT_LIGHT_OVERRIDDEN = "flare_light_overridden"
 EVENT_LIGHTS_CONTROLLED = "flare_lights_controlled"
 EVENT_LIGHTS_RELEASED = "flare_lights_released"
