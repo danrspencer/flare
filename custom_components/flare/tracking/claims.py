@@ -153,8 +153,8 @@ class ClaimRegistry:
             "min_color_temp_change": min_color_temp_change,
         }
         self.claims: dict[str, WriteRecord] = {}
-        # Room key -> {"lights": [...]}.
-        self.rooms: dict[str, dict] = {}
+        # Room key -> its lights, sorted. Saved as {"lights": [...]}.
+        self.rooms: dict[str, list[str]] = {}
         # The most recent overrides, oldest first (log_override).
         self.overrides: list[dict] = []
         self._storage: Store[dict] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
@@ -172,14 +172,14 @@ class ClaimRegistry:
         """The claims and rooms from before the restart."""
         data = await self._storage.async_load() or {}
         self.claims = dict(data.get("claims") or {})
-        self.rooms = dict(data.get("rooms") or {})
+        self.rooms = {key: list(room.get("lights", ())) for key, room in (data.get("rooms") or {}).items()}
         self.overrides = list(data.get("overrides") or [])[-OVERRIDE_LOG_SIZE:]
         self._forget_deleted_rooms()
 
     @callback
     def _save(self) -> None:
         self._storage.async_delay_save(
-            lambda: {"claims": self.claims, "rooms": self.rooms, "overrides": self.overrides}, SAVE_DELAY
+            lambda: {"claims": self.claims, "rooms": self.stored_rooms(), "overrides": self.overrides}, SAVE_DELAY
         )
 
     @callback
@@ -209,7 +209,7 @@ class ClaimRegistry:
         only it held, which nothing else would release. True if any went."""
         entities = er.async_get(self._hass)
         gone = [key for key in self.rooms if _REGISTRY_ID.fullmatch(key) and entities.async_get(key) is None]
-        lights = {entity_id for key in gone for entity_id in self.rooms.pop(key).get("lights", ())}
+        lights = {entity_id for key in gone for entity_id in self.rooms.pop(key)}
         for entity_id in lights:
             if not self.rooms_of(entity_id):
                 self.claims.pop(entity_id, None)
@@ -219,6 +219,10 @@ class ClaimRegistry:
         """The entities the rooms are keyed by, as their current entity_ids."""
         entities = er.async_get(self._hass)
         return frozenset(entry.entity_id for key in self.rooms if (entry := entities.async_get(key)) is not None)
+
+    def stored_rooms(self) -> dict[str, dict]:
+        """The rooms as they're saved, each under a key so more can be kept."""
+        return {key: {"lights": list(lights)} for key, lights in self.rooms.items()}
 
     def record(self, entity_id: str) -> WriteRecord | None:
         """This light's claims, or None if it has none."""
@@ -252,11 +256,11 @@ class ClaimRegistry:
 
     def room_lights(self, key: str) -> list[str]:
         """Every light a room has named."""
-        return list(self.rooms.get(key, {}).get("lights", ()))
+        return list(self.rooms.get(key, ()))
 
     def rooms_of(self, entity_id: str) -> list[str]:
         """Every room this light is one of, by key, sorted."""
-        return sorted(key for key, room in self.rooms.items() if entity_id in room.get("lights", ()))
+        return sorted(key for key, lights in self.rooms.items() if entity_id in lights)
 
     @callback
     def note_mismatch(self, entity_id: str) -> bool:
@@ -355,9 +359,9 @@ class ClaimRegistry:
         claim it made can be released with it."""
         if key is None:
             return
-        held = [e for e in self.rooms.get(key, {}).get("lights", ()) if e in self.claims]
+        held = [e for e in self.rooms.get(key, ()) if e in self.claims]
         lights = set(room_entities or ()) | set(written) | set(held)
-        self.rooms[key] = {"lights": sorted(lights)}
+        self.rooms[key] = sorted(lights)
 
     @callback
     def async_clear(self, entity_ids: list[str], *, announce: bool = False) -> list[str]:
@@ -474,8 +478,7 @@ class ClaimRegistry:
             self.note_mismatch(entity_id)
 
     def _claimed_lights(self, key: str) -> list[str]:
-        lights = self.rooms.get(key, {}).get("lights", ())
-        return [entity_id for entity_id in lights if entity_id in self.claims]
+        return [entity_id for entity_id in self.rooms.get(key, ()) if entity_id in self.claims]
 
     @callback
     def _release_if_dark(self, key: str) -> bool:
@@ -578,9 +581,9 @@ class ClaimRegistry:
             record = self.claims.pop(old, None)
             if record is not None and new is not None:
                 self.claims[new] = record
-            for room in self.rooms.values():
-                if old in room["lights"]:
-                    room["lights"] = sorted((set(room["lights"]) - {old}) | ({new} if new else set()))
+            for key, lights in self.rooms.items():
+                if old in lights:
+                    self.rooms[key] = sorted((set(lights) - {old}) | ({new} if new else set()))
             self._notify()
 
         @callback

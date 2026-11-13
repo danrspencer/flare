@@ -18,6 +18,6 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
     return {
         "options": dict(entry.options),
         "claims": registry.all_records(),
-        "rooms": dict(registry.rooms),
+        "rooms": registry.stored_rooms(),
         "recent_overrides": list(registry.overrides),
     }
