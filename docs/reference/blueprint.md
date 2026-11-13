@@ -112,11 +112,14 @@ Whenever a template returns a value, it overrides the per-phase setting.
 | Value | Effect |
 |---|---|
 | `1`–`255` | Sets the light to this brightness, on the same scale as the phase brightnesses. |
-| `0` | Turns the light off. |
+| `'50%'` | Sets the light to this percentage of full brightness: `'100%'` is 255, `'50%'` is 127. |
+| `'x0.5'` | Sets the light to the schedule's brightness multiplied by this, so `'x0.5'` is half of it. |
+| `0`, `'0%'` or `'x0'` | Turns the light off. |
 | `null` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
 
-A single number instead of a mapping applies to every light in the room, and any light the
-template doesn't include follows the schedule. See [Templates](../../guides/templates/#brightness-template).
+A single value instead of a mapping applies to every light in the room, and any light the
+template doesn't include follows the schedule. The Idle Brightness Template takes the same
+values except `'x0.5'`, and there `0` or `'0%'` means the light goes dark. See [Templates](../../guides/templates/#brightness-template).
 
 ### Additional triggers
 

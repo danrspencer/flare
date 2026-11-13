@@ -2,6 +2,8 @@
 light.turn_on/turn_off calls. Pure: HA access is injected through an
 EntityLookup."""
 
+import math
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Iterable, Optional
 
@@ -108,6 +110,43 @@ class Group:
     already_set: list = field(default_factory=list)
 
 
+_PERCENT = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*%\s*$")
+_SCALE = re.compile(r"^\s*[xX]\s*(\d+(?:\.\d+)?)\s*$")
+
+
+@dataclass(frozen=True)
+class Scale:
+    """A level relative to the call's `brightness`: 'x0.5' is half of it."""
+
+    factor: float
+
+
+def parse_level(value) -> "float | Scale":
+    """A level as 0-255, '50%' of full brightness (rounded down, so 50% is
+    127), or 'x0.5' of the call's brightness. Raises ValueError otherwise."""
+    if isinstance(value, Scale):
+        return value
+    if isinstance(value, str):
+        if match := _PERCENT.match(value):
+            level = MAX_BRIGHTNESS * float(match[1]) / 100
+            # Below 1 stays fractional, so only 0% is off.
+            return float(math.floor(level)) if level >= 1 else level
+        if match := _SCALE.match(value):
+            return Scale(float(match[1]))
+    level = float(value)
+    if level < 0:
+        raise ValueError(f"brightness level can't be negative: {value}")
+    return level
+
+
+def needs_brightness(entity_id: str, brightness_levels: dict) -> bool:
+    """Whether the light is sent the call's `brightness`, or a scale of it."""
+    if entity_id not in brightness_levels:
+        return True
+    value = brightness_levels[entity_id]
+    return value is not None and value is not False and isinstance(parse_level(value), Scale)
+
+
 def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optional[int]) -> Optional[int]:
     """The brightness `entity_id` is sent: 0 for off, None for hands off.
 
@@ -119,6 +158,9 @@ def target_brightness(entity_id: str, brightness_levels: dict, brightness: Optio
         value = brightness_levels[entity_id]
         if value is None or value is False:
             return None
+        value = parse_level(value)
+        if isinstance(value, Scale):
+            value = float(brightness) * value.factor
     else:
         value = brightness
     value = float(value)

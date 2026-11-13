@@ -1,6 +1,6 @@
 import pytest
 
-from custom_components.flare.services.grouping import MAX_BRIGHTNESS, build_groups
+from custom_components.flare.services.grouping import MAX_BRIGHTNESS, build_groups, parse_level
 from tests.support.fakes import make_lookup
 
 TRADFRI = ("IKEA", "TRADFRI bulb GU10, color/white spectrum, 345 lm")
@@ -212,6 +212,50 @@ class TestBrightnessLevels:
     def test_arithmetic(self, levels, brightness, expected):
         groups = _groups({"light.a": _off()}, brightness=brightness, levels=levels)
         assert groups[0].brightness == expected
+
+    @pytest.mark.parametrize(
+        ("level", "expected"),
+        [
+            ("100%", 255),
+            ("50%", 127),
+            (" 20 % ", 51),
+            ("0%", 0),
+            ("0.1%", 1),
+            ("150%", MAX_BRIGHTNESS),
+            ("x0.5", 100),
+            ("X 1.5", 255),
+            ("x0", 0),
+            ("x0.001", 1),
+            ("60", 60),
+        ],
+        ids=[
+            "100% is full brightness",
+            "50% rounds down",
+            "spaces are allowed",
+            "0% is off",
+            "a percent rounding to 0 isn't off",
+            "a percent over 100 caps",
+            "x scales the brightness",
+            "x over 1 caps",
+            "x0 is off",
+            "an x rounding to 0 isn't off",
+            "a number as text is absolute",
+        ],
+    )
+    def test_text_levels(self, level, expected):
+        groups = _groups({"light.a": _off()}, brightness=200, levels={"light.a": level})
+        assert groups[0].brightness == expected
+
+    @pytest.mark.parametrize("level", ["50", "50%"])
+    def test_absolute_levels_ignore_brightness(self, level):
+        a = _groups({"light.a": _off()}, brightness=10, levels={"light.a": level})
+        b = _groups({"light.a": _off()}, brightness=250, levels={"light.a": level})
+        assert a[0].brightness == b[0].brightness
+
+    @pytest.mark.parametrize("level", ["half", "-10%", "x-1", "50%%", -1])
+    def test_anything_else_is_not_a_level(self, level):
+        with pytest.raises(ValueError):
+            parse_level(level)
 
     def test_a_light_at_max_is_not_recommanded_when_the_level_overshoots(self):
         """light.turn_on clamps to 255, so an unclamped 300 target would

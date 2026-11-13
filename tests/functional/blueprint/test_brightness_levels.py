@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
+
 from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -93,6 +95,28 @@ class TestBrightnessScaling:
         call = apply_lighting_calls[-1]
         assert effective(call, "light.a") == 40
         assert effective(call, "light.b") == 40
+
+    @pytest.mark.parametrize(("template", "expected"), [("{{ '50%' }}", 127), ("{{ 'x0.5' }}", 105)])
+    async def test_a_bare_percent_or_multiplier_from_the_brightness_template_applies_to_every_light(
+        self, hass, apply_lighting_calls, template, expected
+    ):
+        light(hass, "light.a", "on")
+        light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b"]},
+            brightness_template=template,
+        )
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        call = apply_lighting_calls[-1]
+        assert effective(call, "light.a") == expected
+        assert effective(call, "light.b") == expected
 
     async def test_a_null_level_light_is_not_turned_off_when_occupancy_clears(
         self, hass, turn_off_calls
@@ -403,6 +427,39 @@ class TestIdleBrightness:
         call = apply_lighting_calls[-1]
         assert effective(call, "light.a") == 20
         assert effective(call, "light.b") == 20
+
+    @pytest.mark.parametrize(
+        ("template", "expected"),
+        [
+            ("{{ '20%' }}", {"light.a": 51, "light.b": 51}),
+            ("{{ {'light.a': '20%', 'light.b': '0%'} }}", {"light.a": 51}),
+            ("{{ {'light.a': '20%', 'light.b': 'x0.5'} }}", {"light.a": 51}),
+        ],
+        ids=["bare percent", "0% isn't idle", "a multiplier isn't an idle level"],
+    )
+    async def test_a_percent_from_the_idle_template(
+        self, hass, turn_off_calls, apply_lighting_calls, template, expected
+    ):
+        occupancy(hass, "binary_sensor.occ", "on")
+        light(hass, "light.a", "on")
+        light(hass, "light.b", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "light.b", "binary_sensor.occ"]},
+            no_motion_wait=0,
+            idle_brightness_template=template,
+        )
+        apply_lighting_calls.clear()
+
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        call = apply_lighting_calls[-1]
+        assert {e: effective(call, e) for e in call.data["entities"]} == expected
 
     async def test_leaving_a_phase_with_an_idle_level_turns_the_lights_off_not_up(
         self, hass, turn_off_calls, apply_lighting_calls

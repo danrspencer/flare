@@ -1,6 +1,7 @@
 """What FLARE does in an ordinary room on an ordinary day, asserted on
 the state the bulbs end up in."""
 
+import pytest
 from homeassistant.core import HomeAssistant
 
 from tests.functional.behaviour.harness import (
@@ -279,6 +280,49 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
     assert room_brightness(hass, bulbs) == expected, (
         "the templated fitting should sit at its own level, the rest on the curve"
     )
+
+
+@pytest.mark.parametrize(
+    ("level", "expected"),
+    [("'50%'", 127), ("'x0.5'", round(CURVE_BRIGHTNESS * 0.5))],
+    ids=["percent of full brightness", "multiplier of the curve"],
+)
+async def test_a_brightness_template_sets_a_fitting_by_percent_or_multiplier(
+    hass: HomeAssistant, add_bulbs, setup_room, area, level, expected
+) -> None:
+    lamp = "light.hall_lamp"
+    bulbs = await lit_room(
+        hass,
+        add_bulbs,
+        setup_room,
+        area,
+        brightness_template=f"{{{{ {{'{lamp}': {level}}} }}}}",
+    )
+
+    want = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    want[lamp] = expected
+    assert room_brightness(hass, bulbs) == want
+
+
+async def test_an_idle_percent_dims_the_nightlight_to_it(
+    hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
+) -> None:
+    lamp = "light.hall_lamp"
+    bulbs = await lit_room(
+        hass,
+        add_bulbs,
+        setup_room,
+        area,
+        no_motion_wait=0,
+        idle_brightness_template=f"{{{{ {{'{lamp}': '10%'}} }}}}",
+    )
+    occupancy(hass, HALL_SENSOR, "off")
+    await hass.async_block_till_done()
+    await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
+
+    expected = {b.entity_id: "off" for b in bulbs}
+    expected[lamp] = 25
+    assert room_brightness(hass, bulbs) == expected
 
 
 async def test_a_fitting_something_else_runs_does_not_keep_an_empty_room_lit(

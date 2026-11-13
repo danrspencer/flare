@@ -32,6 +32,8 @@ Returns the brightness each light should sit at, as a mapping from entity ID to 
 | Value | Effect |
 |---|---|
 | `1`–`255` | The light sits at this brightness, on the same scale as the phase brightnesses |
+| `'50%'` | The light sits at this percentage of full brightness: `'100%'` is 255, `'50%'` is 127 |
+| `'x0.5'` | The light sits at the curve's brightness multiplied by this, so it still follows the curve |
 | `0` | The light is turned off |
 | `null` or `false` | FLARE leaves the light alone entirely, on or off |
 
@@ -75,22 +77,25 @@ the room empties either; the other automation needs to do that.
 
 ### One level for the whole room
 
-A single number applies to every light in the room:
+A single value applies to every light in the room:
 
 ```yaml
-{{ 40 if is_state('media_player.tv', 'playing') else none }}
+{{ '15%' if is_state('media_player.tv', 'playing') else none }}
 ```
 
 `none` here means "no opinion", so the room follows the curve when the TV is off.
 
 ### A level that follows the curve
 
-A level is fixed: the light stays at it for as long as the template returns it, whatever the
-time of day. To keep a light at, say, half the room's brightness, read the curve and scale it:
+A number or a percentage is fixed: the light stays at it for as long as the template returns
+it, whatever the time of day. To keep a light at, say, half the room's brightness, multiply the
+curve instead:
 
 ```yaml
-{{ {'light.lounge_ceiling': state_attr('sensor.home_flare', 'brightness') | int * 0.5} }}
+{{ {'light.lounge_ceiling': 'x0.5'} }}
 ```
+
+`'x1.5'` makes a light brighter than the rest of the room, up to full brightness.
 
 ### `0` or `null`?
 
@@ -103,7 +108,8 @@ When the template returns a light, its value overrides the phase's **Lights Off*
 ## Idle Brightness Template
 
 Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template. When it returns a light, its value overrides the phase's
+same values as Brightness Template except `'x0.5'`, since an empty room has no curve brightness
+to multiply. When it returns a light, its value overrides the phase's
 **Idle Brightness** for that light.
 
 ### One lamp as the nightlight
