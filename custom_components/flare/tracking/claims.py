@@ -110,6 +110,22 @@ def _baseline_target(state) -> Optional[dict]:
     return shown(state.attributes)
 
 
+def _claim(
+    context_id: Optional[str],
+    target: Optional[dict],
+    *,
+    secondary_context_id: Optional[str] = None,
+    recorded_at: Optional[str] = None,
+) -> ContextClaim:
+    """One claim: the context a write went out under and what it asked for."""
+    return {
+        "context_id": context_id,
+        "secondary_context_id": secondary_context_id,
+        "recorded_at": recorded_at,
+        "target": target,
+    }
+
+
 class ClaimListener(Protocol):
     """What announces claim changes (sensor.py's ClaimEvents). Structural,
     to avoid importing sensor.py circularly."""
@@ -376,12 +392,7 @@ class ClaimRegistry:
         overridden_since = (dt_util.utcnow() - MISMATCH_GRACE).isoformat()
         for entity_id in entity_ids:
             self.claims[entity_id] = {
-                "observed": {
-                    "context_id": ulid_util.ulid_now(),
-                    "secondary_context_id": None,
-                    "recorded_at": now,
-                    "target": None,
-                },
+                "observed": _claim(ulid_util.ulid_now(), None, recorded_at=now),
                 "latest": None,
                 "mismatch_since": overridden_since,
             }
@@ -449,24 +460,15 @@ class ClaimRegistry:
                 else:
                     observed = old.get("observed")
             else:
-                observed = (
-                    {
-                        "context_id": live_context,
-                        "secondary_context_id": None,
-                        "recorded_at": None,
-                        "target": _baseline_target(state),
-                    }
-                    if live_context is not None
-                    else None
-                )
+                observed = _claim(live_context, _baseline_target(state)) if live_context is not None else None
             claims[entity_id] = {
                 "observed": observed,
-                "latest": {
-                    "context_id": context_id_overrides.get(entity_id, context_id),
-                    "secondary_context_id": secondary_context_ids.get(entity_id),
-                    "recorded_at": dt_util.utcnow().isoformat(),
-                    "target": sent(state.attributes, targets.get(entity_id)) if state is not None else targets.get(entity_id),
-                },
+                "latest": _claim(
+                    context_id_overrides.get(entity_id, context_id),
+                    sent(state.attributes, targets.get(entity_id)) if state is not None else targets.get(entity_id),
+                    secondary_context_id=secondary_context_ids.get(entity_id),
+                    recorded_at=dt_util.utcnow().isoformat(),
+                ),
             }
             # A new write starts afresh: a mismatch now is the write landing.
             self.note_mismatch(entity_id)
