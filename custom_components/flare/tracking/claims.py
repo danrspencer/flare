@@ -79,9 +79,9 @@ from ..const import (
 from .matching import Tolerance, differs, reported, sent, shown
 from .override_protection import (
     MISMATCH_GRACE,
-    _context_matches,
-    _ContextClaim,
-    _WriteRecord,
+    context_matches,
+    ContextClaim,
+    WriteRecord,
     classify_state,
     disagrees,
 )
@@ -136,7 +136,7 @@ class ClaimRegistry:
             "min_brightness_change": min_brightness_change,
             "min_color_temp_change": min_color_temp_change,
         }
-        self.claims: dict[str, _WriteRecord] = {}
+        self.claims: dict[str, WriteRecord] = {}
         # Room key -> {"lights": [...]}.
         self.rooms: dict[str, dict] = {}
         # The most recent overrides, oldest first (log_override).
@@ -204,7 +204,7 @@ class ClaimRegistry:
         entities = er.async_get(self._hass)
         return frozenset(entry.entity_id for key in self.rooms if (entry := entities.async_get(key)) is not None)
 
-    def record(self, entity_id: str) -> _WriteRecord | None:
+    def record(self, entity_id: str) -> WriteRecord | None:
         """This light's claims, or None if it has none."""
         return self.claims.get(entity_id)
 
@@ -228,7 +228,7 @@ class ClaimRegistry:
             return []
         return differs(state.attributes, target, Tolerance(**self.tolerances))
 
-    def all_records(self) -> dict[str, _WriteRecord]:
+    def all_records(self) -> dict[str, WriteRecord]:
         return dict(self.claims)
 
     def room_keys(self) -> list[str]:
@@ -441,10 +441,10 @@ class ClaimRegistry:
             state = self._hass.states.get(entity_id)
             live_context = state.context.id if state is not None else None
             old = claims.get(entity_id)
-            observed: Optional[_ContextClaim]
+            observed: Optional[ContextClaim]
             if old is not None:
                 old_latest = old.get("latest")
-                if _context_matches(old_latest, live_context):
+                if context_matches(old_latest, live_context):
                     observed = old_latest
                 else:
                     observed = old.get("observed")
