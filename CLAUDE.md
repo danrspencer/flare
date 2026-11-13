@@ -800,8 +800,10 @@ and the docs playground.
 
 ### Curve math (`curve.py`)
 
-Every literal is a keyword-only parameter with a named default
-(`DEFAULT_CURVE_VALUES`, `DEFAULT_SCHEDULE_HOURS`).
+Every literal is a named default (`DEFAULT_CURVE_VALUES`,
+`DEFAULT_SCHEDULE_HOURS`), and a curve value is passed by its key there:
+`brightness_for_phase` and `kelvin_for_phase` are one function
+(`_for_phase`), which refuses a key that isn't its kind's.
 
 - **Each phase eases to the next over its own transition** (minutes,
   per phase and per brightness/Kelvin), ending at the boundary.

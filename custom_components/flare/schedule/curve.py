@@ -215,6 +215,38 @@ def _value_at(
     return own + (values[_NEXT_PHASE[day_phase]] - own) * t
 
 
+def _for_phase(
+    kind: str,
+    day_phase: str,
+    now_ts: float,
+    morning_ts: float,
+    day_start_ts: float,
+    evening_ts: float,
+    night_ts: float,
+    next_morning_ts: float | None,
+    next_night_ts: float | None,
+    values: dict,
+) -> int:
+    """One kind of value ("brightness" or "kelvin") for the phase and
+    instant. `values` are that kind's curve values, keyed like
+    DEFAULT_CURVE_VALUES, which fills in the rest."""
+    unknown = [key for key in values if key not in DEFAULT_CURVE_VALUES or f"_{kind}" not in key]
+    if unknown:
+        raise TypeError(f"not {kind} curve values: {', '.join(sorted(unknown))}")
+    values = {**DEFAULT_CURVE_VALUES, **values}
+    return round(
+        _value_at(
+            day_phase,
+            now_ts,
+            {"morning": morning_ts, "day": day_start_ts, "evening": evening_ts, "night": night_ts},
+            {phase: values[f"{phase.lower()}_{kind}"] for phase in Phase},
+            values[f"{Phase(day_phase).lower()}_{kind}_transition"],
+            next_morning_ts,
+            next_night_ts,
+        )
+    )
+
+
 def brightness_for_phase(
     day_phase: str,
     now_ts: float,
@@ -223,38 +255,15 @@ def brightness_for_phase(
     evening_ts: float,
     night_ts: float,
     *,
-    morning_brightness: int = DEFAULT_MORNING_BRIGHTNESS,
-    day_brightness: int = DEFAULT_DAY_BRIGHTNESS,
-    evening_brightness: int = DEFAULT_EVENING_BRIGHTNESS,
-    night_brightness: int = DEFAULT_NIGHT_BRIGHTNESS,
-    morning_brightness_transition: float = DEFAULT_MORNING_BRIGHTNESS_TRANSITION,
-    day_brightness_transition: float = DEFAULT_DAY_BRIGHTNESS_TRANSITION,
-    evening_brightness_transition: float = DEFAULT_EVENING_BRIGHTNESS_TRANSITION,
-    night_brightness_transition: float = DEFAULT_NIGHT_BRIGHTNESS_TRANSITION,
     next_morning_ts: float | None = None,
     next_night_ts: float | None = None,
+    **brightness_values: float,
 ) -> int:
-    """Target brightness (0-255) for the given phase/instant."""
-    return round(
-        _value_at(
-            day_phase,
-            now_ts,
-            {"morning": morning_ts, "day": day_start_ts, "evening": evening_ts, "night": night_ts},
-            {
-                Phase.MORNING: morning_brightness,
-                Phase.DAY: day_brightness,
-                Phase.EVENING: evening_brightness,
-                Phase.NIGHT: night_brightness,
-            },
-            {
-                Phase.MORNING: morning_brightness_transition,
-                Phase.DAY: day_brightness_transition,
-                Phase.EVENING: evening_brightness_transition,
-                Phase.NIGHT: night_brightness_transition,
-            }[day_phase],
-            next_morning_ts,
-            next_night_ts,
-        )
+    """Target brightness (0-255) for the given phase/instant. The curve's
+    brightness values and transitions pass as keywords; unknown keys raise."""
+    return _for_phase(
+        "brightness", day_phase, now_ts, morning_ts, day_start_ts, evening_ts, night_ts,
+        next_morning_ts, next_night_ts, brightness_values,
     )
 
 
@@ -266,38 +275,15 @@ def kelvin_for_phase(
     evening_ts: float,
     night_ts: float,
     *,
-    morning_kelvin: int = DEFAULT_MORNING_KELVIN,
-    day_kelvin: int = DEFAULT_DAY_KELVIN,
-    evening_kelvin: int = DEFAULT_EVENING_KELVIN,
-    night_kelvin: int = DEFAULT_NIGHT_KELVIN,
-    morning_kelvin_transition: float = DEFAULT_MORNING_KELVIN_TRANSITION,
-    day_kelvin_transition: float = DEFAULT_DAY_KELVIN_TRANSITION,
-    evening_kelvin_transition: float = DEFAULT_EVENING_KELVIN_TRANSITION,
-    night_kelvin_transition: float = DEFAULT_NIGHT_KELVIN_TRANSITION,
     next_morning_ts: float | None = None,
     next_night_ts: float | None = None,
+    **kelvin_values: float,
 ) -> int:
-    """Target colour temperature (Kelvin) for the given phase/instant."""
-    return round(
-        _value_at(
-            day_phase,
-            now_ts,
-            {"morning": morning_ts, "day": day_start_ts, "evening": evening_ts, "night": night_ts},
-            {
-                Phase.MORNING: morning_kelvin,
-                Phase.DAY: day_kelvin,
-                Phase.EVENING: evening_kelvin,
-                Phase.NIGHT: night_kelvin,
-            },
-            {
-                Phase.MORNING: morning_kelvin_transition,
-                Phase.DAY: day_kelvin_transition,
-                Phase.EVENING: evening_kelvin_transition,
-                Phase.NIGHT: night_kelvin_transition,
-            }[day_phase],
-            next_morning_ts,
-            next_night_ts,
-        )
+    """Target colour temperature (Kelvin) for the given phase/instant. The
+    curve's Kelvin values and transitions pass as keywords; unknown keys raise."""
+    return _for_phase(
+        "kelvin", day_phase, now_ts, morning_ts, day_start_ts, evening_ts, night_ts,
+        next_morning_ts, next_night_ts, kelvin_values,
     )
 
 
@@ -322,7 +308,7 @@ def targets_for_phase(
     boundaries = (now_ts, morning_ts, day_start_ts, evening_ts, night_ts)
     tomorrow = {"next_morning_ts": next_morning_ts, "next_night_ts": next_night_ts}
     brightness = brightness_for_phase(
-        day_phase, *boundaries, **tomorrow, **{k: v for k, v in curve_values.items() if "brightness" in k}
+        day_phase, *boundaries, **tomorrow, **{k: v for k, v in curve_values.items() if "kelvin" not in k}
     )
     kelvin = kelvin_for_phase(
         day_phase, *boundaries, **tomorrow, **{k: v for k, v in curve_values.items() if "kelvin" in k}
