@@ -13,7 +13,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CLEAR_OBJECT_ID, CLEAR_ROLE
-from .sensor import settings_device_info
+from .tracking.events import settings_device_info
 from .tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 
 

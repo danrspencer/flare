@@ -1,7 +1,7 @@
 /**
  * FLARE's Activity: what each room did, from the logbook's live stream for
  * FLARE's device, coloured and filtered by kind. An event's kind is the
- * entity it's filed under (sensor.py's _filed_under): the Controlled or
+ * entity it's filed under (tracking/events.py's _filed_under): the Controlled or
  * Overridden count, or Clear for a release.
  *
  * Each row is Home Assistant's own `ha-logbook-entry`, with its dot in the

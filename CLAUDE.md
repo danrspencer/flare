@@ -491,7 +491,7 @@ Settings entry's diagnostics), and an entity holding it broke FLARE when
 disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
 dropped for being hidden; the status sensors are what make this one not.
 
-**The claim events aren't an entity** (`sensor.ClaimEvents`). There's no
+**The claim events aren't an entity** (`tracking/events.py`'s `ClaimEvents`, started by the sensor platform). There's no
 poll: every change that moves a count reaches the registry's listener,
 and the grace is the only timed change, with its own recheck. They seed
 the statuses when they start, and a room restored dark is released only

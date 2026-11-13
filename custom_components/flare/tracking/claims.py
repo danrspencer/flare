@@ -127,8 +127,8 @@ def _claim(
 
 
 class ClaimListener(Protocol):
-    """What announces claim changes (sensor.py's ClaimEvents). Structural,
-    to avoid importing sensor.py circularly."""
+    """What announces claim changes (events.py's ClaimEvents). Structural,
+    since events.py imports this module."""
 
     def async_claims_changed(self) -> None:
         """The claims changed."""

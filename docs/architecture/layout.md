@@ -44,6 +44,7 @@ custom_components/flare/
 ├── tracking/             who owns a light, and when each area ticks
 │   ├── override_protection.py   classify(): the decision table, pure
 │   ├── claims.py           ClaimRegistry: claims, rooms, the Store, the listener
+│   ├── events.py           ClaimEvents: the claim events, and FLARE's own device
 │   ├── matching.py         does a light show a target? (the one value matcher)
 │   └── ticker.py           TickScheduler: each area's tick, spaced apart
 ├── flares/               lights over automations
