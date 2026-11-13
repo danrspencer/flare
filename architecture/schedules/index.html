@@ -389,6 +389,11 @@ tomorrow’s boundary, and Evening runs on through midnight until it. Every
 timestamp is shifted onto a clock where Night comes after Evening before
 comparing.</p>
 
+<p><strong>Tomorrow’s Morning and Night are worked out by the calendar</strong>
+(<code class="language-plaintext highlighter-rouge">Boundaries.next_morning</code>, <code class="language-plaintext highlighter-rouge">next_night</code>) and passed to the curve, since they
+aren’t 24 hours after today’s on a day the clocks change. <code class="language-plaintext highlighter-rouge">flare.compute_curve</code>
+takes only today’s four, so it assumes 24 hours.</p>
+
 <pre><code class="language-mermaid">gantt
     dateFormat HH:mm
     axisFormat %H:%M
