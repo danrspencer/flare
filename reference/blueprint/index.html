@@ -249,24 +249,38 @@
 <p>The blueprint is the automation each room runs. This page covers every input and how a room
 behaves.</p>
 
+<p>Its settings come in two groups. <strong>Customise</strong> holds what most rooms change: a section for each
+phase, and <strong>Custom</strong> for anything more particular. <strong>Fine Tuning</strong> holds what most rooms never
+touch. This page follows the same order.</p>
+
 <details open="">
   <summary class="text-delta">On this page</summary>
 <ul id="markdown-toc">
   <li><a href="#room" id="markdown-toc-room">Room</a></li>
-  <li><a href="#sensors-and-triggers" id="markdown-toc-sensors-and-triggers">Sensors and triggers</a>    <ul>
-      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
+  <li><a href="#phases" id="markdown-toc-phases">Phases</a>    <ul>
+      <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
+      <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
+    </ul>
+  </li>
+  <li><a href="#custom" id="markdown-toc-custom">Custom</a>    <ul>
+      <li><a href="#brightness-template" id="markdown-toc-brightness-template">Brightness template</a></li>
       <li><a href="#additional-triggers" id="markdown-toc-additional-triggers">Additional triggers</a></li>
     </ul>
   </li>
-  <li><a href="#brightness" id="markdown-toc-brightness">Brightness</a></li>
-  <li><a href="#idle-brightness" id="markdown-toc-idle-brightness">Idle brightness</a></li>
-  <li><a href="#scenes" id="markdown-toc-scenes">Scenes</a></li>
+  <li><a href="#sensors--conditions" id="markdown-toc-sensors--conditions">Sensors &amp; Conditions</a>    <ul>
+      <li><a href="#wait-time" id="markdown-toc-wait-time">Wait time</a></li>
+      <li><a href="#lux-threshold" id="markdown-toc-lux-threshold">Lux Threshold</a></li>
+      <li><a href="#conditions" id="markdown-toc-conditions">Conditions</a></li>
+      <li><a href="#trigger-ids" id="markdown-toc-trigger-ids">Trigger IDs</a></li>
+    </ul>
+  </li>
   <li><a href="#transitions" id="markdown-toc-transitions">Transitions</a></li>
-  <li><a href="#settings" id="markdown-toc-settings">Settings</a>    <ul>
+  <li><a href="#other-settings" id="markdown-toc-other-settings">Other settings</a>    <ul>
       <li><a href="#override-protection" id="markdown-toc-override-protection">Override protection</a></li>
       <li><a href="#prefer-rgb-during" id="markdown-toc-prefer-rgb-during">Prefer RGB during</a></li>
       <li><a href="#stored-traces" id="markdown-toc-stored-traces">Stored traces</a></li>
       <li><a href="#sensors-from-areas" id="markdown-toc-sensors-from-areas">Sensors from areas</a></li>
+      <li><a href="#additional-trigger-entities" id="markdown-toc-additional-trigger-entities">Additional trigger entities</a></li>
     </ul>
   </li>
   <li><a href="#how-a-room-behaves" id="markdown-toc-how-a-room-behaves">How a room behaves</a>    <ul>
@@ -331,22 +345,24 @@ label is on the light itself, it’s included.</li>
 other binary sensors in the target are ignored. A room can mix both kinds.</p>
 
 <p>To pick an area for its lights but leave some of its sensors out, add them with <strong>Exclude
-target</strong> (Home Assistant 2026.11 and later). On earlier versions, turn off
-<a href="#sensors-from-areas">Sensors From Areas</a> and pick the sensors you want by name.</p>
+target</strong>.</p>
 
 <p>A room with no sensor follows the schedule but never turns its lights on or off.</p>
 
 <p>A room can have two automations, for example one for a lamp and one for the ceiling light.
 Each releases the lights it drives once they’re all off; a light in both is released when
 either room goes dark.</p>
-<h2 id="sensors-and-triggers">
+<h2 id="phases">
   
   
-    <a href="#sensors-and-triggers" class="anchor-heading" aria-labelledby="sensors-and-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors and triggers
+    <a href="#phases" class="anchor-heading" aria-labelledby="phases"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Phases
   
   
 </h2>
     
+
+<p><strong>Morning</strong>, <strong>Day</strong>, <strong>Evening</strong> and <strong>Night</strong> each have a section with the same three
+settings, which apply while the schedule is in that phase.</p>
 
 <div class="table-wrapper"><table>
   <thead>
@@ -358,101 +374,106 @@ either room goes dark.</p>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Wait time</strong></td>
-      <td>120s</td>
-      <td>How long every sensor must be clear before the room is empty. Only used when the room has sensors.</td>
+      <td><strong>Lights Off</strong></td>
+      <td>none</td>
+      <td>Lights in the room that stay off during the phase.</td>
     </tr>
     <tr>
-      <td><strong>Lux Threshold</strong></td>
-      <td>0 (off)</td>
-      <td>Above 0, the room leaves its lights off while every illuminance sensor in it reads above this many lux.</td>
+      <td><strong>Idle Brightness</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">0</code></td>
+      <td>The brightness, 0–255, the room’s lights dim to when it’s empty, instead of switching off. <code class="language-plaintext highlighter-rouge">0</code> turns them off.</td>
+    </tr>
+    <tr>
+      <td><strong>Scene</strong></td>
+      <td>none</td>
+      <td>A scene the room uses instead of the schedule during the phase.</td>
+    </tr>
+  </tbody>
+</table></div>
+<h3 id="idle-brightness">
+  
+  
+    <a href="#idle-brightness" class="anchor-heading" aria-labelledby="idle-brightness"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Idle brightness
+  
+  
+</h3>
+    
+
+<p>An idle brightness turns a room’s “off” into a dim glow: a nightlight. It only works in a room
+with occupancy or motion sensors, since without them the room is never empty. It’s the only way
+the room’s lights come on while it’s empty.</p>
+
+<p>For a nightlight whenever it’s dark outside, leave each phase at <code class="language-plaintext highlighter-rouge">0</code> and set the
+<a href="#custom">Idle Brightness Template</a> to:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="nv">10 if is_state('sun.sun'</span><span class="pi">,</span> <span class="s1">'</span><span class="s">below_horizon'</span><span class="nv">) else</span> <span class="pi">{}</span> <span class="pi">}}</span>
+</code></pre></div></div>
+
+<p>See <a href="../../guides/templates/#idle-brightness-template">Templates</a> for one lamp as the nightlight,
+and other variations.</p>
+<h3 id="scenes">
+  
+  
+    <a href="#scenes" class="anchor-heading" aria-labelledby="scenes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scenes
+  
+  
+</h3>
+    
+
+<p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
+the schedule. When a scene is used, any light in the room that the scene doesn’t set still
+follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
+<h2 id="custom">
+  
+  
+    <a href="#custom" class="anchor-heading" aria-labelledby="custom"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Custom
+  
+  
+</h2>
+    
+
+<p>Templates for when per-phase settings aren’t enough, like dimming the room while the TV is on.
+Whenever a template returns a value, it overrides the per-phase setting.</p>
+
+<div class="table-wrapper"><table>
+  <thead>
+    <tr>
+      <th>Input</th>
+      <th>Default</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Brightness Template</strong></td>
+      <td>none</td>
+      <td>A template returning a mapping of entity ID to brightness, in place of the schedule’s. When it returns a light, its value overrides <strong>Lights Off</strong> for that light.</td>
+    </tr>
+    <tr>
+      <td><strong>Idle Brightness Template</strong></td>
+      <td>none</td>
+      <td>Like Brightness Template, for when the room is empty. When it returns a light, its value overrides <strong>Idle Brightness</strong> for that light.</td>
+    </tr>
+    <tr>
+      <td><strong>Scene Template</strong></td>
+      <td>none</td>
+      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. When it returns a scene that exists, it overrides the phase’s <strong>Scene</strong>.</td>
     </tr>
     <tr>
       <td><strong>Additional Triggers</strong></td>
       <td>none</td>
-      <td>Entities that make the room update as soon as they change.</td>
+      <td>Triggers that make the room update as soon as they fire.</td>
     </tr>
   </tbody>
 </table></div>
-<h3 id="lux-threshold">
+<h3 id="brightness-template">
   
   
-    <a href="#lux-threshold" class="anchor-heading" aria-labelledby="lux-threshold"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lux Threshold
+    <a href="#brightness-template" class="anchor-heading" aria-labelledby="brightness-template"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Brightness template
   
   
 </h3>
     
-
-<p>Illuminance sensors are the <code class="language-plaintext highlighter-rouge">sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: illuminance</code> in <strong>Lights &amp;
-Occupancy</strong> — picked by name, or included through its area, floor, device or label — that
-aren’t excluded. With <a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by
-name count.</p>
-
-<p>Above <code class="language-plaintext highlighter-rouge">0</code>, the room counts as bright enough while every one of those sensors reads above that
-many lux. A bright room isn’t switched on by:</p>
-
-<ul>
-  <li>a sensor detecting someone,</li>
-  <li>a <a href="#scenes">scene</a>, unless every light it covers is already on,</li>
-  <li><a href="#idle-brightness">idle brightness</a>.</li>
-</ul>
-
-<p>If someone is still in the room when it stops being bright enough, because one of those sensors
-drops to the threshold or below, the lights come on then. Someone counts as in the room if one
-of its occupancy or motion sensors is detecting them, or was within the <strong>Wait time</strong>.</p>
-
-<p>Lights already on carry on as before: following the curve, or left to the phase’s scene. Nothing
-is switched off for being bright. Turning the room on by hand — the automation’s
-<strong>Run</strong>, the <a href="../flares/">flare</a>, or a voice assistant — ignores the threshold.</p>
-
-<p>A sensor that is unavailable, unknown or not numeric can’t say how bright the room is, so it
-doesn’t count either way, and a room with no illuminance sensor never blocks. The check is off
-while <strong>Lux Threshold</strong> is <code class="language-plaintext highlighter-rouge">0</code>, which is the default.</p>
-<h3 id="additional-triggers">
-  
-  
-    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
-  
-  
-</h3>
-    
-
-<p>Add any entity a template depends on, such as the TV in a Brightness Template that dims the room
-while it’s playing. An additional trigger only adjusts lights that are already on. To turn a room
-on from something else, see
-<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
-<h2 id="brightness">
-  
-  
-    <a href="#brightness" class="anchor-heading" aria-labelledby="brightness"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Brightness
-  
-  
-</h2>
-    
-
-<div class="table-wrapper"><table>
-  <thead>
-    <tr>
-      <th>Input</th>
-      <th>Default</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Lights Off During Morning / Day / Evening / Night</strong></td>
-      <td>none</td>
-      <td>Lights to turn off during that phase.</td>
-    </tr>
-    <tr>
-      <td><strong>Brightness Template</strong></td>
-      <td>none</td>
-      <td>A template returning a mapping of entity ID to brightness. Overrides the lists above for the lights it includes.</td>
-    </tr>
-  </tbody>
-</table></div>
-
-<p>Brightness Template values:</p>
 
 <div class="table-wrapper"><table>
   <thead>
@@ -479,10 +500,25 @@ on from something else, see
 
 <p>A single number instead of a mapping applies to every light in the room, and any light the
 template doesn’t include follows the schedule. See <a href="../../guides/templates/#brightness-template">Templates</a>.</p>
-<h2 id="idle-brightness">
+<h3 id="additional-triggers">
   
   
-    <a href="#idle-brightness" class="anchor-heading" aria-labelledby="idle-brightness"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Idle brightness
+    <a href="#additional-triggers" class="anchor-heading" aria-labelledby="additional-triggers"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional triggers
+  
+  
+</h3>
+    
+
+<p>Add a trigger for anything a template depends on, such as a <strong>State</strong> trigger on the TV for a
+Brightness Template that dims the room while it’s playing. They’re the same triggers as an
+ordinary automation’s, so one can be as specific as you need: the TV changing to playing, an
+attribute, a button press, a time. An additional trigger only adjusts lights that are already
+on, and never switches one on. To turn a room on from something else, see
+<a href="../../guides/examples/#lighting-a-room-from-a-remote">lighting a room from a remote</a>.</p>
+<h2 id="sensors--conditions">
+  
+  
+    <a href="#sensors--conditions" class="anchor-heading" aria-labelledby="sensors--conditions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Sensors &amp; Conditions
   
   
 </h2>
@@ -498,61 +534,163 @@ template doesn’t include follows the schedule. See <a href="../../guides/templ
   </thead>
   <tbody>
     <tr>
-      <td><strong>Morning / Day / Evening / Night Idle Brightness</strong></td>
-      <td><code class="language-plaintext highlighter-rouge">0</code></td>
-      <td>The brightness, 0–255, the room’s lights dim to when it empties during that phase. <code class="language-plaintext highlighter-rouge">0</code> turns them off.</td>
+      <td><strong>Wait Time</strong></td>
+      <td>120s</td>
+      <td>How long every occupancy and motion sensor must be clear before the room is empty.</td>
     </tr>
     <tr>
-      <td><strong>Idle Brightness Template</strong></td>
+      <td><strong>Lux Threshold</strong></td>
+      <td>0 (off)</td>
+      <td>Above 0, the room stays dark while every illuminance sensor in it reads above this many lux.</td>
+    </tr>
+    <tr>
+      <td><strong>Conditions</strong></td>
       <td>none</td>
-      <td>Like Brightness Template, for when the room is empty. Overrides the settings above for the lights it includes.</td>
+      <td>As in an ordinary automation: all must be met for the room to run. While they aren’t, the room is paused.</td>
     </tr>
   </tbody>
 </table></div>
+<h3 id="wait-time">
+  
+  
+    <a href="#wait-time" class="anchor-heading" aria-labelledby="wait-time"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Wait time
+  
+  
+</h3>
+    
 
-<p>For a nightlight whenever it’s dark outside, leave the four settings at <code class="language-plaintext highlighter-rouge">0</code> and set the template
-to:</p>
+<p>Most occupancy and motion sensors clear the moment they stop seeing movement, even with someone
+sitting still. The room counts as empty only once every one of them has been clear for the
+<strong>Wait Time</strong>. It isn’t used in a room without sensors.</p>
+<h3 id="lux-threshold">
+  
+  
+    <a href="#lux-threshold" class="anchor-heading" aria-labelledby="lux-threshold"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Lux Threshold
+  
+  
+</h3>
+    
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="nv">10 if is_state('sun.sun'</span><span class="pi">,</span> <span class="s1">'</span><span class="s">below_horizon'</span><span class="nv">) else</span> <span class="pi">{}</span> <span class="pi">}}</span>
+<p>Illuminance sensors are the <code class="language-plaintext highlighter-rouge">sensor</code> entities with <code class="language-plaintext highlighter-rouge">device_class: illuminance</code> in <strong>Lights &amp;
+Occupancy</strong> — picked by name, or included through its area, floor, device or label — that
+aren’t excluded. With <a href="#sensors-from-areas">Sensors From Areas</a> off, only the ones picked by
+name count.</p>
+
+<p>Above <code class="language-plaintext highlighter-rouge">0</code>, the room counts as bright enough while every one of those sensors reads above that
+many lux. A bright room isn’t switched on by:</p>
+
+<ul>
+  <li>a sensor detecting someone,</li>
+  <li>a <a href="#scenes">scene</a>, unless every light it covers is already on,</li>
+  <li><a href="#idle-brightness">idle brightness</a>.</li>
+</ul>
+
+<p>If someone is still in the room when it stops being bright enough, because one of those sensors
+drops to the threshold or below, the lights come on then. Someone counts as in the room if one
+of its occupancy or motion sensors is detecting them, or was within the <strong>Wait Time</strong>.</p>
+
+<p>Lights already on carry on as before: following the curve, or left to the phase’s scene. Nothing
+is switched off for being bright. Turning the room on by hand — the automation’s
+<strong>Run</strong>, the <a href="../flares/">flare</a>, or a voice assistant — ignores the threshold.</p>
+
+<p>A sensor that is unavailable, unknown or not numeric can’t say how bright the room is, so it
+doesn’t count either way, and a room with no illuminance sensor never blocks. The check is off
+while <strong>Lux Threshold</strong> is <code class="language-plaintext highlighter-rouge">0</code>, which is the default.</p>
+<h3 id="conditions">
+  
+  
+    <a href="#conditions" class="anchor-heading" aria-labelledby="conditions"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Conditions
+  
+  
+</h3>
+    
+
+<p>While any of the <strong>Conditions</strong> isn’t met, the room does nothing at all: its lights stay as
+they are, sensors don’t turn it on or off, and the schedule isn’t followed. For a vacation or
+guest mode, add a <strong>State</strong> condition on an <code class="language-plaintext highlighter-rouge">input_boolean</code>. Once every condition is met again,
+the room catches up on its next tick: lights that are on move to the schedule, and an empty
+room turns off. If a condition reads an entity, add a trigger for it to
+<a href="#additional-triggers">Additional Triggers</a> so the room catches up as soon as it changes.</p>
+
+<p>Running the automation by hand, or turning on its <a href="../flares/">flare</a>, still works while the
+room is paused.</p>
+
+<p>A room left on when the pause starts stays on until it ends. To stop only some runs, make a
+condition about what started the run, with a <strong>Triggered by</strong> condition on one of the
+<a href="#trigger-ids">trigger IDs</a>. For example, so a pet walking through at night doesn’t light the
+room, while everything else carries on (turning off, following the schedule):</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">condition</span><span class="pi">:</span> <span class="s">not</span>
+<span class="na">conditions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">and</span>
+    <span class="na">conditions</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">trigger</span>
+        <span class="na">id</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s">motion_on</span>
+          <span class="pi">-</span> <span class="s">lux_dark</span>
+      <span class="pi">-</span> <span class="na">condition</span><span class="pi">:</span> <span class="s">time</span>
+        <span class="na">after</span><span class="pi">:</span> <span class="s2">"</span><span class="s">23:00:00"</span>
+        <span class="na">before</span><span class="pi">:</span> <span class="s2">"</span><span class="s">06:00:00"</span>
 </code></pre></div></div>
-
-<p>An idle brightness is the only way the room’s lights come on while it’s empty. See
-<a href="../../guides/templates/#idle-brightness-template">Templates</a> for one lamp as the nightlight,
-and other variations.</p>
-<h2 id="scenes">
+<h3 id="trigger-ids">
   
   
-    <a href="#scenes" class="anchor-heading" aria-labelledby="scenes"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Scenes
+    <a href="#trigger-ids" class="anchor-heading" aria-labelledby="trigger-ids"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Trigger IDs
   
   
-</h2>
+</h3>
     
+
+<p>Each of the room’s triggers has an ID, which a <strong>Triggered by</strong> condition in <strong>Conditions</strong> can
+check. Home Assistant’s editor can’t list a blueprint’s triggers, so the condition shows a
+warning and no choices: use <strong>⋮ → Edit in YAML</strong> and type the ID, as in the example above.</p>
 
 <div class="table-wrapper"><table>
   <thead>
     <tr>
-      <th>Input</th>
-      <th>Default</th>
-      <th>Description</th>
+      <th>ID</th>
+      <th>Fires when</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Morning / Day / Evening / Night Scene</strong></td>
-      <td>none</td>
-      <td>A scene the room uses instead of the schedule during that phase.</td>
+      <td><code class="language-plaintext highlighter-rouge">phase_change</code></td>
+      <td>the schedule moves to another phase</td>
     </tr>
     <tr>
-      <td><strong>Scene Template</strong></td>
-      <td>none</td>
-      <td>A template returning a scene’s entity ID, or <code class="language-plaintext highlighter-rouge">''</code> for none. Overrides the per-phase scenes when it returns a scene that exists.</td>
+      <td><code class="language-plaintext highlighter-rouge">tick</code></td>
+      <td>the room’s regular update, about once a minute</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_on</code></td>
+      <td>an occupancy or motion sensor detects someone</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">motion_off</code></td>
+      <td>a sensor has been clear for the <strong>Wait Time</strong></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">lux_dark</code></td>
+      <td>the room stops being too bright for <strong>Lux Threshold</strong>, with someone there</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">recovered</code></td>
+      <td>one of the room’s lights comes back online</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">extra</code></td>
+      <td>an entity in <strong>Additional Trigger Entities</strong> changes (deprecated)</td>
+    </tr>
+    <tr>
+      <td>your own</td>
+      <td>one of your <strong>Additional Triggers</strong> fires: the ID you give it, or its position if it has none</td>
     </tr>
   </tbody>
 </table></div>
 
-<p>A scene is only used if every entity it sets is in the room; otherwise the whole room follows
-the schedule. When a scene is used, any light in the room that the scene doesn’t set still
-follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
+<p>Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
+you give one, it’s still an additional trigger: one named <code class="language-plaintext highlighter-rouge">motion_on</code> doesn’t light the room.
+Running the automation by hand has no trigger, and skips <strong>Conditions</strong> anyway.</p>
 <h2 id="transitions">
   
   
@@ -572,26 +710,26 @@ follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
   </thead>
   <tbody>
     <tr>
-      <td><strong>Motion On Transition</strong></td>
+      <td><strong>Turning On</strong></td>
       <td>1s</td>
-      <td>Transition when someone comes in, or when you run the automation by hand.</td>
+      <td>How long lights take to fade up when someone comes in, or when you run the automation by hand.</td>
     </tr>
     <tr>
-      <td><strong>Motion Off Transition</strong></td>
+      <td><strong>Turning Off</strong></td>
       <td>15s</td>
-      <td>Transition when the room empties.</td>
+      <td>How long lights take to fade out once the room is empty.</td>
     </tr>
     <tr>
-      <td><strong>Background Transition</strong></td>
+      <td><strong>Everything Else</strong></td>
       <td>5s</td>
-      <td>Transition for every other update.</td>
+      <td>How long every other update takes, such as the schedule moving on.</td>
     </tr>
   </tbody>
 </table></div>
-<h2 id="settings">
+<h2 id="other-settings">
   
   
-    <a href="#settings" class="anchor-heading" aria-labelledby="settings"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Settings
+    <a href="#other-settings" class="anchor-heading" aria-labelledby="other-settings"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Other settings
   
   
 </h2>
@@ -625,6 +763,11 @@ follows the schedule. See <a href="../../guides/scenes/">Scene handoff</a>.</p>
       <td><strong>Sensors From Areas</strong></td>
       <td>on</td>
       <td>Off, sensors aren’t inferred from the areas, floors, devices or labels in <strong>Lights &amp; Occupancy</strong>; only explicitly selected sensors are used. Deprecated: use <strong>Exclude target</strong> instead of turning this off.</td>
+    </tr>
+    <tr>
+      <td><strong>Additional Trigger Entities</strong></td>
+      <td>none</td>
+      <td>Entities that make the room update as soon as they change. Deprecated: use <strong>Additional Triggers</strong> instead.</td>
     </tr>
   </tbody>
 </table></div>
@@ -674,11 +817,25 @@ each trace takes memory, so set it back once you’re done.</p>
 count, so you can pick an area for its lights and choose the sensors yourself, such as the
 hallway’s for a landing. Pick none for a room that only follows the schedule.</p>
 
-<p><strong>Sensors From Areas is deprecated, and FLARE 3.0 removes it.</strong> From Home Assistant 2026.11,
-use <strong>Exclude target</strong> in <strong>Lights &amp; Occupancy</strong> instead of turning it off, to leave out the
-sensors you don’t want (see Home Assistant’s
+<p><strong>Sensors From Areas is deprecated, and FLARE 3.0 removes it.</strong> It only shows in a room that
+has it turned off. Use <strong>Exclude target</strong> in <strong>Lights &amp; Occupancy</strong> instead of turning it off,
+to leave out the sensors you don’t want (see Home Assistant’s
 <a href="https://www.home-assistant.io/docs/automation/targets/#excluding-targets">excluding targets</a>).
 An excluded sensor doesn’t count, whether it came from an area, a device, a floor or a label.</p>
+<h3 id="additional-trigger-entities">
+  
+  
+    <a href="#additional-trigger-entities" class="anchor-heading" aria-labelledby="additional-trigger-entities"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Additional trigger entities
+  
+  
+</h3>
+    
+
+<p>The list of entities <strong>Additional Triggers</strong> used to be: any change to one updates the room,
+as a <strong>State</strong> trigger on it in <a href="#additional-triggers">Additional Triggers</a> does.</p>
+
+<p><strong>Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.</strong> Move each entity to
+<strong>Additional Triggers</strong> as a <strong>State</strong> trigger, then clear this list.</p>
 <h2 id="how-a-room-behaves">
   
   
@@ -711,7 +868,7 @@ minute, on the minute.</p>
     
 
 <p>Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
-been clear for the <strong>Wait time</strong>.</p>
+been clear for the <strong>Wait Time</strong>.</p>
 
 <p>While every light in <strong>Lights &amp; Occupancy</strong> is off, the only things that turn any of them on are
 a sensor detecting someone, running the automation by hand, the room getting dark while someone
@@ -719,7 +876,7 @@ is in it (with a <a href="#lux-threshold">Lux Threshold</a>), and <a href="#idle
 at least one light is on, any update can turn on the others. This means a phase change doesn’t light up an empty room, and a bulb that comes back
 online stays off if the rest of the room is off.</p>
 
-<p>If a light is still on after the room has been empty for the <strong>Wait time</strong>, the turn-off is sent
+<p>If a light is still on after the room has been empty for the <strong>Wait Time</strong>, the turn-off is sent
 again.</p>
 
 <p>Running the automation by hand sets every light in the room, including ones someone else has
@@ -737,6 +894,8 @@ changed.</p>
   <li><strong>Someone else changed it.</strong> A light changed from a wall switch, an app, a voice assistant or
 another automation, including being turned off, is left alone until every light in the room is
 off. See <a href="../override-protection/">override protection</a>.</li>
+  <li><strong>The room’s <a href="#conditions">Conditions</a> aren’t met</strong>, so it’s paused. Its <strong>Traces</strong> show the
+Conditions step that stopped it.</li>
   <li><strong>The room is empty and the light was off.</strong> See
 <a href="#when-lights-turn-on-and-off">when lights turn on and off</a>.</li>
   <li><strong>It’s already close enough.</strong> Changes smaller than 5% of the brightness or 5 mireds of colour

@@ -326,7 +326,7 @@ its <code class="language-plaintext highlighter-rouge">action:</code>.</p>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">extra</code></td>
-      <td>Additional Triggers</td>
+      <td>Additional Trigger Entities (deprecated)</td>
       <td>any state change of entities the user picked</td>
     </tr>
     <tr>
@@ -349,8 +349,16 @@ its <code class="language-plaintext highlighter-rouge">action:</code>.</p>
       <td>template: the room stops reading too bright (some illuminance sensor at or below Lux Threshold)</td>
       <td>a wake-up only; the action re-checks</td>
     </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">additional</code></td>
+      <td>Additional Triggers, the user’s own, last</td>
+      <td>by position: <code class="language-plaintext highlighter-rouge">trigger_id</code> is <code class="language-plaintext highlighter-rouge">additional</code> for any trigger at position 10 or later, whatever its own id</td>
+    </tr>
   </tbody>
 </table></div>
+
+<p>The blueprint reads which trigger ran from <code class="language-plaintext highlighter-rouge">trigger_id</code>, never <code class="language-plaintext highlighter-rouge">trigger.id</code>: a user’s trigger can
+carry any id, <code class="language-plaintext highlighter-rouge">motion_on</code> included, and must never count as one of the blueprint’s own.</p>
 
 <p><code class="language-plaintext highlighter-rouge">trigger_variables:</code> are the only variables a trigger can see. <code class="language-plaintext highlighter-rouge">tick_area</code>
 is computed there, as the first <code class="language-plaintext highlighter-rouge">area_id</code> in <code class="language-plaintext highlighter-rouge">room_target</code>. Trigger

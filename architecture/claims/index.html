@@ -358,7 +358,9 @@ way the light is still FLARE’s, so a dropped write can’t lock FLARE out,
 even if the light reports the same state again under a new context.</p>
 
 <p><strong>A target</strong> is what a write asked for: <code class="language-plaintext highlighter-rouge">{brightness, color_temp_kelvin}</code>,
-<code class="language-plaintext highlighter-rouge">{brightness, rgb_color}</code>, or <code class="language-plaintext highlighter-rouge">{state: off}</code> for a turn-off. A light
+<code class="language-plaintext highlighter-rouge">{brightness, rgb_color}</code>, or <code class="language-plaintext highlighter-rouge">{state: off}</code> for a turn-off, kept as HA
+sends it to the light (<code class="language-plaintext highlighter-rouge">matching.sent()</code>): a Kelvin target for a light that
+can’t show Kelvin is kept as the RGB HA sends it instead. A light
 reported under a stranger’s context is still FLARE’s if it shows the
 target. That covers a bulb reporting after HA has forgotten the write’s
 context, which happens 5 seconds after the call.</p>
@@ -463,12 +465,22 @@ anything else calls <code class="language-plaintext highlighter-rouge">classify(
       <td>RGB</td>
       <td><code class="language-plaintext highlighter-rouge">rgb_color</code>, only against an RGB target: the channels’ differences summed, within twice the colour tolerance (10 at the default), never less than 4</td>
     </tr>
+    <tr>
+      <td>Kelvin on a light without it</td>
+      <td>a light with colour but neither colour temperature nor RGBWW (an RGB strip) is compared with the RGB HA’s <code class="language-plaintext highlighter-rouge">light.turn_on</code> sends it for the Kelvin (<code class="language-plaintext highlighter-rouge">color_temperature_to_hs</code>), by the RGB rule, and shows its <code class="language-plaintext highlighter-rouge">rgb_color</code></td>
+    </tr>
+    <tr>
+      <td>only what it can show</td>
+      <td>no colour for a light without colour or colour temperature (a dimmer), no brightness for an on/off light, as HA’s <code class="language-plaintext highlighter-rouge">light.turn_on</code> drops them; a light whose colour modes aren’t known is compared on everything</td>
+    </tr>
   </tbody>
 </table></div>
 
 <p>Never Kelvin by way of RGB: HA’s Kelvin→RGB and xy→RGB conversions differ
 by about 13 in red at 6500K, so a bulb showing exactly what was asked would
-read as something else.</p>
+read as something else. The exception is a light that can’t show Kelvin,
+where HA does that conversion itself and the light shows its result: its xy
+reads 2700K back as about 1870K, so its target is the RGB HA sends.</p>
 <h2 id="a-lights-life">
   
   
