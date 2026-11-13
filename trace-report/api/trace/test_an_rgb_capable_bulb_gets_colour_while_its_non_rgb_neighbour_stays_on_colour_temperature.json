@@ -4,7 +4,7 @@
   "traces": [
     {
       "last_step": "action/3/default/4/if/condition/0",
-      "run_id": "8136e80bcb0013d496dd8c5bbe71e3a9",
+      "run_id": "142baf4e8433bba80dc7906406f2d18c",
       "state": "stopped",
       "script_execution": "finished",
       "timestamp": {
@@ -34,7 +34,7 @@
                 "last_reported": "2026-11-14T03:00:02+00:00",
                 "last_updated": "2026-11-14T03:00:02+00:00",
                 "context": {
-                  "id": "01M7BZYSTG9MCFHGVRTD2T3S8B",
+                  "id": "01M7BZYSTGBWM9PEDN44ZCM4JX",
                   "parent_id": null,
                   "user_id": null
                 }
@@ -56,7 +56,7 @@
                   "last_reported": "2026-11-14T03:00:02+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTGPJZ5CM1DBKX3TWVB",
+                    "id": "01M7BZYSTGV14TFQ51W9C3QKMX",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -71,7 +71,7 @@
                   "last_reported": "2026-11-14T03:00:02+00:00",
                   "last_updated": "2026-11-14T03:00:02+00:00",
                   "context": {
-                    "id": "01M7BZYSTG99P4Y5TAZZB2PVBS",
+                    "id": "01M7BZYSTGH6X3XA685K85E8WZ",
                     "parent_id": null,
                     "user_id": null
                   }
@@ -89,7 +89,7 @@
               "lux_threshold": 0,
               "tick_area": null,
               "trigger_id": "motion_on",
-              "schedule": "b12e947f4fbe7cc77966427e588d28bf",
+              "schedule": "e9a0a5032474ed60ea8cd7f1d4edcd7d",
               "override_protection_on": true,
               "room_id": "automation.room",
               "adaptive_sensor": "sensor.test_flare",
@@ -138,8 +138,8 @@
             "timestamp": "2026-11-14T03:00:02+00:00",
             "changed_variables": {
               "context": {
-                "id": "01M7BZYSTGDSN2AYS6WC59Z3BF",
-                "parent_id": "01M7BZYSTG99P4Y5TAZZB2PVBS",
+                "id": "01M7BZYSTGZA3Y8GW0E9NKRY8Z",
+                "parent_id": "01M7BZYSTGH6X3XA685K85E8WZ",
                 "user_id": null
               },
               "room": {
@@ -277,8 +277,8 @@
             "result": {
               "result": false,
               "entities": [
-                "light.rgb_spot",
-                "light.ct_spot"
+                "light.ct_spot",
+                "light.rgb_spot"
               ]
             }
           }
@@ -565,7 +565,7 @@
         },
         "variables": {
           "trigger_id": "{% if trigger is defined and trigger.idx is defined and trigger.idx | int(-1) >= 10 %}additional {%- elif trigger is defined and trigger.id is defined %}{{ trigger.id }} {%- else %}{{ none }}{% endif %}",
-          "schedule": "b12e947f4fbe7cc77966427e588d28bf",
+          "schedule": "e9a0a5032474ed60ea8cd7f1d4edcd7d",
           "override_protection_on": true,
           "room_id": "{{ this.entity_id if override_protection_on else none }}",
           "adaptive_sensor": "{{ device_entities(schedule) | select('match', '^sensor\\\\.') | first | default(none) }}\n",
@@ -589,7 +589,7 @@
             "id": "phase_change",
             "trigger": "event.received",
             "target": {
-              "device_id": "b12e947f4fbe7cc77966427e588d28bf"
+              "device_id": "e9a0a5032474ed60ea8cd7f1d4edcd7d"
             },
             "options": {
               "event_type": [
@@ -1021,7 +1021,7 @@
         "use_blueprint": {
           "path": "flare/flare.yaml",
           "input": {
-            "schedule": "b12e947f4fbe7cc77966427e588d28bf",
+            "schedule": "e9a0a5032474ed60ea8cd7f1d4edcd7d",
             "room_target": {
               "entity_id": [
                 "light.rgb_spot",
@@ -1033,8 +1033,8 @@
         }
       },
       "context": {
-        "id": "01M7BZYSTGDSN2AYS6WC59Z3BF",
-        "parent_id": "01M7BZYSTG99P4Y5TAZZB2PVBS",
+        "id": "01M7BZYSTGZA3Y8GW0E9NKRY8Z",
+        "parent_id": "01M7BZYSTGH6X3XA685K85E8WZ",
         "user_id": null
       }
     }
