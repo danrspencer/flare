@@ -143,6 +143,19 @@ async def test_claims_and_rooms_come_back_after_a_restart(hass: HomeAssistant, h
     assert registry.rooms_of("light.a") == [ROOM]
 
 
+async def test_a_room_whose_automation_was_deleted_meanwhile_does_not_come_back(
+    hass: HomeAssistant, hass_storage: dict[str, Any]
+):
+    """Nor do its claims. A room that isn't keyed by an entity stays."""
+    deleted = "0123456789abcdef0123456789abcdef"
+    claims = {"light.a": _claim("ctx-ours"), "light.b": _claim("ctx-ours")}
+    rooms = {deleted: {"lights": ["light.a"]}, ROOM: {"lights": ["light.b"]}}
+    registry = await _start(hass, hass_storage, claims, rooms)
+
+    assert registry.room_keys() == [ROOM]
+    assert set(registry.all_records()) == {"light.b"}
+
+
 async def test_a_light_someone_else_had_before_the_restart_is_still_theirs(hass: HomeAssistant, hass_storage: dict[str, Any]):
     """We asked for 200; it shows 90. Left alone at once, and an override
     once the grace has passed."""

@@ -199,6 +199,10 @@ set of claimed lights changes. It follows their registry entries too, with
 | renamed in the registry | its claim and its place in its rooms move to the new entity ID |
 | deleted from the registry | its claim and its place in its rooms go |
 
+It follows the registry entry of each entity a room is keyed by as well. When
+one is deleted its room goes, with the claims on lights no other room has
+(`_forget_deleted_rooms`, which also runs when the claims are loaded).
+
 The rules the listener keeps:
 
 - **Nothing reported while HA is stopping counts.** MQTT marks lights

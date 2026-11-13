@@ -212,7 +212,8 @@ data:
   [`flare.claims_override`](../services/#flareclaims_override).
 
 If an automation is renamed, its room carries on: FLARE keeps rooms by the automation's entity
-registry entry, not its entity ID.
+registry entry, not its entity ID. If it's deleted, its room goes with it, and FLARE lets go of
+the lights no other room has.
 
 ### How close counts as a match
 

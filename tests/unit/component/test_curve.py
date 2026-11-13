@@ -43,6 +43,14 @@ def test_phase_at_boundaries():
     assert phase_at(NIGHT + _H, MORNING, DAY_START, EVENING, NIGHT) == "Night"
 
 
+def test_night_eases_to_tomorrows_morning_where_that_is_given():
+    """An eight-hour ramp: begun at 22:00 for a Morning 24 hours after
+    today's, and not until 23:00 for one an hour later than that."""
+    an_hour_in = NIGHT + _H
+    assert _bri("Night", an_hour_in, night_brightness_transition=480) == 102
+    assert _bri("Night", an_hour_in, night_brightness_transition=480, next_morning_ts=MORNING + 25 * _H) == 80
+
+
 class TestDefaults:
     @pytest.mark.parametrize("phase,start", PHASE_STARTS)
     def test_every_phase_is_its_own_value_at_its_own_start(self, phase, start):
