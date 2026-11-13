@@ -21,13 +21,20 @@ export function supportsKelvinFeature(hass, context) {
   return (stateObj.attributes || {}).unit_of_measurement === KELVIN_UNIT;
 }
 
+// The most of the theme's text colour a near-white gets, and how fast that
+// falls off as the colour saturates: an orange or blue already shows.
+const MAX_TEXT_MIX = 15;
+const MIX_FALLOFF = 6;
+
 /**
- * The curve card's colour for a Kelvin, with a little of the theme's text
- * colour mixed in, so a near-white still shows on a light card.
+ * The curve card's colour for a Kelvin, with the theme's text colour mixed
+ * in by how pale it is, so a near-white still shows on a light card.
  */
 export function sliderColor(kelvin) {
   const [r, g, b] = kelvinToRgb(kelvin);
-  return `color-mix(in srgb, rgb(${r}, ${g}, ${b}) 85%, var(--primary-text-color))`;
+  const paleness = Math.min(r, g, b) / Math.max(r, g, b);
+  const mix = Math.round(MAX_TEXT_MIX * paleness ** MIX_FALLOFF);
+  return `color-mix(in srgb, rgb(${r}, ${g}, ${b}) ${100 - mix}%, var(--primary-text-color))`;
 }
 
 defineValueSlider({

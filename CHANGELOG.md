@@ -19,6 +19,9 @@ CI — see `.github/workflows/release.yml`.
   another automation, FLARE could let go of them while that room was still lit, and Activity
   named the old room by an ID. The room now goes with its automation
   ([#363](https://github.com/danrspencer/flare/issues/363)).
+- **The dashboard's colour temperature sliders looked dull on a light theme.** Oranges showed as
+  brown and the coolest blues as grey. Now only the near-whites are darkened, just enough to show
+  against a white card.
 
 ## [2.1.0] - Unreleased
 
