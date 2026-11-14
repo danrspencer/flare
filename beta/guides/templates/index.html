@@ -261,6 +261,7 @@ Assistant template that can depend on anything and set each light separately. Th
       <li><a href="#leaving-a-light-alone" id="markdown-toc-leaving-a-light-alone">Leaving a light alone</a></li>
       <li><a href="#one-level-for-the-whole-room" id="markdown-toc-one-level-for-the-whole-room">One level for the whole room</a></li>
       <li><a href="#a-level-that-follows-the-curve" id="markdown-toc-a-level-that-follows-the-curve">A level that follows the curve</a></li>
+      <li><a href="#a-light-that-never-drops-below-a-level" id="markdown-toc-a-light-that-never-drops-below-a-level">A light that never drops below a level</a></li>
       <li><a href="#0-or-null" id="markdown-toc-0-or-null"><code class="language-plaintext highlighter-rouge">0</code> or <code class="language-plaintext highlighter-rouge">null</code>?</a></li>
     </ol>
   </li>
@@ -400,6 +401,25 @@ curve instead:</p>
 </code></pre></div></div>
 
 <p><code class="language-plaintext highlighter-rouge">'x1.5'</code> makes a light brighter than the rest of the room, up to full brightness.</p>
+<h3 id="a-light-that-never-drops-below-a-level">
+  
+  
+    <a href="#a-light-that-never-drops-below-a-level" class="anchor-heading" aria-labelledby="a-light-that-never-drops-below-a-level"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> A light that never drops below a level
+  
+  
+</h3>
+    
+
+<p><code class="language-plaintext highlighter-rouge">schedule_brightness</code> is the brightness, 0–255, the room’s schedule is at right now, which is
+what every light without a level gets. Use it for anything a multiplier can’t do, such as a
+floor:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="pi">{</span><span class="s1">'</span><span class="s">light.desk_lamp'</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">schedule_brightness</span><span class="pi">,</span> <span class="nv">80</span><span class="pi">]</span> <span class="err">|</span> <span class="nv">max</span><span class="pi">}</span> <span class="pi">}}</span>
+</code></pre></div></div>
+
+<p>The desk lamp follows the curve, but never sits below 80. <code class="language-plaintext highlighter-rouge">schedule_brightness</code> is <code class="language-plaintext highlighter-rouge">none</code>
+while the schedule is unavailable, so a template doing arithmetic with it can guard with
+<code class="language-plaintext highlighter-rouge">schedule_brightness is not none</code>.</p>
 <h3 id="0-or-null">
   
   
