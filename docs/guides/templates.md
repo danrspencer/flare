@@ -97,6 +97,20 @@ curve instead:
 
 `'x1.5'` makes a light brighter than the rest of the room, up to full brightness.
 
+### A light that never drops below a level
+
+`schedule_brightness` is the brightness, 0–255, the room's schedule is at right now, which is
+what every light without a level gets. Use it for anything a multiplier can't do, such as a
+floor:
+
+```yaml
+{{ {'light.desk_lamp': [schedule_brightness, 80] | max} }}
+```
+
+The desk lamp follows the curve, but never sits below 80. `schedule_brightness` is `none`
+while the schedule is unavailable, so a template doing arithmetic with it can guard with
+`schedule_brightness is not none`.
+
 ### `0` or `null`?
 
 `0` turns the light off but keeps it FLARE's, so it comes back on with the rest of the room.

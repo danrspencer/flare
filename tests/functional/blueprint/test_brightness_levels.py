@@ -118,6 +118,25 @@ class TestBrightnessScaling:
         assert effective(call, "light.a") == expected
         assert effective(call, "light.b") == expected
 
+    @pytest.mark.parametrize(("schedule", "expected"), [(210, 210), (100, 150)])
+    async def test_the_brightness_template_reads_schedule_brightness(
+        self, hass, apply_lighting_calls, schedule, expected
+    ):
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a"]},
+            brightness_template="{{ {'light.a': [schedule_brightness, 150] | max} }}",
+        )
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": schedule, "color_temp_kelvin": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert apply_lighting_calls
+        assert effective(apply_lighting_calls[-1], "light.a") == expected
+
     async def test_a_null_level_light_is_not_turned_off_when_occupancy_clears(
         self, hass, turn_off_calls
     ):

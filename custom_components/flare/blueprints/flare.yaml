@@ -652,6 +652,9 @@ action:
         {{ resolved_entities | reject('is_state', 'on') | list if too_bright else [] }}
       # Up here because variables: render top to bottom and the turn-off lists
       # below need it.
+      # Public: the templates read it, and the docs name it. None while the
+      # schedule is unavailable.
+      schedule_brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
       template_brightness_levels: !input brightness_template
       morning_exclude_lights: !input morning_exclude_lights
       day_exclude_lights: !input day_exclude_lights
@@ -696,7 +699,6 @@ action:
           {% endif %}
         {% endfor %}
         {{ ns.items }}
-      brightness: "{{ state_attr(adaptive_sensor, 'brightness') }}"
       color_temp_kelvin: "{{ state_attr(adaptive_sensor, 'color_temp_kelvin') }}"
       # None while the sensor is unavailable.
       rgb_color: "{{ state_attr(adaptive_sensor, 'rgb_color') }}"
@@ -1028,14 +1030,14 @@ action:
             if:
               - condition: template
                 alias: "Sensor has a real brightness and colour target"
-                value_template: "{{ brightness is not none and color_temp_kelvin is not none }}"
+                value_template: "{{ schedule_brightness is not none and color_temp_kelvin is not none }}"
             then:
               - alias: "Apply adaptive lighting (FLARE)"
                 action: flare.apply_lighting
                 data:
                   entities: "{{ target_entities }}"
                   brightness_levels: "{{ brightness_levels }}"
-                  brightness: "{{ brightness }}"
+                  brightness: "{{ schedule_brightness }}"
                   color_temp_kelvin: "{{ color_temp_kelvin }}"
                   rgb_color: "{{ rgb_color }}"
                   transition: "{{ script_transition }}"
