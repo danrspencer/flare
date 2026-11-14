@@ -119,7 +119,10 @@ Whenever a template returns a value, it overrides the per-phase setting.
 
 A single value instead of a mapping applies to every light in the room, and any light the
 template doesn't include follows the schedule. The Idle Brightness Template takes the same
-values except `'x0.5'`, and there `0` or `'0%'` means the light goes dark. See [Templates](../../guides/templates/#brightness-template).
+values except `'x0.5'`, and there `0` or `'0%'` means the light goes dark.
+
+Both templates can read `schedule_brightness`: the schedule's brightness right now, 0–255, or
+`none` while the schedule is unavailable. See [Templates](../../guides/templates/#brightness-template).
 
 ### Additional triggers
 
