@@ -304,6 +304,23 @@ async def test_a_brightness_template_sets_a_fitting_by_percent_or_multiplier(
     assert room_brightness(hass, bulbs) == want
 
 
+async def test_a_brightness_template_reads_the_schedule_brightness(
+    hass: HomeAssistant, add_bulbs, setup_room, area
+) -> None:
+    lamp = "light.hall_lamp"
+    bulbs = await lit_room(
+        hass,
+        add_bulbs,
+        setup_room,
+        area,
+        brightness_template=f"{{{{ {{'{lamp}': schedule_brightness - 10}} }}}}",
+    )
+
+    want = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
+    want[lamp] = CURVE_BRIGHTNESS - 10
+    assert room_brightness(hass, bulbs) == want
+
+
 async def test_an_idle_percent_dims_the_nightlight_to_it(
     hass: HomeAssistant, add_bulbs, setup_room, area, frozen_time
 ) -> None:

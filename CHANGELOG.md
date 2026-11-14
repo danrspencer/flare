@@ -15,6 +15,8 @@ CI — see `.github/workflows/release.yml`.
   sets a light to half of full brightness, and `'x0.5'` to half of the schedule's, so it keeps
   following the curve. The Idle Brightness Template takes percentages too, and
   `flare.apply_lighting`'s `brightness_levels` takes both.
+- **`schedule_brightness` in the brightness templates**: the room's schedule brightness right
+  now, for anything a multiplier can't do, such as keeping a lamp from dropping below a level.
 
 ## [2.1.1] - Unreleased
 
