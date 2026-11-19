@@ -252,9 +252,9 @@ everything in FLARE is an ordinary Home Assistant entity or event, so an automat
 can change it or react to it. Each example here is a complete automation to paste in and
 adjust.</p>
 
-<p>They use a schedule called <strong>Home</strong>, so its entities are <code class="language-plaintext highlighter-rouge">time.home_…</code>, <code class="language-plaintext highlighter-rouge">number.home_…</code>
-and <code class="language-plaintext highlighter-rouge">sensor.home_flare</code>. Swap in your own schedule’s name, and your own rooms, lights and
-sensors.</p>
+<p>They use a schedule called <strong>Home</strong>, so its entities are <code class="language-plaintext highlighter-rouge">time.home_…</code>, <code class="language-plaintext highlighter-rouge">number.home_…</code>,
+<code class="language-plaintext highlighter-rouge">sensor.home_flare</code>, <code class="language-plaintext highlighter-rouge">select.home_flare_phase</code>, and <code class="language-plaintext highlighter-rouge">event.home_flare_phase</code>. Swap in your own
+schedule’s name, and your own rooms, lights and sensors.</p>
 
 <details open="">
   <summary class="text-delta">On this page</summary>
@@ -304,9 +304,9 @@ sensors.</p>
       <span class="na">time</span><span class="pi">:</span> <span class="s2">"</span><span class="s">{{</span><span class="nv"> </span><span class="s">'09:30:00'</span><span class="nv"> </span><span class="s">if</span><span class="nv"> </span><span class="s">lie_in</span><span class="nv"> </span><span class="s">else</span><span class="nv"> </span><span class="s">'08:00:00'</span><span class="nv"> </span><span class="s">}}"</span>
 </code></pre></div></div>
 
-<p>The schedule only checks Morning’s start time when the morning comes round, so the trick is
-to change it the night <strong>before</strong>. This runs when Night starts: after today’s morning, and
-before tomorrow’s.</p>
+<p>Changing Morning’s start time during Morning itself shifts today’s phase straight away, so the
+trick is to change it the night <strong>before</strong>. This automation runs when Night starts — after
+today’s morning, and before tomorrow’s.</p>
 
 <ul>
   <li><strong>It runs every night</strong>, not just at the weekend, so the weekday times come back on Sunday
@@ -360,9 +360,9 @@ Helpers → Create helper → Toggle). Then:</p>
               <span class="s">time: "22:00"</span>
 </code></pre></div></div>
 
-<p>Each schedule lists only what changes; everything else stays as it is. A schedule can hold
-any of its settings, so for bigger changes, set your schedule up the way you want it, press
-<strong>Copy</strong> in its dashboard section, and paste the result in.</p>
+<p>Each YAML block lists only the settings that change; everything else keeps its current value. A
+schedule can hold any of its settings, so for bigger changes, set your schedule up the way you
+want it, press <strong>Copy</strong> in its dashboard section, and paste the result in.</p>
 <h2 id="movie-night">
   
   

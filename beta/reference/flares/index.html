@@ -278,11 +278,15 @@
   <tbody>
     <tr>
       <td><strong>Automation</strong></td>
-      <td>The automation that turning the flare on runs. If the automation is deleted, the flare is unavailable.</td>
+      <td>The automation that turning the flare on runs. If the automation is deleted, the flare becomes unavailable.</td>
+    </tr>
+    <tr>
+      <td><strong>Name</strong></td>
+      <td>The flare’s display name (and what voice assistants hear). Renaming it later doesn’t change its entity ID.</td>
     </tr>
     <tr>
       <td><strong>Lights input</strong></td>
-      <td>For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it’s used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is <strong>Lights &amp; Occupancy</strong>.</td>
+      <td>For an automation built from a blueprint: the input that holds the lights. The flare reads that input whenever it’s used, so changing the automation updates the flare. For an automation from the FLARE blueprint this is <strong>Lights &amp; Occupancy</strong>.</td>
     </tr>
     <tr>
       <td><strong>Lights</strong></td>
@@ -290,18 +294,18 @@
     </tr>
     <tr>
       <td><strong>Area</strong></td>
-      <td>Only when adding: the area the flare’s device starts in, which defaults to the automation’s area. After that, the device’s area is set the usual way.</td>
+      <td>Shown only when adding a flare for another automation: the area the flare’s device starts in, defaulting to the automation’s area. Afterwards, change the device’s area the usual way in Home Assistant.</td>
     </tr>
   </tbody>
 </table></div>
 
-<p><strong>Set up area</strong> offers a flare for each area it sets up, named after the area. Adding flares from <strong>Rooms from
-the FLARE blueprint</strong> creates one for each room picked, named after its automation. Either way,
-the flare starts in the automation’s area.</p>
+<p><strong>Set up area</strong> offers a flare for each area it sets up, named after the area. Adding flares from
+<strong>Rooms from the FLARE blueprint</strong> creates a flare for each room picked, named after its
+automation. In both cases, the new flare is placed in its automation’s area.</p>
 
-<p><strong>Reconfigure</strong> shows which automation the flare runs, and changes the flare’s name and its
-lights, or its lights input. It can’t change the automation, so to use a different
-one, add a new flare.</p>
+<p><strong>Reconfigure flare</strong> (in the flare’s three-dot menu) shows which automation the flare runs, and
+lets you change its <strong>Name</strong> and either its <strong>Lights</strong> or <strong>Lights input</strong>. It can’t switch a
+flare to a different automation — add a new flare if you need that.</p>
 <h2 id="the-flares-light">
   
   
@@ -329,7 +333,7 @@ attribute lists the lights.</p>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">light.turn_on</code> with a brightness, colour or effect</td>
-      <td>Marks every light as overridden, with the automation as its room, with <a href="../services/#flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>, then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark.</td>
+      <td>Marks every light as overridden for that automation’s room via <a href="../services/#flareclaims_override"><code class="language-plaintext highlighter-rouge">flare.claims_override</code></a>, then sends the values to the lights as a light group does. FLARE leaves them alone until the room is empty and dark.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">light.turn_off</code></td>
@@ -338,8 +342,9 @@ attribute lists the lights.</p>
   </tbody>
 </table></div>
 
-<p>The flare’s lights are the same as its automation’s, chosen as described under
-<a href="../blueprint/#room">Room</a>. A light that belongs to another flare isn’t one of them.</p>
+<p>For an automation built from a blueprint, the flare’s lights match the automation’s target as
+described under <a href="../blueprint/#room">Room</a>. A light that belongs to another flare is always
+excluded.</p>
 <h2 id="flares-and-the-rooms-automation">
   
   

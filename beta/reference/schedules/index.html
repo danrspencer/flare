@@ -303,21 +303,22 @@ that need different timing, with <strong>Settings → Devices &amp; Services →
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">number.&lt;name&gt;_&lt;phase&gt;_brightness</code></td>
-      <td>The phase’s brightness, 0–255. At <code class="language-plaintext highlighter-rouge">0</code>, the phase turns the lights off.</td>
+      <td>The phase’s brightness, 0–255 (defaults: Morning 255, Day 255, Evening 180, Night 80). At <code class="language-plaintext highlighter-rouge">0</code>, the phase turns the lights off.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">number.&lt;name&gt;_&lt;phase&gt;_kelvin</code></td>
-      <td>The phase’s colour temperature, 1000–10000 K.</td>
+      <td>The phase’s colour temperature, 1000–10000 K (defaults: Morning 6667 K, Day 6667 K, Evening 3200 K, Night 2700 K).</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">number.&lt;name&gt;_&lt;phase&gt;_brightness_transition</code>, <code class="language-plaintext highlighter-rouge">_kelvin_transition</code></td>
-      <td>The phase’s transitions, in minutes. See <a href="#transitions">transitions</a>.</td>
+      <td>The phase’s transitions, in minutes (defaults: Morning 60/60, Day 65/1440, Evening 60/60, Night 30/30). See <a href="#transitions">transitions</a>.</td>
     </tr>
   </tbody>
 </table></div>
 
-<p>A change to any of these takes effect within a few seconds. To remove a schedule, delete its
-device.</p>
+<p>A change to any of these takes effect on the schedule sensor within 10 seconds, and lit rooms pick
+it up on their next regular update (or immediately if the phase itself changed). To remove a
+schedule, delete its device.</p>
 <h2 id="the-schedule-sensor">
   
   
@@ -338,6 +339,10 @@ device.</p>
     <tr>
       <td>state</td>
       <td>The phase: <code class="language-plaintext highlighter-rouge">Morning</code>, <code class="language-plaintext highlighter-rouge">Day</code>, <code class="language-plaintext highlighter-rouge">Evening</code> or <code class="language-plaintext highlighter-rouge">Night</code>.</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">phase</code></td>
+      <td>Same as the sensor’s state.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">brightness</code></td>
@@ -377,10 +382,11 @@ follows the overridden phase.</p>
 </h2>
     
 
-<p>A phase’s transition is how long before the phase ends its brightness or colour starts changing
-to the next phase’s. The change finishes when the next phase starts: if Morning starts at 06:00,
-the lights reach Morning’s values at 06:00. For example, <code class="language-plaintext highlighter-rouge">day_kelvin_transition</code> is how long
-before the end of Day the colour starts changing to Evening’s.</p>
+<p>A phase’s transition is how long before the phase ends that its brightness or colour starts
+easing toward the next phase’s values. The change finishes when the next phase starts — for
+example, if Morning starts at 06:00, the lights reach Morning’s values at 06:00. Likewise,
+<code class="language-plaintext highlighter-rouge">day_kelvin_transition</code> is how many minutes before the end of Day that the colour starts easing
+toward Evening’s colour temperature.</p>
 
 <ul>
   <li>A transition of <code class="language-plaintext highlighter-rouge">0</code> switches at the boundary.</li>

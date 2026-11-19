@@ -337,12 +337,12 @@ recurse forever.</li>
 automation’s decision. A manual run passes <code class="language-plaintext highlighter-rouge">allow_turn_on</code> and <code class="language-plaintext highlighter-rouge">force</code>,
 so “on” also takes back a room that was overridden.</li>
   <li><strong>“On” with values, and “off”, mark the lights overridden first</strong>,
-with the automation as the room, then send as any light group does.
-Without that, an unclaimed light (every light, once a room goes dark)
-would read <code class="language-plaintext highlighter-rouge">untracked</code>, and the run the change itself triggers would
-take it straight back to the curve. That’s how Siri’s “100 %” got
-dimmed back down. The override claim has a fresh context and no target,
-so it never matches; the room going dark hands the lights back.</li>
+using the automation as the room, then forward the call like a standard light group. Without
+that step, any unclaimed light (including every light in a room that had previously gone dark)
+would read as <code class="language-plaintext highlighter-rouge">untracked</code>, and the automation run triggered by the state change would immediately
+push the lights back to the curve (turning a voice assistant’s “100%” straight back down). The
+override claim has a fresh context and no target, so it never matches; the room going dark
+later releases the lights back to FLARE.</li>
   <li><strong>Off is a plain <code class="language-plaintext highlighter-rouge">light.turn_off</code>, never <code class="language-plaintext highlighter-rouge">flare.turn_off</code>.</strong> A flare’s
 off is the user’s. Recording it as FLARE’s off would let a run landing
 while the room was half-off switch it back on.</li>

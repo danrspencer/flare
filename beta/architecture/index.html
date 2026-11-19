@@ -242,11 +242,10 @@ FLARE’s code, or who just like to know how things work. Installing, setting up
 are all covered without it: start at <a href="/flare/beta/installation/">Installation</a>.</p>
 </blockquote>
 
-<p>What runs where, how FLARE hooks into Home Assistant, and how the pieces
-talk to each other. These pages describe the system as it is. The reasons
-behind its decisions are in
-<a href="https://github.com/danrspencer/flare/blob/main/CLAUDE.md">CLAUDE.md</a>, in
-the repository.</p>
+<p>This section covers what runs where, how FLARE hooks into Home Assistant, and how the pieces
+talk to each other. These pages describe the system as it is today; the reasons behind its
+design decisions live in
+<a href="https://github.com/danrspencer/flare/blob/main/CLAUDE.md">CLAUDE.md</a> in the repository.</p>
 <h2 id="reading-order">
   
   
@@ -359,8 +358,7 @@ made from it.</li>
 </h3>
     
 
-<p>The commonest path: an area’s tick fires, and the room drifts with the
-curve.</p>
+<p>In the most common path, an area’s tick fires and the room moves along the curve:</p>
 
 <pre><code class="language-mermaid">sequenceDiagram
     autonumber
@@ -382,11 +380,15 @@ curve.</p>
     Note over CR: context matches the claim:&lt;br/&gt;the light stays "controlled"
 </code></pre>
 
-<p>Every other path is a variation on this one. Motion uses a shorter
-transition and may switch lights on. A room emptying calls
-<code class="language-plaintext highlighter-rouge">flare.turn_off</code>. A phase change also moves scenes on. Someone changing a
-light by hand shows up at step 10 as a context and values that match no
-claim, and from then on step 5 leaves that light out.</p>
+<p>Every other path is a variation on this one:</p>
+
+<ul>
+  <li><strong>Motion</strong> uses a shorter transition and may turn lights on.</li>
+  <li><strong>Emptying a room</strong> calls <code class="language-plaintext highlighter-rouge">flare.turn_off</code>.</li>
+  <li><strong>A phase change</strong> also activates or updates the room’s scene if one is configured.</li>
+  <li><strong>A manual change</strong> shows up on the light’s <code class="language-plaintext highlighter-rouge">state_changed</code> event with a context and values that
+don’t match any claim; from then on, <code class="language-plaintext highlighter-rouge">build_groups</code> omits that light until the room goes dark.</li>
+</ul>
 <h2 id="words-used-here">
   
   

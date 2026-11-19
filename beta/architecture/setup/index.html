@@ -262,9 +262,9 @@ how it keeps an installed blueprint current.</p>
 </h2>
     
 
-<p><code class="language-plaintext highlighter-rouge">FlareConfigFlow</code> (<code class="language-plaintext highlighter-rouge">config_flow.py</code>) is the integration page’s main
-button. The first time it sets everything up. After that, it’s
-<strong>Set up area</strong>.</p>
+<p><code class="language-plaintext highlighter-rouge">FlareConfigFlow</code> (<code class="language-plaintext highlighter-rouge">config_flow.py</code>) powers the integration page’s main button. On first
+install it creates the entries and schedules and offers room setup; on subsequent runs it acts
+as <strong>Set up area</strong>.</p>
 
 <pre><code class="language-mermaid">flowchart TB
     U(["Add Integration / Set up area"]) --&gt; Q{"Schedules entry exists?"}
@@ -326,7 +326,7 @@ open during setup never loads the dashboard’s JavaScript (see
     <tr>
       <td><code class="language-plaintext highlighter-rouge">FlareOptionsFlow</code></td>
       <td>Settings entry, <strong>Configure</strong></td>
-      <td>tick interval and gap, minimum change, two-step models</td>
+      <td>update interval, gap between areas, matching tolerances, and two-step bulb models</td>
     </tr>
   </tbody>
 </table></div>
@@ -370,9 +370,9 @@ it. A lock in <code class="language-plaintext highlighter-rouge">hass.data</code
   <li><strong>Which areas are offered</strong>: every area holding a light by HA’s own rule
 (<code class="language-plaintext highlighter-rouge">target_entities({"area_id": ...})</code>), so an area with only hidden or
 categorised lights isn’t offered.</li>
-  <li><strong>“Already set up”</strong> means an automation labelled FLARE sits in the
-area. That only unticks the area: running Set up area again adds another
-automation.</li>
+  <li><strong>“Already set up”</strong> means an automation labelled <strong>FLARE</strong> sits in the area. That leaves the
+area’s schedule dropdown empty by default; picking a schedule for it and submitting creates
+another automation.</li>
   <li><strong>Not handled yet</strong>: a failure part-way leaves what was already created.</li>
 </ul>
 <h2 id="keeping-the-blueprint-current">
@@ -398,20 +398,19 @@ its own once HA has started (<code class="language-plaintext highlighter-rouge">
 <ul>
   <li>Ours is recognised <strong>by name</strong>, “FLARE”. Only copies an automation uses
 count as outdated: HA never removes an unused copy, and a repair about
-one nobody reads couldn’t be silenced.</li>
+an unused blueprint couldn’t be silenced.</li>
   <li>The version stamp is in the blueprint’s <code class="language-plaintext highlighter-rouge">description</code>, since the
 <code class="language-plaintext highlighter-rouge">blueprint:</code> block is a closed schema and the description survives every
 import route. It’s <code class="language-plaintext highlighter-rouge">0.0.0-dev</code> in source. <code class="language-plaintext highlighter-rouge">scripts/release.py</code> writes
 the real version into each release’s zip, along with the manifest and
 <code class="language-plaintext highlighter-rouge">BLUEPRINT_VERSION</code>.</li>
   <li><strong>The blueprint is written in HA’s language</strong> (<code class="language-plaintext highlighter-rouge">blueprint_translation.py</code>).
-HA has no translations for a blueprint, so <code class="language-plaintext highlighter-rouge">_shipped()</code> swaps in each
-input’s text from <code class="language-plaintext highlighter-rouge">blueprints/translations/&lt;language&gt;.yaml</code> before saving
-it; keys, defaults and selectors stay, and select options keep their
-English values under a translated label. The stamp names the language
-(<code class="language-plaintext highlighter-rouge">Blueprint version 2.0.0 (de)</code>), so a copy in another language than
-HA’s counts as outdated and Fix rewrites it. A copy stamped without one
-reads as English.</li>
+Home Assistant doesn’t natively translate blueprints, so <code class="language-plaintext highlighter-rouge">_shipped()</code> substitutes each input’s
+text from <code class="language-plaintext highlighter-rouge">blueprints/translations/&lt;language&gt;.yaml</code> before saving the file. Keys, defaults,
+and selectors stay unchanged, and select options keep their English values behind translated
+labels. The version stamp includes the language (<code class="language-plaintext highlighter-rouge">Blueprint version 2.0.0 (de)</code>), so a copy
+whose language differs from Home Assistant’s counts as outdated and <strong>Fix</strong> rewrites it. A
+stamp without a language suffix is treated as English.</li>
   <li>A blueprint that fails to load comes back from <code class="language-plaintext highlighter-rouge">async_get_blueprints()</code>
 as the exception itself, hence <code class="language-plaintext highlighter-rouge">isinstance</code> rather than a <code class="language-plaintext highlighter-rouge">None</code> check.</li>
 </ul>

@@ -443,10 +443,13 @@ when the room empties either, and whatever controls it has to do that instead.</
 </h2>
     
 
-<p>Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template except <code class="language-plaintext highlighter-rouge">'x0.5'</code>, since an empty room has no curve brightness
-to multiply. When it returns a light, its value overrides the phase’s
-<strong>Idle Brightness</strong> for that light.</p>
+<p>Returns what each light dims to when the room is empty instead of going dark (<code class="language-plaintext highlighter-rouge">1</code>–<code class="language-plaintext highlighter-rouge">255</code>, or a
+percentage like <code class="language-plaintext highlighter-rouge">'5%'</code>). It accepts the same values as <strong>Brightness Template</strong> except <code class="language-plaintext highlighter-rouge">'x0.5'</code>,
+since an empty room has no curve brightness to multiply. When it returns a light, its value
+overrides the phase’s <strong>Idle Brightness</strong> for that light. Returning <code class="language-plaintext highlighter-rouge">0</code>, <code class="language-plaintext highlighter-rouge">'0%'</code>, <code class="language-plaintext highlighter-rouge">null</code>, or
+<code class="language-plaintext highlighter-rouge">false</code> turns that light off when the room empties — unlike <strong>Brightness Template</strong>, <code class="language-plaintext highlighter-rouge">null</code> here
+does not leave the light alone while the room is empty. Return <code class="language-plaintext highlighter-rouge">{}</code> when you have nothing to
+override for a light.</p>
 <h3 id="one-lamp-as-the-nightlight">
   
   
@@ -477,7 +480,7 @@ phase’s Idle Brightness as well, and use the template for the one light.</p>
 </h3>
     
 
-<p>A single number applies to every light in the room:</p>
+<p>A single value applies to every light in the room:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="nv">20</span> <span class="pi">}}</span>
 </code></pre></div></div>

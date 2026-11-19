@@ -360,11 +360,11 @@ its <code class="language-plaintext highlighter-rouge">action:</code>.</p>
 <p>The blueprint reads which trigger ran from <code class="language-plaintext highlighter-rouge">trigger_id</code>, never <code class="language-plaintext highlighter-rouge">trigger.id</code>: a user’s trigger can
 carry any id, <code class="language-plaintext highlighter-rouge">motion_on</code> included, and must never count as one of the blueprint’s own.</p>
 
-<p><code class="language-plaintext highlighter-rouge">trigger_variables:</code> are the only variables a trigger can see. <code class="language-plaintext highlighter-rouge">tick_area</code>
-is computed there, as the first <code class="language-plaintext highlighter-rouge">area_id</code> in <code class="language-plaintext highlighter-rouge">room_target</code>. Trigger
-templates are <em>limited</em>: they can’t call <code class="language-plaintext highlighter-rouge">area_devices()</code> and friends, so
-<code class="language-plaintext highlighter-rouge">recovered</code> and <code class="language-plaintext highlighter-rouge">lux_dark</code> expand <code class="language-plaintext highlighter-rouge">room_target</code> by hand in Jinja. That’s
-close enough for a wake-up. The action works from the real resolution.</p>
+<p><code class="language-plaintext highlighter-rouge">trigger_variables:</code> are the only variables available inside a trigger, so <code class="language-plaintext highlighter-rouge">tick_area</code> is computed
+there as the first <code class="language-plaintext highlighter-rouge">area_id</code> in <code class="language-plaintext highlighter-rouge">room_target</code>. Because trigger templates are limited and cannot
+call helpers like <code class="language-plaintext highlighter-rouge">area_devices()</code>, the <code class="language-plaintext highlighter-rouge">recovered</code> and <code class="language-plaintext highlighter-rouge">lux_dark</code> triggers expand <code class="language-plaintext highlighter-rouge">room_target</code>
+inline in Jinja. That expansion is close enough for a wake-up trigger, and once the automation
+runs, the action always resolves entities properly with <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>.</p>
 <h2 id="the-action-step-by-step">
   
   
@@ -519,32 +519,31 @@ after it.</p>
     </tr>
   </tbody>
 </table></div>
-<h2 id="occupancy-briefly">
+<h2 id="occupancy-details">
   
   
-    <a href="#occupancy-briefly" class="anchor-heading" aria-labelledby="occupancy-briefly"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Occupancy, briefly
+    <a href="#occupancy-details" class="anchor-heading" aria-labelledby="occupancy-details"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Occupancy details
   
   
 </h2>
     
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">room_occupancy_entities</code> exists only to know whether the room has a
-sensor at all. <code class="language-plaintext highlighter-rouge">occupancy.is_detected</code> over zero entities is vacuously
-false, so a lights-only room would otherwise always read empty.</li>
-  <li>An unavailable sensor is left out, so a room whose only sensor is dead
-counts as sensorless rather than empty.</li>
-  <li><code class="language-plaintext highlighter-rouge">occupancy_clear_for_wait</code> is a hand-written <code class="language-plaintext highlighter-rouge">now() - last_changed</code>
-check. The native <code class="language-plaintext highlighter-rouge">for:</code> needs the recorder to prime it after a restart,
-and that isn’t reliable.</li>
-  <li>With <strong>Sensors From Areas</strong> off, the native triggers still fire for
-every sensor in the target (a trigger’s <code class="language-plaintext highlighter-rouge">target:</code> takes no templates),
-so the top-level <code class="language-plaintext highlighter-rouge">condition:</code> drops the ones not named directly.</li>
-  <li>A sensor excluded from the target (<code class="language-plaintext highlighter-rouge">exclude:</code>, HA 2026.11) never fires
-the native triggers and isn’t in <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>’s entities, so
-the blueprint needs no code for exclusions. Only the <code class="language-plaintext highlighter-rouge">lux_dark</code> and
-<code class="language-plaintext highlighter-rouge">recovered</code> wake-ups ignore them, since their Jinja expands the target
-itself.</li>
+  <li><code class="language-plaintext highlighter-rouge">room_occupancy_entities</code> exists so the blueprint can tell whether the room has any working
+sensors at all. Home Assistant’s <code class="language-plaintext highlighter-rouge">occupancy.is_detected</code> condition returns false when given zero
+entities, so without this guard a lights-only room would always look empty.</li>
+  <li>Unavailable and unknown sensors are filtered out, so a room whose only sensor is offline is
+treated as sensorless rather than empty.</li>
+  <li><code class="language-plaintext highlighter-rouge">occupancy_clear_for_wait</code> is computed with an explicit <code class="language-plaintext highlighter-rouge">now() - last_changed</code> check rather than
+relying on a native <code class="language-plaintext highlighter-rouge">for:</code> condition, because <code class="language-plaintext highlighter-rouge">for:</code> depends on recorder priming after a
+restart and is not always reliable.</li>
+  <li>When <strong>Sensors From Areas</strong> is off, the native occupancy and motion triggers still fire for
+every sensor in the target (since a trigger’s <code class="language-plaintext highlighter-rouge">target:</code> cannot take templates), so the top-level
+<code class="language-plaintext highlighter-rouge">condition:</code> drops events from sensors that weren’t picked directly by entity ID.</li>
+  <li>Any sensor excluded via <strong>Exclude target</strong> (Home Assistant 2026.11+) never fires the native
+triggers and is omitted by <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>, so the blueprint needs no custom exclusion
+logic for them. Only the <code class="language-plaintext highlighter-rouge">lux_dark</code> and <code class="language-plaintext highlighter-rouge">recovered</code> Jinja wake-up triggers ignore exclusions,
+because they expand the target manually.</li>
 </ul>
 
           

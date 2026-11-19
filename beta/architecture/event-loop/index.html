@@ -413,12 +413,12 @@ automation’s inputs until then.</p>
     <tr>
       <td>a light’s registry entry</td>
       <td>each <code class="language-plaintext highlighter-rouge">_LightStatusSensor</code></td>
-      <td>following a rename; going with its light when it’s removed</td>
+      <td>following a rename; removing the sensor when its light is deleted</td>
     </tr>
     <tr>
       <td>an automation’s registry entry</td>
       <td>each <code class="language-plaintext highlighter-rouge">FlareLight</code>, for its own automation</td>
-      <td>retracking when it’s renamed or removed</td>
+      <td>re-resolving its members when the automation is renamed or deleted</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">automation_reloaded</code></td>
@@ -428,12 +428,12 @@ automation’s inputs until then.</p>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">homeassistant_started</code></td>
       <td><code class="language-plaintext highlighter-rouge">FlareLight</code></td>
-      <td>first membership, once automations exist</td>
+      <td>resolving its initial members once automations have loaded</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">homeassistant_stop</code></td>
       <td>Settings entry, <code class="language-plaintext highlighter-rouge">ClaimEvents</code></td>
-      <td>stopping the ticker and timers</td>
+      <td>stopping the area ticker and cancelling pending timers</td>
     </tr>
   </tbody>
 </table></div>
@@ -594,7 +594,7 @@ its previous claim.</li>
     
 
 <ul>
-  <li><strong>Nothing a light reports while HA is stopping counts</strong>
+  <li><strong>Any state a light reports while HA is stopping is ignored</strong>
 (<code class="language-plaintext highlighter-rouge">hass.is_stopping</code>). MQTT marks its lights unavailable as its
 connection closes, which would otherwise drop every claim just before
 the Store’s final write.</li>

@@ -305,9 +305,9 @@ blueprint is built on them. <strong>Developer Tools → Actions</strong> shows t
 </table></div>
 
 <p>In the field tables, a schedule is passed as its <strong>device</strong> ID. In a template, <code class="language-plaintext highlighter-rouge">device_id()</code> of
-any of its entities gives you that, such as <code class="language-plaintext highlighter-rouge">device_id('sensor.home_flare')</code> for the Home
-schedule. A room is passed as <code class="language-plaintext highlighter-rouge">room_id</code>, usually the calling automation’s own entity ID,
-<code class="language-plaintext highlighter-rouge">{{ this.entity_id }}</code>; see <a href="../override-protection/#rooms">rooms</a>.</p>
+any of its entities gives you that schedule’s device ID, such as <code class="language-plaintext highlighter-rouge">device_id('sensor.home_flare')</code>
+for the Home schedule. A room is passed as <code class="language-plaintext highlighter-rouge">room_id</code>, usually the calling automation’s own entity
+ID, <code class="language-plaintext highlighter-rouge">{{ this.entity_id }}</code>; see <a href="../override-protection/#rooms">rooms</a>.</p>
 
 <details open="">
   <summary class="text-delta">On this page</summary>
@@ -468,12 +468,12 @@ something else (see <a href="../override-protection/">override protection</a>).<
     <tr>
       <td><code class="language-plaintext highlighter-rouge">rgb_color</code><br /><code class="language-plaintext highlighter-rouge">[r, g, b]</code> or <code class="language-plaintext highlighter-rouge">null</code></td>
       <td>no</td>
-      <td>The colour for RGB lights when <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is on. The schedule sensor’s <code class="language-plaintext highlighter-rouge">rgb_color</code> attribute is the colour temperature converted to RGB. Ignored if <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is off.</td>
+      <td>The colour for RGB lights when <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is on. The schedule sensor’s <code class="language-plaintext highlighter-rouge">rgb_color</code> attribute provides the colour temperature converted to RGB. If <code class="language-plaintext highlighter-rouge">rgb_color</code> is omitted or <code class="language-plaintext highlighter-rouge">null</code> (or <code class="language-plaintext highlighter-rouge">prefer_rgb_color</code> is off), FLARE sends <code class="language-plaintext highlighter-rouge">color_temp_kelvin</code> instead.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">room_entities</code><br />list of light entity IDs</td>
       <td>no</td>
-      <td>The room’s lights, which FLARE releases together once none of them is on. Without it, the lights this room’s calls have set.</td>
+      <td>The room’s lights, which FLARE releases together once none of them is on. If omitted, FLARE tracks only the lights this room’s calls have set.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">room_id</code><br />text</td>
@@ -537,8 +537,8 @@ something else (see <a href="../override-protection/">override protection</a>).<
 </h3>
     
 
-<p>Optional. With <code class="language-plaintext highlighter-rouge">response_variable</code>, the response is what was sent, or with <code class="language-plaintext highlighter-rouge">dry_run</code>, what
-would be sent. <code class="language-plaintext highlighter-rouge">groups</code> is a list with one entry for each brightness, and each entry has these
+<p>Add <code class="language-plaintext highlighter-rouge">response_variable</code> if you want to inspect what was sent (or, with <code class="language-plaintext highlighter-rouge">dry_run: true</code>, what
+would be sent). <code class="language-plaintext highlighter-rouge">groups</code> is a list with one entry for each brightness, and each entry has these
 fields:</p>
 
 <ul>
@@ -674,7 +674,7 @@ still in use, a light turned off with <code class="language-plaintext highlighte
 <ul>
   <li>It turns off every light it’s given, including lights someone else has changed. To turn off
 only the lights FLARE is still setting, call <a href="#flareclaims_check"><code class="language-plaintext highlighter-rouge">claims_check</code></a> first.</li>
-  <li>A light FLARE isn’t driving is just turned off, as <code class="language-plaintext highlighter-rouge">light.turn_off</code> would.</li>
+  <li>A light FLARE isn’t driving is turned off directly, just like <code class="language-plaintext highlighter-rouge">light.turn_off</code>.</li>
 </ul>
 <h2 id="flarecompute_curve">
   
@@ -734,7 +734,7 @@ start times and curve settings you give it, without needing a schedule.</p>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">&lt;phase&gt;_brightness_transition</code><br />minutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30</td>
       <td>no</td>
-      <td>How long before the phase ends its brightness starts changing to the next phase’s.</td>
+      <td>How many minutes before the phase ends that its brightness starts easing toward the next phase’s values.</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">&lt;phase&gt;_kelvin</code><br />Kelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700</td>
@@ -744,7 +744,7 @@ start times and curve settings you give it, without needing a schedule.</p>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">&lt;phase&gt;_kelvin_transition</code><br />minutes, 0–1440; default Morning 60, Day 1440, Evening 60, Night 30</td>
       <td>no</td>
-      <td>How long before the phase ends its colour temperature starts changing to the next phase’s.</td>
+      <td>How many minutes before the phase ends that its colour temperature starts easing toward the next phase’s values.</td>
     </tr>
   </tbody>
 </table></div>
@@ -842,7 +842,7 @@ yourself with <a href="../override-protection/">override protection</a>. It chan
 <a href="../override-protection/#inspecting-tracked-state">inspecting tracked state</a>.</li>
   <li><code class="language-plaintext highlighter-rouge">matched_via</code>: Which claim the entity matched, and how: <code class="language-plaintext highlighter-rouge">latest-context</code>, <code class="language-plaintext highlighter-rouge">latest-value</code>,
 <code class="language-plaintext highlighter-rouge">observed-context</code> or <code class="language-plaintext highlighter-rouge">observed-value</code>. <code class="language-plaintext highlighter-rouge">null</code> if it matched neither.</li>
-  <li><code class="language-plaintext highlighter-rouge">rooms</code>: The rooms the light is one of, by the <code class="language-plaintext highlighter-rouge">room_id</code> each named.</li>
+  <li><code class="language-plaintext highlighter-rouge">rooms</code>: The rooms the light belongs to, listed by each room’s <code class="language-plaintext highlighter-rouge">room_id</code>.</li>
 </ul>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">results</span><span class="pi">:</span>
@@ -862,7 +862,7 @@ yourself with <a href="../override-protection/">override protection</a>. It chan
     
 
 <p>Use this action to record a change you’re about to make, so a later
-<a href="#flareclaims_check"><code class="language-plaintext highlighter-rouge">claims_check</code></a> treats it as FLARE’s. Call it just <strong>before</strong> you change
+<a href="#flareclaims_check"><code class="language-plaintext highlighter-rouge">claims_check</code></a> counts it as FLARE’s. Call it just <strong>before</strong> you change
 the entities, with the values you’re about to send.</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">action</span><span class="pi">:</span> <span class="s">flare.claims_record</span>
@@ -922,9 +922,9 @@ the entities, with the values you’re about to send.</p>
     
 
 <ul>
-  <li>Without <code class="language-plaintext highlighter-rouge">targets</code>, the claim holds only the change’s context, which Home Assistant drops
-after five seconds. A bulb that’s slower than that to report back doesn’t match its claim,
-so it becomes <code class="language-plaintext highlighter-rouge">overridden</code>.</li>
+  <li>Without <code class="language-plaintext highlighter-rouge">targets</code>, the claim records only the call itself, which Home Assistant clears after
+five seconds. A bulb that takes longer than that to report back won’t match the claim by value
+and will become <code class="language-plaintext highlighter-rouge">overridden</code>.</li>
   <li>A light running an effect that keeps changing its colour won’t match its claim. Use a scene
 for it instead, or hand it over with a <code class="language-plaintext highlighter-rouge">null</code> brightness in the blueprint.</li>
 </ul>
@@ -979,7 +979,8 @@ does the same for every light.</p>
 </h3>
     
 
-<p>Optional. <code class="language-plaintext highlighter-rouge">cleared</code> lists the entities that had a claim to discard.</p>
+<p>Add <code class="language-plaintext highlighter-rouge">response_variable</code> if you want the result: <code class="language-plaintext highlighter-rouge">cleared</code> lists the entities that had a claim to
+discard.</p>
 <h2 id="flareclaims_override">
   
   
@@ -991,7 +992,7 @@ does the same for every light.</p>
 
 <p>Use this action to mark lights as changed by someone else, so FLARE leaves them alone.</p>
 
-<p>You don’t usually need it. A light with a claim becomes <code class="language-plaintext highlighter-rouge">overridden</code> by itself once something
+<p>You don’t usually need it. A light with a claim becomes <code class="language-plaintext highlighter-rouge">overridden</code> automatically once something
 else changes it and it stops matching its claim. It’s for lights with no claim yet, such as
 when your automation turns lights on in a dark room and you want FLARE to leave them as they
 are. Without it, they’re <code class="language-plaintext highlighter-rouge">untracked</code>, so the room’s next update sets them to the curve.</p>
@@ -1107,7 +1108,7 @@ and set the other lights yourself.</p>
   <li><code class="language-plaintext highlighter-rouge">scene_valid</code>: <code class="language-plaintext highlighter-rouge">true</code> if the scene exists and every entity it sets is in <code class="language-plaintext highlighter-rouge">scope_entities</code>.</li>
   <li><code class="language-plaintext highlighter-rouge">covered_entities</code>: The entities the scene sets.</li>
   <li><code class="language-plaintext highlighter-rouge">uncovered_entities</code>: The entries in <code class="language-plaintext highlighter-rouge">target_entities</code> that the scene doesn’t set. If
-<code class="language-plaintext highlighter-rouge">scene_valid</code> is <code class="language-plaintext highlighter-rouge">false</code>, this is all of them.</li>
+<code class="language-plaintext highlighter-rouge">scene_valid</code> is <code class="language-plaintext highlighter-rouge">false</code>, this includes every entity in <code class="language-plaintext highlighter-rouge">target_entities</code>.</li>
 </ul>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">scene_valid</span><span class="pi">:</span> <span class="kc">true</span>
@@ -1141,7 +1142,7 @@ the lights in an area.</p>
     
 
 <p>It takes a target, as an action such as <code class="language-plaintext highlighter-rouge">light.turn_on</code> does: any mix of <code class="language-plaintext highlighter-rouge">entity_id</code>,
-<code class="language-plaintext highlighter-rouge">device_id</code>, <code class="language-plaintext highlighter-rouge">area_id</code>, <code class="language-plaintext highlighter-rouge">floor_id</code> and <code class="language-plaintext highlighter-rouge">label_id</code>.</p>
+<code class="language-plaintext highlighter-rouge">device_id</code>, <code class="language-plaintext highlighter-rouge">area_id</code>, <code class="language-plaintext highlighter-rouge">floor_id</code> and <code class="language-plaintext highlighter-rouge">label_id</code>, plus <code class="language-plaintext highlighter-rouge">exclude</code> targets.</p>
 <h3 id="response-data-5">
   
   
@@ -1157,8 +1158,9 @@ which entities those are, in the same way as when you call an action on that tar
     <ul>
       <li>An entity you name directly is always included.</li>
       <li>An entity reached through a device, area, floor or label is left out if it’s hidden.</li>
-      <li>An entity reached through a device, area or floor is also left out if it’s a
-configuration or diagnostic entity. If a label is on the entity itself, it’s kept.</li>
+      <li>An entity reached through a device, area or floor, or through a label on its device or area,
+is also left out if it’s a configuration or diagnostic entity. If a label is on the entity
+itself, it’s kept.</li>
     </ul>
   </li>
 </ul>
@@ -1371,9 +1373,9 @@ lights that are on, since <code class="language-plaintext highlighter-rouge">app
 <p>If you want to send <code class="language-plaintext highlighter-rouge">light.turn_on</code> yourself and still have FLARE leave hand-set lights alone:</p>
 
 <ol>
-  <li><code class="language-plaintext highlighter-rouge">flare.claims_check</code> to find out whether someone else has changed the light.</li>
-  <li><code class="language-plaintext highlighter-rouge">flare.claims_record</code> with what you’re about to send, so FLARE recognises it next time.</li>
-  <li>Your own <code class="language-plaintext highlighter-rouge">light.turn_on</code>.</li>
+  <li>Call <code class="language-plaintext highlighter-rouge">flare.claims_check</code> to find out whether someone else has changed the light.</li>
+  <li>Call <code class="language-plaintext highlighter-rouge">flare.claims_record</code> with the values you’re about to send, so FLARE matches them later.</li>
+  <li>Call <code class="language-plaintext highlighter-rouge">light.turn_on</code> yourself.</li>
 </ol>
 
 <p>For example, this script sets the porch light to a warm 60%, unless someone has changed it
@@ -1403,7 +1405,7 @@ since the script last set it:</p>
 
 <p><code class="language-plaintext highlighter-rouge">targets</code> needs the brightness and either <code class="language-plaintext highlighter-rouge">color_temp_kelvin</code> or <code class="language-plaintext highlighter-rouge">rgb_color</code> you’re sending.
 FLARE checks the light against it later, so a light running an effect that keeps changing its
-colour won’t be recognised. For that, use a scene or hand the light over with a <code class="language-plaintext highlighter-rouge">null</code>
+colour won’t match its claim. For that, use a scene or hand the light over with a <code class="language-plaintext highlighter-rouge">null</code>
 brightness in the blueprint instead.</p>
 
 <p>If your automation turns lights off while some of the room’s lights stay on, use

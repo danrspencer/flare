@@ -312,9 +312,8 @@ nothing to wait for.</p>
 only from the page HTML at load time, so a page open while FLARE is set up
 never gets them. On HTTPS or <code class="language-plaintext highlighter-rouge">localhost</code>, the service worker serves the
 first reload from its stale cache too. <code class="language-plaintext highlighter-rouge">dashboard_reload.py</code> handles both:
-setup’s summary and a repair link to a reload with a one-off query token,
-a URL the service worker has never cached, with <code class="language-plaintext highlighter-rouge">target="_self"</code> so it’s
-a real page load. The beacon, imported last by the loader, clears the
+setup’s summary and a repair both link to a reload URL carrying a one-off query token that the
+service worker has never cached, using <code class="language-plaintext highlighter-rouge">target="_self"</code> so the browser performs a full page load. The beacon, imported last by the loader, clears the
 repair. It sits under <code class="language-plaintext highlighter-rouge">/flare_static/</code> rather than <code class="language-plaintext highlighter-rouge">/api/</code> because HA’s
 CORS check rejects the <code class="language-plaintext highlighter-rouge">Origin</code> header a module import always sends.</p>
 <h2 id="what-registers-what">
@@ -371,9 +370,9 @@ itself: HA keeps the dashboards collection private.</p>
     V2 --&gt; S4["flare-activity-card&lt;br/&gt;(sidebar)"]
 </code></pre>
 
-<p>Strategies regenerate on every load, so an update is the whole migration
-and a new schedule or room just appears. <strong>Take control</strong> turns it into
-ordinary YAML and is the one-way escape hatch.</p>
+<p>Strategies regenerate on every load, so an integration update automatically upgrades the
+dashboard layout and any new schedule or room appears on its own. <strong>Take control</strong> turns it
+into ordinary YAML and is the one-way escape hatch.</p>
 
 <p><strong>Entities are found by device and role, never by building ids.</strong>
 <code class="language-plaintext highlighter-rouge">flareDevices()</code> groups <code class="language-plaintext highlighter-rouge">hass.entities</code> by device, keyed by each entry’s
@@ -417,7 +416,7 @@ is what makes them testable under node.</p>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">flare-area-lights-card</code></td>
       <td>each light’s status sensor</td>
-      <td>an area’s lights, counts and Clear, worked out live in the browser</td>
+      <td>computes an area’s lights, counts, and <strong>Clear</strong> actions live in the browser</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">flare-activity-card</code></td>
@@ -432,9 +431,9 @@ is what makes them testable under node.</p>
 breaks) and <code class="language-plaintext highlighter-rouge">ha-logbook-entry</code> (lazy-loaded, by having card helpers create
 a logbook card first).</p>
 
-<p><strong>Slider colour</strong> is the curve’s colour for the value, with 15 % of
-<code class="language-plaintext highlighter-rouge">--primary-text-color</code> mixed in through <code class="language-plaintext highlighter-rouge">color-mix</code>. A near-white then
-shows on a light card, and the theme decides which way it moves.</p>
+<p><strong>Slider colour</strong> is the curve’s colour for the current value, mixed with 15% of
+<code class="language-plaintext highlighter-rouge">--primary-text-color</code> via <code class="language-plaintext highlighter-rouge">color-mix</code>. That keeps near-white sliders visible against light card
+backgrounds while adapting automatically to both light and dark themes.</p>
 <h2 id="translations">
   
   

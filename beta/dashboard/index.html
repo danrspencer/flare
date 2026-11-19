@@ -237,30 +237,16 @@
     
 
 <p>FLARE comes with a ready-made dashboard: a view for each schedule, and one for your rooms. It
-builds itself from your schedules and rooms each time it loads, so one you add later appears on
-its own.</p>
+builds itself from your schedules and rooms each time it loads, so any schedule or room you add
+later appears on its own.</p>
 
 <p>Add it from <strong>Settings → Dashboards → Add dashboard</strong>: pick <strong>FLARE Lighting</strong>, then give it a
 name and an icon. FLARE’s logo is in the icon picker as <code class="language-plaintext highlighter-rouge">flare:logo</code>.</p>
 
 <ul>
   <li><strong>A schedule’s view</strong> shows the day’s curve and every schedule and curve setting.</li>
-  <li><strong>Overrides</strong> starts with <strong>All lights</strong>: how many lights FLARE is driving across the house, how
-many something else has taken over, and <strong>Clear all</strong> to hand every light back at once. Below
-that is each area with lights a room automation drives, by floor, laid out like Home
-Assistant’s Lights dashboard: a list of the area’s lights, overridden ones first, headed by
-its controlled and overridden counts and <strong>Clear all</strong> to hand them back. Each light shows its
-status, what FLARE last asked it for and what it’s showing, in red where that differs, with its
-own <strong>Clear</strong>; press its name to open the light. Values in amber with an info icon beside them
-mean the light isn’t showing FLARE’s last change but hasn’t been overridden: on a controlled
-light the change hasn’t arrived yet and FLARE keeps sending it, and on a mismatched one it
-counts as overridden if it doesn’t match again within 30 seconds. Hover over or tap the icon to
-see what FLARE asked for, what it last saw the light take, and what the light shows. Lights FLARE isn’t driving are hidden until
-you press <strong>Show untracked</strong> at the bottom of the list. An area’s name opens its page. Beside
-the areas, <strong>Activity</strong> lists the last 24 hours of what the rooms did, coloured by kind - blue
-when a room takes its lights, amber when something else overrides one, grey when a room lets
-them go - and the buttons at its top show one kind at a time. On a narrow screen, Activity is
-a separate tab.</li>
+  <li><strong>Overrides</strong> shows how many lights FLARE is controlling, which lights have been taken over,
+and the last 24 hours of room activity.</li>
 </ul>
 
 <p><img src="/flare/beta/assets/img/dashboard-section.png" alt="A schedule's view: the day's curve, a phase override, the schedule times, and
@@ -301,10 +287,9 @@ view instead, add <code class="language-plaintext highlighter-rouge">sensor:</co
       <span class="na">sensor</span><span class="pi">:</span> <span class="s">upstairs</span>
 </code></pre></div></div>
 
-<p><code class="language-plaintext highlighter-rouge">sensor</code> is the part before <code class="language-plaintext highlighter-rouge">_flare</code> in the schedule sensor’s entity ID, such as
-<code class="language-plaintext highlighter-rouge">downstairs</code> for <code class="language-plaintext highlighter-rouge">sensor.downstairs_flare</code>, or the full entity ID, which is what to use if you’ve
-renamed it. If you name
-one that doesn’t exist, the view says so and lists the schedules you do have.</p>
+<p><code class="language-plaintext highlighter-rouge">sensor</code> is the part before <code class="language-plaintext highlighter-rouge">_flare</code> in the schedule sensor’s entity ID (such as <code class="language-plaintext highlighter-rouge">downstairs</code> for
+<code class="language-plaintext highlighter-rouge">sensor.downstairs_flare</code>), or the full entity ID if you’ve renamed the sensor. If <code class="language-plaintext highlighter-rouge">sensor</code>
+doesn’t match any schedule, the view tells you so and lists the schedules you do have.</p>
 <h2 id="just-the-chart">
   
   
@@ -314,16 +299,16 @@ one that doesn’t exist, the view says so and lists the schedules you do have.<
 </h2>
     
 
-<p>To put the curve chart on a dashboard of your own: on Home Assistant 2026.6 or newer, add a
-card, open the <strong>By entity</strong> tab and pick your schedule sensor — <strong>FLARE Curve</strong> appears
-under <em>Community</em> with a preview. On older versions, add a <strong>Manual</strong> card:</p>
+<p>To put the curve chart on a dashboard of your own, add a card, open the <strong>By entity</strong> tab, and
+pick your schedule sensor — <strong>FLARE Curve</strong> appears under <em>Community</em> with a preview. Or add a
+<strong>Manual</strong> card in YAML:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">type</span><span class="pi">:</span> <span class="s">custom:flare-curve-card</span>
 <span class="na">sensor</span><span class="pi">:</span> <span class="s">home</span>
 </code></pre></div></div>
 
-<p><code class="language-plaintext highlighter-rouge">sensor</code> is the part before <code class="language-plaintext highlighter-rouge">_flare</code> in the schedule sensor’s entity ID, or the full entity
-ID, which is what to use if you’ve renamed it.</p>
+<p><code class="language-plaintext highlighter-rouge">sensor</code> is the part before <code class="language-plaintext highlighter-rouge">_flare</code> in the schedule sensor’s entity ID, or the full entity ID if
+you’ve renamed the sensor.</p>
 <h2 id="reading-a-schedules-view">
   
   
@@ -333,7 +318,8 @@ ID, which is what to use if you’ve renamed it.</p>
 </h2>
     
 
-<p>Twenty-five near-identical controls is a lot to scan, so two things are colour-coded:</p>
+<p>With over twenty controls on a schedule’s view, two things are colour-coded so you can scan them
+at a glance:</p>
 
 <ul>
   <li><strong>Colour is the phase</strong> — Morning blue, Day amber, Evening deep orange, Night indigo,
@@ -342,14 +328,43 @@ wherever that phase appears.</li>
 transitions.</li>
 </ul>
 
-<p>Each Curve row is a colour temperature and a brightness, in that order, and together they
-preview what the light will look like: both sliders are painted in the colour that phase
-sets, and how far the brightness one fills is how bright it will be. It’s the same idea as
-Home Assistant’s own brightness slider for a light.</p>
+<p>Each <strong>Curve</strong> row pairs a colour temperature slider with a brightness slider in that order, so
+together they preview what the light will look like: both sliders are painted in the colour that
+phase sets, and how far the brightness slider fills shows how bright the light will be.</p>
 
-<p><strong>Copy or paste</strong>, at the bottom of each schedule, copies that schedule as text, or applies
-one you paste in, so a schedule can be backed up, shared, or copied onto another. See
-<a href="../reference/schedules/#copying-a-schedule">copying a schedule</a>.</p>
+<p><strong>Copy or paste</strong>, at the bottom of each schedule, copies that schedule as text or applies one
+you paste in, so a schedule can be backed up, shared, or copied onto another schedule. See
+<a href="/flare/beta/reference/schedules/#copying-a-schedule">copying a schedule</a>.</p>
+<h2 id="reading-the-overrides-view">
+  
+  
+    <a href="#reading-the-overrides-view" class="anchor-heading" aria-labelledby="reading-the-overrides-view"><svg viewBox="0 0 16 16" aria-hidden="true"><use xlink:href="#svg-link"></use></svg></a> Reading the Overrides view
+  
+  
+</h2>
+    
+
+<ul>
+  <li><strong>All lights</strong> at the top shows how many lights FLARE is controlling across the house, how many
+something else has taken over, and a <strong>Clear all</strong> button to hand every light back to FLARE at
+once.</li>
+  <li><strong>Area cards</strong>, grouped by floor, list each room automation’s lights with overridden lights
+first. The card header shows the area’s controlled and overridden counts along with <strong>Clear
+all</strong> for that area, and clicking the area’s name opens its Home Assistant area page.</li>
+  <li><strong>Each light row</strong> shows its status, what FLARE last asked it for, and what it is currently
+showing (with differing values highlighted in red), plus its own <strong>Clear</strong> button. Values in
+amber with an info icon beside them mean the light isn’t showing FLARE’s last change yet, but
+isn’t overridden either: on a <code class="language-plaintext highlighter-rouge">controlled</code> light the command is still taking effect and FLARE
+keeps retrying it, while on a <code class="language-plaintext highlighter-rouge">mismatched</code> light it will become <code class="language-plaintext highlighter-rouge">overridden</code> if it doesn’t
+match again within 30 seconds. Hover over or tap the info icon to see what FLARE asked for,
+what it last saw the light confirm, and what the light is showing. Click the light’s name to
+open its more-info dialog. Lights FLARE isn’t currently driving stay hidden behind a <strong>Show
+<em>N</em> untracked</strong> row at the bottom of the list.</li>
+  <li><strong>Activity</strong> (beside the areas, or on a separate tab on narrow screens) shows the last 24 hours
+of room events. Entries are colour-coded — blue when a room starts controlling its lights, amber
+when something else overrides a light, and grey when a room lets them go — and the filter buttons
+at the top show one kind at a time.</li>
+</ul>
 <h2 id="changing-it">
   
   

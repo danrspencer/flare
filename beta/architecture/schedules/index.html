@@ -370,8 +370,8 @@ uses defaults. The second runs once they’ve restored their values.</li>
 </h2>
     
 
-<p>Pure functions, with every literal a named default
-(<code class="language-plaintext highlighter-rouge">DEFAULT_CURVE_VALUES</code>, <code class="language-plaintext highlighter-rouge">DEFAULT_SCHEDULE_HOURS</code>).</p>
+<p><code class="language-plaintext highlighter-rouge">schedule/curve.py</code> consists of pure functions, with all defaults defined in
+<code class="language-plaintext highlighter-rouge">DEFAULT_CURVE_VALUES</code> and <code class="language-plaintext highlighter-rouge">DEFAULT_SCHEDULE_HOURS</code>.</p>
 <h3 id="which-phase-is-it">
   
   
@@ -390,9 +390,9 @@ timestamp is shifted onto a clock where Night comes after Evening before
 comparing.</p>
 
 <p><strong>Tomorrow’s Morning and Night are worked out by the calendar</strong>
-(<code class="language-plaintext highlighter-rouge">Boundaries.next_morning</code>, <code class="language-plaintext highlighter-rouge">next_night</code>) and passed to the curve, since they
-aren’t 24 hours after today’s on a day the clocks change. <code class="language-plaintext highlighter-rouge">flare.compute_curve</code>
-takes only today’s four, so it assumes 24 hours.</p>
+(<code class="language-plaintext highlighter-rouge">Boundaries.next_morning</code>, <code class="language-plaintext highlighter-rouge">next_night</code>) and passed to the curve, because they aren’t 24 hours
+after today’s boundaries on days when daylight saving time shifts. Because <code class="language-plaintext highlighter-rouge">flare.compute_curve</code>
+takes only today’s four timestamps, it assumes 24-hour days.</p>
 
 <pre><code class="language-mermaid">gantt
     dateFormat HH:mm
@@ -468,10 +468,10 @@ of Day.</p>
   </tbody>
 </table></div>
 
-<p><code class="language-plaintext highlighter-rouge">day_phase</code> is a <strong>parameter</strong>, not worked out from the time, because a
-manual override passes a phase the clock disagrees with. So every ramp
-clamps its factor and can’t extrapolate. Strictly outside its own span, an
-overridden phase returns its own value.</p>
+<p><code class="language-plaintext highlighter-rouge">day_phase</code> is passed as an explicit parameter rather than derived from the clock, because a
+manual phase override supplies a phase the clock disagrees with. Every ramp clamps its
+interpolation factor to <code class="language-plaintext highlighter-rouge">[0, 1]</code> so it never extrapolates; outside that phase’s own span, an
+overridden phase simply returns its own target values.</p>
 
 <p>RGB is Kelvin converted, through HA’s <code class="language-plaintext highlighter-rouge">color_temperature_to_rgb</code> with a
 round-half-up wrapper that matches the card’s <code class="language-plaintext highlighter-rouge">Math.round</code>.</p>

@@ -259,9 +259,9 @@ Nothing here is needed to use FLARE.</p>
 </h2>
     
 
-<p><code class="language-plaintext highlighter-rouge">custom_components/flare/</code> is grouped by <strong>concept</strong>, not by how a thing
-is exposed. A schedule and the claims are each exposed both as entities
-and as services, so grouping by exposure tangled them.</p>
+<p><code class="language-plaintext highlighter-rouge">custom_components/flare/</code> is grouped by <strong>concept</strong>, rather than by how something is exposed.
+Both schedules and claims are exposed through both entities and services, so organising packages
+around entity platforms vs services would split cohesive code apart.</p>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>custom_components/flare/
 ├── __init__.py           setup and unload for all three entries; the area ticks
@@ -305,9 +305,9 @@ and as services, so grouping by exposure tangled them.</p>
 │
 ├── blueprints/flare.yaml the room automation
 ├── blueprints/translations/ its text in other languages
-├── services.yaml  strings.json  translations/
+├── manifest.json  services.yaml  strings.json  translations/
 ├── brand/                the integration's icon
-└── www/                  the dashboard (see frontend.md)
+└── www/                  the dashboard (see Dashboard internals)
 </code></pre></div></div>
 <h2 id="the-dependency-rule">
   
@@ -353,13 +353,12 @@ needs flares and the blueprint at once.</li>
   <li><code class="language-plaintext highlighter-rouge">services/__init__.py</code> holds no imports.</li>
 </ul>
 
-<p>Several modules are <strong>pure</strong>: no <code class="language-plaintext highlighter-rouge">hass</code>, only data in and data out.
-<code class="language-plaintext highlighter-rouge">curve.py</code>, <code class="language-plaintext highlighter-rouge">override_protection.py</code>, <code class="language-plaintext highlighter-rouge">matching.py</code>, <code class="language-plaintext highlighter-rouge">grouping.py</code>,
-<code class="language-plaintext highlighter-rouge">scenes.py</code>, <code class="language-plaintext highlighter-rouge">two_step.py</code> and <code class="language-plaintext highlighter-rouge">blueprint_version.py</code> are all tested
-without Home Assistant (<code class="language-plaintext highlighter-rouge">tests/unit/</code>). Where pure code needs HA state, the
-caller hands it a small adapter: <code class="language-plaintext highlighter-rouge">grouping.EntityLookup</code> and
-<code class="language-plaintext highlighter-rouge">scenes.SceneLookup</code> are dataclasses of callables, filled in by
-<code class="language-plaintext highlighter-rouge">services/handlers.py</code>.</p>
+<p>Several modules are <strong>pure</strong>: they never import or receive <code class="language-plaintext highlighter-rouge">hass</code>, taking plain inputs and
+returning plain data. <code class="language-plaintext highlighter-rouge">curve.py</code>, <code class="language-plaintext highlighter-rouge">override_protection.py</code>, <code class="language-plaintext highlighter-rouge">matching.py</code>, <code class="language-plaintext highlighter-rouge">grouping.py</code>,
+<code class="language-plaintext highlighter-rouge">scenes.py</code>, <code class="language-plaintext highlighter-rouge">two_step.py</code>, and <code class="language-plaintext highlighter-rouge">blueprint_version.py</code> are all unit-tested without Home Assistant
+(<code class="language-plaintext highlighter-rouge">tests/unit/</code>). When pure logic needs to inspect Home Assistant state, the caller supplies a
+small adapter of callables — <code class="language-plaintext highlighter-rouge">grouping.EntityLookup</code> and <code class="language-plaintext highlighter-rouge">scenes.SceneLookup</code> are dataclasses
+populated by <code class="language-plaintext highlighter-rouge">services/handlers.py</code>.</p>
 <h3 id="one-definition-each">
   
   
@@ -369,9 +368,9 @@ caller hands it a small adapter: <code class="language-plaintext highlighter-rou
 </h3>
     
 
-<p>A handful of rules are defined once and imported everywhere, because
-copies drifted apart before. A check test fails on a new copy where one
-is practical.</p>
+<p>A handful of rules are defined once and imported everywhere, because separate copies drifted
+apart in the past. Repository check tests enforce the single-source rules where static checking
+is practical:</p>
 
 <div class="table-wrapper"><table>
   <thead>
@@ -518,8 +517,8 @@ The dashboard relies on it (<code class="language-plaintext highlighter-rouge">f
 <code class="language-plaintext highlighter-rouge">device_entry</code>, as HA’s own helpers attach to a source device. A
 <code class="language-plaintext highlighter-rouge">DeviceInfo</code> with the device’s identifiers would register a second
 device, since identifiers are unique per config entry.</li>
-  <li>Schedule settings live in entity state, not in <code class="language-plaintext highlighter-rouge">subentry.data</code>: a change
-to subentry data reloads the whole entry.</li>
+  <li>Schedule settings live in entity state rather than in <code class="language-plaintext highlighter-rouge">subentry.data</code>, because modifying
+<code class="language-plaintext highlighter-rouge">subentry.data</code> reloads the entire config entry.</li>
 </ul>
 <h2 id="tests-mirror-the-layers">
   
