@@ -121,10 +121,13 @@ When the template returns a light, its value overrides the phase's **Lights Off*
 
 ## Idle Brightness Template
 
-Returns what each light dims to when the room is empty, instead of going dark. It takes the
-same values as Brightness Template except `'x0.5'`, since an empty room has no curve brightness
-to multiply. When it returns a light, its value overrides the phase's
-**Idle Brightness** for that light.
+Returns what each light dims to when the room is empty instead of going dark (`1`–`255`, or a
+percentage like `'5%'`). It accepts the same values as **Brightness Template** except `'x0.5'`,
+since an empty room has no curve brightness to multiply. When it returns a light, its value
+overrides the phase's **Idle Brightness** for that light. Returning `0`, `'0%'`, `null`, or
+`false` turns that light off when the room empties — unlike **Brightness Template**, `null` here
+does not leave the light alone while the room is empty. Return `{}` when you have nothing to
+override for a light.
 
 ### One lamp as the nightlight
 
@@ -143,7 +146,7 @@ light goes out.
 
 ### A whole-room nightlight
 
-A single number applies to every light in the room:
+A single value applies to every light in the room:
 
 ```yaml
 {{ 20 }}

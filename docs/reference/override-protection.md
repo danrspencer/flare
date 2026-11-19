@@ -35,22 +35,24 @@ For what override protection means for your lights day to day, see the
 | `sensor.flare_controlled_lights` | The number of lights FLARE is setting. For information only. |
 | `sensor.flare_overridden_lights` | The number of lights something else has changed. For information only. |
 | `button.flare_clear` | Discards every claim. |
-| `sensor.<light>_flare_status` | One for each light a room has named: its [status](#inspecting-tracked-state), on the light's own device. `rooms` lists the rooms it's in, `claimed` whether FLARE has a claim on it, `asked` what FLARE last asked it for, `confirmed` what FLARE last saw it take (its older claim, see [two claims, not one](#two-claims-not-one)), and `differs` which of what it asked for it isn't showing (`state`, `brightness`, `color`), within the tolerances. |
+| `sensor.<light>_flare_status` | Created for each light targeted by a room automation, on the light's own device: holds its [status](#inspecting-tracked-state). Its attributes list `light` (the light entity ID), `rooms` (the rooms it belongs to), `claimed` (whether FLARE holds a claim on it), `asked` (what FLARE last asked it for), `confirmed` (the older claim FLARE last saw the light take — see [two claims, not one](#two-claims-not-one)), and `differs` (which fields don't match within the tolerances: `state`, `brightness`, or `color`). |
 
 The two counts and each light's status are recorded in history, with long-term statistics for
-the counts. `asked`, `confirmed` and `differs` aren't recorded, since they change with every update. A light that's
-unavailable or has no claim isn't included in either count. The [dashboard](../../dashboard/)
-shows the counts and each light for each area too.
+the counts. `asked`, `confirmed`, and `differs` aren't recorded, since they change with every
+update. A light that is unavailable or has no claim isn't included in either count. The
+[dashboard](../../dashboard/) also shows the house-wide totals and the lights for each area.
 
 FLARE keeps its claims in Home Assistant's own storage, so they're kept across a restart. To see
 every claim at once, download the diagnostics from **FLARE → Settings**: they list each light's
 claims and each room's lights. They also list the last 50 overrides, each with what FLARE asked
 for, what the light reported and what kind of light it is.
 
-A light's status sensor appears the first time a room names the light, under **Diagnostic** on
-the light's device page, and stays after its room lets the light go. It's unavailable while the
-light is, and it's removed with the light. A light with no device, such as a light group, gets
-one named after it instead. An automation can trigger on it:
+A light's status sensor is created the first time a room automation runs with that light, under
+**Diagnostic** on the light's device page, and stays even after the room releases the light. The
+status sensor becomes `unavailable` whenever the light itself is unavailable, and is deleted
+automatically if the light is removed. If a light has no device (such as a light group), FLARE
+creates a standalone status sensor named `<Light name> FLARE status` instead. An automation can
+trigger on the status sensor:
 
 ```yaml
 triggers:
@@ -65,27 +67,28 @@ again on its next update.
 ## How it works
 
 FLARE tells a light you've changed from one it set by keeping a record of what it last asked
-each light for, and comparing the light with it.
+each light for, and comparing the light against that record.
 
 ### Claims
 
-Each time FLARE sets a light, it records a **claim** for the light: what it asked the light
-for. On every update, FLARE compares each light with its claim, and that comparison gives the
-light a status:
+Each time FLARE sets a light, it records a **claim** holding what it asked the light for. On every
+update, FLARE compares each light against its claim to determine its status:
 
-| The light | Status | What FLARE's updates do |
-|---|---|---|
-| Matches its claim | `controlled` | Keep setting it to the curve. |
-| Has stopped matching its claim, for less than 30 seconds | `mismatched` | Leave it alone for now. |
-| Hasn't matched its claim for 30 seconds | `overridden` | Leave it alone. |
-| Has no claim | `untracked` | Set it, which gives it a claim. |
+- **`controlled`** — The light matches its claim, so updates keep moving it along the curve.
+- **`mismatched`** — The light stopped matching less than 30 seconds ago. FLARE leaves it alone
+  while waiting for slow bulbs to finish reporting back, without counting or announcing it as
+  overridden yet.
+- **`overridden`** — The light hasn't matched its claim for at least 30 seconds, so updates leave
+  it alone.
+- **`untracked`** — The light is on with no confirmed claim yet, so FLARE sets it and records a
+  claim.
 
-"Matches" means within a tolerance, since bulbs rarely report back exactly what they were sent:
+(See [Inspecting tracked state](#inspecting-tracked-state) for the complete table of all six
+statuses, including `off` and `unavailable`.)
+
+"Matches" means within a tolerance, since bulbs rarely report back exactly what they were sent —
 5% of the brightness and 5 mireds of the colour temperature by default. See
 [how close counts as a match](#how-close-counts-as-a-match).
-
-The 30 seconds give a slow bulb time to report back, so a light that's only catching up isn't
-counted as overridden.
 
 ### Example: dimming a lamp
 
@@ -104,8 +107,9 @@ From 19:21 the update keeps setting the ceiling light to the curve, but leaves t
 because it's overridden. So the lamp stays at 60 all evening.
 
 At 23:00 none of the room's lights is on, so the room deletes their claims (see
-[how a light goes back to the curve](#back-to-the-curve)). In the morning the
-lamp has no claim, so it's `untracked`, and the update sets it with the rest of the room.
+[how a light goes back to the curve](#back-to-the-curve)). While off with no claim, the lamp's
+status is `off`. When morning motion arrives and turns the room on, FLARE sets the lamp to the
+curve and records a new `controlled` claim.
 
 ### Example: switching a lamp off
 
@@ -146,14 +150,15 @@ regardless:
 
 - **The room goes dark.** Once none of the room's claimed lights is on, the room deletes all
   their claims. A light that's unavailable counts as off, so one dead bulb can't hold a room's
-  claims forever. A light in the room that FLARE has no claim on, such as a lamp another
-  automation runs, doesn't count either way.
+  claims forever. A light in the room that FLARE has no claim on (such as a lamp run by another
+  automation) neither holds the room open when on nor blocks release.
 - **You press Clear.** **Clear** under **FLARE → Settings**, or an area's **Clear** on the
   [dashboard](../../dashboard/), deletes claims, so FLARE sets those lights at its next update.
 - **You run the room's automation yourself**, or turn on the room's
   [flare](../../guides/flares/) with no brightness or colour. That sets every light, overridden ones
   included, and records new claims.
-- **The light goes unavailable.** Its claim is deleted, so it's `untracked` when it comes back.
+- **The light goes unavailable.** Its claim is deleted, so it starts unclaimed (`untracked` if on,
+  or `off` if off) when it comes back online, and FLARE sets it again.
 
 A restart doesn't send a light back: claims are kept across restarts, and a light still showing
 what its claim says is still `controlled`.
@@ -171,11 +176,14 @@ overridden. FLARE sends the command again at its next update.
 
 ### What the services record
 
-`flare.apply_lighting` records a claim on each light it sets, and `flare.turn_off` sets the
-claim of each light it switches off to off. A light that's on and has no claim is always sent what
-`flare.apply_lighting` would set, even if it already shows it, and that write claims it. After a
-**Clear**, for example, a room's lights are claimed again on their next update. Without a
-`room_id`, a light already showing the values isn't sent anything.
+`flare.apply_lighting` records a claim on each light it sets when given a `room_id`, and
+`flare.turn_off` updates the claim of each light it switches off to `off`.
+
+When `flare.apply_lighting` is called with a `room_id`, any `on` light with no claim is sent the
+target values even if the light is already showing them, so that write establishes a claim on the
+light. After pressing **Clear**, for example, a room's lit lights are claimed again on their next
+update. By contrast, when `flare.apply_lighting` is called without a `room_id`, nothing is sent
+to lights that already show the target values, and no claims are recorded.
 
 ### Rooms
 
@@ -199,21 +207,21 @@ data:
   room_entities: [light.kitchen_1, light.kitchen_2, light.kitchen_lamp]
 ```
 
-- Without `room_id`, `apply_lighting` sets the lights but records nothing, and doesn't leave any
-  light alone.
-- `turn_off` doesn't take a room: it updates the claims of the lights FLARE already has, which
-  already belong to their rooms.
+- Without `room_id`, `apply_lighting` sets the lights without recording any claims, and doesn't
+  skip overridden lights.
+- `turn_off` doesn't take a room: it updates only the lights FLARE already holds claims on,
+  keeping them in whichever rooms they already belong to.
 - `claims_record` and `claims_override` require `room_id`. `claims_check` and `claims_clear`
   don't take one.
-- Without `room_entities`, a room's lights are the ones its calls have set.
+- Without `room_entities`, a room's lights are whichever lights its calls have set.
 - `force: true` sets lights even if something else has changed them, and records the claim.
-- A light FLARE has no claim on is free for FLARE to set, so a change your own automation makes
-  to one isn't left alone unless you mark it with
+- An unclaimed light is free for FLARE to set, so if your own automation turns on or adjusts an
+  unclaimed light, FLARE will overwrite it unless you mark it with
   [`flare.claims_override`](../services/#flareclaims_override).
 
-If an automation is renamed, its room carries on: FLARE keeps rooms by the automation's entity
-registry entry, not its entity ID. If it's deleted, its room goes with it, and FLARE lets go of
-the lights no other room has.
+If an automation is renamed, FLARE keeps tracking its room continuously. If an automation is
+deleted, its room is removed along with it, and FLARE releases the claims on any lights that no
+other room drives.
 
 ### How close counts as a match
 
@@ -227,22 +235,25 @@ temperature asked for as 4294 K can come back as 4312 K. You can set the toleran
 | Brightness tolerance | 5% | How far, as a percentage of the brightness FLARE asked for, a light's brightness can be and still match. A dim light always gets at least 2 (of 255). |
 | Colour temperature tolerance | 5 mireds | How far a light's colour temperature can be from what FLARE asked for and still match. For a light set by RGB, the red, green and blue differences added together can be up to twice this (10 by default). That includes a light with no colour temperature of its own, such as an RGB LED strip, which Home Assistant sets to the RGB for the colour temperature FLARE asks for. |
 
-The same tolerances decide what's worth sending: a light that close to its target isn't sent
-anything.
+The same tolerances decide what's worth sending: if a light is already within the tolerances of
+its target, FLARE doesn't send it a command.
 
-If lights are marked overridden when nobody has changed them, raise the one that matches the
-difference shown on the [dashboard](../../dashboard/). Lower them to catch smaller changes.
+If lights are marked overridden when nobody has changed them, look at the difference shown on the
+[dashboard](../../dashboard/) and raise the matching tolerance (**Brightness tolerance** or
+**Colour temperature tolerance**). Lower the tolerances if you want FLARE to catch smaller manual
+changes.
 
 ## FLARE's events
 
-FLARE says when a room takes its lights, when it lets them go, and when something else changes
-one of them. Each event is filed under one of FLARE's entities (its **Controlled** or
-**Overridden** count, or **Clear** for a release) and FLARE's device, so they appear in its
-Activity. `room` names the automation. FLARE adjusting lights it already has isn't announced.
+FLARE fires events when a room takes control of lights, when it releases them, and when
+something else overrides a light. Each event is filed under one of FLARE's entities (its
+**Controlled lights** or **Overridden lights** count, or **Clear** for a release) on FLARE's
+service device, so they appear in FLARE's Activity. `room` names the automation. Normal updates
+to lights FLARE is already controlling aren't announced.
 
-When a room starts controlling lights it wasn't, such as when it comes on, FLARE fires
-`flare_lights_controlled` once for them all, a few seconds after the first, since the bulbs
-report back one by one:
+When a room starts controlling lights it wasn't driving before (such as when the room turns on),
+FLARE waits 3 seconds so bulbs reporting back one by one can be grouped together, then fires
+`flare_lights_controlled`:
 
 ```yaml
 lights: [light.kitchen_1, light.kitchen_2]   # the lights it took
@@ -252,7 +263,7 @@ entity_id: sensor.flare_controlled_lights
 device_id: ...                               # FLARE's device
 ```
 
-> **Controlled lights** Kitchen Lighting is now controlling 6 lights
+> Kitchen Lighting is now controlling 6 lights
 
 When a room lets its lights go, because it went dark or you pressed **Clear**, FLARE fires
 `flare_lights_released`:
@@ -264,14 +275,14 @@ entity_id: button.flare_clear
 device_id: ...
 ```
 
-> **Clear** Kitchen Lighting cleared 6 lights
+> Kitchen Lighting cleared 6 lights
 
 When something else changes one of FLARE's lights, and it stays changed for 30 seconds, FLARE
 fires `flare_light_overridden` for that light:
 
 ```yaml
 light: light.kitchen_1
-rooms: [automation.kitchen_lighting]   # every room it's one of
+rooms: [automation.kitchen_lighting]   # every room it belongs to
 entity_id: sensor.flare_overridden_lights
 device_id: ...
 previous_status: controlled
@@ -281,14 +292,16 @@ observed: { context_id: ..., target: {...}, recorded_at: ... }
 latest:   { context_id: ..., target: {...}, recorded_at: ... }
 ```
 
-> **Overridden lights** Kitchen Lighting released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)
+> Kitchen Lighting released Kitchen 1 to something else (last asked for 255/6667, found 12/6500)
 
-`live` is what the light was showing: its brightness and colour temperature, or its `rgb_color`
-if it wasn't showing a white. A light reporting its colour as `xy` that's showing a white has its
-colour temperature worked out from it.
+`live` shows the state the light reported: its brightness and colour temperature, or its
+`rgb_color` if it wasn't showing a white or doesn't support colour temperature. When a colour
+temperature light reports `xy_color` for a white shade, FLARE converts that into
+`color_temp_kelvin`.
 
-It fires once when the light changes hands, not again while the light stays overridden, and not
-for lights that were already overridden before a restart. To trigger an automation on it:
+`flare_light_overridden` fires once when a light becomes overridden, doesn't repeat while it
+stays overridden, and doesn't re-fire on startup for lights that were already overridden before a
+restart. To trigger an automation on it:
 
 ```yaml
 triggers:
@@ -304,25 +317,26 @@ triggers:
 |---|---|
 | `controlled` | FLARE is setting it: it matches one of its claims. |
 | `overridden` | It has matched neither claim for at least 30 seconds, so something else has changed it. |
-| `mismatched` | It has matched neither claim for less than 30 seconds. Usually it's FLARE's own change still arriving, or a light just back online reporting late, so it isn't counted or announced as overridden yet. It's left alone meanwhile, the same as an overridden light. |
-| `untracked` | It's on, and has no claim, or only one FLARE hasn't seen the light report yet. FLARE sets it as usual. |
-| `off` | It's off and has no claim. A light FLARE turned off is `controlled`; one someone else turned off is `overridden`. |
-| `unavailable` | Home Assistant can't reach it, so its claims aren't checked. It isn't blocked. |
+| `mismatched` | It has matched neither claim for less than 30 seconds. Usually FLARE's own command is still taking effect, or a light that just came back online is still reporting its old values, so FLARE leaves it alone meanwhile without counting or announcing it as overridden yet. |
+| `untracked` | It's on, and either has no claim or only an unconfirmed first claim that the light hasn't reported back for yet. FLARE sets it as usual. |
+| `off` | It's off and has no claim. A light FLARE turned off is `controlled`; a light someone else turned off is `overridden`. |
+| `unavailable` | Home Assistant can't reach it, so its claims aren't checked and FLARE skips it. |
 
 `matched_via` says which claim matched, and how: `latest-context`, `latest-value`,
-`observed-context` or `observed-value`. `rooms` lists the rooms the light is one of.
+`observed-context` or `observed-value`. `rooms` lists the rooms the light belongs to.
 
-Each claim has a `recorded_at` time and a `context_id`, which you can use to find the change in
-Home Assistant's logbook. A light's claim follows it when it's renamed, and goes when it's
-deleted from Home Assistant.
+Each claim records a `recorded_at` timestamp and a `context_id`, which you can use to trace the
+change in Home Assistant's logbook. A light's claim moves with it when the entity is renamed, and
+is deleted if the light is removed from Home Assistant.
 
 ## When rooms update
 
 FLARE fires a `flare_tick` event for each area once per update interval, carrying the area as
-`area_id`. Areas tick one after another, in name order, a gap apart, so rooms don't all send
-commands at the same time. A tick is a plain event, not an entity, so it never appears in
-Activity, history or the logbook. You can set the interval and the gap under **FLARE → Settings →
-Configure**:
+`area_id`. Areas tick one after another in name order, spaced apart by the configured gap, so
+rooms don't all send commands at the same time. A tick is a plain event, not an entity, so it
+never appears in Activity, history or the logbook. You can set the interval and the gap under
+**FLARE → Settings → Configure** (alongside the matching tolerances and [**Two-step bulb
+models**](../services/#two-step-bulbs)):
 
 | Option | Default | Description |
 |---|---|---|

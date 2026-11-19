@@ -88,15 +88,16 @@ flowchart TB
     TSQ -->|"no"| CB["combined / combined_rgb"]
 ```
 
-**One closeness**, for both questions: *is this still what FLARE set?* and
-*should FLARE bother sending?* The **tolerances** are 5 % of the target
-brightness and 5 mireds by default, from the Settings entry's options; a
-call may pass its own. An RGB target's channel differences are summed and
-allowed twice the colour tolerance. Device rounding has fixed floors: 2
-brightness points for dim targets, Kelvins that floor to the same mired,
-and 4 summed for RGB. 5 % and 5 mireds are about one just-noticeable
-difference, so a light too close to be worth a write is never someone
-else's change either.
+**One definition of closeness** answers both questions: *is this light still showing what FLARE
+set?* and *is this light close enough that FLARE shouldn't send a command?* By default, the
+**tolerances** are 5% of the target brightness and 5 mireds of colour temperature (configured on
+the Settings entry, though a service call can override them). For an `rgb_color` target, FLARE
+sums the differences across the red, green, and blue channels and allows up to twice the colour
+tolerance (10 by default). Fixed floors handle device rounding at low values: at least 2
+brightness points for dim targets, any two Kelvin values that floor to the same mired, and a
+summed difference of at least 4 for RGB. Because 5% brightness and 5 mireds are roughly one
+just-noticeable difference, any light close enough to skip sending is also never marked as
+changed by someone else.
 
 Both go through `tracking/matching.shows()`, the one place a light's
 reported values are compared with a target (see [Claims and override protection]({{ site.baseurl }}/architecture/claims/)).
@@ -129,25 +130,25 @@ can cancel the run mid-sleep.
 
 ## `turn_off`
 
-`flare.turn_off` records `{"state": "off"}` as the target of each light
-that already has a claim (`ClaimRegistry.async_record_off`), then calls
-`light.turn_off`, as one operation and with **no** override protection: a
-room emptying takes hand-set lights too. The off target is what tells
-FLARE's off from anyone else's once the context has expired, which matters
-only while the room stays lit; a dark room releases its claims anyway. It
-takes no room, since a claimed light is already in its rooms, and it
-claims nothing new. Callers mustn't split it back into a claim and a bare
-`light.turn_off`.
+`flare.turn_off` records `{"state": "off"}` as the target on each light that already holds a
+claim (`ClaimRegistry.async_record_off`), then calls `light.turn_off` in a single operation
+without checking override protection (an empty room turns off hand-set lights too). Recording the
+off target is what distinguishes a FLARE turn-off from someone else switching a light off after
+the 5-second context expires, which matters whenever other lights keep the room from going dark
+(once a room is completely dark, it releases its claims anyway). `turn_off` takes no `room_id`
+because claimed lights already belong to their rooms, and it creates no new claims on lights
+that weren't already tracked. Callers must not split this into separate claim-recording and
+`light.turn_off` calls.
 
 ## Unclaimed lights
 
-A light that's already on and showing what `apply_lighting` would send
-gets no write if it's claimed, or if the call names no room. An unclaimed
-light in a room is written to anyway (`EntityLookup.unclaimed`), and that
-write's claim adds it to the room. So after a Clear in a lit room every
-light is claimed again, and its claim is what FLARE sent rather than what
-the light reported, which a bulb just back on can get wrong. It costs one
-write per light each time a room takes it on.
+If a light is already on and showing the values `apply_lighting` would send, FLARE skips sending
+a command when the light already has a claim or when the call has no `room_id`. However, an
+unclaimed light in a tracked room is written to anyway (`EntityLookup.unclaimed`), so that write
+establishes FLARE's claim and adds the light to the room. After pressing **Clear** in a lit
+room, this guarantees every light gets re-claimed with what FLARE actually sent rather than
+trusting a stale state report from a bulb that just reconnected. The trade-off is one initial
+write per light whenever a room starts tracking it.
 
 ## `resolve_target`
 

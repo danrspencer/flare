@@ -14,9 +14,9 @@ permalink: /architecture/layout/
 
 ## The package
 
-`custom_components/flare/` is grouped by **concept**, not by how a thing
-is exposed. A schedule and the claims are each exposed both as entities
-and as services, so grouping by exposure tangled them.
+`custom_components/flare/` is grouped by **concept**, rather than by how something is exposed.
+Both schedules and claims are exposed through both entities and services, so organising packages
+around entity platforms vs services would split cohesive code apart.
 
 ```
 custom_components/flare/
@@ -61,9 +61,9 @@ custom_components/flare/
 │
 ├── blueprints/flare.yaml the room automation
 ├── blueprints/translations/ its text in other languages
-├── services.yaml  strings.json  translations/
+├── manifest.json  services.yaml  strings.json  translations/
 ├── brand/                the integration's icon
-└── www/                  the dashboard (see frontend.md)
+└── www/                  the dashboard (see Dashboard internals)
 ```
 
 ## The dependency rule
@@ -102,19 +102,18 @@ flowchart TB
   needs flares and the blueprint at once.
 - `services/__init__.py` holds no imports.
 
-Several modules are **pure**: no `hass`, only data in and data out.
-`curve.py`, `override_protection.py`, `matching.py`, `grouping.py`,
-`scenes.py`, `two_step.py` and `blueprint_version.py` are all tested
-without Home Assistant (`tests/unit/`). Where pure code needs HA state, the
-caller hands it a small adapter: `grouping.EntityLookup` and
-`scenes.SceneLookup` are dataclasses of callables, filled in by
-`services/handlers.py`.
+Several modules are **pure**: they never import or receive `hass`, taking plain inputs and
+returning plain data. `curve.py`, `override_protection.py`, `matching.py`, `grouping.py`,
+`scenes.py`, `two_step.py`, and `blueprint_version.py` are all unit-tested without Home Assistant
+(`tests/unit/`). When pure logic needs to inspect Home Assistant state, the caller supplies a
+small adapter of callables — `grouping.EntityLookup` and `scenes.SceneLookup` are dataclasses
+populated by `services/handlers.py`.
 
 ### One definition each
 
-A handful of rules are defined once and imported everywhere, because
-copies drifted apart before. A check test fails on a new copy where one
-is practical.
+A handful of rules are defined once and imported everywhere, because separate copies drifted
+apart in the past. Repository check tests enforce the single-source rules where static checking
+is practical:
 
 | Rule | Where | Check |
 |---|---|---|
@@ -200,8 +199,8 @@ flowchart LR
   `device_entry`, as HA's own helpers attach to a source device. A
   `DeviceInfo` with the device's identifiers would register a second
   device, since identifiers are unique per config entry.
-- Schedule settings live in entity state, not in `subentry.data`: a change
-  to subentry data reloads the whole entry.
+- Schedule settings live in entity state rather than in `subentry.data`, because modifying
+  `subentry.data` reloads the entire config entry.
 
 ## Tests mirror the layers
 

@@ -33,18 +33,20 @@ that need different timing, with **Settings → Devices & Services → FLARE →
 | `switch.<name>_sticky_phase_override` | When on, an override stays until you set the phase back to `Auto`. |
 | `time.<name>_morning_time`, `day_time`, `night_time` | When Morning, Day and Night start. Defaults: 06:00, 08:00, 22:00. If Night's time is earlier than Morning's, such as 01:00, Night starts after midnight, and Evening runs until then. |
 | `time.<name>_evening_earliest_time`, `evening_latest_time` | Evening starts at sunset, but no earlier or later than these. Defaults: 17:00, 20:00. |
-| `number.<name>_<phase>_brightness` | The phase's brightness, 0–255. At `0`, the phase turns the lights off. |
-| `number.<name>_<phase>_kelvin` | The phase's colour temperature, 1000–10000 K. |
-| `number.<name>_<phase>_brightness_transition`, `_kelvin_transition` | The phase's transitions, in minutes. See [transitions](#transitions). |
+| `number.<name>_<phase>_brightness` | The phase's brightness, 0–255 (defaults: Morning 255, Day 255, Evening 180, Night 80). At `0`, the phase turns the lights off. |
+| `number.<name>_<phase>_kelvin` | The phase's colour temperature, 1000–10000 K (defaults: Morning 6667 K, Day 6667 K, Evening 3200 K, Night 2700 K). |
+| `number.<name>_<phase>_brightness_transition`, `_kelvin_transition` | The phase's transitions, in minutes (defaults: Morning 60/60, Day 65/1440, Evening 60/60, Night 30/30). See [transitions](#transitions). |
 
-A change to any of these takes effect within a few seconds. To remove a schedule, delete its
-device.
+A change to any of these takes effect on the schedule sensor within 10 seconds, and lit rooms pick
+it up on their next regular update (or immediately if the phase itself changed). To remove a
+schedule, delete its device.
 
 ## The schedule sensor
 
 | Attribute | Description |
 |---|---|
 | state | The phase: `Morning`, `Day`, `Evening` or `Night`. |
+| `phase` | Same as the sensor's state. |
 | `brightness` | The current brightness, 0–255. |
 | `color_temp_kelvin` | The current colour temperature, in Kelvin. |
 | `rgb_color` | The current colour temperature as `[r, g, b]`. |
@@ -57,10 +59,11 @@ follows the overridden phase.
 
 ## Transitions
 
-A phase's transition is how long before the phase ends its brightness or colour starts changing
-to the next phase's. The change finishes when the next phase starts: if Morning starts at 06:00,
-the lights reach Morning's values at 06:00. For example, `day_kelvin_transition` is how long
-before the end of Day the colour starts changing to Evening's.
+A phase's transition is how long before the phase ends that its brightness or colour starts
+easing toward the next phase's values. The change finishes when the next phase starts — for
+example, if Morning starts at 06:00, the lights reach Morning's values at 06:00. Likewise,
+`day_kelvin_transition` is how many minutes before the end of Day that the colour starts easing
+toward Evening's colour temperature.
 
 - A transition of `0` switches at the boundary.
 - A transition longer than its phase covers the whole phase.

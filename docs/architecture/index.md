@@ -13,11 +13,10 @@ permalink: /architecture/
 > FLARE's code, or who just like to know how things work. Installing, setting up and using FLARE
 > are all covered without it: start at [Installation]({{ site.baseurl }}/installation/).
 
-What runs where, how FLARE hooks into Home Assistant, and how the pieces
-talk to each other. These pages describe the system as it is. The reasons
-behind its decisions are in
-[CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md), in
-the repository.
+This section covers what runs where, how FLARE hooks into Home Assistant, and how the pieces
+talk to each other. These pages describe the system as it is today; the reasons behind its
+design decisions live in
+[CLAUDE.md](https://github.com/danrspencer/flare/blob/main/CLAUDE.md) in the repository.
 
 ## Reading order
 
@@ -73,8 +72,7 @@ flowchart TB
 
 ### One room update, end to end
 
-The commonest path: an area's tick fires, and the room drifts with the
-curve.
+In the most common path, an area's tick fires and the room moves along the curve:
 
 ```mermaid
 sequenceDiagram
@@ -97,11 +95,13 @@ sequenceDiagram
     Note over CR: context matches the claim:<br/>the light stays "controlled"
 ```
 
-Every other path is a variation on this one. Motion uses a shorter
-transition and may switch lights on. A room emptying calls
-`flare.turn_off`. A phase change also moves scenes on. Someone changing a
-light by hand shows up at step 10 as a context and values that match no
-claim, and from then on step 5 leaves that light out.
+Every other path is a variation on this one:
+
+- **Motion** uses a shorter transition and may turn lights on.
+- **Emptying a room** calls `flare.turn_off`.
+- **A phase change** also activates or updates the room's scene if one is configured.
+- **A manual change** shows up on the light's `state_changed` event with a context and values that
+  don't match any claim; from then on, `build_groups` omits that light until the room goes dark.
 
 ## Words used here
 

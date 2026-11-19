@@ -66,9 +66,8 @@ nothing to wait for.
 only from the page HTML at load time, so a page open while FLARE is set up
 never gets them. On HTTPS or `localhost`, the service worker serves the
 first reload from its stale cache too. `dashboard_reload.py` handles both:
-setup's summary and a repair link to a reload with a one-off query token,
-a URL the service worker has never cached, with `target="_self"` so it's
-a real page load. The beacon, imported last by the loader, clears the
+setup's summary and a repair both link to a reload URL carrying a one-off query token that the
+service worker has never cached, using `target="_self"` so the browser performs a full page load. The beacon, imported last by the loader, clears the
 repair. It sits under `/flare_static/` rather than `/api/` because HA's
 CORS check rejects the `Origin` header a module import always sends.
 
@@ -115,9 +114,9 @@ flowchart LR
     V2 --> S4["flare-activity-card<br/>(sidebar)"]
 ```
 
-Strategies regenerate on every load, so an update is the whole migration
-and a new schedule or room just appears. **Take control** turns it into
-ordinary YAML and is the one-way escape hatch.
+Strategies regenerate on every load, so an integration update automatically upgrades the
+dashboard layout and any new schedule or room appears on its own. **Take control** turns it
+into ordinary YAML and is the one-way escape hatch.
 
 **Entities are found by device and role, never by building ids.**
 `flareDevices()` groups `hass.entities` by device, keyed by each entry's
@@ -133,7 +132,7 @@ is what makes them testable under node.
 | `flare-curve-card` | the schedule sensor's `points` and boundaries | one filled SVG path, simplified; corner easing never overshoots |
 | `flare-kelvin-feature`, `flare-brightness-feature` | a `number` entity | HA's own `ha-control-slider`, filled with the value's colour |
 | `flare-schedule-transfer-card` | `flare.export_schedule` / `import_schedule` | holds no copy of the YAML format |
-| `flare-area-lights-card` | each light's status sensor | an area's lights, counts and Clear, worked out live in the browser |
+| `flare-area-lights-card` | each light's status sensor | computes an area's lights, counts, and **Clear** actions live in the browser |
 | `flare-activity-card` | the logbook's `logbook/event_stream` for FLARE's device | rows are HA's own `ha-logbook-entry`, coloured by kind |
 
 Two frontend internals are used knowingly, as accepted risks:
@@ -141,9 +140,9 @@ Two frontend internals are used knowingly, as accepted risks:
 breaks) and `ha-logbook-entry` (lazy-loaded, by having card helpers create
 a logbook card first).
 
-**Slider colour** is the curve's colour for the value, with 15 % of
-`--primary-text-color` mixed in through `color-mix`. A near-white then
-shows on a light card, and the theme decides which way it moves.
+**Slider colour** is the curve's colour for the current value, mixed with 15% of
+`--primary-text-color` via `color-mix`. That keeps near-white sliders visible against light card
+backgrounds while adapting automatically to both light and dark themes.
 
 ## Translations
 

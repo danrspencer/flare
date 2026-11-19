@@ -26,8 +26,8 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
   [scene]({{ site.baseurl }}/guides/scenes/) you've picked for it, and
   [turns off once it's empty]({{ site.baseurl }}/reference/blueprint/#when-lights-turn-on-and-off).
 - **It works with lights on a physical wall switch.** If you cut the power to a room and
-  restore it, FLARE puts each bulb on the current phase as soon as it shows up in Home
-  Assistant again, instead of leaving it at whatever it powered up as.
+  restore it, FLARE sets each bulb to the current brightness and colour as soon as it shows up in
+  Home Assistant again, instead of leaving it at whatever it powered up as.
 - **It keeps every light on the curve.** [Every minute]({{ site.baseurl }}/reference/blueprint/#when-the-room-updates)
   it checks each light, and corrects any that have drifted or missed a command.
 - **Each room can be different.** Give a light its own [brightness]({{ site.baseurl }}/guides/templates/#brightness-template),
@@ -39,9 +39,9 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
   switch or another automation, FLARE [stops setting it]({{ site.baseurl }}/reference/override-protection/)
   until the room next goes dark.
 - **It works with Siri, Alexa and Google.** Each room gets [a single light]({{ site.baseurl }}/guides/flares/)
-  to expose to them, so "turn on the kitchen" lights the kitchen the way FLARE would, rather than
-  at whatever the bulbs were last set to. If you ask for a brightness or colour, FLARE leaves it
-  alone.
+  to expose to them, so "turn on the kitchen" lights the kitchen at the right brightness and
+  colour for the time of day, rather than at whatever the bulbs were last set to. If you ask for a
+  specific brightness or colour, FLARE leaves those lights alone until the room goes dark.
 - **It's gentle on your Zigbee network.** Rooms update [one after another]({{ site.baseurl }}/reference/override-protection/#when-rooms-update)
   rather than all at once, and [changes too small to see]({{ site.baseurl }}/reference/blueprint/#why-didnt-my-light-change)
   aren't sent.
@@ -50,7 +50,8 @@ FLARE sets your lights through the day, and leaves alone any light you change yo
 
 ## Setting it up
 
-Adding FLARE sets up every room with lights, then the dashboard. The
+Adding FLARE creates your schedules and can set up an automation for each room with lights;
+afterwards you can add the dashboard in Home Assistant. The
 [Quickstart]({{ site.baseurl }}/installation/) goes through it step by step.
 
 <video src="{{ '/assets/video/setup.mp4' | relative_url }}" poster="{{ '/assets/video/setup.jpg' | relative_url }}"
@@ -72,8 +73,8 @@ default settings:
 |---|---|
 | **Morning** | Bright and cold — enough eyeball caffeine to get you as far as the coffee machine, with [some research](https://pubmed.ncbi.nlm.nih.gov/36058557/) to back it up. |
 | **Day** | Bright, easing steadily from Morning's colour toward Evening's across the whole afternoon. |
-| **Evening** | Dimming and warming, anchored to your actual sunset. |
-| **Night** | Warm and low, flat until morning. |
+| **Evening** | Dimmer and warmer, anchored to your actual sunset. |
+| **Night** | Warm and low overnight, easing into Morning before dawn. |
 
 Each boundary has its own transition: how long beforehand to start easing into the next
 phase, so the new values land exactly as it begins. If you set a transition to zero, the
