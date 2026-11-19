@@ -11,12 +11,18 @@ CI — see `.github/workflows/release.yml`.
 
 ### Added
 
-- **Brightness levels as a percentage or a multiplier.** In the Brightness Template, `'50%'`
-  sets a light to half of full brightness, and `'x0.5'` to half of the schedule's, so it keeps
-  following the curve. The Idle Brightness Template takes percentages too, and
-  `flare.apply_lighting`'s `brightness_levels` takes both.
-- **`schedule_brightness` in the brightness templates**: the room's schedule brightness right
-  now, for anything a multiplier can't do, such as keeping a lamp from dropping below a level.
+- **Percentages and multipliers in Brightness Template.** `'50%'` sets a light to half of full
+  brightness, and `'x0.5'` sets it to half of the schedule's brightness so it keeps following the
+  curve.
+- **Percentages in Idle Brightness Template.** Use percentages like `'5%'` (of full brightness)
+  alongside 0–255 numbers.
+- **Percentages and multipliers in `flare.apply_lighting`.** `brightness_levels` accepts `'50%'`
+  and `'x0.5'`, with `'x0.5'` multiplying the call's `brightness` (which is required for any light
+  using a multiplier).
+- **`schedule_brightness` is available in Brightness Template and Idle Brightness Template** if
+  you want to manipulate the schedule's current brightness (0–255, or `none` while the schedule
+  is unavailable) directly in a template — for example, to keep a lamp from dropping below a
+  minimum level.
 
 ## [2.1.1] - Unreleased
 
