@@ -96,10 +96,21 @@ class TestBrightnessScaling:
         assert effective(call, "light.a") == 40
         assert effective(call, "light.b") == 40
 
-    @pytest.mark.parametrize(("template", "expected"), [("{{ '50%' }}", 127), ("{{ 'x0.5' }}", 105)])
-    async def test_a_bare_percent_or_multiplier_from_the_brightness_template_applies_to_every_light(
+    @pytest.mark.parametrize(
+        ("template", "expected"),
+        [
+            ("{{ '50%' }}", {"light.a": 127.5, "light.b": 127.5}),
+            ("{{ 'x0.5' }}", {"light.a": 105.0, "light.b": 105.0}),
+            ("{{ {'light.a': '20%', 'light.b': 'X 1.5'} }}", {"light.a": 51.0, "light.b": 315.0}),
+            ("{{ {'light.a': ' 0 %', 'light.b': 'x0'} }}", {"light.a": 0.0, "light.b": 0.0}),
+        ],
+        ids=["bare percent", "bare multiplier", "per light", "zero"],
+    )
+    async def test_percentages_and_multipliers_reach_the_service_as_numbers(
         self, hass, apply_lighting_calls, template, expected
     ):
+        """flare.apply_lighting takes only 0-255, so the blueprint resolves them:
+        a percentage of 255, a multiplier of the schedule's brightness."""
         light(hass, "light.a", "on")
         light(hass, "light.b", "on")
         await hass.async_block_till_done()
@@ -114,12 +125,45 @@ class TestBrightnessScaling:
         await hass.async_block_till_done()
 
         assert apply_lighting_calls
-        call = apply_lighting_calls[-1]
-        assert effective(call, "light.a") == expected
-        assert effective(call, "light.b") == expected
+        assert apply_lighting_calls[-1].data["brightness_levels"] == expected
+
+    async def test_a_percentage_rounds_as_light_turn_on_does(self, hass, apply_lighting_calls):
+        """50% is 128, as `brightness_pct: 50` is."""
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass, room_target={"entity_id": ["light.a"]}, brightness_template="{{ '50%' }}"
+        )
+
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
+        async_fire_time_changed(hass, dt_util.utcnow() + timedelta(minutes=1))
+        await hass.async_block_till_done()
+
+        assert effective(apply_lighting_calls[-1], "light.a") == 128
+
+    async def test_a_multiplier_without_a_schedule_brightness_does_not_hand_the_light_over(
+        self, hass, turn_off_calls
+    ):
+        occupancy(hass, "binary_sensor.occ", "on")
+        light(hass, "light.a", "on")
+        await hass.async_block_till_done()
+        await setup_room_automation(
+            hass,
+            room_target={"entity_id": ["light.a", "binary_sensor.occ"]},
+            brightness_template="{{ {'light.a': 'x0.5'} }}",
+            no_motion_wait=0,
+        )
+        hass.states.async_set("sensor.test_adaptive", "Day", {"color_temp_kelvin": 4000})
+        await hass.async_block_till_done()
+
+        occupancy(hass, "binary_sensor.occ", "off")
+        await hass.async_block_till_done()
+
+        assert turn_off_calls
+        assert "light.a" in turn_off_calls[-1].data["entities"]
 
     @pytest.mark.parametrize(("schedule", "expected"), [(210, 210), (100, 150)])
-    async def test_the_brightness_template_reads_schedule_brightness(
+    async def test_the_brightness_template_reads_brightness(
         self, hass, apply_lighting_calls, schedule, expected
     ):
         light(hass, "light.a", "on")
@@ -127,7 +171,7 @@ class TestBrightnessScaling:
         await setup_room_automation(
             hass,
             room_target={"entity_id": ["light.a"]},
-            brightness_template="{{ {'light.a': [schedule_brightness, 150] | max} }}",
+            brightness_template="{{ {'light.a': [brightness, 150] | max} }}",
         )
 
         hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": schedule, "color_temp_kelvin": 4000})
@@ -453,8 +497,9 @@ class TestIdleBrightness:
             ("{{ '20%' }}", {"light.a": 51, "light.b": 51}),
             ("{{ {'light.a': '20%', 'light.b': '0%'} }}", {"light.a": 51}),
             ("{{ {'light.a': '20%', 'light.b': 'x0.5'} }}", {"light.a": 51}),
+            ("{{ {'light.a': (brightness / 10) | int} }}", {"light.a": 21}),
         ],
-        ids=["bare percent", "0% isn't idle", "a multiplier isn't an idle level"],
+        ids=["bare percent", "0% isn't idle", "a multiplier isn't an idle level", "reads brightness"],
     )
     async def test_a_percent_from_the_idle_template(
         self, hass, turn_off_calls, apply_lighting_calls, template, expected
@@ -469,6 +514,8 @@ class TestIdleBrightness:
             no_motion_wait=0,
             idle_brightness_template=template,
         )
+        hass.states.async_set("sensor.test_adaptive", "Day", {"brightness": 210, "color_temp_kelvin": 4000})
+        await hass.async_block_till_done()
         apply_lighting_calls.clear()
 
         occupancy(hass, "binary_sensor.occ", "off")

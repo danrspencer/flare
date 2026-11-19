@@ -32,7 +32,7 @@ Returns the brightness each light should sit at, as a mapping from entity ID to 
 | Value | Effect |
 |---|---|
 | `1`–`255` | The light sits at this brightness, on the same scale as the phase brightnesses |
-| `'50%'` | The light sits at this percentage of full brightness: `'100%'` is 255, `'50%'` is 127 |
+| `'50%'` | The light sits at this percentage of full brightness: `'100%'` is 255, `'50%'` is 128 |
 | `'x0.5'` | The light sits at the curve's brightness multiplied by this, so it still follows the curve |
 | `0` | The light is turned off |
 | `null` or `false` | FLARE leaves the light alone entirely, on or off |
@@ -99,17 +99,17 @@ curve instead:
 
 ### A light that never drops below a level
 
-`schedule_brightness` is the brightness, 0–255, the room's schedule is at right now, which is
+`brightness` is the brightness, 0–255, the room's schedule is at right now, which is
 what every light without a level gets. Use it for anything a multiplier can't do, such as a
 floor:
 
 ```yaml
-{{ {'light.desk_lamp': [schedule_brightness, 80] | max} }}
+{{ {'light.desk_lamp': [brightness, 80] | max} }}
 ```
 
-The desk lamp follows the curve, but never sits below 80. `schedule_brightness` is `none`
-while the schedule is unavailable, so a template doing arithmetic with it can guard with
-`schedule_brightness is not none`.
+The desk lamp follows the curve, but never sits below 80. `brightness` is `none` while the
+schedule is unavailable, so a template doing arithmetic with it can guard with
+`brightness is not none`.
 
 ### `0` or `null`?
 
