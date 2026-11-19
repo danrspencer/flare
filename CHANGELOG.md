@@ -16,9 +16,10 @@ CI — see `.github/workflows/release.yml`.
   following the curve. **Idle Brightness Template** takes percentages too, and
   `flare.apply_lighting`'s `brightness_levels` takes both (where `'x0.5'` scales the call's
   `brightness`, so `brightness` is required for scaled lights).
-- **`schedule_brightness` in Brightness Template and Idle Brightness Template.** Gives the
-  room's current schedule brightness (0–255, or `none` while the schedule is unavailable), for
-  anything a multiplier can't do, such as keeping a lamp from dropping below a minimum level.
+- **`schedule_brightness` is available in Brightness Template and Idle Brightness Template** if
+  you want to manipulate the schedule's current brightness (0–255, or `none` while the schedule
+  is unavailable) directly in a template — for example, to keep a lamp from dropping below a
+  minimum level.
 
 ## [2.1.1] - Unreleased
 
