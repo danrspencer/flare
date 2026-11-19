@@ -23,18 +23,19 @@ A flare is a light entity that sits over an automation. Flares are under **Setti
 
 | Setting | Description |
 |---|---|
-| **Automation** | The automation that turning the flare on runs. If the automation is deleted, the flare is unavailable. |
-| **Lights input** | For an automation built from a blueprint: the input that holds the lights. The flare reads it whenever it's used, so a change to the automation changes the flare. For an automation from the FLARE blueprint this is **Lights & Occupancy**. |
+| **Automation** | The automation that turning the flare on runs. If the automation is deleted, the flare becomes unavailable. |
+| **Name** | The flare's display name (and what voice assistants hear). Renaming it later doesn't change its entity ID. |
+| **Lights input** | For an automation built from a blueprint: the input that holds the lights. The flare reads that input whenever it's used, so changing the automation updates the flare. For an automation from the FLARE blueprint this is **Lights & Occupancy**. |
 | **Lights** | For an automation not built from a blueprint: the lights, picked directly. |
-| **Area** | Only when adding: the area the flare's device starts in, which defaults to the automation's area. After that, the device's area is set the usual way. |
+| **Area** | Shown only when adding a flare for another automation: the area the flare's device starts in, defaulting to the automation's area. Afterwards, change the device's area the usual way in Home Assistant. |
 
-**Set up area** offers a flare for each area it sets up, named after the area. Adding flares from **Rooms from
-the FLARE blueprint** creates one for each room picked, named after its automation. Either way,
-the flare starts in the automation's area.
+**Set up area** offers a flare for each area it sets up, named after the area. Adding flares from
+**Rooms from the FLARE blueprint** creates a flare for each room picked, named after its
+automation. In both cases, the new flare is placed in its automation's area.
 
-**Reconfigure** shows which automation the flare runs, and changes the flare's name and its
-lights, or its lights input. It can't change the automation, so to use a different
-one, add a new flare.
+**Reconfigure flare** (in the flare's three-dot menu) shows which automation the flare runs, and
+lets you change its **Name** and either its **Lights** or **Lights input**. It can't switch a
+flare to a different automation — add a new flare if you need that.
 
 ## The flare's light
 
@@ -45,11 +46,12 @@ attribute lists the lights.
 | Call | What it does |
 |---|---|
 | `light.turn_on` with no brightness, colour or effect | Runs the automation, as **Run actions** does. A `transition` on its own is ignored. |
-| `light.turn_on` with a brightness, colour or effect | Marks every light as overridden, with the automation as its room, with [`flare.claims_override`](../services/#flareclaims_override), then sends the values to them, as a light group does. FLARE leaves them alone until the room is empty and dark. |
+| `light.turn_on` with a brightness, colour or effect | Marks every light as overridden for that automation's room via [`flare.claims_override`](../services/#flareclaims_override), then sends the values to the lights as a light group does. FLARE leaves them alone until the room is empty and dark. |
 | `light.turn_off` | Marks every light as overridden in the same way, then turns them off. They stay off until the room's automation next turns them on, such as when it detects motion. |
 
-The flare's lights are the same as its automation's, chosen as described under
-[Room](../blueprint/#room). A light that belongs to another flare isn't one of them.
+For an automation built from a blueprint, the flare's lights match the automation's target as
+described under [Room](../blueprint/#room). A light that belongs to another flare is always
+excluded.
 
 ## Flares and the room's automation
 

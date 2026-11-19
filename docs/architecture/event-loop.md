@@ -94,11 +94,11 @@ automation's inputs until then.
 | a flare's member lights | `FlareLight`, via `async_track_target_selector_state_change_event` | recomputing the group's state |
 | `area_registry_updated` | `_tick_areas` | handing the ticker the new set of areas |
 | each claimed light's registry entry | `ClaimRegistry.async_start_listening`, alongside its state listener | moving a claim with a rename; dropping it with a deletion |
-| a light's registry entry | each `_LightStatusSensor` | following a rename; going with its light when it's removed |
-| an automation's registry entry | each `FlareLight`, for its own automation | retracking when it's renamed or removed |
+| a light's registry entry | each `_LightStatusSensor` | following a rename; removing the sensor when its light is deleted |
+| an automation's registry entry | each `FlareLight`, for its own automation | re-resolving its members when the automation is renamed or deleted |
 | `automation_reloaded` | `FlareLight` | re-reading the automation's lights |
-| `homeassistant_started` | `FlareLight` | first membership, once automations exist |
-| `homeassistant_stop` | Settings entry, `ClaimEvents` | stopping the ticker and timers |
+| `homeassistant_started` | `FlareLight` | resolving its initial members once automations have loaded |
+| `homeassistant_stop` | Settings entry, `ClaimEvents` | stopping the area ticker and cancelling pending timers |
 
 ### Timers
 
@@ -194,7 +194,7 @@ Four facts shape everything built on contexts:
 
 ## Shutdown
 
-- **Nothing a light reports while HA is stopping counts**
+- **Any state a light reports while HA is stopping is ignored**
   (`hass.is_stopping`). MQTT marks its lights unavailable as its
   connection closes, which would otherwise drop every claim just before
   the Store's final write.

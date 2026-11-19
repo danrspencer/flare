@@ -87,8 +87,8 @@ The coordinator refreshes every 60 seconds, and also:
 
 ## The curve maths (`schedule/curve.py`)
 
-Pure functions, with every literal a named default
-(`DEFAULT_CURVE_VALUES`, `DEFAULT_SCHEDULE_HOURS`).
+`schedule/curve.py` consists of pure functions, with all defaults defined in
+`DEFAULT_CURVE_VALUES` and `DEFAULT_SCHEDULE_HOURS`.
 
 ### Which phase is it?
 
@@ -101,9 +101,9 @@ timestamp is shifted onto a clock where Night comes after Evening before
 comparing.
 
 **Tomorrow's Morning and Night are worked out by the calendar**
-(`Boundaries.next_morning`, `next_night`) and passed to the curve, since they
-aren't 24 hours after today's on a day the clocks change. `flare.compute_curve`
-takes only today's four, so it assumes 24 hours.
+(`Boundaries.next_morning`, `next_night`) and passed to the curve, because they aren't 24 hours
+after today's boundaries on days when daylight saving time shifts. Because `flare.compute_curve`
+takes only today's four timestamps, it assumes 24-hour days.
 
 ```mermaid
 gantt
@@ -141,10 +141,10 @@ With the default settings and a 17:30 sunset, brightness runs:
 | 17:30 | 21:00 | 180 (Evening) |
 | 21:00 | 22:00 | 180 → 80, Evening's 60-minute transition |
 
-`day_phase` is a **parameter**, not worked out from the time, because a
-manual override passes a phase the clock disagrees with. So every ramp
-clamps its factor and can't extrapolate. Strictly outside its own span, an
-overridden phase returns its own value.
+`day_phase` is passed as an explicit parameter rather than derived from the clock, because a
+manual phase override supplies a phase the clock disagrees with. Every ramp clamps its
+interpolation factor to `[0, 1]` so it never extrapolates; outside that phase's own span, an
+overridden phase simply returns its own target values.
 
 RGB is Kelvin converted, through HA's `color_temperature_to_rgb` with a
 round-half-up wrapper that matches the card's `Math.round`.

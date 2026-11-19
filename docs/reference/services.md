@@ -36,9 +36,9 @@ blueprint is built on them. **Developer Tools → Actions** shows the same field
 | [`flare.import_schedule`](#flareimport_schedule) | Sets a schedule from YAML |
 
 In the field tables, a schedule is passed as its **device** ID. In a template, `device_id()` of
-any of its entities gives you that, such as `device_id('sensor.home_flare')` for the Home
-schedule. A room is passed as `room_id`, usually the calling automation's own entity ID,
-`{{ this.entity_id }}`; see [rooms](../override-protection/#rooms).
+any of its entities gives you that schedule's device ID, such as `device_id('sensor.home_flare')`
+for the Home schedule. A room is passed as `room_id`, usually the calling automation's own entity
+ID, `{{ this.entity_id }}`; see [rooms](../override-protection/#rooms).
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -80,8 +80,8 @@ This sets both kitchen lights to the Home schedule's current colour temperature,
 | `min_brightness_change`<br>percent, 0–25; default from **FLARE → Settings → Configure** | no | A light within this percentage of the target brightness, or 2 if that's more, isn't sent anything, and still matches its claim. See [tolerances](../override-protection/#how-close-counts-as-a-match). |
 | `min_color_temp_change`<br>mireds, 0–50; default from **FLARE → Settings → Configure** | no | A light within this many mireds of the target colour temperature isn't sent anything, and still matches its claim. For an `rgb_color` target, the channels' differences added together can be up to twice this. |
 | `prefer_rgb_color`<br>boolean; default `false` | no | Sends `rgb_color` instead of `color_temp_kelvin` to lights that support RGB. |
-| `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute is the colour temperature converted to RGB. Ignored if `prefer_rgb_color` is off. |
-| `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. Without it, the lights this room's calls have set. |
+| `rgb_color`<br>`[r, g, b]` or `null` | no | The colour for RGB lights when `prefer_rgb_color` is on. The schedule sensor's `rgb_color` attribute provides the colour temperature converted to RGB. If `rgb_color` is omitted or `null` (or `prefer_rgb_color` is off), FLARE sends `color_temp_kelvin` instead. |
+| `room_entities`<br>list of light entity IDs | no | The room's lights, which FLARE releases together once none of them is on. If omitted, FLARE tracks only the lights this room's calls have set. |
 | `room_id`<br>text | no | The room to record the change for, usually the calling automation: `{{ this.entity_id }}`. Without it, FLARE records nothing and doesn't leave any light alone. See [rooms](../override-protection/#rooms). |
 | `transition`<br>seconds, 0–300; default `0` | no | How long the change takes. [Two-step bulbs](#two-step-bulbs) spend half of it on brightness and half on colour. |
 
@@ -99,8 +99,8 @@ A level above full brightness, such as `'150%'` or `'x2'` on a bright light, is 
 
 ### Response data
 
-Optional. With `response_variable`, the response is what was sent, or with `dry_run`, what
-would be sent. `groups` is a list with one entry for each brightness, and each entry has these
+Add `response_variable` if you want to inspect what was sent (or, with `dry_run: true`, what
+would be sent). `groups` is a list with one entry for each brightness, and each entry has these
 fields:
 
 - `brightness`: The brightness the group's lights are sent, or `0` for lights being turned
@@ -173,7 +173,7 @@ still in use, a light turned off with `flare.turn_off` comes back on at the next
 
 - It turns off every light it's given, including lights someone else has changed. To turn off
   only the lights FLARE is still setting, call [`claims_check`](#flareclaims_check) first.
-- A light FLARE isn't driving is just turned off, as `light.turn_off` would.
+- A light FLARE isn't driving is turned off directly, just like `light.turn_off`.
 
 ## `flare.compute_curve`
 
@@ -199,9 +199,9 @@ response_variable: curve
 | `at`<br>Unix timestamp; default now | no | The moment to work out the values for. |
 | `day`, `evening`, `morning`, `night`<br>Unix timestamp | yes | When each phase starts today. If `night` is earlier than `morning`, Night starts after midnight, and Evening runs until then. |
 | `<phase>_brightness`<br>0–255; default Morning 255, Day 255, Evening 180, Night 80 | no | The phase's brightness. |
-| `<phase>_brightness_transition`<br>minutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30 | no | How long before the phase ends its brightness starts changing to the next phase's. |
+| `<phase>_brightness_transition`<br>minutes, 0–1440; default Morning 60, Day 65, Evening 60, Night 30 | no | How many minutes before the phase ends that its brightness starts easing toward the next phase's values. |
 | `<phase>_kelvin`<br>Kelvin, 1000–10000; default Morning 6667, Day 6667, Evening 3200, Night 2700 | no | The phase's colour temperature. |
-| `<phase>_kelvin_transition`<br>minutes, 0–1440; default Morning 60, Day 1440, Evening 60, Night 30 | no | How long before the phase ends its colour temperature starts changing to the next phase's. |
+| `<phase>_kelvin_transition`<br>minutes, 0–1440; default Morning 60, Day 1440, Evening 60, Night 30 | no | How many minutes before the phase ends that its colour temperature starts easing toward the next phase's values. |
 
 `<phase>` is `morning`, `day`, `evening` or `night`, so `evening_brightness` is Evening's
 brightness. The defaults are the values a new schedule starts with, and
@@ -250,7 +250,7 @@ response_variable: check
   [inspecting tracked state](../override-protection/#inspecting-tracked-state).
 - `matched_via`: Which claim the entity matched, and how: `latest-context`, `latest-value`,
   `observed-context` or `observed-value`. `null` if it matched neither.
-- `rooms`: The rooms the light is one of, by the `room_id` each named.
+- `rooms`: The rooms the light belongs to, listed by each room's `room_id`.
 
 ```yaml
 results:
@@ -264,7 +264,7 @@ results:
 ## `flare.claims_record`
 
 Use this action to record a change you're about to make, so a later
-[`claims_check`](#flareclaims_check) treats it as FLARE's. Call it just **before** you change
+[`claims_check`](#flareclaims_check) counts it as FLARE's. Call it just **before** you change
 the entities, with the values you're about to send.
 
 ```yaml
@@ -287,9 +287,9 @@ data:
 
 ### Good to know
 
-- Without `targets`, the claim holds only the change's context, which Home Assistant drops
-  after five seconds. A bulb that's slower than that to report back doesn't match its claim,
-  so it becomes `overridden`.
+- Without `targets`, the claim records only the call itself, which Home Assistant clears after
+  five seconds. A bulb that takes longer than that to report back won't match the claim by value
+  and will become `overridden`.
 - A light running an effect that keeps changing its colour won't match its claim. Use a scene
   for it instead, or hand it over with a `null` brightness in the blueprint.
 
@@ -313,13 +313,14 @@ data:
 
 ### Response data
 
-Optional. `cleared` lists the entities that had a claim to discard.
+Add `response_variable` if you want the result: `cleared` lists the entities that had a claim to
+discard.
 
 ## `flare.claims_override`
 
 Use this action to mark lights as changed by someone else, so FLARE leaves them alone.
 
-You don't usually need it. A light with a claim becomes `overridden` by itself once something
+You don't usually need it. A light with a claim becomes `overridden` automatically once something
 else changes it and it stops matching its claim. It's for lights with no claim yet, such as
 when your automation turns lights on in a dark room and you want FLARE to leave them as they
 are. Without it, they're `untracked`, so the room's next update sets them to the curve.
@@ -370,7 +371,7 @@ response_variable: coverage
 - `scene_valid`: `true` if the scene exists and every entity it sets is in `scope_entities`.
 - `covered_entities`: The entities the scene sets.
 - `uncovered_entities`: The entries in `target_entities` that the scene doesn't set. If
-  `scene_valid` is `false`, this is all of them.
+  `scene_valid` is `false`, this includes every entity in `target_entities`.
 
 ```yaml
 scene_valid: true
@@ -393,7 +394,7 @@ response_variable: kitchen
 ### Fields
 
 It takes a target, as an action such as `light.turn_on` does: any mix of `entity_id`,
-`device_id`, `area_id`, `floor_id` and `label_id`.
+`device_id`, `area_id`, `floor_id` and `label_id`, plus `exclude` targets.
 
 ### Response data
 
@@ -401,8 +402,9 @@ It takes a target, as an action such as `light.turn_on` does: any mix of `entity
   which entities those are, in the same way as when you call an action on that target:
   - An entity you name directly is always included.
   - An entity reached through a device, area, floor or label is left out if it's hidden.
-  - An entity reached through a device, area or floor is also left out if it's a
-    configuration or diagnostic entity. If a label is on the entity itself, it's kept.
+  - An entity reached through a device, area or floor, or through a label on its device or area,
+    is also left out if it's a configuration or diagnostic entity. If a label is on the entity
+    itself, it's kept.
 
 ```yaml
 entities: [binary_sensor.kitchen_motion, light.kitchen_1, light.kitchen_2]
@@ -519,9 +521,9 @@ lights that are on, since `apply_lighting` turns on everything it's given. Turni
 
 If you want to send `light.turn_on` yourself and still have FLARE leave hand-set lights alone:
 
-1. `flare.claims_check` to find out whether someone else has changed the light.
-2. `flare.claims_record` with what you're about to send, so FLARE recognises it next time.
-3. Your own `light.turn_on`.
+1. Call `flare.claims_check` to find out whether someone else has changed the light.
+2. Call `flare.claims_record` with the values you're about to send, so FLARE matches them later.
+3. Call `light.turn_on` yourself.
 
 For example, this script sets the porch light to a warm 60%, unless someone has changed it
 since the script last set it:
@@ -551,7 +553,7 @@ sequence:
 
 `targets` needs the brightness and either `color_temp_kelvin` or `rgb_color` you're sending.
 FLARE checks the light against it later, so a light running an effect that keeps changing its
-colour won't be recognised. For that, use a scene or hand the light over with a `null`
+colour won't match its claim. For that, use a scene or hand the light over with a `null`
 brightness in the blueprint instead.
 
 If your automation turns lights off while some of the room's lights stay on, use

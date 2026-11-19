@@ -19,9 +19,9 @@ everything in FLARE is an ordinary Home Assistant entity or event, so an automat
 can change it or react to it. Each example here is a complete automation to paste in and
 adjust.
 
-They use a schedule called **Home**, so its entities are `time.home_…`, `number.home_…`
-and `sensor.home_flare`. Swap in your own schedule's name, and your own rooms, lights and
-sensors.
+They use a schedule called **Home**, so its entities are `time.home_…`, `number.home_…`,
+`sensor.home_flare`, `select.home_flare_phase`, and `event.home_flare_phase`. Swap in your own
+schedule's name, and your own rooms, lights and sensors.
 
 <details open markdown="block">
   <summary>On this page</summary>
@@ -59,9 +59,9 @@ actions:
       time: "{{ '09:30:00' if lie_in else '08:00:00' }}"
 ```
 
-The schedule only checks Morning's start time when the morning comes round, so the trick is
-to change it the night **before**. This runs when Night starts: after today's morning, and
-before tomorrow's.
+Changing Morning's start time during Morning itself shifts today's phase straight away, so the
+trick is to change it the night **before**. This automation runs when Night starts — after
+today's morning, and before tomorrow's.
 
 - **It runs every night**, not just at the weekend, so the weekday times come back on Sunday
   night without a second automation.
@@ -108,9 +108,9 @@ actions:
               time: "22:00"
 ```
 
-Each schedule lists only what changes; everything else stays as it is. A schedule can hold
-any of its settings, so for bigger changes, set your schedule up the way you want it, press
-**Copy** in its dashboard section, and paste the result in.
+Each YAML block lists only the settings that change; everything else keeps its current value. A
+schedule can hold any of its settings, so for bigger changes, set your schedule up the way you
+want it, press **Copy** in its dashboard section, and paste the result in.
 
 ## Movie night
 

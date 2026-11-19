@@ -17,9 +17,9 @@ how it keeps an installed blueprint current.
 
 ## The main flow
 
-`FlareConfigFlow` (`config_flow.py`) is the integration page's main
-button. The first time it sets everything up. After that, it's
-**Set up area**.
+`FlareConfigFlow` (`config_flow.py`) powers the integration page's main button. On first
+install it creates the entries and schedules and offers room setup; on subsequent runs it acts
+as **Set up area**.
 
 ```mermaid
 flowchart TB
@@ -56,7 +56,7 @@ flowchart TB
 |---|---|---|
 | `SensorSubentryFlow` | Schedules entry, **Add schedule** | a new schedule; Reconfigure shows it as YAML to copy out or replace, and applying sets the entities, leaving the subentry untouched |
 | `FlareSubentryFlow` | Flares entry, **Add flare** | a flare over a FLARE-blueprint automation, or a custom one by input |
-| `FlareOptionsFlow` | Settings entry, **Configure** | tick interval and gap, minimum change, two-step models |
+| `FlareOptionsFlow` | Settings entry, **Configure** | update interval, gap between areas, matching tolerances, and two-step bulb models |
 
 Reconfiguring a subentry ends with `async_update_and_abort`. Subentry
 changes don't reload an entry by themselves, so each entry has an update
@@ -91,9 +91,9 @@ it. A lock in `hass.data` keeps two setups from interleaving.
 - **Which areas are offered**: every area holding a light by HA's own rule
   (`target_entities({"area_id": ...})`), so an area with only hidden or
   categorised lights isn't offered.
-- **"Already set up"** means an automation labelled FLARE sits in the
-  area. That only unticks the area: running Set up area again adds another
-  automation.
+- **"Already set up"** means an automation labelled **FLARE** sits in the area. That leaves the
+  area's schedule dropdown empty by default; picking a schedule for it and submitting creates
+  another automation.
 - **Not handled yet**: a failure part-way leaves what was already created.
 
 ## Keeping the blueprint current
@@ -112,20 +112,19 @@ flowchart TB
 
 - Ours is recognised **by name**, "FLARE". Only copies an automation uses
   count as outdated: HA never removes an unused copy, and a repair about
-  one nobody reads couldn't be silenced.
+  an unused blueprint couldn't be silenced.
 - The version stamp is in the blueprint's `description`, since the
   `blueprint:` block is a closed schema and the description survives every
   import route. It's `0.0.0-dev` in source. `scripts/release.py` writes
   the real version into each release's zip, along with the manifest and
   `BLUEPRINT_VERSION`.
 - **The blueprint is written in HA's language** (`blueprint_translation.py`).
-  HA has no translations for a blueprint, so `_shipped()` swaps in each
-  input's text from `blueprints/translations/<language>.yaml` before saving
-  it; keys, defaults and selectors stay, and select options keep their
-  English values under a translated label. The stamp names the language
-  (`Blueprint version 2.0.0 (de)`), so a copy in another language than
-  HA's counts as outdated and Fix rewrites it. A copy stamped without one
-  reads as English.
+  Home Assistant doesn't natively translate blueprints, so `_shipped()` substitutes each input's
+  text from `blueprints/translations/<language>.yaml` before saving the file. Keys, defaults,
+  and selectors stay unchanged, and select options keep their English values behind translated
+  labels. The version stamp includes the language (`Blueprint version 2.0.0 (de)`), so a copy
+  whose language differs from Home Assistant's counts as outdated and **Fix** rewrites it. A
+  stamp without a language suffix is treated as English.
 - A blueprint that fails to load comes back from `async_get_blueprints()`
   as the exception itself, hence `isinstance` rather than a `None` check.
 

@@ -52,7 +52,7 @@ were sent. See
 
 - **It doesn't stop a room switching off when it empties.** Once every sensor has been clear for
   the Wait Time, the room's lights go off, including ones you've changed.
-- **It doesn't last for ever.** It ends once the room has been dark, or when you press
+- **It doesn't last forever.** It ends once the room has been dark, or when you press
   **Clear**. See [how a light goes back to the curve](#back-to-the-curve).
 - **It doesn't affect lights FLARE isn't running**, such as a lamp left out of the room's
   lights.
@@ -77,10 +77,10 @@ details, such as what happens to a light that goes unavailable.
 
 ## Seeing what's going on
 
-- Each light a room names has a **FLARE status** sensor on its device page, showing its status, what FLARE
-  last asked it for, and what doesn't match.
+- Each light controlled by a room automation has a **FLARE status** sensor on its device page,
+  showing its status, what FLARE last asked it for, and what doesn't match.
 - The dashboard's **Overrides** view lists every area's lights with the same details, and a
-  **Clear** for each light.
+  **Clear** button for each light.
 - FLARE's **Activity** shows when a room starts controlling its lights, when it lets them go,
   and when a light is overridden.
 
@@ -89,6 +89,10 @@ entities, events and options.
 
 ## Turning it off for a room
 
-If a room's bulbs report something other than what they show, they'll keep being overridden.
-If you turn off **Override Protection** in that room's automation, no light there is ever
-overridden: every update sets any light that isn't showing the curve.
+If a room's bulbs report values that don't match what they actually show, FLARE can repeatedly
+mark them as overridden. First try raising the matching tolerances under **FLARE → Settings →
+Configure** (see [how close counts as a match](../../reference/override-protection/#how-close-counts-as-a-match)).
+If that still isn't enough, you can turn off **Override Protection** in that room's automation:
+every update will then set any light that isn't showing the curve. See
+[Turning override protection off](../../reference/blueprint/#turning-override-protection-off) for
+the full details.

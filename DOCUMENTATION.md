@@ -231,7 +231,7 @@ Reference pages are the exception: they open with the table (rule 3).
 | scene handoff | external | Letting a scene own part or all of a room. |
 | self-healing | external | Retrying a command that didn't land. |
 | two-step transition | both | Sending brightness and colour separately. Users meet it via the **Two-step bulb models** option and the `no_combined_transition` label. |
-| brightness level | external | A light's own brightness, 0–255, from Brightness Template or an idle brightness. Not a *multiplier*: levels are absolute. |
+| brightness level | external | A light's own brightness from Brightness Template or Idle Brightness Template — 0–255, a percentage of full brightness like `'50%'`, or (in Brightness Template) a multiplier of the schedule's brightness like `'x0.5'`. |
 | ~~adaptive tick~~ | internal | Say *the regular update* or *the next update*. |
 | ~~adaptive step~~ | internal | Say *when FLARE next sets the lights*. |
 | ~~dispatch~~ | internal | As a noun for FLARE's own sending step. The ordinary verb (*issue the calls yourself*) is fine in `docs/reference/`. |
@@ -246,16 +246,15 @@ Reference pages are the exception: they open with the table (rule 3).
 
 Never paraphrase these. They are what the user types or clicks.
 
-- **Blueprint inputs** — the UI labels, verbatim: Schedule, Override Protection,
-  Lights & Occupancy, Additional Triggers, Conditions, Prefer RGB During,
-  Additional Trigger Entities (Deprecated),
-  Scene Template, Morning/Day/Evening/Night Scene,
-  Brightness Template, Lights Off During Morning/Day/Evening/Night,
-  Idle Brightness Template, Morning/Day/Evening/Night Idle Brightness,
-  Wait time,
-  Motion On / Motion Off / Background Transition.
-  Several carry a literal "(Optional)" in the label — keep it when
-  quoting the label, drop it in running prose.
+- **Blueprint inputs** — the UI labels, verbatim: Schedule, Lights & Occupancy;
+  under **Customise** (per phase **Morning**, **Day**, **Evening**, **Night**):
+  Lights Off, Idle Brightness, Scene; under **Custom**: Brightness Template,
+  Idle Brightness Template, Scene Template, Additional Triggers; under
+  **Fine Tuning**: Wait Time, Lux Threshold, Conditions, Turning On, Turning Off,
+  Everything Else, Override Protection, Prefer RGB During, Stored Traces,
+  Sensors From Areas (Deprecated), Additional Trigger Entities (Deprecated).
+  Keep `(Deprecated)` when quoting the label verbatim, and drop it in running
+  prose.
 - **Services** — `flare.apply_lighting`, `flare.turn_off`, `flare.compute_curve`, `flare.compute_scene_coverage`,
   `flare.claims_check`, `flare.claims_record`, `flare.claims_clear`,
   `flare.claims_override`, `flare.export_schedule`, `flare.import_schedule`.

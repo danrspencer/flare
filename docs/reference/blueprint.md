@@ -36,8 +36,9 @@ touch. This page follows the same order.
 | **Schedule** | required | The FLARE schedule the room follows. |
 | **Lights & Occupancy** | required | The room's lights, and the occupancy and motion sensors that turn them on and off. An illuminance sensor picked here, or in its area, drives **Lux Threshold**. |
 
-**Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. An
-area includes lights and sensors added to it later.
+**Lights & Occupancy** takes an area, a floor, a device, a label, or individual entities. When you
+target an area, floor, device, or label, lights and sensors added to it later are included
+automatically.
 
 FLARE picks the room's lights the same way Home Assistant does when you call `light.turn_on`
 on that target:
@@ -58,9 +59,10 @@ target**.
 
 A room with no sensor follows the schedule but never turns its lights on or off.
 
-A room can have two automations, for example one for a lamp and one for the ceiling light.
-Each releases the lights it drives once they're all off; a light in both is released when
-either room goes dark.
+A physical room can have more than one FLARE automation — for example, one for a lamp and another
+for the ceiling light. Each automation releases the lights it drives once all of them are off, so
+if the same light appears in both automations, its override is cleared when either automation's
+lights go dark.
 
 ## Phases
 
@@ -75,9 +77,10 @@ settings, which apply while the schedule is in that phase.
 
 ### Idle brightness
 
-An idle brightness turns a room's "off" into a dim glow: a nightlight. It only works in a room
-with occupancy or motion sensors, since without them the room is never empty. It's the only way
-the room's lights come on while it's empty.
+An idle brightness turns a room's "off" state into a dim glow, acting as a nightlight. It only
+works in a room with occupancy or motion sensors, since a sensorless room never becomes empty.
+Outside of running the automation manually, idle brightness is the only way lights come on while
+the room is empty.
 
 For a nightlight whenever it's dark outside, leave each phase at `0` and set the
 [Idle Brightness Template](#custom) to:
@@ -103,7 +106,7 @@ Whenever a template returns a value, it overrides the per-phase setting.
 | Input | Default | Description |
 |---|---|---|
 | **Brightness Template** | none | A template returning a mapping of entity ID to brightness, in place of the schedule's. When it returns a light, its value overrides **Lights Off** for that light. |
-| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty. When it returns a light, its value overrides **Idle Brightness** for that light. |
+| **Idle Brightness Template** | none | Like Brightness Template, for when the room is empty (except `'x0.5'`). When it returns a light, its value overrides **Idle Brightness** for that light; `0`, `'0%'`, `null`, or `false` turns the light off when empty. |
 | **Scene Template** | none | A template returning a scene's entity ID, or `''` for none. When it returns a scene that exists, it overrides the phase's **Scene**. |
 | **Additional Triggers** | none | Triggers that make the room update as soon as they fire. |
 
@@ -115,23 +118,24 @@ Whenever a template returns a value, it overrides the per-phase setting.
 | `'50%'` | Sets the light to this percentage of full brightness: `'100%'` is 255, `'50%'` is 127. |
 | `'x0.5'` | Sets the light to the schedule's brightness multiplied by this, so `'x0.5'` is half of it. |
 | `0`, `'0%'` or `'x0'` | Turns the light off. |
-| `null` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
+| `null` or `false` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
 
 A single value instead of a mapping applies to every light in the room, and any light the
-template doesn't include follows the schedule. The Idle Brightness Template takes the same
-values except `'x0.5'`, and there `0` or `'0%'` means the light goes dark.
+template doesn't include follows the schedule. **Idle Brightness Template** accepts the same
+values except `'x0.5'`, and returning `0`, `'0%'`, `null`, or `false` turns the light off when
+the room empties (unlike **Brightness Template**, `null` here does not leave the light alone).
 
-Both templates can read `schedule_brightness`: the schedule's brightness right now, 0–255, or
+Both templates can read `schedule_brightness`: the schedule's brightness right now (0–255), or
 `none` while the schedule is unavailable. See [Templates](../../guides/templates/#brightness-template).
 
 ### Additional triggers
 
 Add a trigger for anything a template depends on, such as a **State** trigger on the TV for a
-Brightness Template that dims the room while it's playing. They're the same triggers as an
-ordinary automation's, so one can be as specific as you need: the TV changing to playing, an
-attribute, a button press, a time. An additional trigger only adjusts lights that are already
-on, and never switches one on. To turn a room on from something else, see
-[lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
+Brightness Template that dims the room while it's playing. These are the same triggers as an
+ordinary automation's, so each trigger can be as specific as you need: the TV changing to playing,
+an attribute, a button press, or a time. An additional trigger only adjusts lights that are
+already on, and never switches lights on in an empty dark room. To turn a room on from
+something else, see [lighting a room from a remote](../../guides/examples/#lighting-a-room-from-a-remote).
 
 ## Sensors & Conditions
 
@@ -151,44 +155,46 @@ sitting still. The room counts as empty only once every one of them has been cle
 
 Illuminance sensors are the `sensor` entities with `device_class: illuminance` in **Lights &
 Occupancy** — picked by name, or included through its area, floor, device or label — that
-aren't excluded. With [Sensors From Areas](#sensors-from-areas) off, only the ones picked by
-name count.
+aren't excluded. When [Sensors From Areas](#sensors-from-areas) is off, only the sensors picked
+by name count.
 
-Above `0`, the room counts as bright enough while every one of those sensors reads above that
-many lux. A bright room isn't switched on by:
+When **Lux Threshold** is above `0`, the room counts as bright enough while every working
+illuminance sensor in it reads above the threshold. While the room is bright enough, FLARE leaves
+off lights off even when:
 
-- a sensor detecting someone,
-- a [scene](#scenes), unless every light it covers is already on,
-- [idle brightness](#idle-brightness).
+- an occupancy or motion sensor detects someone,
+- a [scene](#scenes) applies (unless every light the scene covers is already on), or
+- [idle brightness](#idle-brightness) would otherwise dim the room.
 
-If someone is still in the room when it stops being bright enough, because one of those sensors
-drops to the threshold or below, the lights come on then. Someone counts as in the room if one
-of its occupancy or motion sensors is detecting them, or was within the **Wait Time**.
+If someone is still in the room when the light level drops to the threshold or below, the lights
+come on right away. Someone counts as in the room if one of its occupancy or motion sensors is
+detecting them, or stopped detecting them within the **Wait Time**.
 
-Lights already on carry on as before: following the curve, or left to the phase's scene. Nothing
-is switched off for being bright. Turning the room on by hand — the automation's
-**Run**, the [flare](../flares/), or a voice assistant — ignores the threshold.
+Lights that are already on continue following the curve or stay in the phase's scene; FLARE never
+switches lights off just because a room is bright. Turning the room on by hand — via the
+automation's **Run actions**, its [flare](../flares/), or a voice assistant controlling the
+flare — ignores **Lux Threshold**.
 
-A sensor that is unavailable, unknown or not numeric can't say how bright the room is, so it
-doesn't count either way, and a room with no illuminance sensor never blocks. The check is off
-while **Lux Threshold** is `0`, which is the default.
+An illuminance sensor that is unavailable, unknown, or non-numeric is ignored, and a room with
+no working illuminance sensors never skips turning on. The threshold check is disabled while
+**Lux Threshold** is `0`, which is the default.
 
 ### Conditions
 
 While any of the **Conditions** isn't met, the room does nothing at all: its lights stay as
 they are, sensors don't turn it on or off, and the schedule isn't followed. For a vacation or
 guest mode, add a **State** condition on an `input_boolean`. Once every condition is met again,
-the room catches up on its next tick: lights that are on move to the schedule, and an empty
-room turns off. If a condition reads an entity, add a trigger for it to
+the room catches up on its next regular update: lights that are on move to the schedule, and an
+empty room turns off. If a condition reads an entity, add a trigger for it to
 [Additional Triggers](#additional-triggers) so the room catches up as soon as it changes.
 
 Running the automation by hand, or turning on its [flare](../flares/), still works while the
 room is paused.
 
-A room left on when the pause starts stays on until it ends. To stop only some runs, make a
-condition about what started the run, with a **Triggered by** condition on one of the
-[trigger IDs](#trigger-ids). For example, so a pet walking through at night doesn't light the
-room, while everything else carries on (turning off, following the schedule):
+A room that was already lit when the pause starts stays on until the pause ends (or you switch it
+off yourself). To block only specific triggers — for example, so a pet walking through at night
+doesn't switch the lights on, while turning off and following the schedule still run — add a
+**Triggered by** condition checking one of the [trigger IDs](#trigger-ids):
 
 ```yaml
 condition: not
@@ -221,9 +227,10 @@ warning and no choices: use **⋮ → Edit in YAML** and type the ID, as in the 
 | `extra` | an entity in **Additional Trigger Entities** changes (deprecated) |
 | your own | one of your **Additional Triggers** fires: the ID you give it, or its position if it has none |
 
-Give each of your Additional Triggers an ID if a condition needs to tell it apart. Whatever ID
-you give one, it's still an additional trigger: one named `motion_on` doesn't light the room.
-Running the automation by hand has no trigger, and skips **Conditions** anyway.
+Give each of your Additional Triggers an ID if a condition needs to tell them apart. Whatever ID
+you give a custom trigger, it still behaves as an additional trigger — naming a trigger
+`motion_on` won't make it switch the lights on. Running the automation by hand has no trigger,
+and skips **Conditions** anyway.
 
 ## Transitions
 
@@ -233,14 +240,14 @@ Running the automation by hand has no trigger, and skips **Conditions** anyway.
 | **Turning Off** | 15s | How long lights take to fade out once the room is empty. |
 | **Everything Else** | 5s | How long every other update takes, such as the schedule moving on. |
 
-## Other settings
+## Other Settings
 
 | Input | Default | Description |
 |---|---|---|
 | **Override Protection** | on | Leaves a light alone once something else changes it, until all of the room's lights are off. |
 | **Prefer RGB During** | Evening, Night | Phases in which lights that support RGB are sent an RGB colour instead of a colour temperature. |
 | **Stored Traces** | 20 | How many of the automation's recent runs keep a trace. |
-| **Sensors From Areas** | on | Off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
+| **Sensors From Areas** | on | When off, sensors aren't inferred from the areas, floors, devices or labels in **Lights & Occupancy**; only explicitly selected sensors are used. Deprecated: use **Exclude target** instead of turning this off. |
 | **Additional Trigger Entities** | none | Entities that make the room update as soon as they change. Deprecated: use **Additional Triggers** instead. |
 
 ### Override protection
@@ -260,9 +267,10 @@ each trace takes memory, so set it back once you're done.
 
 ### Sensors from areas
 
-Turn **Sensors From Areas** off and only the sensors you pick by name in **Lights & Occupancy**
-count, so you can pick an area for its lights and choose the sensors yourself, such as the
-hallway's for a landing. Pick none for a room that only follows the schedule.
+If you turn **Sensors From Areas** off, only the sensors you pick by name in **Lights &
+Occupancy** count, so you can select an area for its lights while picking sensors from elsewhere
+(such as the hallway's sensors for a landing). If you pick no sensors at all, the room only
+follows the schedule without turning its lights on or off automatically.
 
 **Sensors From Areas is deprecated, and FLARE 3.0 removes it.** It only shows in a room that
 has it turned off. Use **Exclude target** in **Lights & Occupancy** instead of turning it off,
@@ -272,8 +280,8 @@ An excluded sensor doesn't count, whether it came from an area, a device, a floo
 
 ### Additional trigger entities
 
-The list of entities **Additional Triggers** used to be: any change to one updates the room,
-as a **State** trigger on it in [Additional Triggers](#additional-triggers) does.
+A list of entities that trigger a room update whenever any of them changes state, equivalent to
+adding **State** triggers for those entities in [Additional Triggers](#additional-triggers).
 
 **Additional Trigger Entities is deprecated, and FLARE 3.0 removes it.** Move each entity to
 **Additional Triggers** as a **State** trigger, then clear this list.
@@ -282,8 +290,9 @@ as a **State** trigger on it in [Additional Triggers](#additional-triggers) does
 
 ### When the room updates
 
-A room updates straight away when the phase changes, a sensor detects someone or an Additional
-Trigger changes, and a few seconds after its lights come back online. Between those, it updates on the
+A room updates straight away when the phase changes, a sensor detects someone, or an Additional
+Trigger fires, and 5 seconds after its lights come back online when the whole room was
+unavailable. Between those events, it updates on the
 [tick](../override-protection/#when-rooms-update) of the first area in **Lights & Occupancy**,
 which is every minute by default. A room whose **Lights & Occupancy** names no area updates every
 minute, on the minute.
@@ -293,31 +302,32 @@ minute, on the minute.
 Lights turn on when a sensor detects someone, and turn off once every sensor in the room has
 been clear for the **Wait Time**.
 
-While every light in **Lights & Occupancy** is off, the only things that turn any of them on are
-a sensor detecting someone, running the automation by hand, the room getting dark while someone
-is in it (with a [Lux Threshold](#lux-threshold)), and [idle brightness](#idle-brightness). Once
-at least one light is on, any update can turn on the others. This means a phase change doesn't light up an empty room, and a bulb that comes back
-online stays off if the rest of the room is off.
-
-If a light is still on after the room has been empty for the **Wait Time**, the turn-off is sent
-again.
+While every light FLARE controls in **Lights & Occupancy** is off, the only things that turn any
+of them on are a sensor detecting someone, running the automation by hand, the room dropping below
+**Lux Threshold** while someone is in it, and [idle brightness](#idle-brightness). Once at least
+one light is on, any update can turn on the others. That way, a phase change never lights up an
+empty room, and a bulb that comes back online stays off if the rest of the room is off. On each
+regular update or phase change while the room has been empty for the **Wait Time**, if any light
+that shouldn't be idle is still on, FLARE sends the turn-off command again.
 
 Running the automation by hand sets every light in the room, including ones someone else has
 changed.
 
 ### Why didn't my light change?
 
-- **Someone else changed it.** A light changed from a wall switch, an app, a voice assistant or
-  another automation, including being turned off, is left alone until every light in the room is
-  off. See [override protection](../override-protection/).
-- **The room's [Conditions](#conditions) aren't met**, so it's paused. Its **Traces** show the
-  Conditions step that stopped it.
+- **Someone else changed it.** If a light was changed from a wall switch, an app, a voice
+  assistant, or another automation (including being switched off), FLARE leaves it alone until
+  every light in the room is off. See [override protection](../override-protection/).
+- **The room's [Conditions](#conditions) aren't met**, so it's paused. The automation's
+  **Traces** show the Conditions step that stopped it.
 - **The room is empty and the light was off.** See
   [when lights turn on and off](#when-lights-turn-on-and-off).
+- **The room is above [Lux Threshold](#lux-threshold)**, so off lights stay off even when motion
+  is detected.
 - **It's already close enough.** Changes smaller than 5% of the brightness or 5 mireds of colour
   temperature aren't sent. You can change both tolerances under **FLARE → Settings → Configure**.
 - **It's unavailable.** FLARE sets it once it comes back online.
-- **A scene has it**, or **Brightness Template** returns `null` for it.
+- **An active [scene](#scenes) covers it**, or **Brightness Template** returns `null` for it.
 - **It's at its idle brightness.** See [idle brightness](#idle-brightness).
 - **It isn't one of the room's lights.** A hidden light, or a configuration or diagnostic
   light, isn't included through an area, floor, device or label. Pick it directly in
@@ -326,15 +336,17 @@ changed.
 ## Turning override protection off
 
 Override protection works by reading back what each light reports, and checking it against what
-FLARE last sent. Bulbs don't always report what they're actually showing. Some send an old value
-for a moment after they reconnect, some report a colour in a different form from the one they
-were sent, and some settle on a colour outside the range they say they support. When a bulb
-reports something FLARE didn't send, it reads as overridden even though nobody touched it, and
-FLARE leaves it alone until every light in the room is off.
+FLARE last sent. Bulbs don't always report what they're actually showing: some send an old value
+for a moment after reconnecting, some report colour in a different mode from the one they were
+sent, and some settle outside the colour range they advertise. When a bulb reports values that
+don't match what FLARE sent, it becomes overridden even though nobody touched it, and FLARE
+leaves it alone until every light in the room is off.
 
-If a room's lights keep getting stuck like this, you can turn off **Override Protection** in the
-room's automation. FLARE then sets the room's lights on every update without checking what they report,
-which also means:
+If a room's lights keep getting stuck like this, first try raising the tolerances under
+**FLARE → Settings → Configure** (see [how close counts as a match](../override-protection/#how-close-counts-as-a-match)).
+If that doesn't help, you can turn off **Override Protection** in the room's automation. FLARE
+then stops tracking overrides for that room and sets any light that isn't already close enough to
+the curve on every update, which means:
 
 - A light someone else changes, from a wall switch, an app or another automation, goes back to
   the curve at the next update.
@@ -353,13 +365,10 @@ can learn to read them properly.
 
 The blueprint comes with FLARE, so after each FLARE update a repair appears under **Settings →
 System → Repairs** offering the new copy. Press **Fix** to install it; your automations keep
-their settings. If you've edited
-your own copy, ignore the repair, because installing replaces the file.
+their settings. If you've edited the blueprint file yourself, ignore the repair, because
+installing replaces your changes.
 
 FLARE installs the blueprint in Home Assistant's language (**Settings → System → General**) when
-it has a translation for it, so far German, and in English otherwise. If you change Home
-Assistant's language, the same repair offers the blueprint in the new one. Its **Details** links
-lead to this page, in English.
-
-The [test trace reports](../../trace-report/) show runs of the blueprint from its tests, with
-each step matched to the line of the blueprint it comes from.
+it has a translation for it (currently German), and in English otherwise. If you change Home
+Assistant's language, the same repair offers the blueprint in the new language. Its **Details**
+links lead to this page, in English.

@@ -35,7 +35,7 @@ FLARE's setup asks:
 
 - **Your schedules.** A [schedule]({{ site.baseurl }}/reference/schedules/) is the day's
   lighting: when each phase starts, and how bright and warm it is. **One for the whole home**
-  (called Home) is the default, and enough for most homes. You can instead choose **one per
+  (called Home) is the default, and enough for most homes. You can instead choose **One per
   floor** (offered when your home has more than one floor, and named after them), or
   **Custom**, to name the schedules yourself.
   A schedule's name becomes part of its entity IDs, so pick names you're happy to keep.
@@ -57,7 +57,7 @@ Each area you set up gets a room automation, and a flare if you pick it, named a
 
 | | What it does |
 |---|---|
-| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area as its **Lights & Occupancy**: the lights in it follow the schedule, its occupancy and motion sensors turn them on and off, and a light you change yourself is [left alone]({{ site.baseurl }}/reference/override-protection/). Called "*Area* Lighting", with a **FLARE** label so you can find them. |
+| A room automation | Built from the FLARE [blueprint]({{ site.baseurl }}/reference/blueprint/), with the area selected under **Lights & Occupancy**: the lights in the area follow the schedule, its occupancy and motion sensors turn them on and off, and any light you change yourself is [left alone]({{ site.baseurl }}/reference/override-protection/). Each automation is named "*Area* Lighting" and tagged with a **FLARE** label so you can find it easily. |
 | A [flare]({{ site.baseurl }}/guides/flares/) | A light for the whole room, for voice assistants and HomeKit. |
 
 You can add flares later too, with **Add flare**.
@@ -83,9 +83,10 @@ with a view for each schedule and one for your rooms, and it keeps up as you add
 
 ## Adding a room later
 
-**Settings → Devices & Services → FLARE → Set up area**. It lists every area with lights. An area
-that already has an automation from setup starts empty, because setting it up again gives it
-another automation, so only pick a schedule for it if it doesn't have one.
+**Settings → Devices & Services → FLARE → Set up area**. This lists every area with lights. For an
+area that already has a FLARE automation from setup, the schedule dropdown starts empty so it isn't
+set up a second time; only pick a schedule for an already-configured area if you want to add
+another automation for it.
 
 The other buttons there add one thing at a time: **Add schedule** and **Add flare**.
 

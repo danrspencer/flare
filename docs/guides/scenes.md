@@ -21,7 +21,8 @@ film, a room can use it, either one scene per phase or one chosen by a template.
 The scene only takes over the lights it sets. Every other light in the room keeps following the
 curve, and FLARE carries on adjusting it as usual. So a scene that sets just the TV backlight
 and one lamp leaves the rest of the room to FLARE. When the scene no longer applies, FLARE takes
-its lights back too.
+its lights back too, and when the room empties, FLARE still turns off the scene's lights along
+with the rest of the room.
 
 <details open markdown="block">
   <summary>On this page</summary>

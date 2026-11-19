@@ -112,15 +112,16 @@ tests/
 
 docs/
     index.md          the pitch, and what the four phases are for
-    installation.md   quickstart: HACS, blueprint, flares, dashboard
+    installation.md   quickstart: Marketplace, blueprint, flares, dashboard
     dashboard.md      how to add the view strategy, and what it builds
     playground.html   the interactive curve, running the real card
     guides/           how to do more: examples, the blueprint's template
-                      inputs, scenes, voice assistants and HomeKit,
-                      building without the blueprint
+                      inputs, override protection, scene handoff, and
+                      voice assistants
     reference/        the technical docs: the blueprint's inputs,
                       schedules, override protection, flares and
-                      services
+                      services (including custom automations)
+    architecture/     how the pieces fit together inside (for contributors)
 ```
 
 Triggers, conditions, and target resolution stay in the blueprint; Home Assistant `condition:` blocks can't call

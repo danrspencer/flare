@@ -65,11 +65,11 @@ flowchart LR
 The blueprint reads which trigger ran from `trigger_id`, never `trigger.id`: a user's trigger can
 carry any id, `motion_on` included, and must never count as one of the blueprint's own.
 
-`trigger_variables:` are the only variables a trigger can see. `tick_area`
-is computed there, as the first `area_id` in `room_target`. Trigger
-templates are *limited*: they can't call `area_devices()` and friends, so
-`recovered` and `lux_dark` expand `room_target` by hand in Jinja. That's
-close enough for a wake-up. The action works from the real resolution.
+`trigger_variables:` are the only variables available inside a trigger, so `tick_area` is computed
+there as the first `area_id` in `room_target`. Because trigger templates are limited and cannot
+call helpers like `area_devices()`, the `recovered` and `lux_dark` triggers expand `room_target`
+inline in Jinja. That expansion is close enough for a wake-up trigger, and once the automation
+runs, the action always resolves entities properly with `flare.resolve_target`.
 
 ## The action, step by step
 
@@ -165,21 +165,20 @@ after it.
 | `prefer_rgb_color` | the phase is in Prefer RGB During | routes RGB-capable bulbs to `rgb_color` |
 | `transition` | slow for background updates, quick for motion or a manual run | `script_transition` |
 
-## Occupancy, briefly
+## Occupancy details
 
-- `room_occupancy_entities` exists only to know whether the room has a
-  sensor at all. `occupancy.is_detected` over zero entities is vacuously
-  false, so a lights-only room would otherwise always read empty.
-- An unavailable sensor is left out, so a room whose only sensor is dead
-  counts as sensorless rather than empty.
-- `occupancy_clear_for_wait` is a hand-written `now() - last_changed`
-  check. The native `for:` needs the recorder to prime it after a restart,
-  and that isn't reliable.
-- With **Sensors From Areas** off, the native triggers still fire for
-  every sensor in the target (a trigger's `target:` takes no templates),
-  so the top-level `condition:` drops the ones not named directly.
-- A sensor excluded from the target (`exclude:`, HA 2026.11) never fires
-  the native triggers and isn't in `flare.resolve_target`'s entities, so
-  the blueprint needs no code for exclusions. Only the `lux_dark` and
-  `recovered` wake-ups ignore them, since their Jinja expands the target
-  itself.
+- `room_occupancy_entities` exists so the blueprint can tell whether the room has any working
+  sensors at all. Home Assistant's `occupancy.is_detected` condition returns false when given zero
+  entities, so without this guard a lights-only room would always look empty.
+- Unavailable and unknown sensors are filtered out, so a room whose only sensor is offline is
+  treated as sensorless rather than empty.
+- `occupancy_clear_for_wait` is computed with an explicit `now() - last_changed` check rather than
+  relying on a native `for:` condition, because `for:` depends on recorder priming after a
+  restart and is not always reliable.
+- When **Sensors From Areas** is off, the native occupancy and motion triggers still fire for
+  every sensor in the target (since a trigger's `target:` cannot take templates), so the top-level
+  `condition:` drops events from sensors that weren't picked directly by entity ID.
+- Any sensor excluded via **Exclude target** (Home Assistant 2026.11+) never fires the native
+  triggers and is omitted by `flare.resolve_target`, so the blueprint needs no custom exclusion
+  logic for them. Only the `lux_dark` and `recovered` Jinja wake-up triggers ignore exclusions,
+  because they expand the target manually.

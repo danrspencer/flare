@@ -79,12 +79,12 @@ flowchart TB
   automation's decision. A manual run passes `allow_turn_on` and `force`,
   so "on" also takes back a room that was overridden.
 - **"On" with values, and "off", mark the lights overridden first**,
-  with the automation as the room, then send as any light group does.
-  Without that, an unclaimed light (every light, once a room goes dark)
-  would read `untracked`, and the run the change itself triggers would
-  take it straight back to the curve. That's how Siri's "100 %" got
-  dimmed back down. The override claim has a fresh context and no target,
-  so it never matches; the room going dark hands the lights back.
+  using the automation as the room, then forward the call like a standard light group. Without
+  that step, any unclaimed light (including every light in a room that had previously gone dark)
+  would read as `untracked`, and the automation run triggered by the state change would immediately
+  push the lights back to the curve (turning a voice assistant's "100%" straight back down). The
+  override claim has a fresh context and no target, so it never matches; the room going dark
+  later releases the lights back to FLARE.
 - **Off is a plain `light.turn_off`, never `flare.turn_off`.** A flare's
   off is the user's. Recording it as FLARE's off would let a run landing
   while the room was half-off switch it back on.

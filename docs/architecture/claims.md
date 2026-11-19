@@ -80,21 +80,20 @@ write landed and is promoted to `observed`. If it still matches
 way the light is still FLARE's, so a dropped write can't lock FLARE out,
 even if the light reports the same state again under a new context.
 
-**A target** is what a write asked for: `{brightness, color_temp_kelvin}`,
-`{brightness, rgb_color}`, or `{state: off}` for a turn-off, kept as HA
-sends it to the light (`matching.sent()`): a Kelvin target for a light that
-can't show Kelvin is kept as the RGB HA sends it instead. A light
-reported under a stranger's context is still FLARE's if it shows the
-target. That covers a bulb reporting after HA has forgotten the write's
-context, which happens 5 seconds after the call.
+**A target** is what a write asked for — `{brightness, color_temp_kelvin}`,
+`{brightness, rgb_color}`, or `{"state": "off"}` for a turn-off — stored in the exact form Home
+Assistant sends to the light (`matching.sent()`). For example, if a light can't take Kelvin
+directly, a Kelvin target is stored as the RGB values Home Assistant converts and sends instead.
+If a light reports back under an unrelated context (for instance, after Home Assistant drops
+the call's context 5 seconds later), it still counts as FLARE's as long as its state matches the
+target.
 
-**A room** is the caller naming itself: `room_id`, which for the blueprint
-is the automation, keyed by its entity-registry id so a rename keeps it.
-Its lights are the latest `room_entities` it named, plus whatever it wrote,
-plus any light it still holds a claim on, so every claim it made can be
-released with it. A call with no `room_id` writes but records nothing, and
-doesn't read claims either. That's the blueprint's **Override Protection**
-switch.
+**A room** identifies the caller (`room_id`, which for the blueprint is the automation entity),
+keyed by its entity registry ID so renaming the automation preserves its room. A room's light
+list includes its latest `room_entities`, every light it has written to, and any light it still
+holds a claim on, so all of those claims can be released together when the room goes dark. A
+call with no `room_id` writes to the lights without reading or recording claims — that is what
+the blueprint's **Override Protection** toggle controls.
 
 ## Deciding: `classify()`
 
@@ -145,22 +144,23 @@ anything else calls `classify()`.
 
 ### What a light "shows" (`matching.py`)
 
-| Reading | Rule |
+| Check | Rule |
 |---|---|
-| brightness | `brightness`, within the Settings entry's tolerance (5% by default), never less than 2 |
-| Kelvin | `color_temp_kelvin`; else a white's `xy_color` read as Kelvin if it's within 0.02 Duv of the Planckian locus; never RGB |
-| same mired | two Kelvins that floor to the same mired are the same to a Zigbee bulb |
-| near mired | within the Settings entry's tolerance (5 mireds by default), about the smallest change anyone notices |
-| out-of-range target | match the target as asked, or clamped to the bulb's advertised range |
-| RGB | `rgb_color`, only against an RGB target: the channels' differences summed, within twice the colour tolerance (10 at the default), never less than 4 |
-| Kelvin on a light without it | a light with colour but neither colour temperature nor RGBWW (an RGB strip) is compared with the RGB HA's `light.turn_on` sends it for the Kelvin (`color_temperature_to_hs`), by the RGB rule, and shows its `rgb_color` |
-| only what it can show | no colour for a light without colour or colour temperature (a dimmer), no brightness for an on/off light, as HA's `light.turn_on` drops them; a light whose colour modes aren't known is compared on everything |
+| Brightness | `brightness` within the Settings tolerance (5% by default), with a minimum floor of 2 points for dim targets. |
+| Kelvin | `color_temp_kelvin`; if reported in `xy_color`, converted to Kelvin as long as it lies within 0.02 Duv of the Planckian locus. Never read via `rgb_color`. |
+| Same mired | Two Kelvin values that floor to the same mired are treated as equal, because Zigbee bulbs operate in mireds. |
+| Near mired | Within the Settings tolerance (5 mireds by default, roughly one just-noticeable difference). |
+| Out-of-range target | Matches either the target as asked or the target clamped to the bulb's advertised min/max range. |
+| RGB | `rgb_color` compared only against an RGB target, by summing channel differences up to twice the colour tolerance (10 by default, minimum floor 4). |
+| Kelvin on an RGB-only light | For a light that supports colour but neither `color_temp` nor `rgbww` (such as an RGB strip), a Kelvin target is converted via `color_temperature_to_hs` and compared against `rgb_color` using the RGB rule. |
+| Capability filtering | Brightness isn't compared on on/off lights, and colour isn't compared on dimmers, because `light.turn_on` drops unsupported attributes. A light with unknown `supported_color_modes` is compared on all attributes. |
 
-Never Kelvin by way of RGB: HA's Kelvin→RGB and xy→RGB conversions differ
-by about 13 in red at 6500K, so a bulb showing exactly what was asked would
-read as something else. The exception is a light that can't show Kelvin,
-where HA does that conversion itself and the light shows its result: its xy
-reads 2700K back as about 1870K, so its target is the RGB HA sends.
+`matching.py` never derives Kelvin from `rgb_color`: Home Assistant's Kelvin-to-RGB and
+xy-to-RGB conversions differ by around 13 in red at 6500 K, so a bulb showing exactly what was
+asked would fail the check. The only exception is a light that cannot accept Kelvin natively,
+where Home Assistant itself performs the conversion (`color_temperature_to_hs`) and the light's
+xy report reads 2700 K back as ~1870 K — for those lights, the claim stores and compares the
+converted RGB target that Home Assistant sends.
 
 ## A light's life
 
@@ -197,15 +197,16 @@ set of claimed lights changes. It follows their registry entries too, with
 | on/off → off (*went off*) | each room containing it is released if none of its claimed lights is on |
 | none/unavailable/unknown → on/off (*arrived*) | each room is released if every claimed light has now reported and none is on |
 | renamed in the registry | its claim and its place in its rooms move to the new entity ID |
-| deleted from the registry | its claim and its place in its rooms go |
+| deleted from the registry | its claim and its place in its rooms are removed |
 
-It follows the registry entry of each entity a room is keyed by as well. When
-one is deleted its room goes, with the claims on lights no other room has
-(`_forget_deleted_rooms`, which also runs when the claims are loaded).
+`ClaimRegistry.async_start_listening` also follows the registry entry of each entity a room is
+keyed by. When that automation or entity is deleted, its room is removed along with any claims
+on lights that no other room tracks (`_forget_deleted_rooms`, which also runs when claims load at
+startup).
 
 The rules the listener keeps:
 
-- **Nothing reported while HA is stopping counts.** MQTT marks lights
+- **Any state reported while HA is stopping is ignored.** MQTT marks lights
   unavailable as it disconnects, which would drop every claim just before
   the Store's final save.
 - **`went_off` needs a real starting state.** Lights reconnect one at a
@@ -213,20 +214,21 @@ The rules the listener keeps:
   are still `unknown` mustn't release the room.
 - **Unavailable counts as dark for release**, so one dead bulb can't hold
   a room open forever. Only claimed lights count, so a TV backlight the
-  room doesn't drive can't either.
+  room doesn't drive cannot hold it open either.
 
 ## Releasing a room
 
-Once **none of a room's claimed lights is on**, the room lets go of all of
-them (`_release_if_dark`). That's deliberate: a light then switched on by
-hand, or back from unavailable, has no claim, reads `untracked`, and FLARE
-takes it to the curve. Keeping your own setting in a dark room is what a
-flare is for. A light in two rooms is released when either goes dark.
+Once **none of a room's claimed lights is on**, the room releases all of its claims
+(`_release_if_dark`). Deleting them is deliberate: if a light is later switched on by hand or
+comes back online from unavailable, it has no claim (`untracked`), so FLARE takes control of it
+and sets it to the curve. (Keeping your own brightness or colour from a dark room is what a
+flare is for.) If a light belongs to two rooms, its claim is released as soon as either room goes
+dark.
 
-Lights that went off while HA wasn't watching never send an on → off, so
-claims restored from storage get a settled check
-(`release_settled_dark_rooms`): once every claimed light in the room has
-reported on or off, and none is on.
+Lights that went off while Home Assistant was shut down never fire an `on` → `off` state
+transition on startup, so claims restored from storage run a settled check
+(`release_settled_dark_rooms`): a restored room is released once every claimed light in it has
+reported `on` or `off` and none of them is `on`.
 
 ## Persistence
 
@@ -248,26 +250,24 @@ flowchart LR
   restored claim counts as dark, and goes when its room next does.
 - A crash loses the last 5 seconds of claims and fails open: an unclaimed
   light is free to drive.
-- `overrides` is the override log (`log_override`): the last 50 overrides,
-  each with both claims, the live values, the light's raw colour
-  attributes (`matching.reported()`), its device's manufacturer and model,
-  the integration providing it and the tolerances in force. Logged when
-  `ClaimEvents` fires `flare_light_overridden`, which carries part of the
-  same entry. Only the Settings entry's diagnostics read it.
+- `overrides` is the override log (`log_override`), holding the last 50 overrides. Each entry
+  records both claims, the live values, the light's raw colour attributes (`matching.reported()`),
+  its device manufacturer and model, the integration providing it, and the active tolerances.
+  Entries are logged when `ClaimEvents` fires `flare_light_overridden` (which carries a subset of
+  the same fields) and are surfaced only in the Settings entry's diagnostics download.
 
 ## Showing it
 
-Where the claims are kept (the registry and its Store) is separate from
-how they're shown, and nothing that shows them holds state of its own.
+Where claims are stored (the registry and its `Store`) is separate from how they are presented,
+and none of the entities hold state of their own:
 
-- **Each room light has a status sensor**, `sensor.<light>_flare_status`,
-  on the light's own device: what `classify_state` says, with `claimed`,
-  `asked` (FLARE's last target, unrecorded) and `rooms`. It updates on its
-  light's state changes and on `SIGNAL_CLAIMS_UPDATED`.
-- **The counts**, `sensor.flare_controlled_lights` and
-  `sensor.flare_overridden_lights`, on FLARE's own device. `untracked`
-  counts as controlled, since either way the light isn't excluded.
-- **The claim events**, fired by `ClaimEvents`:
+- **Status sensors** (`sensor.<light>_flare_status`) sit on each light's own device and report
+  what `classify_state` returns, along with `claimed`, `asked` (FLARE's last target, unrecorded),
+  and `rooms`. Each sensor updates on its light's state changes and on `SIGNAL_CLAIMS_UPDATED`.
+- **Count sensors** (`sensor.flare_controlled_lights` and `sensor.flare_overridden_lights`) sit
+  on FLARE's own service device. `untracked` lights are counted as controlled, since either way
+  they aren't excluded from updates.
+- **Claim events**, fired by `ClaimEvents`:
 
 | Event | When | Filed under |
 |---|---|---|
@@ -275,8 +275,8 @@ how they're shown, and nothing that shows them holds state of its own.
 | `flare_light_overridden` | a light becomes `overridden`, with both claims and its live values | the Overridden count |
 | `flare_lights_released` | a room goes dark, or Clear | `button.flare_clear` |
 
-Each event carries one of FLARE's entities as `entity_id` and FLARE's
-`device_id`. That's how they reach FLARE's Activity, and how the dashboard
-tells the three kinds apart. A light going back to controlled after an
-override is churn, not news, and is silent. The first refresh after start
-seeds the statuses without firing, so a restart doesn't announce anything.
+Each event carries one of FLARE's entities as `entity_id` and FLARE's `device_id`, which routes
+it into FLARE's Activity and lets the dashboard distinguish the three event kinds. A light
+returning from `overridden` to `controlled` is routine state churn rather than news, so no event
+is fired. The initial refresh after startup seeds statuses silently so restarts don't flood the
+logbook.
