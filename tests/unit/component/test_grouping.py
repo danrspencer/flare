@@ -1,6 +1,6 @@
 import pytest
 
-from custom_components.flare.services.grouping import MAX_BRIGHTNESS, build_groups
+from custom_components.flare.services.grouping import MAX_BRIGHTNESS, Group, build_groups
 from tests.support.fakes import make_lookup
 
 TRADFRI = ("IKEA", "TRADFRI bulb GU10, color/white spectrum, 345 lm")
@@ -388,3 +388,13 @@ class TestOverrideProtection:
             ),
         )
         assert groups[0].combined == ["light.a"]
+
+
+def test_a_groups_sends_are_its_non_empty_lists_with_what_each_is_sent():
+    kelvin, rgb = {"brightness": 100, "color_temp_kelvin": 3000}, {"brightness": 100, "rgb_color": [255, 0, 0]}
+    group = Group(brightness=100, target=kelvin, target_rgb=rgb, combined=["light.a"], two_step_rgb=["light.b"])
+
+    assert group.sends() == [(["light.a"], kelvin, False), (["light.b"], rgb, True)]
+    assert Group(brightness=0, target={"state": "off"}, needing_off=["light.c"]).sends() == [
+        (["light.c"], {"state": "off"}, False)
+    ]

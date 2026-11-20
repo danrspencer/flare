@@ -38,7 +38,7 @@ class LightStatus(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
-class _ContextClaim(TypedDict):
+class ContextClaim(TypedDict):
     context_id: str
     # A two-step write's brightness-step context; either step landing counts
     # as ours. None for a single combined write.
@@ -50,15 +50,15 @@ class _ContextClaim(TypedDict):
     target: Optional[dict]
 
 
-class _WriteRecord(TypedDict, total=False):
-    observed: Optional[_ContextClaim]
-    latest: Optional[_ContextClaim]
+class WriteRecord(TypedDict, total=False):
+    observed: Optional[ContextClaim]
+    latest: Optional[ContextClaim]
     # ISO 8601: when the light first stopped matching its claims, kept by
     # claims.py. Absent while it matches.
     mismatch_since: Optional[str]
 
 
-def _context_matches(claim: Optional[dict], current_context: Optional[str]) -> bool:
+def context_matches(claim: Optional[dict], current_context: Optional[str]) -> bool:
     """True if `current_context` is either of the claim's context ids."""
     if claim is None:
         return False
@@ -100,9 +100,9 @@ def classify(
     "observed-value", or None) is diagnostic only."""
     if observed is None and latest is None:
         return (LightStatus.UNTRACKED if is_on else LightStatus.OFF), None
-    if _context_matches(latest, current_context):
+    if context_matches(latest, current_context):
         return LightStatus.CONTROLLED, "latest-context"
-    if _context_matches(observed, current_context):
+    if context_matches(observed, current_context):
         return LightStatus.CONTROLLED, "observed-context"
     if not is_on:
         # An off light matches only a claim that asked for off.
@@ -130,7 +130,7 @@ MISMATCH_GRACE = timedelta(seconds=30)
 
 def classify_state(
     state: Optional["State"],
-    record: Optional[_WriteRecord],
+    record: Optional[WriteRecord],
     min_brightness_change: float = DEFAULT_MIN_BRIGHTNESS_CHANGE,
     min_color_temp_change: float = DEFAULT_MIN_COLOR_TEMP_CHANGE,
     now: Optional[datetime] = None,

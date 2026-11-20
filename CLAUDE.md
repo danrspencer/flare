@@ -491,7 +491,7 @@ Settings entry's diagnostics), and an entity holding it broke FLARE when
 disabled and lost up to 15 minutes in a crash. `owner_id`'s Store was
 dropped for being hidden; the status sensors are what make this one not.
 
-**The claim events aren't an entity** (`sensor.ClaimEvents`). There's no
+**The claim events aren't an entity** (`tracking/events.py`'s `ClaimEvents`, started by the sensor platform). There's no
 poll: every change that moves a count reaches the registry's listener,
 and the grace is the only timed change, with its own recheck. They seed
 the statuses when they start, and a room restored dark is released only
@@ -800,8 +800,10 @@ and the docs playground.
 
 ### Curve math (`curve.py`)
 
-Every literal is a keyword-only parameter with a named default
-(`DEFAULT_CURVE_VALUES`, `DEFAULT_SCHEDULE_HOURS`).
+Every literal is a named default (`DEFAULT_CURVE_VALUES`,
+`DEFAULT_SCHEDULE_HOURS`), and a curve value is passed by its key there:
+`brightness_for_phase` and `kelvin_for_phase` are one function
+(`_for_phase`), which refuses a key that isn't its kind's.
 
 - **Each phase eases to the next over its own transition** (minutes,
   per phase and per brightness/Kelvin), ending at the boundary.

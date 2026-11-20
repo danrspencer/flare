@@ -24,7 +24,7 @@ from custom_components.flare.const import (
     SUBENTRY_TYPE_SENSOR,
 )
 from custom_components.flare.schedule.coordinator import ScheduleCoordinator, schedule_instances
-from custom_components.flare.sensor import CONTROLLED_GATHER_SECONDS, ClaimEvents
+from custom_components.flare.tracking.events import CONTROLLED_GATHER_SECONDS, ClaimEvents
 from custom_components.flare.sensor import async_setup_entry as sensor_setup
 from custom_components.flare.tracking.claims import SIGNAL_CLAIMS_UPDATED, ClaimRegistry
 from custom_components.flare.tracking.override_protection import MISMATCH_GRACE

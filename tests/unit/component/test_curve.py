@@ -31,7 +31,7 @@ def _kel(phase, t, **kw):
 
 
 def _targets(phase, t, **kw):
-    return targets_for_phase(phase, t, EVENING, DAY_START, NIGHT, MORNING, **kw)
+    return targets_for_phase(phase, t, MORNING, DAY_START, EVENING, NIGHT, **kw)
 
 
 def test_phase_at_boundaries():
@@ -49,6 +49,14 @@ def test_night_eases_to_tomorrows_morning_where_that_is_given():
     an_hour_in = NIGHT + _H
     assert _bri("Night", an_hour_in, night_brightness_transition=480) == 102
     assert _bri("Night", an_hour_in, night_brightness_transition=480, next_morning_ts=MORNING + 25 * _H) == 80
+
+
+@pytest.mark.parametrize("value", ["night_kelvin", "night_brightnes", "noon_brightness"])
+def test_a_value_that_isnt_one_of_the_kinds_own_is_refused(value):
+    with pytest.raises(TypeError):
+        _bri("Night", NIGHT, **{value: 1})
+    with pytest.raises(TypeError):
+        _targets("Night", NIGHT, noon_brightness=1)
 
 
 class TestDefaults:

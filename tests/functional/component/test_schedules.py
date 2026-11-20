@@ -79,6 +79,16 @@ async def test_the_sensor_publishes_the_current_values_and_the_day(schedule, has
     assert dt_util.utc_from_timestamp(state.attributes["night_start"]) == _today_at(22)
 
 
+async def test_day_eases_towards_evening_between_those_two_boundaries(schedule, hass: HomeAssistant):
+    """Noon, a third of the way through a Day from 08:00 to 20:00 whose
+    colour eases all the way to Evening's: a third of the way from 6667K to
+    3200K, now and on the day's curve."""
+    noon = next(p for p in _attr(hass, "points") if p["t"] == int(dt_util.utcnow().timestamp()))
+
+    assert _attr(hass, "color_temp_kelvin") == 5511
+    assert noon["kelvin"] == 5511
+
+
 async def test_a_curve_value_change_applies_at_once(schedule, hass: HomeAssistant):
     await hass.services.async_call(
         "number", "set_value", {"entity_id": "number.ground_floor_day_brightness", "value": 100}, blocking=True

@@ -30,7 +30,8 @@ room-empty, light-off and reconnect releases all just happen.
 | `tracking/override_protection.py` | `classify()`, the decision table, and `classify_state()`, its adapter for a live HA state | yes |
 | `tracking/matching.py` | `shows()`: does a light's report match a target? | yes |
 | `tracking/claims.py` | `ClaimRegistry`: claims, rooms, the Store, the state listener | no |
-| `sensor.py` | `ClaimEvents` (statuses, events), the counts, each light's status sensor | no |
+| `tracking/events.py` | `ClaimEvents`: the statuses as they change, and the events | no |
+| `sensor.py` | the counts, each light's status sensor | no |
 
 ## The data
 

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from homeassistant.core import Context, State
 
-from custom_components.flare.tracking.override_protection import _context_matches, classify, classify_state, is_blocked
+from custom_components.flare.tracking.override_protection import context_matches, classify, classify_state, is_blocked
 
 ON_TARGET = {"brightness": 200, "color_temp_kelvin": 3000}
 
@@ -40,8 +40,8 @@ class TestClassifyByContext:
         assert classify(is_on=True, observed=observed, latest=latest, current_context=live) == expected
 
     def test_a_missing_secondary_never_matches_a_missing_live_context(self):
-        assert not _context_matches(_claim("ctx-a"), None)
-        assert not _context_matches({"context_id": "ctx-a"}, None)
+        assert not context_matches(_claim("ctx-a"), None)
+        assert not context_matches({"context_id": "ctx-a"}, None)
 
 
 class TestClassifyByValue:
