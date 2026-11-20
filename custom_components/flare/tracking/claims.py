@@ -160,11 +160,16 @@ class ClaimRegistry:
         self.overrides = list(data.get("overrides") or [])[-OVERRIDE_LOG_SIZE:]
         self._forget_deleted_rooms()
 
+    def _data(self) -> dict:
+        return {"claims": self.claims, "rooms": self.rooms, "overrides": self.overrides}
+
     @callback
     def _save(self) -> None:
-        self._storage.async_delay_save(
-            lambda: {"claims": self.claims, "rooms": self.rooms, "overrides": self.overrides}, SAVE_DELAY
-        )
+        self._storage.async_delay_save(self._data, SAVE_DELAY)
+
+    async def async_save(self) -> None:
+        """Saves now, for an unload: a reload reads the claims back at once."""
+        await self._storage.async_save(self._data())
 
     @callback
     def register(self, listener: ClaimListener) -> None:
