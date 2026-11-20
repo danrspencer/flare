@@ -284,7 +284,7 @@ async def test_a_brightness_template_pins_one_fitting_to_its_own_level(
 
 @pytest.mark.parametrize(
     ("level", "expected"),
-    [("'50%'", 127), ("'x0.5'", round(CURVE_BRIGHTNESS * 0.5))],
+    [("'50%'", 128), ("'x0.5'", round(CURVE_BRIGHTNESS * 0.5))],
     ids=["percent of full brightness", "multiplier of the curve"],
 )
 async def test_a_brightness_template_sets_a_fitting_by_percent_or_multiplier(
@@ -304,7 +304,7 @@ async def test_a_brightness_template_sets_a_fitting_by_percent_or_multiplier(
     assert room_brightness(hass, bulbs) == want
 
 
-async def test_a_brightness_template_reads_the_schedule_brightness(
+async def test_a_brightness_template_reads_the_schedule_brightness_as_brightness(
     hass: HomeAssistant, add_bulbs, setup_room, area
 ) -> None:
     lamp = "light.hall_lamp"
@@ -313,7 +313,7 @@ async def test_a_brightness_template_reads_the_schedule_brightness(
         add_bulbs,
         setup_room,
         area,
-        brightness_template=f"{{{{ {{'{lamp}': schedule_brightness - 10}} }}}}",
+        brightness_template=f"{{{{ {{'{lamp}': brightness - 10}} }}}}",
     )
 
     want = {b.entity_id: CURVE_BRIGHTNESS for b in bulbs}
@@ -338,7 +338,7 @@ async def test_an_idle_percent_dims_the_nightlight_to_it(
     await let_time_pass(hass, frozen_time, PAST_THE_WAIT)
 
     expected = {b.entity_id: "off" for b in bulbs}
-    expected[lamp] = 25
+    expected[lamp] = 26  # 10% of 255, rounded as brightness_pct is
     assert room_brightness(hass, bulbs) == expected
 
 

@@ -1003,11 +1003,17 @@ computed before `action:`. It requires occupancy clear for the full Wait
 time, by a hand-written `now() - last_changed` template: the native
 `for:` needs the recorder to prime it, unreliable after a restart.
 
-**Brightness levels are absolute 0-255**, not multipliers, in
-`brightness_template`, the idle inputs and the services'
-`brightness_levels` alike (user's call: pinning a light at a level was
-awkward otherwise). Rules, all in `grouping.target_brightness()`, which
-the blueprint test harness also calls:
+**Brightness levels are absolute 0-255** in the idle inputs and the
+services' `brightness_levels` (user's call: pinning a light at a level was
+awkward otherwise). The templates may also write `'50%'` (of 255, rounded as
+`light.turn_on`'s `brightness_pct`) and, in the Brightness Template only,
+`'x0.5'` (of the schedule's brightness); the blueprint turns both into
+0-255 before the call. **A service field never depends on another
+field** (user's call): `'x0.5'` in `apply_lighting` read one number and
+scaled it by another, and was taken out. The blueprint's `brightness`
+variable is public: the templates read it and the docs name it, so it
+can't be renamed. Rules, all in `grouping.target_brightness()`, which the
+blueprint test harness also calls:
 
 - A light without a level gets `brightness`; the service only requires
   `brightness` when some light lacks a level.

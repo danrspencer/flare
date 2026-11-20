@@ -115,7 +115,7 @@ Whenever a template returns a value, it overrides the per-phase setting.
 | Value | Effect |
 |---|---|
 | `1`–`255` | Sets the light to this brightness, on the same scale as the phase brightnesses. |
-| `'50%'` | Sets the light to this percentage of full brightness: `'100%'` is 255, `'50%'` is 127. |
+| `'50%'` | Sets the light to this percentage of full brightness: `'100%'` is 255, `'50%'` is 128, as for `light.turn_on`'s `brightness_pct`. |
 | `'x0.5'` | Sets the light to the schedule's brightness multiplied by this, so `'x0.5'` is half of it. |
 | `0`, `'0%'` or `'x0'` | Turns the light off. |
 | `null` or `false` | FLARE leaves the light alone, including when the room empties, and its being on doesn't count as the room being in use. |
@@ -125,8 +125,8 @@ template doesn't include follows the schedule. **Idle Brightness Template** acce
 values except `'x0.5'`, and returning `0`, `'0%'`, `null`, or `false` turns the light off when
 the room empties (unlike **Brightness Template**, `null` here does not leave the light alone).
 
-Both templates can read `schedule_brightness`: the schedule's brightness right now (0–255), or
-`none` while the schedule is unavailable. See [Templates](../../guides/templates/#brightness-template).
+The templates can read `brightness`: the schedule's brightness right now (0–255), or `none`
+while the schedule is unavailable. See [Templates](../../guides/templates/#brightness-template).
 
 ### Additional triggers
 
