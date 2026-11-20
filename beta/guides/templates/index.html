@@ -300,7 +300,7 @@ Assistant template that can depend on anything and set each light separately. Th
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">'50%'</code></td>
-      <td>The light sits at this percentage of full brightness: <code class="language-plaintext highlighter-rouge">'100%'</code> is 255, <code class="language-plaintext highlighter-rouge">'50%'</code> is 127</td>
+      <td>The light sits at this percentage of full brightness: <code class="language-plaintext highlighter-rouge">'100%'</code> is 255, <code class="language-plaintext highlighter-rouge">'50%'</code> is 128</td>
     </tr>
     <tr>
       <td><code class="language-plaintext highlighter-rouge">'x0.5'</code></td>
@@ -410,16 +410,16 @@ curve instead:</p>
 </h3>
     
 
-<p><code class="language-plaintext highlighter-rouge">schedule_brightness</code> is the brightness, 0–255, the room’s schedule is at right now, which is
+<p><code class="language-plaintext highlighter-rouge">brightness</code> is the brightness, 0–255, the room’s schedule is at right now, which is
 what every light without a level gets. Use it for anything a multiplier can’t do, such as a
 floor:</p>
 
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="pi">{</span><span class="s1">'</span><span class="s">light.desk_lamp'</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">schedule_brightness</span><span class="pi">,</span> <span class="nv">80</span><span class="pi">]</span> <span class="err">|</span> <span class="nv">max</span><span class="pi">}</span> <span class="pi">}}</span>
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="pi">{{</span> <span class="pi">{</span><span class="s1">'</span><span class="s">light.desk_lamp'</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">brightness</span><span class="pi">,</span> <span class="nv">80</span><span class="pi">]</span> <span class="err">|</span> <span class="nv">max</span><span class="pi">}</span> <span class="pi">}}</span>
 </code></pre></div></div>
 
-<p>The desk lamp follows the curve, but never sits below 80. <code class="language-plaintext highlighter-rouge">schedule_brightness</code> is <code class="language-plaintext highlighter-rouge">none</code>
-while the schedule is unavailable, so a template doing arithmetic with it can guard with
-<code class="language-plaintext highlighter-rouge">schedule_brightness is not none</code>.</p>
+<p>The desk lamp follows the curve, but never sits below 80. <code class="language-plaintext highlighter-rouge">brightness</code> is <code class="language-plaintext highlighter-rouge">none</code> while the
+schedule is unavailable, so a template doing arithmetic with it can guard with
+<code class="language-plaintext highlighter-rouge">brightness is not none</code>.</p>
 <h3 id="0-or-null">
   
   
