@@ -274,7 +274,7 @@ things differ from a plain light group: who its members are, and what
 <pre><code class="language-mermaid">flowchart LR
     sub["Flares entry subentry&lt;br/&gt;{automation: registry id,&lt;br/&gt;lights_input: room_target}"] --&gt; inst["FlareInstance"]
     inst --&gt; fl["FlareLight&lt;br/&gt;(LightGroup)"]
-    auto["automation entity&lt;br/&gt;_blueprint_inputs"] --&gt;|"lights_target()"| tgt["target&lt;br/&gt;{area_id: kitchen}"]
+    auto["automation entity&lt;br/&gt;raw_blueprint_inputs"] --&gt;|"lights_target()"| tgt["target&lt;br/&gt;{area_id: kitchen}"]
     tgt --&gt;|"async_track_target_selector_&lt;br/&gt;state_change_event"| mem["members:&lt;br/&gt;the room's lights, minus flares"]
     mem --&gt; fl
 </code></pre>
@@ -294,11 +294,11 @@ value live. A plain automation, not made from a blueprint, stores a
 target instead.</p>
 
 <ul>
-  <li>The inputs come from the automation entity’s private
-<code class="language-plaintext highlighter-rouge">_blueprint_inputs</code> (<code class="language-plaintext highlighter-rouge">flares/automation.py:blueprint_inputs</code>). Its
-<code class="language-plaintext highlighter-rouge">raw_config</code> is the substituted config, so it doesn’t have them. This is
-an accepted risk, kept to that one function, and the behaviour tests
-break if HA changes it.</li>
+  <li>The inputs come from the automation entity’s <code class="language-plaintext highlighter-rouge">raw_blueprint_inputs</code>
+(<code class="language-plaintext highlighter-rouge">flares/automation.py:blueprint_inputs</code>), or its private
+<code class="language-plaintext highlighter-rouge">_blueprint_inputs</code> before Home Assistant 2026.12. Its <code class="language-plaintext highlighter-rouge">raw_config</code> is
+the substituted config, so it doesn’t have them. Reading them is kept to
+that one function, and the behaviour tests break if HA changes it.</li>
   <li>Members are tracked with
 <code class="language-plaintext highlighter-rouge">async_track_target_selector_state_change_event</code>, HA’s own target
 resolution: the same rule as <code class="language-plaintext highlighter-rouge">flare.resolve_target</code>, so a flare’s
