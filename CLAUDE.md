@@ -723,10 +723,11 @@ leaves the room wherever the bulbs restored to.
   live - `room_target` for our blueprint (`BLUEPRINT_LIGHTS_INPUT`, pinned
   by `tests/checks/test_flare_inputs.py`). A plain automation stores a
   target instead.
-- **The inputs come from the automation entity's private
-  `_blueprint_inputs`** (`raw_config` is the substituted config). An
-  accepted risk, kept to `flares/automation.py:blueprint_inputs`; the
-  behaviour tests break if HA changes it.
+- **The inputs come from the automation entity's `raw_blueprint_inputs`**
+  (`raw_config` is the substituted config), public from 2026.12; 2026.11
+  has only the private `_blueprint_inputs`, read as a fallback. Kept to
+  `flares/automation.py:blueprint_inputs`; the behaviour tests break if
+  HA changes it.
 - **Add Flare lists only automations from our blueprint** (user's call);
   any other automation goes through the custom path, which offers only
   inputs that can hold lights. Room flares are added in bulk, all

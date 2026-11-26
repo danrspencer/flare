@@ -19,6 +19,13 @@ CI — see `.github/workflows/release.yml`.
   for anything a multiplier can't do, such as keeping a lamp from dropping below a level. The
   other templates already could.
 
+### Fixed
+
+- **Flares work on Home Assistant 2026.12.** That release renamed a constant FLARE imported
+  and where an automation keeps its blueprint inputs, so the Flares entry failed to set up,
+  and once it did every flare was unavailable
+  ([#375](https://github.com/danrspencer/flare/issues/375)).
+
 ## [2.1.1] - Unreleased
 
 ### Fixed
