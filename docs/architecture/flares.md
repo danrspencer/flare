@@ -30,7 +30,7 @@ things differ from a plain light group: who its members are, and what
 flowchart LR
     sub["Flares entry subentry<br/>{automation: registry id,<br/>lights_input: room_target}"] --> inst["FlareInstance"]
     inst --> fl["FlareLight<br/>(LightGroup)"]
-    auto["automation entity<br/>_blueprint_inputs"] -->|"lights_target()"| tgt["target<br/>{area_id: kitchen}"]
+    auto["automation entity<br/>raw_blueprint_inputs"] -->|"lights_target()"| tgt["target<br/>{area_id: kitchen}"]
     tgt -->|"async_track_target_selector_<br/>state_change_event"| mem["members:<br/>the room's lights, minus flares"]
     mem --> fl
 ```
@@ -43,11 +43,11 @@ room's lights (`room_target` for our blueprint). It reads the input's
 value live. A plain automation, not made from a blueprint, stores a
 target instead.
 
-- The inputs come from the automation entity's private
-  `_blueprint_inputs` (`flares/automation.py:blueprint_inputs`). Its
-  `raw_config` is the substituted config, so it doesn't have them. This is
-  an accepted risk, kept to that one function, and the behaviour tests
-  break if HA changes it.
+- The inputs come from the automation entity's `raw_blueprint_inputs`
+  (`flares/automation.py:blueprint_inputs`), or its private
+  `_blueprint_inputs` before Home Assistant 2026.12. Its `raw_config` is
+  the substituted config, so it doesn't have them. Reading them is kept to
+  that one function, and the behaviour tests break if HA changes it.
 - Members are tracked with
   `async_track_target_selector_state_change_event`, HA's own target
   resolution: the same rule as `flare.resolve_target`, so a flare's

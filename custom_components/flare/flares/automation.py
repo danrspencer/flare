@@ -1,9 +1,9 @@
 """Reads a flare's automation: which lights it controls.
 
 A blueprint automation's inputs are only kept on the automation entity's
-private `_blueprint_inputs` (its `raw_config` is the substituted config),
-so this is the one place that reads them.
-`tests/checks/test_ha_contracts.py` pins the shape."""
+`raw_blueprint_inputs` (`_blueprint_inputs`, private, before Home Assistant
+2026.12; its `raw_config` is the substituted config), so this is the one
+place that reads them."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def blueprint_inputs(hass: HomeAssistant, entity_id: str) -> dict[str, Any] | No
     isn't from a blueprint."""
     component = hass.data.get(DATA_COMPONENT)
     entity = component.get_entity(entity_id) if component else None
-    raw = getattr(entity, "_blueprint_inputs", None)
+    raw = getattr(entity, "raw_blueprint_inputs", None) or getattr(entity, "_blueprint_inputs", None)
     if not raw:
         return None
     return dict(raw.get(CONF_USE_BLUEPRINT, {}).get(CONF_INPUT) or {})
